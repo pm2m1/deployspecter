@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DeploySpecter</title>
+<style>
+:root{--bg:#f7f7f5;--panel:#fff;--ink:#1c1d1f;--muted:#62666d;--line:#dfe0dc;--bad:#b3261e;--bad-bg:#fbeae8;--good:#1a7f4b;--good-bg:#e6f4ec;--warn:#8a5a00;--warn-bg:#fbf1da;--accent:#2f4fa8;--code:#f0f0ec}
+@media (prefers-color-scheme:dark){:root{--bg:#141517;--panel:#1d1f22;--ink:#e8e8e6;--muted:#a0a4ab;--line:#33363b;--bad:#f2857d;--bad-bg:#3a1f1d;--good:#6fcf9c;--good-bg:#17301f;--warn:#e2b75c;--warn-bg:#352a12;--accent:#93aeff;--code:#26282c}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{padding:20px 24px 12px;border-bottom:1px solid var(--line)}
+h1{margin:0;font-size:20px}h2{font-size:16px;margin:0 0 10px}h3{font-size:14px;margin:16px 0 6px}
+.sub{color:var(--muted);font-size:13px}
+main{max-width:1280px;margin:0 auto;padding:20px 24px;display:grid;gap:16px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px;min-width:0}
+.controls{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
+label{display:grid;grid-template-columns:minmax(0,1fr);gap:3px;font-size:12px;color:var(--muted);min-width:0;max-width:100%}
+select,input,button{font:inherit;padding:7px 10px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);max-width:100%}
+button{background:var(--accent);color:var(--panel);border-color:var(--accent);font-weight:600;cursor:pointer}
+button:disabled{opacity:.55;cursor:wait}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:16px}
+.badge{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600}
+.bad{background:var(--bad-bg);color:var(--bad)}.good{background:var(--good-bg);color:var(--good)}.warn{background:var(--warn-bg);color:var(--warn)}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:600;white-space:nowrap}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+code,pre{font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace}
+code{background:var(--code);padding:1px 4px;border-radius:3px;overflow-wrap:anywhere}
+pre{background:var(--code);padding:10px;border-radius:6px;margin:6px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.lane{min-width:170px}
+.step{font-size:12px;overflow-wrap:anywhere}
+.step .meta{color:var(--muted);display:block}
+.step.txn{color:var(--muted)}
+.step.blocked{border-left:3px solid var(--warn);padding-left:6px}
+.step.err{border-left:3px solid var(--bad);padding-left:6px}
+.violation{background:var(--bad-bg);border-radius:6px;padding:10px 12px;margin:8px 0}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-size:13px}.kv dt{color:var(--muted)}.kv dd{margin:0}
+details{margin-top:10px;font-size:13px}summary{cursor:pointer;color:var(--accent)}
+ul{margin:6px 0;padding-left:18px;font-size:13px}
+.note{font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>DeploySpecter</h1>
+  <div class="sub">Finds and reproduces data corruption from rolling migrations, on real PostgreSQL. This page makes no model requests. <span id="health"></span></div>
+</header>
+<main>
+  <section class="panel">
+    <div class="controls">
+      <label>Scenario <select id="scenario"></select></label>
+      <label>Test generator
+        <select id="generator">
+          <option value="hand">Hand-authored reference</option>
+          <option value="baseline">Baseline B (code-aware, no LLM)</option>
+          <option value="ai">Muse Spark (recorded responses)</option>
+        </select>
+      </label>
+      <label>Schedule budget <input id="budget" type="number" min="1" max="2000" value="300"></label>
+      <button id="run">Run both versions</button>
+    </div>
+    <p class="note" id="desc"></p>
+    <p class="note" id="requirement"></p>
+  </section>
+  <section class="panel">
+    <h2>Deployment under test</h2>
+    <div id="source" class="note"></div>
+  </section>
+  <div class="cols" id="results"></div>
+  <section class="panel">
+    <h2>AI versus non-AI comparison <span class="badge warn">Saved benchmark data</span></h2>
+    <div id="scenario-comparison"></div>
+    <div id="comparison" class="note">Loading saved benchmark results…</div>
+  </section>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+// All data is written with textContent. Model output and SQL are never parsed as HTML.
+function el(tag, props = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "class") node.className = v; else if (k === "text") node.textContent = v; else node.setAttribute(k, v);
+  }
+  for (const c of children) if (c !== null && c !== undefined) node.append(c);
+  return node;
+}
+const fmt = (v) => (v === null || v === undefined ? "n/a" : String(v));
+const inlineSql = (r) => {
+  let s = r.sql || r.kind.toUpperCase();
+  for (const [k, v] of Object.entries(r.params || {})) s = s.replaceAll(`%(${k})s`, typeof v === "string" ? `'${v}'` : fmt(v));
+  return s;
+};
+
+function statusBadge(view) {
+  if (view.error) return el("span", {class: "badge warn", text: "Run error"});
+  if (view.detected) return el("span", {class: "badge bad", text: "Requirement violated"});
+  if (!view.schedules_executed) return el("span", {class: "badge warn", text: "Nothing executed"});
+  return el("span", {class: "badge good", text: "No violation in schedules run"});
+}
+
+function swimlane(view) {
+  const actors = [...new Set(view.timeline.map((r) => r.actor))];
+  const head = el("tr", {}, el("th", {text: "#"}), ...actors.map((a) => el("th", {class: "lane", text: a})));
+  const rows = view.timeline.map((r) => {
+    const cells = actors.map((a) => {
+      if (a !== r.actor) return el("td");
+      const cls = ["step"];
+      if (r.kind !== "sql") cls.push("txn");
+      if (r.blocked_by.length) cls.push("blocked");
+      if (r.status === "error") cls.push("err");
+      const facts = [];
+      if (r.kind === "sql" && r.rowcount !== null) facts.push(`rows ${r.rowcount}`);
+      if (r.rows && r.rows.length) facts.push(`read ${JSON.stringify(r.rows)}`);
+      if (r.blocked_by.length) facts.push(`waited for ${r.blocked_by.join(", ")}`);
+      if (r.committed === true && r.kind !== "sql") facts.push("committed");
+      if (r.status !== "ok") facts.push(r.status);
+      if (r.error) facts.push(r.error);
+      return el("td", {}, el("div", {class: cls.join(" ")}, el("code", {text: inlineSql(r)}),
+        facts.length ? el("span", {class: "meta", text: facts.join(" · ")}) : null));
+    });
+    return el("tr", {}, el("td", {class: "num", text: r.seq}), ...cells);
+  });
+  return el("div", {class: "scroll"}, el("table", {}, el("thead", {}, head), el("tbody", {}, ...rows)));
+}
+
+function stateTable(state) {
+  return el("div", {}, ...Object.entries(state || {}).map(([table, rows]) => {
+    const cols = rows.length ? Object.keys(rows[0]) : [];
+    return el("div", {class: "scroll"}, el("h3", {text: table}), rows.length
+      ? el("table", {}, el("thead", {}, el("tr", {}, ...cols.map((c) => el("th", {text: c})))),
+          el("tbody", {}, ...rows.map((r) => el("tr", {}, ...cols.map((c) => el("td", {text: fmt(r[c])}))))))
+      : el("p", {class: "note", text: "No rows."}));
+  }));
+}
+
+function coverage(view) {
+  const full = view.tests.filter((t) => t.exhausted_space).length;
+  return `${full} of ${view.tests.length} tests covered every interleaving of their inputs`;
+}
+
+function specList(view) {
+  const d = el("details", {}, el("summary", {text: `Test specifications from ${view.generator} (${view.tests.length} valid, ${view.rejections.length} rejected)`}));
+  for (const t of view.tests) {
+    if (!t.spec) continue;
+    const box = el("div", {}, el("h3", {text: t.name}));
+    if (t.spec.rationale) box.append(el("p", {class: "note", text: t.spec.rationale}));
+    box.append(el("pre", {text: t.spec.actors.map((a) => `${a.name}  (${a.function})\n${a.steps.map((s) => "  " + s).join("\n")}`).join("\n\n")}));
+    box.append(el("p", {class: "note", text: `Seed: ${JSON.stringify(t.spec.seed)}`}));
+    if (Object.keys(t.renamed_actors).length) box.append(el("p", {class: "note", text: `Actor names normalized: ${JSON.stringify(t.renamed_actors)}`}));
+    d.append(box);
+  }
+  return d;
+}
+
+function replayControl(runId, view) {
+  const out = el("div", {class: "note"});
+  const button = el("button", {text: "Replay this failure now"});
+  button.onclick = async () => {
+    button.disabled = true;
+    out.textContent = "Re-executing on PostgreSQL…";
+    const response = await fetch(`/runs/${runId}/replay`, {method: "POST"});
+    if (!response.ok) { out.textContent = `Replay failed: HTTP ${response.status}`; button.disabled = false; return; }
+    const r = await response.json();
+    const found = r.violations.map((v) => `${v.requirement_id}: expected ${fmt(v.expected)}, actual ${fmt(v.actual)}`).join("; ");
+    out.replaceChildren(
+      el("span", {class: `badge ${r.reproduced ? "bad" : "warn"}`, text: r.reproduced ? "Reproduced" : "Did not reproduce"}),
+      el("p", {text: `Re-executed ${r.attempts} times just now. Identical behaviour: ${r.fingerprints_match}/${r.attempts}. Same violation: ${r.violations_match}/${r.attempts}. ${found}`}),
+      stateTable(r.final_state));
+    button.disabled = false;
+  };
+  return el("div", {}, button, out);
+}
+
+function renderView(view, runId) {
+  const box = el("div", {});
+  box.append(el("dl", {class: "kv"},
+    el("dt", {text: "Tests valid"}), el("dd", {text: `${view.tests_valid} of ${view.tests_proposed}`}),
+    el("dt", {text: "Schedules run"}), el("dd", {text: `${view.schedules_executed} of ${view.schedule_budget} budget`}),
+    el("dt", {text: "Coverage"}), el("dd", {text: coverage(view)}),
+    el("dt", {text: "First failure"}), el("dd", {text: view.detected ? `schedule ${view.schedules_to_first_failure}, ${view.seconds_to_first_failure}s` : "none"}),
+    view.detected ? el("dt", {text: "Needs concurrency"}) : null,
+    view.detected ? el("dd", {text: view.serial_order_violation ? "No: also fails in a serial order" : "Yes: no serial order failed"}) : null,
+  ));
+  if (view.error) box.append(el("p", {class: "violation", text: view.error}));
+  for (const v of view.violations || []) {
+    box.append(el("div", {class: "violation"},
+      el("strong", {text: `${v.requirement_id}: ${v.requirement}`}), el("div", {text: v.explanation}),
+      el("div", {}, "Expected ", el("code", {text: fmt(v.expected)}), " actual ", el("code", {text: fmt(v.actual)}))));
+  }
+  if (view.timeline) {
+    box.append(el("h3", {text: view.detected ? "Discovered interleaving (minimized)" : "Example interleaving"}));
+    if (view.example_note) box.append(el("p", {class: "note", text: view.example_note}));
+    box.append(swimlane(view));
+    box.append(el("h3", {text: "Database state before the schedule"}), stateTable(view.initial_state));
+    box.append(el("h3", {text: "Final database state (read from PostgreSQL)"}), stateTable(view.final_state));
+  }
+  if (view.replay) {
+    const r = view.replay, m = view.minimized_replay;
+    box.append(el("h3", {text: "Replay"}),
+      el("p", {class: "note", text: `Original: ${r.fingerprints_match}/${r.attempts} identical. Minimized: ${m ? m.fingerprints_match + "/" + m.attempts : "n/a"} identical. Reduced from ${view.minimized.before.steps} to ${view.minimized.after.steps} steps, ${view.minimized.before.preemptions} to ${view.minimized.after.preemptions} preemptions.`}),
+      el("pre", {text: view.replay_command}), replayControl(runId, view));
+  }
+  if (!view.detected && view.schedules_executed) {
+    box.append(el("p", {class: "note", text: "No stated requirement was violated in the schedules run. This is not a proof that the code is safe."}));
+  }
+  if (view.rejections.length) {
+    box.append(el("p", {class: "note", text: `${view.rejections.length} generated test(s) rejected: ${view.rejections[0].reasons[0]}`}));
+  }
+  box.append(specList(view));
+  if (view.analysis) {
+    const a = view.analysis;
+    const d = el("details", {}, el("summary", {text: `Recorded Muse Spark analysis: ${a.input_tokens} input and ${a.output_tokens} output tokens, ${a.latency_seconds}s when recorded`}));
+    d.append(el("ul", {}, ...a.conflicts.map((c) => el("li", {text: `${c.table}.${c.column}: ${c.risk_explanation}`}))));
+    box.append(d);
+  }
+  const tests = el("details", {}, el("summary", {text: `Tests and schedule counts (${view.tests.length})`}));
+  tests.append(el("div", {class: "scroll"}, el("table", {},
+    el("thead", {}, el("tr", {}, ...["Test", "Run / space", "Violations", "Deferred", "Non-serial states"].map((t) => el("th", {text: t})))),
+    el("tbody", {}, ...view.tests.map((t) => el("tr", {},
+      el("td", {text: t.name}), el("td", {class: "num", text: `${t.executed} / ${t.space_size}`}),
+      el("td", {class: "num", text: t.violations}), el("td", {class: "num", text: t.deferred}),
+      el("td", {class: "num", text: t.non_serial_final_states})))))));
+  for (const t of view.tests) for (const i of t.invariants) {
+    if (i.failed_without_oracle_violation > 0 && !i.screened_out) {
+      tests.append(el("p", {class: "note", text: `Unconfirmed model hypothesis, not a finding: ${i.description} (failed in ${i.failed_without_oracle_violation} schedules with no oracle violation)`}));
+    }
+  }
+  for (const r of view.rejections) tests.append(el("p", {class: "note", text: `Rejected ${r.test}: ${r.reasons.join("; ")}`}));
+  box.append(tests);
+  if (view.assumptions) {
+    const d = el("details", {}, el("summary", {text: "Oracle assumptions"}));
+    d.append(el("ul", {}, ...view.assumptions.map((a) => el("li", {text: a}))));
+    box.append(d);
+  }
+  if (view.report_markdown) {
+    const d = el("details", {}, el("summary", {text: "Full report and manual replay"}));
+    d.append(el("pre", {text: view.report_markdown}));
+    box.append(d);
+  }
+  for (const n of view.notes) box.append(el("p", {class: "note", text: n}));
+  return box;
+}
+
+async function runVariant(scenario, variant, generator, budget, card) {
+  const body = card.querySelector(".body");
+  const post = await fetch(`/scenarios/${scenario}/run`, {method: "POST", headers: {"content-type": "application/json"},
+    body: JSON.stringify({variant, generator, max_schedules: budget})});
+  if (!post.ok) { body.textContent = `Request failed: ${post.status}`; return; }
+  const {run_id} = await post.json();
+  for (;;) {
+    const record = await (await fetch(`/runs/${run_id}`)).json();
+    if (record.status === "finished") {
+      card.querySelector(".head").append(" ", statusBadge(record.result));
+      body.replaceChildren(renderView(record.result, run_id));
+      return;
+    }
+    if (record.status === "failed") { body.textContent = record.error; return; }
+    body.textContent = "Running…";
+    await new Promise((r) => setTimeout(r, 400));
+  }
+}
+
+$("run").onclick = async () => {
+  const scenario = $("scenario").value, generator = $("generator").value, budget = Number($("budget").value);
+  $("run").disabled = true;
+  $("results").replaceChildren();
+  const cards = ["buggy", "corrected"].map((variant) => {
+    const card = el("section", {class: "panel"}, el("h2", {class: "head", text: variant === "buggy" ? "Buggy version" : "Corrected version"}), el("div", {class: "body note", text: "Waiting…"}));
+    $("results").append(card);
+    return [variant, card];
+  });
+  try { for (const [variant, card] of cards) await runVariant(scenario, variant, generator, budget, card); }
+  finally { $("run").disabled = false; }
+};
+
+let savedReports = {};
+
+// A corrected case whose tests were all rejected never ran, so it cannot count as a clean result.
+function falseFlags(system, summary, report) {
+  if (system === "baseline_a_static") return `${summary.false_positives}/${summary.corrected_runs}`;
+  const runs = report.scores.filter((s) => s.system === system && !s.has_bug);
+  const executed = runs.filter((s) => s.schedules_executed > 0).length;
+  const skipped = runs.length - executed;
+  return `${summary.false_positives}/${executed}${skipped ? ` (${skipped} not executed)` : ""}`;
+}
+
+function renderScenarioComparison() {
+  const scenario = $("scenario").value;
+  const report = Object.values(savedReports).find((r) => r.scores.some((s) => s.case_id.startsWith(`${scenario}/`)));
+  const target = $("scenario-comparison");
+  if (!report) { target.replaceChildren(); return; }
+  const rows = report.scores.filter((s) => s.case_id.startsWith(`${scenario}/`));
+  const heads = ["Version", "System", "Run", "Finding", "Schedules to first failure", "Needs concurrency", "Valid tests", "Replayed"];
+  const finding = (s) => {
+    if (s.system === "baseline_a_static") return s.flagged ? "Warning, not executed" : "No warning";
+    if (s.tests_proposed !== null && s.tests_valid === 0) return "No test executed";
+    return s.flagged ? "Violation" : "No violation";
+  };
+  target.replaceChildren(
+    el("h3", {text: `${scenario}, from the benchmark generated ${report.generated_at}`}),
+    el("div", {class: "scroll"}, el("table", {},
+      el("thead", {}, el("tr", {}, ...heads.map((h) => el("th", {text: h})))),
+      el("tbody", {}, ...rows.map((s) => el("tr", {},
+        el("td", {text: s.has_bug ? "Buggy" : "Corrected"}), el("td", {text: s.system}), el("td", {class: "num", text: s.repeat}),
+        el("td", {text: finding(s)}), el("td", {class: "num", text: fmt(s.schedules_to_first_failure)}),
+        el("td", {text: s.serial_order_violation === null ? "n/a" : (s.serial_order_violation ? "No" : "Yes")}),
+        el("td", {class: "num", text: s.tests_proposed === null ? "n/a" : `${s.tests_valid}/${s.tests_proposed}`}),
+        el("td", {text: s.replay_ok === null ? "n/a" : (s.replay_ok ? "Yes" : "No")})))))));
+}
+
+async function init() {
+  const health = await (await fetch("/health")).json();
+  $("health").textContent = health.database.reachable
+    ? `PostgreSQL ${health.database.server_version} reachable.` : "PostgreSQL is not reachable.";
+  const list = await (await fetch("/scenarios")).json();
+  const describe = async () => {
+    const s = list.find((x) => x.id === $("scenario").value);
+    $("desc").textContent = s.description;
+    $("requirement").textContent = `Independent requirement, hidden from test generators: ${s.requirements.join(" ")}`;
+    renderScenarioComparison();
+    const src = await (await fetch(`/scenarios/${s.id}/source`)).json();
+    const files = new Set([...Object.keys(src.variants.buggy), ...Object.keys(src.variants.corrected)]);
+    $("source").replaceChildren(...[...files].sort().map((name) => {
+      const differs = src.differing_files.includes(name);
+      const d = el("details", {}, el("summary", {text: differs ? `${name} (differs between versions)` : name}));
+      if (differs) d.setAttribute("open", "");
+      d.append(differs
+        ? el("div", {class: "cols"},
+            el("div", {}, el("h3", {text: "Buggy version"}), el("pre", {text: src.variants.buggy[name]})),
+            el("div", {}, el("h3", {text: "Corrected version"}), el("pre", {text: src.variants.corrected[name]})))
+        : el("pre", {text: src.variants.buggy[name]}));
+      return d;
+    }));
+  };
+  for (const s of list) $("scenario").append(el("option", {value: s.id, text: `${s.title} (${s.split})`}));
+  const data = await (await fetch("/comparison")).json();
+  savedReports = data;
+  $("scenario").onchange = describe; describe();
+  const target = $("comparison");
+  if (!Object.keys(data).length) { target.textContent = "No benchmark has been run yet."; return; }
+  target.replaceChildren();
+  for (const [split, report] of Object.entries(data)) {
+    const heads = ["System", "Detected", "Replay verified", "False positives", "Median schedules to failure", "Valid tests", "First-response valid", "Schedules run", "Requests", "Inference", "Est. cost"];
+    target.append(el("h3", {text: `${split === "dev" ? "Development" : "Held-out"} cases: ${report.budget.schedules_per_case} schedules per case, generated ${report.generated_at}`}),
+      el("div", {class: "scroll"}, el("table", {},
+        el("thead", {}, el("tr", {}, ...heads.map((h) => el("th", {text: h})))),
+        el("tbody", {}, ...Object.entries(report.summary).map(([name, s]) => el("tr", {},
+          el("td", {text: name}), el("td", {class: "num", text: `${s.detected}/${s.buggy_runs}`}),
+          el("td", {class: "num", text: name === "baseline_a_static" ? "does not execute" : `${s.verified_by_execution}/${s.buggy_runs}`}),
+          el("td", {class: "num", text: falseFlags(name, s, report)}),
+          el("td", {class: "num", text: fmt(s.median_schedules_to_failure)}),
+          el("td", {class: "num", text: name === "baseline_a_static" ? "n/a" : `${s.valid_tests}/${s.proposed_tests}`}),
+          el("td", {class: "num", text: s.first_attempt_proposed !== undefined ? `${s.first_attempt_valid}/${s.first_attempt_proposed}` : "n/a"}),
+          el("td", {class: "num", text: s.schedules_executed}),
+          el("td", {class: "num", text: fmt(s.requests)}),
+          el("td", {class: "num", text: s.inference_seconds !== undefined ? `${s.inference_seconds}s` : "none"}),
+          el("td", {class: "num", text: s.approx_cost_usd !== undefined ? `$${s.approx_cost_usd}` : "none"})))))));
+    for (const n of report.notes || []) target.append(el("p", {class: "note", text: n}));
+    if (report.pricing_note) target.append(el("p", {class: "note", text: `Tokens are as reported by the API in recorded responses. Cost is ${report.pricing_note}.`}));
+  }
+}
+init();
+</script>
+</body>
+</html>

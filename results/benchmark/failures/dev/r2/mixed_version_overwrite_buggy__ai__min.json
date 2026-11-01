@@ -1,0 +1,505 @@
+{
+  "schema_version": 1,
+  "case_id": "mixed_version_overwrite/buggy",
+  "setup_sql": "CREATE TABLE accounts (\n    id    integer PRIMARY KEY,\n    email text NOT NULL,\n    plan  text NOT NULL DEFAULT 'free' CHECK (plan IN ('free', 'pro', 'team'))\n);\n\nALTER TABLE accounts ADD COLUMN plan_changed_by text;\n",
+  "requirements": [
+    {
+      "id": "BR-plan",
+      "text": "Saving an unrelated field from the old release must not undo a committed plan change.",
+      "kind": "authoritative_write_preserved",
+      "table": "accounts",
+      "key_column": "id",
+      "column": "plan",
+      "writers": [
+        {
+          "function": "app_v2.py:change_plan",
+          "key_param": "id",
+          "value_param": "plan",
+          "value_transform": "none"
+        }
+      ],
+      "base_column": null,
+      "base_multiplier": 1.0,
+      "assumptions": [
+        "change_plan is the only source of intentional plan changes; change_email is never meant to alter plan."
+      ]
+    },
+    {
+      "id": "BR-email",
+      "text": "A committed email change must be preserved.",
+      "kind": "authoritative_write_preserved",
+      "table": "accounts",
+      "key_column": "id",
+      "column": "email",
+      "writers": [
+        {
+          "function": "app_v1.py:change_email",
+          "key_param": "id",
+          "value_param": "email",
+          "value_transform": "none"
+        }
+      ],
+      "base_column": null,
+      "base_multiplier": 1.0,
+      "assumptions": []
+    }
+  ],
+  "spec": {
+    "name": "lost_plan_update_email_vs_plan",
+    "generator": "ai",
+    "seed": [
+      {
+        "table": "accounts",
+        "values": [
+          {
+            "column": "id",
+            "value": 1
+          },
+          {
+            "column": "email",
+            "value": "alice@old.example"
+          },
+          {
+            "column": "plan",
+            "value": "free"
+          },
+          {
+            "column": "plan_changed_by",
+            "value": null
+          }
+        ]
+      }
+    ],
+    "actors": [
+      {
+        "name": "email_change",
+        "function": "app_v1.py:change_email",
+        "steps": [
+          {
+            "kind": "begin",
+            "sql": null,
+            "params": {},
+            "bind_as": null,
+            "statement_id": null,
+            "removable": false
+          },
+          {
+            "kind": "sql",
+            "sql": "SELECT id, email, plan FROM accounts WHERE id = %(id)s",
+            "params": {
+              "id": {
+                "name": "id",
+                "source": "literal",
+                "value": 1,
+                "bind": null,
+                "row": 0,
+                "column": null,
+                "transform": "none",
+                "operand": null
+              }
+            },
+            "bind_as": "e1",
+            "statement_id": "app_v1.py:change_email#0",
+            "removable": false
+          },
+          {
+            "kind": "sql",
+            "sql": "UPDATE accounts SET email = %(email)s, plan = %(plan)s WHERE id = %(id)s",
+            "params": {
+              "email": {
+                "name": "email",
+                "source": "literal",
+                "value": "alice@new.example",
+                "bind": null,
+                "row": 0,
+                "column": null,
+                "transform": "none",
+                "operand": null
+              },
+              "plan": {
+                "name": "plan",
+                "source": "row_ref",
+                "value": null,
+                "bind": "e1",
+                "row": 0,
+                "column": "plan",
+                "transform": "none",
+                "operand": null
+              },
+              "id": {
+                "name": "id",
+                "source": "row_ref",
+                "value": null,
+                "bind": "e1",
+                "row": 0,
+                "column": "id",
+                "transform": "none",
+                "operand": null
+              }
+            },
+            "bind_as": null,
+            "statement_id": "app_v1.py:change_email#1",
+            "removable": false
+          },
+          {
+            "kind": "commit",
+            "sql": null,
+            "params": {},
+            "bind_as": null,
+            "statement_id": null,
+            "removable": false
+          }
+        ]
+      },
+      {
+        "name": "plan_change",
+        "function": "app_v2.py:change_plan",
+        "steps": [
+          {
+            "kind": "begin",
+            "sql": null,
+            "params": {},
+            "bind_as": null,
+            "statement_id": null,
+            "removable": false
+          },
+          {
+            "kind": "sql",
+            "sql": "UPDATE accounts SET plan = %(plan)s, plan_changed_by = %(actor)s WHERE id = %(id)s",
+            "params": {
+              "plan": {
+                "name": "plan",
+                "source": "literal",
+                "value": "pro",
+                "bind": null,
+                "row": 0,
+                "column": null,
+                "transform": "none",
+                "operand": null
+              },
+              "actor": {
+                "name": "actor",
+                "source": "literal",
+                "value": "alice",
+                "bind": null,
+                "row": 0,
+                "column": null,
+                "transform": "none",
+                "operand": null
+              },
+              "id": {
+                "name": "id",
+                "source": "literal",
+                "value": 1,
+                "bind": null,
+                "row": 0,
+                "column": null,
+                "transform": "none",
+                "operand": null
+              }
+            },
+            "bind_as": null,
+            "statement_id": "app_v2.py:change_plan#0",
+            "removable": false
+          },
+          {
+            "kind": "commit",
+            "sql": null,
+            "params": {},
+            "bind_as": null,
+            "statement_id": null,
+            "removable": false
+          }
+        ]
+      }
+    ],
+    "invariants": [
+      {
+        "id": "inv-email",
+        "description": "email must be new value in all serial orders",
+        "kind": "column_equals",
+        "table": "accounts",
+        "key_column": "id",
+        "key_value": 1,
+        "column": "email",
+        "expected": [
+          "alice@new.example"
+        ],
+        "other_column": null
+      },
+      {
+        "id": "inv-plan",
+        "description": "plan must be pro in all serial orders; stale rewrite reverts to free",
+        "kind": "column_equals",
+        "table": "accounts",
+        "key_column": "id",
+        "key_value": 1,
+        "column": "plan",
+        "expected": [
+          "pro"
+        ],
+        "other_column": null
+      },
+      {
+        "id": "inv-actor",
+        "description": "actor recorded by plan change",
+        "kind": "column_equals",
+        "table": "accounts",
+        "key_column": "id",
+        "key_value": 1,
+        "column": "plan_changed_by",
+        "expected": [
+          "alice"
+        ],
+        "other_column": null
+      }
+    ],
+    "rationale": "Old release preserves plan via stale read; new release blind-writes plan. Interleaving SELECT(v1)->UPDATE(v2)->UPDATE(v1) loses v2 plan update while keeping v2 plan_changed_by, corrupting plan vs provenance."
+  },
+  "schedule": [
+    "email_change",
+    "email_change",
+    "plan_change",
+    "plan_change",
+    "plan_change",
+    "email_change",
+    "email_change"
+  ],
+  "seed": null,
+  "trace": {
+    "requested_schedule": [
+      "email_change",
+      "email_change",
+      "plan_change",
+      "plan_change",
+      "plan_change",
+      "email_change",
+      "email_change"
+    ],
+    "issue_order": [
+      "email_change",
+      "email_change",
+      "plan_change",
+      "plan_change",
+      "plan_change",
+      "email_change",
+      "email_change"
+    ],
+    "records": [
+      {
+        "seq": 0,
+        "actor": "email_change",
+        "step_index": 0,
+        "kind": "begin",
+        "function": "app_v1.py:change_email",
+        "statement_id": null,
+        "sql": "BEGIN",
+        "params": {},
+        "status": "ok",
+        "rowcount": -1,
+        "rows": null,
+        "command_tag": "BEGIN",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": null,
+        "commit_seq": null,
+        "durable_commit_seq": null
+      },
+      {
+        "seq": 1,
+        "actor": "email_change",
+        "step_index": 1,
+        "kind": "sql",
+        "function": "app_v1.py:change_email",
+        "statement_id": "app_v1.py:change_email#0",
+        "sql": "SELECT id, email, plan FROM accounts WHERE id = %(id)s",
+        "params": {
+          "id": 1
+        },
+        "status": "ok",
+        "rowcount": 1,
+        "rows": [
+          {
+            "id": 1,
+            "email": "alice@old.example",
+            "plan": "free"
+          }
+        ],
+        "command_tag": "SELECT 1",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": true,
+        "commit_seq": null,
+        "durable_commit_seq": 2
+      },
+      {
+        "seq": 2,
+        "actor": "plan_change",
+        "step_index": 0,
+        "kind": "begin",
+        "function": "app_v2.py:change_plan",
+        "statement_id": null,
+        "sql": "BEGIN",
+        "params": {},
+        "status": "ok",
+        "rowcount": -1,
+        "rows": null,
+        "command_tag": "BEGIN",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": null,
+        "commit_seq": null,
+        "durable_commit_seq": null
+      },
+      {
+        "seq": 3,
+        "actor": "plan_change",
+        "step_index": 1,
+        "kind": "sql",
+        "function": "app_v2.py:change_plan",
+        "statement_id": "app_v2.py:change_plan#0",
+        "sql": "UPDATE accounts SET plan = %(plan)s, plan_changed_by = %(actor)s WHERE id = %(id)s",
+        "params": {
+          "plan": "pro",
+          "actor": "alice",
+          "id": 1
+        },
+        "status": "ok",
+        "rowcount": 1,
+        "rows": null,
+        "command_tag": "UPDATE 1",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": true,
+        "commit_seq": null,
+        "durable_commit_seq": 1
+      },
+      {
+        "seq": 4,
+        "actor": "plan_change",
+        "step_index": 2,
+        "kind": "commit",
+        "function": "app_v2.py:change_plan",
+        "statement_id": null,
+        "sql": "COMMIT",
+        "params": {},
+        "status": "ok",
+        "rowcount": -1,
+        "rows": null,
+        "command_tag": "COMMIT",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": true,
+        "commit_seq": 1,
+        "durable_commit_seq": null
+      },
+      {
+        "seq": 5,
+        "actor": "email_change",
+        "step_index": 2,
+        "kind": "sql",
+        "function": "app_v1.py:change_email",
+        "statement_id": "app_v1.py:change_email#1",
+        "sql": "UPDATE accounts SET email = %(email)s, plan = %(plan)s WHERE id = %(id)s",
+        "params": {
+          "email": "alice@new.example",
+          "plan": "free",
+          "id": 1
+        },
+        "status": "ok",
+        "rowcount": 1,
+        "rows": null,
+        "command_tag": "UPDATE 1",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": true,
+        "commit_seq": null,
+        "durable_commit_seq": 2
+      },
+      {
+        "seq": 6,
+        "actor": "email_change",
+        "step_index": 3,
+        "kind": "commit",
+        "function": "app_v1.py:change_email",
+        "statement_id": null,
+        "sql": "COMMIT",
+        "params": {},
+        "status": "ok",
+        "rowcount": -1,
+        "rows": null,
+        "command_tag": "COMMIT",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": true,
+        "commit_seq": 2,
+        "durable_commit_seq": null
+      }
+    ],
+    "outcome": "completed",
+    "initial_state": {
+      "accounts": [
+        {
+          "id": 1,
+          "email": "alice@old.example",
+          "plan": "free",
+          "plan_changed_by": null
+        }
+      ]
+    },
+    "final_state": {
+      "accounts": [
+        {
+          "id": 1,
+          "email": "alice@new.example",
+          "plan": "free",
+          "plan_changed_by": "alice"
+        }
+      ]
+    },
+    "diagnostics": [],
+    "duration_ms": 7.68
+  },
+  "verdict": {
+    "classification": "true_violation",
+    "violations": [
+      {
+        "requirement_id": "BR-plan",
+        "requirement": "Saving an unrelated field from the old release must not undo a committed plan change.",
+        "table": "accounts",
+        "key": 1,
+        "column": "plan",
+        "expected": "pro",
+        "actual": "free",
+        "evidence": [
+          3,
+          5
+        ],
+        "explanation": "plan_change committed plan='pro' at step 3, but the final value is 'free'; later committed write by email_change (step 5)."
+      }
+    ],
+    "checked": [
+      "BR-plan",
+      "BR-email"
+    ],
+    "vacuous": [],
+    "assumptions": [
+      "Scheduling is at statement and transaction boundaries only; PostgreSQL-internal interleavings are not controlled.",
+      "Each schedule starts from freshly rebuilt schema and seed state.",
+      "A passing result covers only the schedules executed with these inputs; it is not a proof of correctness.",
+      "change_plan is the only source of intentional plan changes; change_email is never meant to alter plan."
+    ]
+  },
+  "fingerprint": "cebb245b53ae110bbfd4e8a72cba27649ea9e02978ff216ed6eb195591f657ef",
+  "provenance": {
+    "system": "ai",
+    "minimized_from": "results/benchmark/failures/dev/r2/mixed_version_overwrite_buggy__ai.json"
+  }
+}

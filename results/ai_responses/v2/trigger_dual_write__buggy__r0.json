@@ -1,0 +1,487 @@
+{
+  "prompt_version": "v2",
+  "prompt_sha256": "40e0b094dd692e90ae4ffd9afa9ad1616fad6f4869eba1cbdfb585d1fd1ec1be",
+  "model": "muse-spark-1.3",
+  "attempts": [
+    {
+      "kind": "initial",
+      "reply": {
+        "text": "{\"conflicts\": [{\"column\": \"email_normalized\", \"functions\": [\"app_v1.py:update_phone\", \"app_v2.py:set_normalized_email\"], \"risk_explanation\": \"update_phone fires unconditional BEFORE UPDATE trigger NEW.email_normalized:=lower(NEW.email). It rewrites normalized even when email is unchanged, discarding a plus-stripped canonical written by set_normalized_email on the same row. Different columns should both survive; trigger causes lost canonical.\", \"table\": \"customers\"}, {\"column\": \"email_normalized\", \"functions\": [\"app_v1.py:update_email\", \"app_v2.py:set_normalized_email\"], \"risk_explanation\": \"update_email trigger recomputes normalized as lower(email) keeping plus-tag, while set_normalized_email writes stripped canonical e.g. user@example.com from User+tag@Example.com. Unconditional trigger discards the explicit canonical write in the same statement and races with concurrent canonical write, leaving lower-with-plus instead of stripped value.\", \"table\": \"customers\"}, {\"column\": \"email_normalized\", \"functions\": [\"app_v1.py:update_phone\", \"app_v1.py:update_email\"], \"risk_explanation\": \"Both old-release writes fire the same unconditional trigger. A phone-only update recomputes normalized from old email as lower() with plus-tag, which can clobber a just-committed email move and leave normalized inconsistent with final email instead of tracking stripped canonical of final email.\", \"table\": \"customers\"}], \"operations\": [{\"function\": \"app_v1.py:update_phone\", \"summary\": \"Updates phone by id; fires trigger that unconditionally overwrites email_normalized with lower(email)\", \"tables_read\": [\"customers\"], \"tables_written\": [\"customers\"]}, {\"function\": \"app_v1.py:update_email\", \"summary\": \"Updates email by id; fires trigger that recomputes email_normalized as lower(email) without plus-tag stripping\", \"tables_read\": [\"customers\"], \"tables_written\": [\"customers\"]}, {\"function\": \"app_v2.py:set_normalized_email\", \"summary\": \"Writes stripped canonical email_normalized directly; trigger unconditionally overwrites it with lower(email)\", \"tables_read\": [\"customers\"], \"tables_written\": [\"customers\"]}], \"tests\": [{\"actors\": [{\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"phone\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"222-2222\"}, {\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v1.py:update_phone#0\"}], \"function\": \"app_v1.py:update_phone\", \"name\": \"phone_writer\"}, {\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"normalized\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"user@example.com\"}, {\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v2.py:set_normalized_email#0\"}], \"function\": \"app_v2.py:set_normalized_email\", \"name\": \"canon_writer\"}], \"invariants\": [{\"column\": \"phone\", \"description\": \"phone update should survive\", \"expected\": [\"222-2222\"], \"id\": \"t1_phone\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"customers\"}, {\"column\": \"email\", \"description\": \"email unchanged\", \"expected\": [\"User+tag@Example.com\"], \"id\": \"t1_email\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"customers\"}, {\"column\": \"email_normalized\", \"description\": \"stripped canonical should survive unrelated phone update\", \"expected\": [\"user@example.com\"], \"id\": \"t1_norm\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"customers\"}], \"name\": \"phone_vs_canonical_same_row\", \"rationale\": \"Old update_phone trigger sets normalized to lower(email) with plus-tag, clobbering new-release stripped canonical on same row. Both columns should survive; buggy code loses canonical.\", \"seed\": [{\"table\": \"customers\", \"values\": [{\"column\": \"id\", \"value\": 1}, {\"column\": \"email\", \"value\": \"User+tag@Example.com\"}, {\"column\": \"phone\", \"value\": \"111-1111\"}, {\"column\": \"email_normalized\", \"value\": \"user@example.com\"}]}]}, {\"actors\": [{\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"email\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"NewUser+promo@Example.com\"}, {\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v1.py:update_email#0\"}], \"function\": \"app_v1.py:update_email\", \"name\": \"email_writer\"}, {\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"normalized\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"newuser@example.com\"}, {\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v2.py:set_normalized_email#0\"}], \"function\": \"app_v2.py:set_normalized_email\", \"name\": \"canon_writer\"}], \"invariants\": [{\"column\": \"email\", \"description\": \"final email is new plus-address\", \"expected\": [\"NewUser+promo@Example.com\"], \"id\": \"t2_email\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"customers\"}, {\"column\": \"email_normalized\", \"description\": \"final normalized is stripped canonical of new email\", \"expected\": [\"newuser@example.com\"], \"id\": \"t2_norm\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"customers\"}, {\"column\": \"phone\", \"description\": \"phone unchanged\", \"expected\": [\"555-0000\"], \"id\": \"t2_phone\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"customers\"}], \"name\": \"email_vs_canonical_consistent_pair\", \"rationale\": \"Email and canonical writers agree on new address. Correct code ends with email plus-address and stripped canonical regardless of order; buggy lower() trigger leaves plus-tag or discards explicit canonical.\", \"seed\": [{\"table\": \"customers\", \"values\": [{\"column\": \"id\", \"value\": 1}, {\"column\": \"email\", \"value\": \"old@example.com\"}, {\"column\": \"phone\", \"value\": \"555-0000\"}, {\"column\": \"email_normalized\", \"value\": \"old@example.com\"}]}]}, {\"actors\": [{\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"phone\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"222-0000\"}, {\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v1.py:update_phone#0\"}], \"function\": \"app_v1.py:update_phone\", \"name\": \"phone_writer\"}, {\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"email\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"Bob+spam@Example.com\"}, {\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v1.py:update_email#0\"}], \"function\": \"app_v1.py:update_email\", \"name\": \"email_writer\"}], \"invariants\": [{\"column\": \"phone\", \"description\": \"phone update survives\", \"expected\": [\"222-0000\"], \"id\": \"t3_phone\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"customers\"}, {\"column\": \"email\", \"description\": \"email update survives\", \"expected\": [\"Bob+spam@Example.com\"], \"id\": \"t3_email\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"customers\"}, {\"column\": \"email_normalized\", \"description\": \"normalized tracks stripped canonical of final email\", \"expected\": [\"bob@example.com\"], \"id\": \"t3_norm\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"customers\"}], \"name\": \"phone_vs_email_tracking\", \"rationale\": \"Concurrent phone and email updates to same row should both survive with normalized as stripped canonical of final email. Unconditional lower() trigger produces plus-tag value and phone update can overwrite email's normalized mapping.\", \"seed\": [{\"table\": \"customers\", \"values\": [{\"column\": \"id\", \"value\": 1}, {\"column\": \"email\", \"value\": \"Alice@Example.com\"}, {\"column\": \"phone\", \"value\": \"111-0000\"}, {\"column\": \"email_normalized\", \"value\": \"alice@example.com\"}]}]}]}",
+        "status": "completed",
+        "latency_seconds": 55.874,
+        "input_tokens": 1911,
+        "output_tokens": 14520,
+        "reasoning_tokens": 12200,
+        "approx_cost_usd": 0.064099
+      },
+      "parse_error": null
+    }
+  ],
+  "output": {
+    "operations": [
+      {
+        "function": "app_v1.py:update_phone",
+        "summary": "Updates phone by id; fires trigger that unconditionally overwrites email_normalized with lower(email)",
+        "tables_read": [
+          "customers"
+        ],
+        "tables_written": [
+          "customers"
+        ]
+      },
+      {
+        "function": "app_v1.py:update_email",
+        "summary": "Updates email by id; fires trigger that recomputes email_normalized as lower(email) without plus-tag stripping",
+        "tables_read": [
+          "customers"
+        ],
+        "tables_written": [
+          "customers"
+        ]
+      },
+      {
+        "function": "app_v2.py:set_normalized_email",
+        "summary": "Writes stripped canonical email_normalized directly; trigger unconditionally overwrites it with lower(email)",
+        "tables_read": [
+          "customers"
+        ],
+        "tables_written": [
+          "customers"
+        ]
+      }
+    ],
+    "conflicts": [
+      {
+        "functions": [
+          "app_v1.py:update_phone",
+          "app_v2.py:set_normalized_email"
+        ],
+        "table": "customers",
+        "column": "email_normalized",
+        "risk_explanation": "update_phone fires unconditional BEFORE UPDATE trigger NEW.email_normalized:=lower(NEW.email). It rewrites normalized even when email is unchanged, discarding a plus-stripped canonical written by set_normalized_email on the same row. Different columns should both survive; trigger causes lost canonical."
+      },
+      {
+        "functions": [
+          "app_v1.py:update_email",
+          "app_v2.py:set_normalized_email"
+        ],
+        "table": "customers",
+        "column": "email_normalized",
+        "risk_explanation": "update_email trigger recomputes normalized as lower(email) keeping plus-tag, while set_normalized_email writes stripped canonical e.g. user@example.com from User+tag@Example.com. Unconditional trigger discards the explicit canonical write in the same statement and races with concurrent canonical write, leaving lower-with-plus instead of stripped value."
+      },
+      {
+        "functions": [
+          "app_v1.py:update_phone",
+          "app_v1.py:update_email"
+        ],
+        "table": "customers",
+        "column": "email_normalized",
+        "risk_explanation": "Both old-release writes fire the same unconditional trigger. A phone-only update recomputes normalized from old email as lower() with plus-tag, which can clobber a just-committed email move and leave normalized inconsistent with final email instead of tracking stripped canonical of final email."
+      }
+    ],
+    "tests": [
+      {
+        "name": "phone_vs_canonical_same_row",
+        "rationale": "Old update_phone trigger sets normalized to lower(email) with plus-tag, clobbering new-release stripped canonical on same row. Both columns should survive; buggy code loses canonical.",
+        "seed": [
+          {
+            "table": "customers",
+            "values": [
+              {
+                "column": "id",
+                "value": 1
+              },
+              {
+                "column": "email",
+                "value": "User+tag@Example.com"
+              },
+              {
+                "column": "phone",
+                "value": "111-1111"
+              },
+              {
+                "column": "email_normalized",
+                "value": "user@example.com"
+              }
+            ]
+          }
+        ],
+        "actors": [
+          {
+            "name": "phone_writer",
+            "function": "app_v1.py:update_phone",
+            "calls": [
+              {
+                "statement_id": "app_v1.py:update_phone#0",
+                "params": [
+                  {
+                    "name": "phone",
+                    "source": "literal",
+                    "value": "222-2222",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          },
+          {
+            "name": "canon_writer",
+            "function": "app_v2.py:set_normalized_email",
+            "calls": [
+              {
+                "statement_id": "app_v2.py:set_normalized_email#0",
+                "params": [
+                  {
+                    "name": "normalized",
+                    "source": "literal",
+                    "value": "user@example.com",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          }
+        ],
+        "invariants": [
+          {
+            "id": "t1_phone",
+            "description": "phone update should survive",
+            "kind": "column_equals",
+            "table": "customers",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "phone",
+            "expected": [
+              "222-2222"
+            ],
+            "other_column": null
+          },
+          {
+            "id": "t1_email",
+            "description": "email unchanged",
+            "kind": "column_equals",
+            "table": "customers",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "email",
+            "expected": [
+              "User+tag@Example.com"
+            ],
+            "other_column": null
+          },
+          {
+            "id": "t1_norm",
+            "description": "stripped canonical should survive unrelated phone update",
+            "kind": "column_equals",
+            "table": "customers",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "email_normalized",
+            "expected": [
+              "user@example.com"
+            ],
+            "other_column": null
+          }
+        ]
+      },
+      {
+        "name": "email_vs_canonical_consistent_pair",
+        "rationale": "Email and canonical writers agree on new address. Correct code ends with email plus-address and stripped canonical regardless of order; buggy lower() trigger leaves plus-tag or discards explicit canonical.",
+        "seed": [
+          {
+            "table": "customers",
+            "values": [
+              {
+                "column": "id",
+                "value": 1
+              },
+              {
+                "column": "email",
+                "value": "old@example.com"
+              },
+              {
+                "column": "phone",
+                "value": "555-0000"
+              },
+              {
+                "column": "email_normalized",
+                "value": "old@example.com"
+              }
+            ]
+          }
+        ],
+        "actors": [
+          {
+            "name": "email_writer",
+            "function": "app_v1.py:update_email",
+            "calls": [
+              {
+                "statement_id": "app_v1.py:update_email#0",
+                "params": [
+                  {
+                    "name": "email",
+                    "source": "literal",
+                    "value": "NewUser+promo@Example.com",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          },
+          {
+            "name": "canon_writer",
+            "function": "app_v2.py:set_normalized_email",
+            "calls": [
+              {
+                "statement_id": "app_v2.py:set_normalized_email#0",
+                "params": [
+                  {
+                    "name": "normalized",
+                    "source": "literal",
+                    "value": "newuser@example.com",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          }
+        ],
+        "invariants": [
+          {
+            "id": "t2_email",
+            "description": "final email is new plus-address",
+            "kind": "column_equals",
+            "table": "customers",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "email",
+            "expected": [
+              "NewUser+promo@Example.com"
+            ],
+            "other_column": null
+          },
+          {
+            "id": "t2_norm",
+            "description": "final normalized is stripped canonical of new email",
+            "kind": "column_equals",
+            "table": "customers",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "email_normalized",
+            "expected": [
+              "newuser@example.com"
+            ],
+            "other_column": null
+          },
+          {
+            "id": "t2_phone",
+            "description": "phone unchanged",
+            "kind": "column_equals",
+            "table": "customers",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "phone",
+            "expected": [
+              "555-0000"
+            ],
+            "other_column": null
+          }
+        ]
+      },
+      {
+        "name": "phone_vs_email_tracking",
+        "rationale": "Concurrent phone and email updates to same row should both survive with normalized as stripped canonical of final email. Unconditional lower() trigger produces plus-tag value and phone update can overwrite email's normalized mapping.",
+        "seed": [
+          {
+            "table": "customers",
+            "values": [
+              {
+                "column": "id",
+                "value": 1
+              },
+              {
+                "column": "email",
+                "value": "Alice@Example.com"
+              },
+              {
+                "column": "phone",
+                "value": "111-0000"
+              },
+              {
+                "column": "email_normalized",
+                "value": "alice@example.com"
+              }
+            ]
+          }
+        ],
+        "actors": [
+          {
+            "name": "phone_writer",
+            "function": "app_v1.py:update_phone",
+            "calls": [
+              {
+                "statement_id": "app_v1.py:update_phone#0",
+                "params": [
+                  {
+                    "name": "phone",
+                    "source": "literal",
+                    "value": "222-0000",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          },
+          {
+            "name": "email_writer",
+            "function": "app_v1.py:update_email",
+            "calls": [
+              {
+                "statement_id": "app_v1.py:update_email#0",
+                "params": [
+                  {
+                    "name": "email",
+                    "source": "literal",
+                    "value": "Bob+spam@Example.com",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          }
+        ],
+        "invariants": [
+          {
+            "id": "t3_phone",
+            "description": "phone update survives",
+            "kind": "column_equals",
+            "table": "customers",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "phone",
+            "expected": [
+              "222-0000"
+            ],
+            "other_column": null
+          },
+          {
+            "id": "t3_email",
+            "description": "email update survives",
+            "kind": "column_equals",
+            "table": "customers",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "email",
+            "expected": [
+              "Bob+spam@Example.com"
+            ],
+            "other_column": null
+          },
+          {
+            "id": "t3_norm",
+            "description": "normalized tracks stripped canonical of final email",
+            "kind": "column_equals",
+            "table": "customers",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "email_normalized",
+            "expected": [
+              "bob@example.com"
+            ],
+            "other_column": null
+          }
+        ]
+      }
+    ]
+  }
+}

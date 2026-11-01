@@ -1,0 +1,21 @@
+{
+  "title": "Sync trigger clobbers a value written by the new release",
+  "split": "heldout",
+  "description": "A compatibility trigger derives a new column while the new release writes that column directly.",
+  "requirements": [
+    {
+      "id": "BR-normalized",
+      "text": "email_normalized must hold the newest committed intent: the new release's explicit value, or the lowercased email after an email change.",
+      "kind": "authoritative_write_preserved",
+      "table": "customers", "key_column": "id", "column": "email_normalized",
+      "writers": [
+        {"function": "app_v2.py:set_normalized_email", "key_param": "id", "value_param": "normalized"},
+        {"function": "app_v1.py:update_email", "key_param": "id", "value_param": "email", "value_transform": "lower"}
+      ],
+      "assumptions": [
+        "An email change supersedes an earlier explicit normalized value.",
+        "A no-op email change (same value as stored) is outside this reference model."
+      ]
+    }
+  ]
+}

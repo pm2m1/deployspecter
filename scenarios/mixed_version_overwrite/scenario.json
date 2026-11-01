@@ -1,0 +1,22 @@
+{
+  "title": "Old release saves a whole record over a new release's update",
+  "split": "dev",
+  "description": "During a rolling deploy, the old release loads a record and saves every column back while the new release changes one of them.",
+  "requirements": [
+    {
+      "id": "BR-plan",
+      "text": "Saving an unrelated field from the old release must not undo a committed plan change.",
+      "kind": "authoritative_write_preserved",
+      "table": "accounts", "key_column": "id", "column": "plan",
+      "writers": [{"function": "app_v2.py:change_plan", "key_param": "id", "value_param": "plan"}],
+      "assumptions": ["change_plan is the only source of intentional plan changes; change_email is never meant to alter plan."]
+    },
+    {
+      "id": "BR-email",
+      "text": "A committed email change must be preserved.",
+      "kind": "authoritative_write_preserved",
+      "table": "accounts", "key_column": "id", "column": "email",
+      "writers": [{"function": "app_v1.py:change_email", "key_param": "id", "value_param": "email"}]
+    }
+  ]
+}

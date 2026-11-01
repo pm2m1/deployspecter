@@ -1,0 +1,15 @@
+{
+  "title": "Copy job resurrects a deleted user",
+  "split": "heldout",
+  "description": "A job copies users to a new table while the new release deletes users from both.",
+  "requirements": [
+    {
+      "id": "BR-stay-deleted",
+      "text": "A user whose deletion committed must not become live again.",
+      "kind": "tombstone_preserved",
+      "table": "users_v2", "key_column": "id", "column": "deleted_at",
+      "writers": [{"function": "app_v2.py:delete_user", "key_param": "id"}],
+      "assumptions": ["No flow in this release legitimately restores a deleted user."]
+    }
+  ]
+}

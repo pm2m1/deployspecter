@@ -1,0 +1,611 @@
+{
+  "prompt_version": "v2",
+  "prompt_sha256": "8e63539d8be24a01648acf672fbe421508a6700c593bfbb40fa0cd3eb9225b69",
+  "model": "muse-spark-1.3",
+  "attempts": [
+    {
+      "kind": "initial",
+      "reply": {
+        "text": "{\"conflicts\": [{\"column\": \"deleted_at\", \"functions\": [\"app_v2.py:delete_user\", \"copy_job.py:copy_users\"], \"risk_explanation\": \"delete_user tombstones by setting deleted_at=now() while copy_users upsert unconditionally sets deleted_at=NULL. A copy that SELECTs before the DELETE but INSERTs after the tombstone clears it and resurrects the deleted row in users_v2.\", \"table\": \"users_v2\"}, {\"column\": \"email\", \"functions\": [\"app_v2.py:delete_user\", \"copy_job.py:copy_users\"], \"risk_explanation\": \"delete_user ON CONFLICT updates only deleted_at and never email, while copy_users overwrites email. Interleavings can leave a tombstone with stale email or let a stale copy overwrite the tombstone email while resurrecting the row.\", \"table\": \"users_v2\"}, {\"column\": \"email\", \"functions\": [\"app_v1.py:update_email\", \"copy_job.py:copy_users\"], \"risk_explanation\": \"update_email writes only users.email while copy_users reads users.email into users_v2. A concurrent SELECT can read stale email and the later per-row INSERT overwrites fresher state, leaving users_v2 stale.\", \"table\": \"users\"}], \"operations\": [{\"function\": \"app_v1.py:update_email\", \"summary\": \"old release updates email in users only\", \"tables_read\": [\"users\"], \"tables_written\": [\"users\"]}, {\"function\": \"app_v2.py:delete_user\", \"summary\": \"new release tombstones in users_v2 then deletes from users\", \"tables_read\": [\"users\", \"users_v2\"], \"tables_written\": [\"users\", \"users_v2\"]}, {\"function\": \"copy_job.py:copy_users\", \"summary\": \"backfill reads users and upserts into users_v2 clearing deleted_at\", \"tables_read\": [\"users\"], \"tables_written\": [\"users_v2\"]}], \"tests\": [{\"actors\": [{\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}, {\"bind\": null, \"column\": null, \"name\": \"email\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"a@example.com\"}], \"statement_id\": \"app_v2.py:delete_user#0\"}, {\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v2.py:delete_user#1\"}], \"function\": \"app_v2.py:delete_user\", \"name\": \"deleter\"}, {\"calls\": [{\"bind_as\": \"r\", \"params\": [{\"bind\": null, \"column\": null, \"name\": \"limit\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"copy_job.py:copy_users#0\"}, {\"bind_as\": null, \"params\": [{\"bind\": \"r\", \"column\": \"id\", \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}, {\"bind\": \"r\", \"column\": \"email\", \"name\": \"email\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}], \"statement_id\": \"copy_job.py:copy_users#1\"}], \"function\": \"copy_job.py:copy_users\", \"name\": \"copier\"}], \"invariants\": [{\"column\": null, \"description\": \"deleted user must stay deleted in users\", \"expected\": [], \"id\": \"users-gone\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"row_absent\", \"other_column\": null, \"table\": \"users\"}, {\"column\": \"deleted_at\", \"description\": \"deleted user must stay tombstoned in users_v2\", \"expected\": [], \"id\": \"tombstone-kept\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_not_null\", \"other_column\": null, \"table\": \"users_v2\"}], \"name\": \"delete_vs_copy_resurrection\", \"rationale\": \"copy SELECT with LIMIT 1 sees id=1 before delete removes it, then its INSERT ... deleted_at=NULL runs after delete tombstone INSERT, clearing deleted_at and resurrecting the row. LIMIT 1 keeps SELECT cardinality 1 whether it sees id=1 or id=2.\", \"seed\": [{\"table\": \"users\", \"values\": [{\"column\": \"id\", \"value\": 1}, {\"column\": \"email\", \"value\": \"a@example.com\"}]}, {\"table\": \"users\", \"values\": [{\"column\": \"id\", \"value\": 2}, {\"column\": \"email\", \"value\": \"b@example.com\"}]}]}, {\"actors\": [{\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"email\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"updated@example.com\"}, {\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v1.py:update_email#0\"}], \"function\": \"app_v1.py:update_email\", \"name\": \"updater\"}, {\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}, {\"bind\": null, \"column\": null, \"name\": \"email\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"updated@example.com\"}], \"statement_id\": \"app_v2.py:delete_user#0\"}, {\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v2.py:delete_user#1\"}], \"function\": \"app_v2.py:delete_user\", \"name\": \"deleter\"}, {\"calls\": [{\"bind_as\": \"r\", \"params\": [{\"bind\": null, \"column\": null, \"name\": \"limit\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"copy_job.py:copy_users#0\"}, {\"bind_as\": null, \"params\": [{\"bind\": \"r\", \"column\": \"id\", \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}, {\"bind\": \"r\", \"column\": \"email\", \"name\": \"email\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}], \"statement_id\": \"copy_job.py:copy_users#1\"}], \"function\": \"copy_job.py:copy_users\", \"name\": \"copier\"}], \"invariants\": [{\"column\": null, \"description\": \"deleted user must stay deleted in users despite concurrent v1 update\", \"expected\": [], \"id\": \"users-gone\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"row_absent\", \"other_column\": null, \"table\": \"users\"}, {\"column\": \"deleted_at\", \"description\": \"deleted user must stay tombstoned despite backfill\", \"expected\": [], \"id\": \"tombstone-kept\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_not_null\", \"other_column\": null, \"table\": \"users_v2\"}], \"name\": \"rollout_update_delete_copy\", \"rationale\": \"models rolling deployment with old release, new release and backfill together on same id. Stale copy read of old or updated email followed by INSERT after tombstone clears deleted_at, losing the delete.\", \"seed\": [{\"table\": \"users\", \"values\": [{\"column\": \"id\", \"value\": 1}, {\"column\": \"email\", \"value\": \"old@example.com\"}]}, {\"table\": \"users\", \"values\": [{\"column\": \"id\", \"value\": 2}, {\"column\": \"email\", \"value\": \"b@example.com\"}]}]}, {\"actors\": [{\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}, {\"bind\": null, \"column\": null, \"name\": \"email\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"fresh@example.com\"}], \"statement_id\": \"app_v2.py:delete_user#0\"}, {\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v2.py:delete_user#1\"}], \"function\": \"app_v2.py:delete_user\", \"name\": \"deleter\"}, {\"calls\": [{\"bind_as\": \"r\", \"params\": [{\"bind\": null, \"column\": null, \"name\": \"limit\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"copy_job.py:copy_users#0\"}, {\"bind_as\": null, \"params\": [{\"bind\": \"r\", \"column\": \"id\", \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}, {\"bind\": \"r\", \"column\": \"email\", \"name\": \"email\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}], \"statement_id\": \"copy_job.py:copy_users#1\"}], \"function\": \"copy_job.py:copy_users\", \"name\": \"copier\"}], \"invariants\": [{\"column\": null, \"description\": \"deleted user must stay deleted in users\", \"expected\": [], \"id\": \"users-gone\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"row_absent\", \"other_column\": null, \"table\": \"users\"}, {\"column\": \"deleted_at\", \"description\": \"deleted user must stay tombstoned\", \"expected\": [], \"id\": \"tombstone-kept\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_not_null\", \"other_column\": null, \"table\": \"users_v2\"}, {\"column\": \"email\", \"description\": \"tombstone should carry latest email, delete must update email on conflict\", \"expected\": [\"fresh@example.com\"], \"id\": \"tombstone-email\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"users_v2\"}], \"name\": \"stale_v2_email_and_resurrection\", \"rationale\": \"users_v2 starts with stale email. Correct delete should overwrite email even on conflict and stay tombstoned. Buggy delete leaves stale email when copy misses id=1, and buggy copy clears tombstone when its stale read INSERTs after tombstone.\", \"seed\": [{\"table\": \"users\", \"values\": [{\"column\": \"id\", \"value\": 1}, {\"column\": \"email\", \"value\": \"fresh@example.com\"}]}, {\"table\": \"users\", \"values\": [{\"column\": \"id\", \"value\": 2}, {\"column\": \"email\", \"value\": \"other@example.com\"}]}, {\"table\": \"users_v2\", \"values\": [{\"column\": \"id\", \"value\": 1}, {\"column\": \"email\", \"value\": \"stale@example.com\"}, {\"column\": \"deleted_at\", \"value\": null}]}]}]}",
+        "status": "completed",
+        "latency_seconds": 80.584,
+        "input_tokens": 2164,
+        "output_tokens": 17510,
+        "reasoning_tokens": 14728,
+        "approx_cost_usd": 0.077123
+      },
+      "parse_error": null
+    }
+  ],
+  "output": {
+    "operations": [
+      {
+        "function": "app_v1.py:update_email",
+        "summary": "old release updates email in users only",
+        "tables_read": [
+          "users"
+        ],
+        "tables_written": [
+          "users"
+        ]
+      },
+      {
+        "function": "app_v2.py:delete_user",
+        "summary": "new release tombstones in users_v2 then deletes from users",
+        "tables_read": [
+          "users",
+          "users_v2"
+        ],
+        "tables_written": [
+          "users",
+          "users_v2"
+        ]
+      },
+      {
+        "function": "copy_job.py:copy_users",
+        "summary": "backfill reads users and upserts into users_v2 clearing deleted_at",
+        "tables_read": [
+          "users"
+        ],
+        "tables_written": [
+          "users_v2"
+        ]
+      }
+    ],
+    "conflicts": [
+      {
+        "functions": [
+          "app_v2.py:delete_user",
+          "copy_job.py:copy_users"
+        ],
+        "table": "users_v2",
+        "column": "deleted_at",
+        "risk_explanation": "delete_user tombstones by setting deleted_at=now() while copy_users upsert unconditionally sets deleted_at=NULL. A copy that SELECTs before the DELETE but INSERTs after the tombstone clears it and resurrects the deleted row in users_v2."
+      },
+      {
+        "functions": [
+          "app_v2.py:delete_user",
+          "copy_job.py:copy_users"
+        ],
+        "table": "users_v2",
+        "column": "email",
+        "risk_explanation": "delete_user ON CONFLICT updates only deleted_at and never email, while copy_users overwrites email. Interleavings can leave a tombstone with stale email or let a stale copy overwrite the tombstone email while resurrecting the row."
+      },
+      {
+        "functions": [
+          "app_v1.py:update_email",
+          "copy_job.py:copy_users"
+        ],
+        "table": "users",
+        "column": "email",
+        "risk_explanation": "update_email writes only users.email while copy_users reads users.email into users_v2. A concurrent SELECT can read stale email and the later per-row INSERT overwrites fresher state, leaving users_v2 stale."
+      }
+    ],
+    "tests": [
+      {
+        "name": "delete_vs_copy_resurrection",
+        "rationale": "copy SELECT with LIMIT 1 sees id=1 before delete removes it, then its INSERT ... deleted_at=NULL runs after delete tombstone INSERT, clearing deleted_at and resurrecting the row. LIMIT 1 keeps SELECT cardinality 1 whether it sees id=1 or id=2.",
+        "seed": [
+          {
+            "table": "users",
+            "values": [
+              {
+                "column": "id",
+                "value": 1
+              },
+              {
+                "column": "email",
+                "value": "a@example.com"
+              }
+            ]
+          },
+          {
+            "table": "users",
+            "values": [
+              {
+                "column": "id",
+                "value": 2
+              },
+              {
+                "column": "email",
+                "value": "b@example.com"
+              }
+            ]
+          }
+        ],
+        "actors": [
+          {
+            "name": "deleter",
+            "function": "app_v2.py:delete_user",
+            "calls": [
+              {
+                "statement_id": "app_v2.py:delete_user#0",
+                "params": [
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "email",
+                    "source": "literal",
+                    "value": "a@example.com",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              },
+              {
+                "statement_id": "app_v2.py:delete_user#1",
+                "params": [
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          },
+          {
+            "name": "copier",
+            "function": "copy_job.py:copy_users",
+            "calls": [
+              {
+                "statement_id": "copy_job.py:copy_users#0",
+                "params": [
+                  {
+                    "name": "limit",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": "r"
+              },
+              {
+                "statement_id": "copy_job.py:copy_users#1",
+                "params": [
+                  {
+                    "name": "id",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "r",
+                    "row": 0,
+                    "column": "id",
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "email",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "r",
+                    "row": 0,
+                    "column": "email",
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          }
+        ],
+        "invariants": [
+          {
+            "id": "users-gone",
+            "description": "deleted user must stay deleted in users",
+            "kind": "row_absent",
+            "table": "users",
+            "key_column": "id",
+            "key_value": 1,
+            "column": null,
+            "expected": [],
+            "other_column": null
+          },
+          {
+            "id": "tombstone-kept",
+            "description": "deleted user must stay tombstoned in users_v2",
+            "kind": "column_not_null",
+            "table": "users_v2",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "deleted_at",
+            "expected": [],
+            "other_column": null
+          }
+        ]
+      },
+      {
+        "name": "rollout_update_delete_copy",
+        "rationale": "models rolling deployment with old release, new release and backfill together on same id. Stale copy read of old or updated email followed by INSERT after tombstone clears deleted_at, losing the delete.",
+        "seed": [
+          {
+            "table": "users",
+            "values": [
+              {
+                "column": "id",
+                "value": 1
+              },
+              {
+                "column": "email",
+                "value": "old@example.com"
+              }
+            ]
+          },
+          {
+            "table": "users",
+            "values": [
+              {
+                "column": "id",
+                "value": 2
+              },
+              {
+                "column": "email",
+                "value": "b@example.com"
+              }
+            ]
+          }
+        ],
+        "actors": [
+          {
+            "name": "updater",
+            "function": "app_v1.py:update_email",
+            "calls": [
+              {
+                "statement_id": "app_v1.py:update_email#0",
+                "params": [
+                  {
+                    "name": "email",
+                    "source": "literal",
+                    "value": "updated@example.com",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          },
+          {
+            "name": "deleter",
+            "function": "app_v2.py:delete_user",
+            "calls": [
+              {
+                "statement_id": "app_v2.py:delete_user#0",
+                "params": [
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "email",
+                    "source": "literal",
+                    "value": "updated@example.com",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              },
+              {
+                "statement_id": "app_v2.py:delete_user#1",
+                "params": [
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          },
+          {
+            "name": "copier",
+            "function": "copy_job.py:copy_users",
+            "calls": [
+              {
+                "statement_id": "copy_job.py:copy_users#0",
+                "params": [
+                  {
+                    "name": "limit",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": "r"
+              },
+              {
+                "statement_id": "copy_job.py:copy_users#1",
+                "params": [
+                  {
+                    "name": "id",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "r",
+                    "row": 0,
+                    "column": "id",
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "email",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "r",
+                    "row": 0,
+                    "column": "email",
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          }
+        ],
+        "invariants": [
+          {
+            "id": "users-gone",
+            "description": "deleted user must stay deleted in users despite concurrent v1 update",
+            "kind": "row_absent",
+            "table": "users",
+            "key_column": "id",
+            "key_value": 1,
+            "column": null,
+            "expected": [],
+            "other_column": null
+          },
+          {
+            "id": "tombstone-kept",
+            "description": "deleted user must stay tombstoned despite backfill",
+            "kind": "column_not_null",
+            "table": "users_v2",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "deleted_at",
+            "expected": [],
+            "other_column": null
+          }
+        ]
+      },
+      {
+        "name": "stale_v2_email_and_resurrection",
+        "rationale": "users_v2 starts with stale email. Correct delete should overwrite email even on conflict and stay tombstoned. Buggy delete leaves stale email when copy misses id=1, and buggy copy clears tombstone when its stale read INSERTs after tombstone.",
+        "seed": [
+          {
+            "table": "users",
+            "values": [
+              {
+                "column": "id",
+                "value": 1
+              },
+              {
+                "column": "email",
+                "value": "fresh@example.com"
+              }
+            ]
+          },
+          {
+            "table": "users",
+            "values": [
+              {
+                "column": "id",
+                "value": 2
+              },
+              {
+                "column": "email",
+                "value": "other@example.com"
+              }
+            ]
+          },
+          {
+            "table": "users_v2",
+            "values": [
+              {
+                "column": "id",
+                "value": 1
+              },
+              {
+                "column": "email",
+                "value": "stale@example.com"
+              },
+              {
+                "column": "deleted_at",
+                "value": null
+              }
+            ]
+          }
+        ],
+        "actors": [
+          {
+            "name": "deleter",
+            "function": "app_v2.py:delete_user",
+            "calls": [
+              {
+                "statement_id": "app_v2.py:delete_user#0",
+                "params": [
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "email",
+                    "source": "literal",
+                    "value": "fresh@example.com",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              },
+              {
+                "statement_id": "app_v2.py:delete_user#1",
+                "params": [
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          },
+          {
+            "name": "copier",
+            "function": "copy_job.py:copy_users",
+            "calls": [
+              {
+                "statement_id": "copy_job.py:copy_users#0",
+                "params": [
+                  {
+                    "name": "limit",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": "r"
+              },
+              {
+                "statement_id": "copy_job.py:copy_users#1",
+                "params": [
+                  {
+                    "name": "id",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "r",
+                    "row": 0,
+                    "column": "id",
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "email",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "r",
+                    "row": 0,
+                    "column": "email",
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          }
+        ],
+        "invariants": [
+          {
+            "id": "users-gone",
+            "description": "deleted user must stay deleted in users",
+            "kind": "row_absent",
+            "table": "users",
+            "key_column": "id",
+            "key_value": 1,
+            "column": null,
+            "expected": [],
+            "other_column": null
+          },
+          {
+            "id": "tombstone-kept",
+            "description": "deleted user must stay tombstoned",
+            "kind": "column_not_null",
+            "table": "users_v2",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "deleted_at",
+            "expected": [],
+            "other_column": null
+          },
+          {
+            "id": "tombstone-email",
+            "description": "tombstone should carry latest email, delete must update email on conflict",
+            "kind": "column_equals",
+            "table": "users_v2",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "email",
+            "expected": [
+              "fresh@example.com"
+            ],
+            "other_column": null
+          }
+        ]
+      }
+    ]
+  }
+}

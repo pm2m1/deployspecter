@@ -1,0 +1,10 @@
+{"name":"hand: resync vs credit","seed":[{"table":"wallets","values":[{"column":"id","value":1},{"column":"balance_dollars","value":10}]}],
+ "actors":[
+  {"name":"resync","function":"resync.py:resync_balances","calls":[
+    {"statement_id":"resync.py:resync_balances#0","bind_as":"rows","params":[{"name":"limit","source":"literal","value":10}]},
+    {"statement_id":"resync.py:resync_balances#1","params":[
+      {"name":"cents","source":"row_ref","bind":"rows","column":"balance_dollars","transform":"multiply","operand":100},
+      {"name":"id","source":"row_ref","bind":"rows","column":"id"}]}]},
+  {"name":"credit","function":"app_v2.py:credit","calls":[
+    {"statement_id":"app_v2.py:credit#0","params":[
+      {"name":"amount_cents","source":"literal","value":500},{"name":"id","source":"literal","value":1}]}]}]}

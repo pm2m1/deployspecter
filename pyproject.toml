@@ -1,0 +1,45 @@
+[project]
+name = "deployspecter"
+version = "0.1.0"
+description = "Finds and reproduces data corruption from rolling database migrations on real PostgreSQL."
+readme = "README.md"
+authors = [
+    { name = "Parth Mishra", email = "205018893+pm2m1@users.noreply.github.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.162.0",
+    "openai>=3.42.0",
+    "psycopg[binary]>=3.3.6",
+    "pydantic>=2.14.2",
+    "python-dotenv>=1.2.4",
+    "uvicorn>=0.54.0",
+]
+
+[project.scripts]
+deployspecter = "deployspecter:main"
+
+[build-system]
+requires = ["uv_build>=0.12.9,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "hypothesis>=6.170.14",
+    "pytest>=9.2.0",
+    "pytest-asyncio>=1.4.1",
+    "ruff>=0.17.3",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["live: calls the paid Meta Model API; run explicitly with -m live"]
+addopts = "-m 'not live'"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff]
+line-length = 120
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]

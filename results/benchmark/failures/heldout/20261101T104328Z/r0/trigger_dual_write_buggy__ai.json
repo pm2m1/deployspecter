@@ -1,0 +1,422 @@
+{
+  "schema_version": 1,
+  "case_id": "trigger_dual_write/buggy",
+  "setup_sql": "CREATE TABLE customers (\n    id    integer PRIMARY KEY,\n    email text NOT NULL,\n    phone text\n);\n\nALTER TABLE customers ADD COLUMN email_normalized text;\n\nCREATE FUNCTION sync_email_normalized() RETURNS trigger AS $$\nBEGIN\n    NEW.email_normalized := lower(NEW.email);\n    RETURN NEW;\nEND;\n$$ LANGUAGE plpgsql;\n\nCREATE TRIGGER customers_sync_email BEFORE UPDATE ON customers\n    FOR EACH ROW EXECUTE FUNCTION sync_email_normalized();\n",
+  "requirements": [
+    {
+      "id": "BR-normalized",
+      "text": "email_normalized must hold the newest committed intent: the new release's explicit value, or the lowercased email after an email change.",
+      "kind": "authoritative_write_preserved",
+      "table": "customers",
+      "key_column": "id",
+      "column": "email_normalized",
+      "writers": [
+        {
+          "function": "app_v2.py:set_normalized_email",
+          "key_param": "id",
+          "value_param": "normalized",
+          "value_transform": "none"
+        },
+        {
+          "function": "app_v1.py:update_email",
+          "key_param": "id",
+          "value_param": "email",
+          "value_transform": "lower"
+        }
+      ],
+      "base_column": null,
+      "base_multiplier": 1.0,
+      "assumptions": [
+        "An email change supersedes an earlier explicit normalized value.",
+        "A no-op email change (same value as stored) is outside this reference model."
+      ]
+    }
+  ],
+  "spec": {
+    "name": "phone_vs_canonical_same_row",
+    "generator": "ai",
+    "seed": [
+      {
+        "table": "customers",
+        "values": [
+          {
+            "column": "id",
+            "value": 1
+          },
+          {
+            "column": "email",
+            "value": "User+tag@Example.com"
+          },
+          {
+            "column": "phone",
+            "value": "111-1111"
+          },
+          {
+            "column": "email_normalized",
+            "value": "user@example.com"
+          }
+        ]
+      }
+    ],
+    "actors": [
+      {
+        "name": "phone_writer",
+        "function": "app_v1.py:update_phone",
+        "steps": [
+          {
+            "kind": "begin",
+            "sql": null,
+            "params": {},
+            "bind_as": null,
+            "statement_id": null,
+            "removable": false
+          },
+          {
+            "kind": "sql",
+            "sql": "UPDATE customers SET phone = %(phone)s WHERE id = %(id)s",
+            "params": {
+              "phone": {
+                "name": "phone",
+                "source": "literal",
+                "value": "222-2222",
+                "bind": null,
+                "row": 0,
+                "column": null,
+                "transform": "none",
+                "operand": null
+              },
+              "id": {
+                "name": "id",
+                "source": "literal",
+                "value": 1,
+                "bind": null,
+                "row": 0,
+                "column": null,
+                "transform": "none",
+                "operand": null
+              }
+            },
+            "bind_as": null,
+            "statement_id": "app_v1.py:update_phone#0",
+            "removable": false
+          },
+          {
+            "kind": "commit",
+            "sql": null,
+            "params": {},
+            "bind_as": null,
+            "statement_id": null,
+            "removable": false
+          }
+        ]
+      },
+      {
+        "name": "canon_writer",
+        "function": "app_v2.py:set_normalized_email",
+        "steps": [
+          {
+            "kind": "begin",
+            "sql": null,
+            "params": {},
+            "bind_as": null,
+            "statement_id": null,
+            "removable": false
+          },
+          {
+            "kind": "sql",
+            "sql": "UPDATE customers SET email_normalized = %(normalized)s WHERE id = %(id)s",
+            "params": {
+              "normalized": {
+                "name": "normalized",
+                "source": "literal",
+                "value": "user@example.com",
+                "bind": null,
+                "row": 0,
+                "column": null,
+                "transform": "none",
+                "operand": null
+              },
+              "id": {
+                "name": "id",
+                "source": "literal",
+                "value": 1,
+                "bind": null,
+                "row": 0,
+                "column": null,
+                "transform": "none",
+                "operand": null
+              }
+            },
+            "bind_as": null,
+            "statement_id": "app_v2.py:set_normalized_email#0",
+            "removable": false
+          },
+          {
+            "kind": "commit",
+            "sql": null,
+            "params": {},
+            "bind_as": null,
+            "statement_id": null,
+            "removable": false
+          }
+        ]
+      }
+    ],
+    "invariants": [
+      {
+        "id": "t1_phone",
+        "description": "phone update should survive",
+        "kind": "column_equals",
+        "table": "customers",
+        "key_column": "id",
+        "key_value": 1,
+        "column": "phone",
+        "expected": [
+          "222-2222"
+        ],
+        "other_column": null
+      },
+      {
+        "id": "t1_email",
+        "description": "email unchanged",
+        "kind": "column_equals",
+        "table": "customers",
+        "key_column": "id",
+        "key_value": 1,
+        "column": "email",
+        "expected": [
+          "User+tag@Example.com"
+        ],
+        "other_column": null
+      },
+      {
+        "id": "t1_norm",
+        "description": "stripped canonical should survive unrelated phone update",
+        "kind": "column_equals",
+        "table": "customers",
+        "key_column": "id",
+        "key_value": 1,
+        "column": "email_normalized",
+        "expected": [
+          "user@example.com"
+        ],
+        "other_column": null
+      }
+    ],
+    "rationale": "Old update_phone trigger sets normalized to lower(email) with plus-tag, clobbering new-release stripped canonical on same row. Both columns should survive; buggy code loses canonical."
+  },
+  "schedule": [
+    "canon_writer",
+    "canon_writer",
+    "canon_writer",
+    "phone_writer",
+    "phone_writer",
+    "phone_writer"
+  ],
+  "seed": null,
+  "trace": {
+    "requested_schedule": [
+      "canon_writer",
+      "canon_writer",
+      "canon_writer",
+      "phone_writer",
+      "phone_writer",
+      "phone_writer"
+    ],
+    "issue_order": [
+      "canon_writer",
+      "canon_writer",
+      "canon_writer",
+      "phone_writer",
+      "phone_writer",
+      "phone_writer"
+    ],
+    "records": [
+      {
+        "seq": 0,
+        "actor": "canon_writer",
+        "step_index": 0,
+        "kind": "begin",
+        "function": "app_v2.py:set_normalized_email",
+        "statement_id": null,
+        "sql": "BEGIN",
+        "params": {},
+        "status": "ok",
+        "rowcount": -1,
+        "rows": null,
+        "command_tag": "BEGIN",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": null,
+        "commit_seq": null,
+        "durable_commit_seq": null
+      },
+      {
+        "seq": 1,
+        "actor": "canon_writer",
+        "step_index": 1,
+        "kind": "sql",
+        "function": "app_v2.py:set_normalized_email",
+        "statement_id": "app_v2.py:set_normalized_email#0",
+        "sql": "UPDATE customers SET email_normalized = %(normalized)s WHERE id = %(id)s",
+        "params": {
+          "normalized": "user@example.com",
+          "id": 1
+        },
+        "status": "ok",
+        "rowcount": 1,
+        "rows": null,
+        "command_tag": "UPDATE 1",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": true,
+        "commit_seq": null,
+        "durable_commit_seq": 1
+      },
+      {
+        "seq": 2,
+        "actor": "canon_writer",
+        "step_index": 2,
+        "kind": "commit",
+        "function": "app_v2.py:set_normalized_email",
+        "statement_id": null,
+        "sql": "COMMIT",
+        "params": {},
+        "status": "ok",
+        "rowcount": -1,
+        "rows": null,
+        "command_tag": "COMMIT",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": true,
+        "commit_seq": 1,
+        "durable_commit_seq": null
+      },
+      {
+        "seq": 3,
+        "actor": "phone_writer",
+        "step_index": 0,
+        "kind": "begin",
+        "function": "app_v1.py:update_phone",
+        "statement_id": null,
+        "sql": "BEGIN",
+        "params": {},
+        "status": "ok",
+        "rowcount": -1,
+        "rows": null,
+        "command_tag": "BEGIN",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": null,
+        "commit_seq": null,
+        "durable_commit_seq": null
+      },
+      {
+        "seq": 4,
+        "actor": "phone_writer",
+        "step_index": 1,
+        "kind": "sql",
+        "function": "app_v1.py:update_phone",
+        "statement_id": "app_v1.py:update_phone#0",
+        "sql": "UPDATE customers SET phone = %(phone)s WHERE id = %(id)s",
+        "params": {
+          "phone": "222-2222",
+          "id": 1
+        },
+        "status": "ok",
+        "rowcount": 1,
+        "rows": null,
+        "command_tag": "UPDATE 1",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": true,
+        "commit_seq": null,
+        "durable_commit_seq": 2
+      },
+      {
+        "seq": 5,
+        "actor": "phone_writer",
+        "step_index": 2,
+        "kind": "commit",
+        "function": "app_v1.py:update_phone",
+        "statement_id": null,
+        "sql": "COMMIT",
+        "params": {},
+        "status": "ok",
+        "rowcount": -1,
+        "rows": null,
+        "command_tag": "COMMIT",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": true,
+        "commit_seq": 2,
+        "durable_commit_seq": null
+      }
+    ],
+    "outcome": "completed",
+    "initial_state": {
+      "customers": [
+        {
+          "id": 1,
+          "email": "User+tag@Example.com",
+          "phone": "111-1111",
+          "email_normalized": "user@example.com"
+        }
+      ]
+    },
+    "final_state": {
+      "customers": [
+        {
+          "id": 1,
+          "email": "User+tag@Example.com",
+          "phone": "222-2222",
+          "email_normalized": "user+tag@example.com"
+        }
+      ]
+    },
+    "diagnostics": [],
+    "duration_ms": 30.62
+  },
+  "verdict": {
+    "classification": "true_violation",
+    "violations": [
+      {
+        "requirement_id": "BR-normalized",
+        "requirement": "email_normalized must hold the newest committed intent: the new release's explicit value, or the lowercased email after an email change.",
+        "table": "customers",
+        "key": 1,
+        "column": "email_normalized",
+        "expected": "user@example.com",
+        "actual": "user+tag@example.com",
+        "evidence": [
+          1,
+          4
+        ],
+        "explanation": "canon_writer committed email_normalized='user@example.com' at step 1, but the final value is 'user+tag@example.com'; later committed write by phone_writer (step 4)."
+      }
+    ],
+    "checked": [
+      "BR-normalized"
+    ],
+    "vacuous": [],
+    "assumptions": [
+      "Scheduling is at statement and transaction boundaries only; PostgreSQL-internal interleavings are not controlled.",
+      "Each schedule starts from freshly rebuilt schema and seed state.",
+      "A passing result covers only the schedules executed with these inputs; it is not a proof of correctness.",
+      "An email change supersedes an earlier explicit normalized value.",
+      "A no-op email change (same value as stored) is outside this reference model."
+    ]
+  },
+  "fingerprint": "4491686a77bfb288f49ed50360b896a1c7a33aaa51833a8ef15bcc432acb5b54",
+  "provenance": {
+    "system": "ai",
+    "test": "phone_vs_canonical_same_row",
+    "schedule_index": 0
+  }
+}

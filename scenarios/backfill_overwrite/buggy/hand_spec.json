@@ -1,0 +1,19 @@
+{
+  "name": "hand: user rename vs backfill",
+  "rationale": "Hand-authored reference test.",
+  "seed": [{"table": "profiles", "values": [{"column": "id", "value": 1}, {"column": "legacy_name", "value": "Alice"}]}],
+  "actors": [
+    {"name": "backfill", "function": "backfill.py:backfill_display_names", "calls": [
+      {"statement_id": "backfill.py:backfill_display_names#0", "bind_as": "rows",
+       "params": [{"name": "limit", "source": "literal", "value": 10}]},
+      {"statement_id": "backfill.py:backfill_display_names#1",
+       "params": [{"name": "display_name", "source": "row_ref", "bind": "rows", "column": "legacy_name"},
+                  {"name": "id", "source": "row_ref", "bind": "rows", "column": "id"}]}
+    ]},
+    {"name": "user", "function": "app_v2.py:update_display_name", "calls": [
+      {"statement_id": "app_v2.py:update_display_name#0",
+       "params": [{"name": "display_name", "source": "literal", "value": "Alicia"},
+                  {"name": "id", "source": "literal", "value": 1}]}
+    ]}
+  ]
+}

@@ -1,0 +1,654 @@
+{
+  "prompt_version": "v2",
+  "prompt_sha256": "2ae0f4a544139d7e429fd516a5d295beab059d407b0838ede64ba20a79ccfd00",
+  "model": "muse-spark-1.3",
+  "attempts": [
+    {
+      "kind": "initial",
+      "reply": {
+        "text": "{\"conflicts\": [{\"column\": \"plan\", \"functions\": [\"change_email\", \"change_plan\"], \"risk_explanation\": \"change_email does read-modify-write: SELECTs plan then UPDATEs email+plan with the stale plan value. Concurrent change_plan blind-writes plan+plan_changed_by. If change_email SELECTs before change_plan commits and UPDATEs after, it restores the old plan and loses the plan change.\", \"table\": \"accounts\"}], \"operations\": [{\"function\": \"change_email\", \"summary\": \"v1 email change that reads plan and writes it back unchanged with new email\", \"tables_read\": [\"accounts\"], \"tables_written\": [\"accounts\"]}, {\"function\": \"change_plan\", \"summary\": \"v2 self-service plan change that writes plan and plan_changed_by\", \"tables_read\": [], \"tables_written\": [\"accounts\"]}], \"tests\": [{\"actors\": [{\"calls\": [{\"bind_as\": \"r1\", \"params\": [{\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v1.py:change_email#0\"}, {\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"email\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"alice_new@example.com\"}, {\"bind\": \"r1\", \"column\": \"plan\", \"name\": \"plan\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}, {\"bind\": \"r1\", \"column\": \"id\", \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}], \"statement_id\": \"app_v1.py:change_email#1\"}], \"function\": \"change_email\", \"name\": \"email_change\"}, {\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"plan\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"pro\"}, {\"bind\": null, \"column\": null, \"name\": \"actor\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"self-service\"}, {\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v2.py:change_plan#0\"}], \"function\": \"change_plan\", \"name\": \"plan_change\"}], \"invariants\": [{\"column\": \"email\", \"description\": \"only email writer is change_email so final email is the new address\", \"expected\": [\"alice_new@example.com\"], \"id\": \"t1_email\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"accounts\"}, {\"column\": \"plan\", \"description\": \"serial orders always end with pro; stale rewrite would leave free\", \"expected\": [\"pro\"], \"id\": \"t1_plan\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"accounts\"}, {\"column\": \"plan_changed_by\", \"description\": \"only plan writer sets attribution and email path preserves it\", \"expected\": [\"self-service\"], \"id\": \"t1_by\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"accounts\"}], \"name\": \"lost_plan_update_email_vs_plan\", \"rationale\": \"Canonical rolling-deploy conflict: old code rewrites plan from stale SELECT while new code updates plan. Any serial order ends with email=new and plan=pro; interleaved stale write leaves plan=free.\", \"seed\": [{\"table\": \"accounts\", \"values\": [{\"column\": \"id\", \"value\": 1}, {\"column\": \"email\", \"value\": \"alice@example.com\"}, {\"column\": \"plan\", \"value\": \"free\"}, {\"column\": \"plan_changed_by\", \"value\": null}]}]}, {\"actors\": [{\"calls\": [{\"bind_as\": \"r1\", \"params\": [{\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v1.py:change_email#0\"}, {\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"email\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"bob_new@example.com\"}, {\"bind\": \"r1\", \"column\": \"plan\", \"name\": \"plan\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}, {\"bind\": \"r1\", \"column\": \"id\", \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}], \"statement_id\": \"app_v1.py:change_email#1\"}], \"function\": \"change_email\", \"name\": \"email_change\"}, {\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"plan\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"pro\"}, {\"bind\": null, \"column\": null, \"name\": \"actor\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"self-service\"}, {\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v2.py:change_plan#0\"}], \"function\": \"change_plan\", \"name\": \"plan_pro\"}, {\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"plan\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"team\"}, {\"bind\": null, \"column\": null, \"name\": \"actor\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"self-service\"}, {\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v2.py:change_plan#0\"}], \"function\": \"change_plan\", \"name\": \"plan_team\"}], \"invariants\": [{\"column\": \"email\", \"description\": \"email writer is unique so final email is fixed\", \"expected\": [\"bob_new@example.com\"], \"id\": \"t2_email\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"accounts\"}, {\"column\": \"plan\", \"description\": \"serial orders end with one of the two new plans, never the initial free\", \"expected\": [\"pro\", \"team\"], \"id\": \"t2_plan\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_in\", \"other_column\": null, \"table\": \"accounts\"}, {\"column\": \"plan_changed_by\", \"description\": \"both plan writers use same actor and email path preserves it\", \"expected\": [\"self-service\"], \"id\": \"t2_by\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"accounts\"}], \"name\": \"lost_plan_update_with_two_plan_writers\", \"rationale\": \"Two concurrent new-release plan values widen the interleaving window. Correct serial execution can never resurrect initial free; stale email rewrite committing last would leave free.\", \"seed\": [{\"table\": \"accounts\", \"values\": [{\"column\": \"id\", \"value\": 1}, {\"column\": \"email\", \"value\": \"bob@example.com\"}, {\"column\": \"plan\", \"value\": \"free\"}, {\"column\": \"plan_changed_by\", \"value\": null}]}]}, {\"actors\": [{\"calls\": [{\"bind_as\": \"rA\", \"params\": [{\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v1.py:change_email#0\"}, {\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"email\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"carol_a@example.com\"}, {\"bind\": \"rA\", \"column\": \"plan\", \"name\": \"plan\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}, {\"bind\": \"rA\", \"column\": \"id\", \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}], \"statement_id\": \"app_v1.py:change_email#1\"}], \"function\": \"change_email\", \"name\": \"email_a\"}, {\"calls\": [{\"bind_as\": \"rB\", \"params\": [{\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v1.py:change_email#0\"}, {\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"email\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"carol_b@example.com\"}, {\"bind\": \"rB\", \"column\": \"plan\", \"name\": \"plan\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}, {\"bind\": \"rB\", \"column\": \"id\", \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}], \"statement_id\": \"app_v1.py:change_email#1\"}], \"function\": \"change_email\", \"name\": \"email_b\"}, {\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"plan\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"pro\"}, {\"bind\": null, \"column\": null, \"name\": \"actor\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"self-service\"}, {\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v2.py:change_plan#0\"}], \"function\": \"change_plan\", \"name\": \"plan_change\"}], \"invariants\": [{\"column\": \"email\", \"description\": \"last email writer wins but result must be one of the two new addresses\", \"expected\": [\"carol_a@example.com\", \"carol_b@example.com\"], \"id\": \"t3_email\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_in\", \"other_column\": null, \"table\": \"accounts\"}, {\"column\": \"plan\", \"description\": \"serial orders always end with pro; stale email rewrite would leave free\", \"expected\": [\"pro\"], \"id\": \"t3_plan\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"accounts\"}, {\"column\": \"plan_changed_by\", \"description\": \"plan attribution survives email rewrites\", \"expected\": [\"self-service\"], \"id\": \"t3_by\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"accounts\"}], \"name\": \"lost_plan_update_with_two_email_readers\", \"rationale\": \"Two old-release readers double the chance that one SELECTs stale free before the plan commit and UPDATEs after, clobbering pro back to free. Serial execution always preserves pro.\", \"seed\": [{\"table\": \"accounts\", \"values\": [{\"column\": \"id\", \"value\": 1}, {\"column\": \"email\", \"value\": \"carol@example.com\"}, {\"column\": \"plan\", \"value\": \"free\"}, {\"column\": \"plan_changed_by\", \"value\": null}]}]}]}",
+        "status": "completed",
+        "latency_seconds": 43.754,
+        "input_tokens": 1895,
+        "output_tokens": 10396,
+        "reasoning_tokens": 7434,
+        "approx_cost_usd": 0.046552
+      },
+      "parse_error": null
+    },
+    {
+      "kind": "repair",
+      "reply": {
+        "text": "{\"conflicts\": [{\"column\": \"plan\", \"functions\": [\"app_v1.py:change_email\", \"app_v2.py:change_plan\"], \"risk_explanation\": \"change_email SELECTs plan then rewrites it (read-modify-write), while change_plan blind-UPDATEs plan. If change_email reads before change_plan commits and writes after, it overwrites the new plan with the stale plan: lost plan update.\", \"table\": \"accounts\"}], \"operations\": [{\"function\": \"app_v1.py:change_email\", \"summary\": \"SELECT account then UPDATE email preserving SELECTed plan\", \"tables_read\": [\"accounts\"], \"tables_written\": [\"accounts\"]}, {\"function\": \"app_v2.py:change_plan\", \"summary\": \"blind UPDATE plan and plan_changed_by\", \"tables_read\": [], \"tables_written\": [\"accounts\"]}], \"tests\": [{\"actors\": [{\"calls\": [{\"bind_as\": \"e1\", \"params\": [{\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v1.py:change_email#0\"}, {\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"email\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"alice@new.example\"}, {\"bind\": \"e1\", \"column\": \"plan\", \"name\": \"plan\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}, {\"bind\": \"e1\", \"column\": \"id\", \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}], \"statement_id\": \"app_v1.py:change_email#1\"}], \"function\": \"app_v1.py:change_email\", \"name\": \"email_change\"}, {\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"plan\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"pro\"}, {\"bind\": null, \"column\": null, \"name\": \"actor\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"alice\"}, {\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v2.py:change_plan#0\"}], \"function\": \"app_v2.py:change_plan\", \"name\": \"plan_change\"}], \"invariants\": [{\"column\": \"email\", \"description\": \"email must be new value in all serial orders\", \"expected\": [\"alice@new.example\"], \"id\": \"inv-email\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"accounts\"}, {\"column\": \"plan\", \"description\": \"plan must be pro in all serial orders; stale rewrite reverts to free\", \"expected\": [\"pro\"], \"id\": \"inv-plan\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"accounts\"}, {\"column\": \"plan_changed_by\", \"description\": \"actor recorded by plan change\", \"expected\": [\"alice\"], \"id\": \"inv-actor\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"accounts\"}], \"name\": \"lost_plan_update_email_vs_plan\", \"rationale\": \"Old release preserves plan via stale read; new release blind-writes plan. Interleaving SELECT(v1)->UPDATE(v2)->UPDATE(v1) loses v2 plan update while keeping v2 plan_changed_by, corrupting plan vs provenance.\", \"seed\": [{\"table\": \"accounts\", \"values\": [{\"column\": \"id\", \"value\": 1}, {\"column\": \"email\", \"value\": \"alice@old.example\"}, {\"column\": \"plan\", \"value\": \"free\"}, {\"column\": \"plan_changed_by\", \"value\": null}]}]}, {\"actors\": [{\"calls\": [{\"bind_as\": \"ea\", \"params\": [{\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v1.py:change_email#0\"}, {\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"email\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"a@new.example\"}, {\"bind\": \"ea\", \"column\": \"plan\", \"name\": \"plan\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}, {\"bind\": \"ea\", \"column\": \"id\", \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}], \"statement_id\": \"app_v1.py:change_email#1\"}], \"function\": \"app_v1.py:change_email\", \"name\": \"email_a\"}, {\"calls\": [{\"bind_as\": \"eb\", \"params\": [{\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v1.py:change_email#0\"}, {\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"email\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"b@new.example\"}, {\"bind\": \"eb\", \"column\": \"plan\", \"name\": \"plan\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}, {\"bind\": \"eb\", \"column\": \"id\", \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}], \"statement_id\": \"app_v1.py:change_email#1\"}], \"function\": \"app_v1.py:change_email\", \"name\": \"email_b\"}, {\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"plan\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"pro\"}, {\"bind\": null, \"column\": null, \"name\": \"actor\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"admin\"}, {\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v2.py:change_plan#0\"}], \"function\": \"app_v2.py:change_plan\", \"name\": \"plan_change\"}], \"invariants\": [{\"column\": \"plan\", \"description\": \"plan must remain pro regardless of email order; stale email rewrite loses it\", \"expected\": [\"pro\"], \"id\": \"inv-plan\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"accounts\"}, {\"column\": \"email\", \"description\": \"email is last-writer-wins between the two email changes\", \"expected\": [\"a@new.example\", \"b@new.example\"], \"id\": \"inv-email\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_in\", \"other_column\": null, \"table\": \"accounts\"}], \"name\": \"lost_plan_update_two_emails_vs_plan\", \"rationale\": \"Two concurrent old-release email writers both perform stale plan reads; either can overwrite a concurrent new-release plan update. Plan must survive in every serial order, email may be either writer.\", \"seed\": [{\"table\": \"accounts\", \"values\": [{\"column\": \"id\", \"value\": 1}, {\"column\": \"email\", \"value\": \"old@example.com\"}, {\"column\": \"plan\", \"value\": \"free\"}, {\"column\": \"plan_changed_by\", \"value\": null}]}]}, {\"actors\": [{\"calls\": [{\"bind_as\": \"e1\", \"params\": [{\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v1.py:change_email#0\"}, {\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"email\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"alice@new.example\"}, {\"bind\": \"e1\", \"column\": \"plan\", \"name\": \"plan\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}, {\"bind\": \"e1\", \"column\": \"id\", \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}], \"statement_id\": \"app_v1.py:change_email#1\"}], \"function\": \"app_v1.py:change_email\", \"name\": \"email_change\"}, {\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"plan\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"pro\"}, {\"bind\": null, \"column\": null, \"name\": \"actor\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"bob\"}, {\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v2.py:change_plan#0\"}], \"function\": \"app_v2.py:change_plan\", \"name\": \"plan_pro\"}, {\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"plan\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"team\"}, {\"bind\": null, \"column\": null, \"name\": \"actor\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"carol\"}, {\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v2.py:change_plan#0\"}], \"function\": \"app_v2.py:change_plan\", \"name\": \"plan_team\"}], \"invariants\": [{\"column\": \"email\", \"description\": \"email always updated by v1 writer\", \"expected\": [\"alice@new.example\"], \"id\": \"inv-email\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"accounts\"}, {\"column\": \"plan\", \"description\": \"plan must be one of the two blind writes; stale rewrite reverts to free\", \"expected\": [\"pro\", \"team\"], \"id\": \"inv-plan\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_in\", \"other_column\": null, \"table\": \"accounts\"}], \"name\": \"lost_plan_update_email_vs_two_plans\", \"rationale\": \"Email RMW concurrent with two blind plan writes. In any serial schedule final plan is last plan writer (pro or team) and email is new. If email's stale read wins last, plan reverts to free, outside allowed set.\", \"seed\": [{\"table\": \"accounts\", \"values\": [{\"column\": \"id\", \"value\": 1}, {\"column\": \"email\", \"value\": \"alice@old.example\"}, {\"column\": \"plan\", \"value\": \"free\"}, {\"column\": \"plan_changed_by\", \"value\": null}]}]}]}",
+        "status": "completed",
+        "latency_seconds": 28.691,
+        "input_tokens": 2076,
+        "output_tokens": 8261,
+        "reasoning_tokens": 5405,
+        "approx_cost_usd": 0.037704
+      },
+      "parse_error": null
+    }
+  ],
+  "output": {
+    "operations": [
+      {
+        "function": "app_v1.py:change_email",
+        "summary": "SELECT account then UPDATE email preserving SELECTed plan",
+        "tables_read": [
+          "accounts"
+        ],
+        "tables_written": [
+          "accounts"
+        ]
+      },
+      {
+        "function": "app_v2.py:change_plan",
+        "summary": "blind UPDATE plan and plan_changed_by",
+        "tables_read": [],
+        "tables_written": [
+          "accounts"
+        ]
+      }
+    ],
+    "conflicts": [
+      {
+        "functions": [
+          "app_v1.py:change_email",
+          "app_v2.py:change_plan"
+        ],
+        "table": "accounts",
+        "column": "plan",
+        "risk_explanation": "change_email SELECTs plan then rewrites it (read-modify-write), while change_plan blind-UPDATEs plan. If change_email reads before change_plan commits and writes after, it overwrites the new plan with the stale plan: lost plan update."
+      }
+    ],
+    "tests": [
+      {
+        "name": "lost_plan_update_email_vs_plan",
+        "rationale": "Old release preserves plan via stale read; new release blind-writes plan. Interleaving SELECT(v1)->UPDATE(v2)->UPDATE(v1) loses v2 plan update while keeping v2 plan_changed_by, corrupting plan vs provenance.",
+        "seed": [
+          {
+            "table": "accounts",
+            "values": [
+              {
+                "column": "id",
+                "value": 1
+              },
+              {
+                "column": "email",
+                "value": "alice@old.example"
+              },
+              {
+                "column": "plan",
+                "value": "free"
+              },
+              {
+                "column": "plan_changed_by",
+                "value": null
+              }
+            ]
+          }
+        ],
+        "actors": [
+          {
+            "name": "email_change",
+            "function": "app_v1.py:change_email",
+            "calls": [
+              {
+                "statement_id": "app_v1.py:change_email#0",
+                "params": [
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": "e1"
+              },
+              {
+                "statement_id": "app_v1.py:change_email#1",
+                "params": [
+                  {
+                    "name": "email",
+                    "source": "literal",
+                    "value": "alice@new.example",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "plan",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "e1",
+                    "row": 0,
+                    "column": "plan",
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "e1",
+                    "row": 0,
+                    "column": "id",
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          },
+          {
+            "name": "plan_change",
+            "function": "app_v2.py:change_plan",
+            "calls": [
+              {
+                "statement_id": "app_v2.py:change_plan#0",
+                "params": [
+                  {
+                    "name": "plan",
+                    "source": "literal",
+                    "value": "pro",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "actor",
+                    "source": "literal",
+                    "value": "alice",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          }
+        ],
+        "invariants": [
+          {
+            "id": "inv-email",
+            "description": "email must be new value in all serial orders",
+            "kind": "column_equals",
+            "table": "accounts",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "email",
+            "expected": [
+              "alice@new.example"
+            ],
+            "other_column": null
+          },
+          {
+            "id": "inv-plan",
+            "description": "plan must be pro in all serial orders; stale rewrite reverts to free",
+            "kind": "column_equals",
+            "table": "accounts",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "plan",
+            "expected": [
+              "pro"
+            ],
+            "other_column": null
+          },
+          {
+            "id": "inv-actor",
+            "description": "actor recorded by plan change",
+            "kind": "column_equals",
+            "table": "accounts",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "plan_changed_by",
+            "expected": [
+              "alice"
+            ],
+            "other_column": null
+          }
+        ]
+      },
+      {
+        "name": "lost_plan_update_two_emails_vs_plan",
+        "rationale": "Two concurrent old-release email writers both perform stale plan reads; either can overwrite a concurrent new-release plan update. Plan must survive in every serial order, email may be either writer.",
+        "seed": [
+          {
+            "table": "accounts",
+            "values": [
+              {
+                "column": "id",
+                "value": 1
+              },
+              {
+                "column": "email",
+                "value": "old@example.com"
+              },
+              {
+                "column": "plan",
+                "value": "free"
+              },
+              {
+                "column": "plan_changed_by",
+                "value": null
+              }
+            ]
+          }
+        ],
+        "actors": [
+          {
+            "name": "email_a",
+            "function": "app_v1.py:change_email",
+            "calls": [
+              {
+                "statement_id": "app_v1.py:change_email#0",
+                "params": [
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": "ea"
+              },
+              {
+                "statement_id": "app_v1.py:change_email#1",
+                "params": [
+                  {
+                    "name": "email",
+                    "source": "literal",
+                    "value": "a@new.example",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "plan",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "ea",
+                    "row": 0,
+                    "column": "plan",
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "ea",
+                    "row": 0,
+                    "column": "id",
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          },
+          {
+            "name": "email_b",
+            "function": "app_v1.py:change_email",
+            "calls": [
+              {
+                "statement_id": "app_v1.py:change_email#0",
+                "params": [
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": "eb"
+              },
+              {
+                "statement_id": "app_v1.py:change_email#1",
+                "params": [
+                  {
+                    "name": "email",
+                    "source": "literal",
+                    "value": "b@new.example",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "plan",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "eb",
+                    "row": 0,
+                    "column": "plan",
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "eb",
+                    "row": 0,
+                    "column": "id",
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          },
+          {
+            "name": "plan_change",
+            "function": "app_v2.py:change_plan",
+            "calls": [
+              {
+                "statement_id": "app_v2.py:change_plan#0",
+                "params": [
+                  {
+                    "name": "plan",
+                    "source": "literal",
+                    "value": "pro",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "actor",
+                    "source": "literal",
+                    "value": "admin",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          }
+        ],
+        "invariants": [
+          {
+            "id": "inv-plan",
+            "description": "plan must remain pro regardless of email order; stale email rewrite loses it",
+            "kind": "column_equals",
+            "table": "accounts",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "plan",
+            "expected": [
+              "pro"
+            ],
+            "other_column": null
+          },
+          {
+            "id": "inv-email",
+            "description": "email is last-writer-wins between the two email changes",
+            "kind": "column_in",
+            "table": "accounts",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "email",
+            "expected": [
+              "a@new.example",
+              "b@new.example"
+            ],
+            "other_column": null
+          }
+        ]
+      },
+      {
+        "name": "lost_plan_update_email_vs_two_plans",
+        "rationale": "Email RMW concurrent with two blind plan writes. In any serial schedule final plan is last plan writer (pro or team) and email is new. If email's stale read wins last, plan reverts to free, outside allowed set.",
+        "seed": [
+          {
+            "table": "accounts",
+            "values": [
+              {
+                "column": "id",
+                "value": 1
+              },
+              {
+                "column": "email",
+                "value": "alice@old.example"
+              },
+              {
+                "column": "plan",
+                "value": "free"
+              },
+              {
+                "column": "plan_changed_by",
+                "value": null
+              }
+            ]
+          }
+        ],
+        "actors": [
+          {
+            "name": "email_change",
+            "function": "app_v1.py:change_email",
+            "calls": [
+              {
+                "statement_id": "app_v1.py:change_email#0",
+                "params": [
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": "e1"
+              },
+              {
+                "statement_id": "app_v1.py:change_email#1",
+                "params": [
+                  {
+                    "name": "email",
+                    "source": "literal",
+                    "value": "alice@new.example",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "plan",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "e1",
+                    "row": 0,
+                    "column": "plan",
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "e1",
+                    "row": 0,
+                    "column": "id",
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          },
+          {
+            "name": "plan_pro",
+            "function": "app_v2.py:change_plan",
+            "calls": [
+              {
+                "statement_id": "app_v2.py:change_plan#0",
+                "params": [
+                  {
+                    "name": "plan",
+                    "source": "literal",
+                    "value": "pro",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "actor",
+                    "source": "literal",
+                    "value": "bob",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          },
+          {
+            "name": "plan_team",
+            "function": "app_v2.py:change_plan",
+            "calls": [
+              {
+                "statement_id": "app_v2.py:change_plan#0",
+                "params": [
+                  {
+                    "name": "plan",
+                    "source": "literal",
+                    "value": "team",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "actor",
+                    "source": "literal",
+                    "value": "carol",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          }
+        ],
+        "invariants": [
+          {
+            "id": "inv-email",
+            "description": "email always updated by v1 writer",
+            "kind": "column_equals",
+            "table": "accounts",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "email",
+            "expected": [
+              "alice@new.example"
+            ],
+            "other_column": null
+          },
+          {
+            "id": "inv-plan",
+            "description": "plan must be one of the two blind writes; stale rewrite reverts to free",
+            "kind": "column_in",
+            "table": "accounts",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "plan",
+            "expected": [
+              "pro",
+              "team"
+            ],
+            "other_column": null
+          }
+        ]
+      }
+    ]
+  }
+}

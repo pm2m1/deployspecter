@@ -1,0 +1,16 @@
+{
+  "title": "Balance resync discards a concurrent credit",
+  "split": "heldout",
+  "description": "A job fills an integer cents column from a dollars column while the new release credits both.",
+  "requirements": [
+    {
+      "id": "BR-credits",
+      "text": "balance_cents must equal the starting dollars times 100 plus every committed credit.",
+      "kind": "committed_delta_sum",
+      "table": "wallets", "key_column": "id", "column": "balance_cents",
+      "base_column": "balance_dollars", "base_multiplier": 100,
+      "writers": [{"function": "app_v2.py:credit", "key_param": "id", "value_param": "amount_cents"}],
+      "assumptions": ["credit is the only money movement in this scenario; a NULL balance_cents means not yet migrated and is not checked."]
+    }
+  ]
+}

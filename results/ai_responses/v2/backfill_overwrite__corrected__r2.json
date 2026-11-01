@@ -1,0 +1,524 @@
+{
+  "prompt_version": "v2",
+  "prompt_sha256": "e74d1fb0d87540e82652b1b36a81c78ad5bf8725ff6d2e4ac1e9b67d72cf95df",
+  "model": "muse-spark-1.3",
+  "attempts": [
+    {
+      "kind": "initial",
+      "reply": {
+        "text": "{\"conflicts\": [{\"column\": \"display_name\", \"functions\": [\"backfill.py:backfill_display_names\", \"app_v2.py:update_display_name\"], \"risk_explanation\": \"Backfill SELECTs rows with display_name IS NULL then UPDATEs display_name from stale legacy_name while v2 concurrently writes a user-supplied display_name to the same id. Without the AND display_name IS NULL guard the backfill would clobber the user value; test 1 forces this race with distinct values.\", \"table\": \"profiles\"}, {\"column\": \"legacy_name\", \"functions\": [\"app_v1.py:update_legacy_name\", \"backfill.py:backfill_display_names\"], \"risk_explanation\": \"Backfill reads legacy_name to populate display_name while v1 concurrently changes legacy_name on the same row. SELECT-then-UPDATE in separate transactions is non-atomic so backfill can copy a stale legacy value leaving display_name permanently stale because later backfills skip NOT NULL rows.\", \"table\": \"profiles\"}, {\"column\": \"id\", \"functions\": [\"app_v1.py:update_legacy_name\", \"app_v2.py:update_display_name\", \"backfill.py:backfill_display_names\"], \"risk_explanation\": \"Old release updates legacy_name, new release updates display_name, and backfill updates display_name on the same id. Concurrent UPDATEs to the same row contend on the row lock; a read-modify-write implementation would lose the different-column update.\", \"table\": \"profiles\"}], \"operations\": [{\"function\": \"app_v1.py:update_legacy_name\", \"summary\": \"Updates legacy_name for one profile; new release reads display_name so this write is invisible unless backfilled or dual-written.\", \"tables_read\": [], \"tables_written\": [\"profiles\"]}, {\"function\": \"app_v2.py:update_display_name\", \"summary\": \"Updates display_name for one profile; old release never maintains this column.\", \"tables_read\": [], \"tables_written\": [\"profiles\"]}, {\"function\": \"backfill.py:backfill_display_names\", \"summary\": \"SELECTs batch with display_name IS NULL then copies legacy_name to display_name with guarded UPDATE per row.\", \"tables_read\": [\"profiles\"], \"tables_written\": [\"profiles\"]}], \"tests\": [{\"actors\": [{\"calls\": [{\"bind_as\": \"b1\", \"params\": [{\"bind\": null, \"column\": null, \"name\": \"limit\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 5}], \"statement_id\": \"backfill.py:backfill_display_names#0\"}, {\"bind_as\": null, \"params\": [{\"bind\": \"b1\", \"column\": \"legacy_name\", \"name\": \"display_name\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}, {\"bind\": \"b1\", \"column\": \"id\", \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}], \"statement_id\": \"backfill.py:backfill_display_names#1\"}], \"function\": \"backfill.py:backfill_display_names\", \"name\": \"bf\"}, {\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"display_name\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"Alice Custom\"}, {\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v2.py:update_display_name#0\"}], \"function\": \"app_v2.py:update_display_name\", \"name\": \"new_writer\"}], \"invariants\": [{\"column\": \"display_name\", \"description\": \"user display_name must survive; backfill must not overwrite it with stale legacy value\", \"expected\": [\"Alice Custom\"], \"id\": \"t1-display\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"profiles\"}, {\"column\": \"legacy_name\", \"description\": \"legacy_name untouched by either actor except backfill read\", \"expected\": [\"alice_legacy\"], \"id\": \"t1-legacy\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"profiles\"}], \"name\": \"backfill_must_not_overwrite_concurrent_display_name\", \"rationale\": \"Same NULL row is selected by backfill and concurrently set by v2 to a distinct custom value. Correct guarded backfill ends with custom in all serial orders (backfill-then-v2 overwrites to custom, v2-then-backfill skips). An unguarded backfill interleaved as SELECT NULL, v2 commit, UPDATE would clobber custom with alice_legacy.\", \"seed\": [{\"table\": \"profiles\", \"values\": [{\"column\": \"id\", \"value\": 1}, {\"column\": \"legacy_name\", \"value\": \"alice_legacy\"}, {\"column\": \"display_name\", \"value\": null}, {\"column\": \"bio\", \"value\": null}]}]}, {\"actors\": [{\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"name\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"new_legacy\"}, {\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 7}], \"statement_id\": \"app_v1.py:update_legacy_name#0\"}], \"function\": \"app_v1.py:update_legacy_name\", \"name\": \"old_writer\"}, {\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"display_name\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"new_display\"}, {\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 7}], \"statement_id\": \"app_v2.py:update_display_name#0\"}], \"function\": \"app_v2.py:update_display_name\", \"name\": \"new_writer\"}], \"invariants\": [{\"column\": \"legacy_name\", \"description\": \"v1 different-column update must persist\", \"expected\": [\"new_legacy\"], \"id\": \"t2-legacy\", \"key_column\": \"id\", \"key_value\": 7, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"profiles\"}, {\"column\": \"display_name\", \"description\": \"v2 different-column update must persist\", \"expected\": [\"new_display\"], \"id\": \"t2-display\", \"key_column\": \"id\", \"key_value\": 7, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"profiles\"}], \"name\": \"concurrent_legacy_and_display_updates_both_persist\", \"rationale\": \"Old and new releases update different columns of the same row concurrently. Correct Postgres row UPDATEs preserve both columns in every order. A read-modify-write or full-row overwrite would lose one column.\", \"seed\": [{\"table\": \"profiles\", \"values\": [{\"column\": \"id\", \"value\": 7}, {\"column\": \"legacy_name\", \"value\": \"orig_legacy\"}, {\"column\": \"display_name\", \"value\": \"orig_display\"}, {\"column\": \"bio\", \"value\": null}]}]}, {\"actors\": [{\"calls\": [{\"bind_as\": \"b3\", \"params\": [{\"bind\": null, \"column\": null, \"name\": \"limit\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 10}], \"statement_id\": \"backfill.py:backfill_display_names#0\"}, {\"bind_as\": null, \"params\": [{\"bind\": \"b3\", \"column\": \"legacy_name\", \"name\": \"display_name\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}, {\"bind\": \"b3\", \"column\": \"id\", \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}], \"statement_id\": \"backfill.py:backfill_display_names#1\"}], \"function\": \"backfill.py:backfill_display_names\", \"name\": \"bf\"}, {\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"name\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"keep_a2\"}, {\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v1.py:update_legacy_name#0\"}], \"function\": \"app_v1.py:update_legacy_name\", \"name\": \"old_writer\"}], \"invariants\": [{\"column\": \"legacy_name\", \"description\": \"concurrent legacy update on already-backfilled row must persist\", \"expected\": [\"keep_a2\"], \"id\": \"t3-r1-legacy\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"profiles\"}, {\"column\": \"display_name\", \"description\": \"backfill must not touch already-set display_name\", \"expected\": [\"already_set\"], \"id\": \"t3-r1-display\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"profiles\"}, {\"column\": \"display_name\", \"description\": \"NULL row must be backfilled from its legacy_name\", \"expected\": [\"need_b\"], \"id\": \"t3-r2-display\", \"key_column\": \"id\", \"key_value\": 2, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"profiles\"}, {\"column\": \"legacy_name\", \"description\": \"backfilled row legacy unchanged\", \"expected\": [\"need_b\"], \"id\": \"t3-r2-legacy\", \"key_column\": \"id\", \"key_value\": 2, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"profiles\"}], \"name\": \"backfill_skips_set_row_and_fills_null_row\", \"rationale\": \"Row 1 already has display_name, row 2 is NULL. Backfill with large limit must only fill row 2 while v1 updates row 1 legacy concurrently on a different id. Checks WHERE display_name IS NULL filtering and no cross-row corruption.\", \"seed\": [{\"table\": \"profiles\", \"values\": [{\"column\": \"id\", \"value\": 1}, {\"column\": \"legacy_name\", \"value\": \"keep_a\"}, {\"column\": \"display_name\", \"value\": \"already_set\"}, {\"column\": \"bio\", \"value\": null}]}, {\"table\": \"profiles\", \"values\": [{\"column\": \"id\", \"value\": 2}, {\"column\": \"legacy_name\", \"value\": \"need_b\"}, {\"column\": \"display_name\", \"value\": null}, {\"column\": \"bio\", \"value\": null}]}]}]}",
+        "status": "completed",
+        "latency_seconds": 67.021,
+        "input_tokens": 2012,
+        "output_tokens": 15077,
+        "reasoning_tokens": 12529,
+        "approx_cost_usd": 0.066592
+      },
+      "parse_error": null
+    }
+  ],
+  "output": {
+    "operations": [
+      {
+        "function": "app_v1.py:update_legacy_name",
+        "summary": "Updates legacy_name for one profile; new release reads display_name so this write is invisible unless backfilled or dual-written.",
+        "tables_read": [],
+        "tables_written": [
+          "profiles"
+        ]
+      },
+      {
+        "function": "app_v2.py:update_display_name",
+        "summary": "Updates display_name for one profile; old release never maintains this column.",
+        "tables_read": [],
+        "tables_written": [
+          "profiles"
+        ]
+      },
+      {
+        "function": "backfill.py:backfill_display_names",
+        "summary": "SELECTs batch with display_name IS NULL then copies legacy_name to display_name with guarded UPDATE per row.",
+        "tables_read": [
+          "profiles"
+        ],
+        "tables_written": [
+          "profiles"
+        ]
+      }
+    ],
+    "conflicts": [
+      {
+        "functions": [
+          "backfill.py:backfill_display_names",
+          "app_v2.py:update_display_name"
+        ],
+        "table": "profiles",
+        "column": "display_name",
+        "risk_explanation": "Backfill SELECTs rows with display_name IS NULL then UPDATEs display_name from stale legacy_name while v2 concurrently writes a user-supplied display_name to the same id. Without the AND display_name IS NULL guard the backfill would clobber the user value; test 1 forces this race with distinct values."
+      },
+      {
+        "functions": [
+          "app_v1.py:update_legacy_name",
+          "backfill.py:backfill_display_names"
+        ],
+        "table": "profiles",
+        "column": "legacy_name",
+        "risk_explanation": "Backfill reads legacy_name to populate display_name while v1 concurrently changes legacy_name on the same row. SELECT-then-UPDATE in separate transactions is non-atomic so backfill can copy a stale legacy value leaving display_name permanently stale because later backfills skip NOT NULL rows."
+      },
+      {
+        "functions": [
+          "app_v1.py:update_legacy_name",
+          "app_v2.py:update_display_name",
+          "backfill.py:backfill_display_names"
+        ],
+        "table": "profiles",
+        "column": "id",
+        "risk_explanation": "Old release updates legacy_name, new release updates display_name, and backfill updates display_name on the same id. Concurrent UPDATEs to the same row contend on the row lock; a read-modify-write implementation would lose the different-column update."
+      }
+    ],
+    "tests": [
+      {
+        "name": "backfill_must_not_overwrite_concurrent_display_name",
+        "rationale": "Same NULL row is selected by backfill and concurrently set by v2 to a distinct custom value. Correct guarded backfill ends with custom in all serial orders (backfill-then-v2 overwrites to custom, v2-then-backfill skips). An unguarded backfill interleaved as SELECT NULL, v2 commit, UPDATE would clobber custom with alice_legacy.",
+        "seed": [
+          {
+            "table": "profiles",
+            "values": [
+              {
+                "column": "id",
+                "value": 1
+              },
+              {
+                "column": "legacy_name",
+                "value": "alice_legacy"
+              },
+              {
+                "column": "display_name",
+                "value": null
+              },
+              {
+                "column": "bio",
+                "value": null
+              }
+            ]
+          }
+        ],
+        "actors": [
+          {
+            "name": "bf",
+            "function": "backfill.py:backfill_display_names",
+            "calls": [
+              {
+                "statement_id": "backfill.py:backfill_display_names#0",
+                "params": [
+                  {
+                    "name": "limit",
+                    "source": "literal",
+                    "value": 5,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": "b1"
+              },
+              {
+                "statement_id": "backfill.py:backfill_display_names#1",
+                "params": [
+                  {
+                    "name": "display_name",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "b1",
+                    "row": 0,
+                    "column": "legacy_name",
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "b1",
+                    "row": 0,
+                    "column": "id",
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          },
+          {
+            "name": "new_writer",
+            "function": "app_v2.py:update_display_name",
+            "calls": [
+              {
+                "statement_id": "app_v2.py:update_display_name#0",
+                "params": [
+                  {
+                    "name": "display_name",
+                    "source": "literal",
+                    "value": "Alice Custom",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          }
+        ],
+        "invariants": [
+          {
+            "id": "t1-display",
+            "description": "user display_name must survive; backfill must not overwrite it with stale legacy value",
+            "kind": "column_equals",
+            "table": "profiles",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "display_name",
+            "expected": [
+              "Alice Custom"
+            ],
+            "other_column": null
+          },
+          {
+            "id": "t1-legacy",
+            "description": "legacy_name untouched by either actor except backfill read",
+            "kind": "column_equals",
+            "table": "profiles",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "legacy_name",
+            "expected": [
+              "alice_legacy"
+            ],
+            "other_column": null
+          }
+        ]
+      },
+      {
+        "name": "concurrent_legacy_and_display_updates_both_persist",
+        "rationale": "Old and new releases update different columns of the same row concurrently. Correct Postgres row UPDATEs preserve both columns in every order. A read-modify-write or full-row overwrite would lose one column.",
+        "seed": [
+          {
+            "table": "profiles",
+            "values": [
+              {
+                "column": "id",
+                "value": 7
+              },
+              {
+                "column": "legacy_name",
+                "value": "orig_legacy"
+              },
+              {
+                "column": "display_name",
+                "value": "orig_display"
+              },
+              {
+                "column": "bio",
+                "value": null
+              }
+            ]
+          }
+        ],
+        "actors": [
+          {
+            "name": "old_writer",
+            "function": "app_v1.py:update_legacy_name",
+            "calls": [
+              {
+                "statement_id": "app_v1.py:update_legacy_name#0",
+                "params": [
+                  {
+                    "name": "name",
+                    "source": "literal",
+                    "value": "new_legacy",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 7,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          },
+          {
+            "name": "new_writer",
+            "function": "app_v2.py:update_display_name",
+            "calls": [
+              {
+                "statement_id": "app_v2.py:update_display_name#0",
+                "params": [
+                  {
+                    "name": "display_name",
+                    "source": "literal",
+                    "value": "new_display",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 7,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          }
+        ],
+        "invariants": [
+          {
+            "id": "t2-legacy",
+            "description": "v1 different-column update must persist",
+            "kind": "column_equals",
+            "table": "profiles",
+            "key_column": "id",
+            "key_value": 7,
+            "column": "legacy_name",
+            "expected": [
+              "new_legacy"
+            ],
+            "other_column": null
+          },
+          {
+            "id": "t2-display",
+            "description": "v2 different-column update must persist",
+            "kind": "column_equals",
+            "table": "profiles",
+            "key_column": "id",
+            "key_value": 7,
+            "column": "display_name",
+            "expected": [
+              "new_display"
+            ],
+            "other_column": null
+          }
+        ]
+      },
+      {
+        "name": "backfill_skips_set_row_and_fills_null_row",
+        "rationale": "Row 1 already has display_name, row 2 is NULL. Backfill with large limit must only fill row 2 while v1 updates row 1 legacy concurrently on a different id. Checks WHERE display_name IS NULL filtering and no cross-row corruption.",
+        "seed": [
+          {
+            "table": "profiles",
+            "values": [
+              {
+                "column": "id",
+                "value": 1
+              },
+              {
+                "column": "legacy_name",
+                "value": "keep_a"
+              },
+              {
+                "column": "display_name",
+                "value": "already_set"
+              },
+              {
+                "column": "bio",
+                "value": null
+              }
+            ]
+          },
+          {
+            "table": "profiles",
+            "values": [
+              {
+                "column": "id",
+                "value": 2
+              },
+              {
+                "column": "legacy_name",
+                "value": "need_b"
+              },
+              {
+                "column": "display_name",
+                "value": null
+              },
+              {
+                "column": "bio",
+                "value": null
+              }
+            ]
+          }
+        ],
+        "actors": [
+          {
+            "name": "bf",
+            "function": "backfill.py:backfill_display_names",
+            "calls": [
+              {
+                "statement_id": "backfill.py:backfill_display_names#0",
+                "params": [
+                  {
+                    "name": "limit",
+                    "source": "literal",
+                    "value": 10,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": "b3"
+              },
+              {
+                "statement_id": "backfill.py:backfill_display_names#1",
+                "params": [
+                  {
+                    "name": "display_name",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "b3",
+                    "row": 0,
+                    "column": "legacy_name",
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "b3",
+                    "row": 0,
+                    "column": "id",
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          },
+          {
+            "name": "old_writer",
+            "function": "app_v1.py:update_legacy_name",
+            "calls": [
+              {
+                "statement_id": "app_v1.py:update_legacy_name#0",
+                "params": [
+                  {
+                    "name": "name",
+                    "source": "literal",
+                    "value": "keep_a2",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          }
+        ],
+        "invariants": [
+          {
+            "id": "t3-r1-legacy",
+            "description": "concurrent legacy update on already-backfilled row must persist",
+            "kind": "column_equals",
+            "table": "profiles",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "legacy_name",
+            "expected": [
+              "keep_a2"
+            ],
+            "other_column": null
+          },
+          {
+            "id": "t3-r1-display",
+            "description": "backfill must not touch already-set display_name",
+            "kind": "column_equals",
+            "table": "profiles",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "display_name",
+            "expected": [
+              "already_set"
+            ],
+            "other_column": null
+          },
+          {
+            "id": "t3-r2-display",
+            "description": "NULL row must be backfilled from its legacy_name",
+            "kind": "column_equals",
+            "table": "profiles",
+            "key_column": "id",
+            "key_value": 2,
+            "column": "display_name",
+            "expected": [
+              "need_b"
+            ],
+            "other_column": null
+          },
+          {
+            "id": "t3-r2-legacy",
+            "description": "backfilled row legacy unchanged",
+            "kind": "column_equals",
+            "table": "profiles",
+            "key_column": "id",
+            "key_value": 2,
+            "column": "legacy_name",
+            "expected": [
+              "need_b"
+            ],
+            "other_column": null
+          }
+        ]
+      }
+    ]
+  }
+}

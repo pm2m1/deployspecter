@@ -1,0 +1,675 @@
+{
+  "prompt_version": "v2",
+  "prompt_sha256": "20532d87f10a88e65def270890134ae0c4e3e5c71f9e9e3094ec01e6fbfbb4c6",
+  "model": "muse-spark-1.3",
+  "attempts": [
+    {
+      "kind": "initial",
+      "reply": {
+        "text": "{\n  \"conflicts\": [\n    {\n      \"column\": \"balance_cents\",\n      \"functions\": [\n        \"app_v2.py:credit\",\n        \"resync.py:resync_balances\"\n      ],\n      \"risk_explanation\": \"credit does balance_cents=balance_cents+amount while resync blind-overwrites balance_cents=(balance_dollars*100). If resync computes from stale dollars it discards a concurrent increment; on unbackfilled rows NULL+amount stays NULL, so final cents can be NULL, stale, or inconsistent with dollars.\",\n      \"table\": \"wallets\"\n    },\n    {\n      \"column\": \"balance_dollars\",\n      \"functions\": [\n        \"app_v2.py:credit\",\n        \"resync.py:resync_balances\"\n      ],\n      \"risk_explanation\": \"resync reads balance_dollars to derive balance_cents while credit increments balance_dollars. A stale read of dollars propagates an old value into cents, leaving cents behind dollars even when dollars itself includes all credits.\",\n      \"table\": \"wallets\"\n    }\n  ],\n  \"operations\": [\n    {\n      \"function\": \"app_v2.py:credit\",\n      \"summary\": \"Single-statement dual-column increment of balance_dollars and balance_cents for one wallet.\",\n      \"tables_read\": [\n        \"wallets\"\n      ],\n      \"tables_written\": [\n        \"wallets\"\n      ]\n    },\n    {\n      \"function\": \"resync.py:resync_balances\",\n      \"summary\": \"Backfill balance_cents from balance_dollars via SELECT ids then per-row UPDATE balance_cents=(balance_dollars*100).\",\n      \"tables_read\": [\n        \"wallets\"\n      ],\n      \"tables_written\": [\n        \"wallets\"\n      ]\n    }\n  ],\n  \"tests\": [\n    {\n      \"actors\": [\n        {\n          \"calls\": [\n            {\n              \"bind_as\": null,\n              \"params\": [\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"amount_cents\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": 500\n                },\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"id\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": 1\n                }\n              ],\n              \"statement_id\": \"app_v2.py:credit#0\"\n            }\n          ],\n          \"function\": \"app_v2.py:credit\",\n          \"name\": \"credit-null-row\"\n        },\n        {\n          \"calls\": [\n            {\n              \"bind_as\": \"q1\",\n              \"params\": [\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"limit\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": 1\n                }\n              ],\n              \"statement_id\": \"resync.py:resync_balances#0\"\n            },\n            {\n              \"bind_as\": null,\n              \"params\": [\n                {\n                  \"bind\": \"q1\",\n                  \"column\": \"id\",\n                  \"name\": \"id\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"row_ref\",\n                  \"transform\": \"none\",\n                  \"value\": null\n                }\n              ],\n              \"statement_id\": \"resync.py:resync_balances#1\"\n            }\n          ],\n          \"function\": \"resync.py:resync_balances\",\n          \"name\": \"resync-null-row\"\n        }\n      ],\n      \"invariants\": [\n        {\n          \"column\": \"balance_dollars\",\n          \"description\": \"dollars must include the 500c credit\",\n          \"expected\": [\n            15\n          ],\n          \"id\": \"t1-dollars\",\n          \"key_column\": \"id\",\n          \"key_value\": 1,\n          \"kind\": \"column_equals\",\n          \"other_column\": null,\n          \"table\": \"wallets\"\n        },\n        {\n          \"column\": \"balance_cents\",\n          \"description\": \"cents must equal dollars*100 after backfill and credit\",\n          \"expected\": [\n            1500\n          ],\n          \"id\": \"t1-cents\",\n          \"key_column\": \"id\",\n          \"key_value\": 1,\n          \"kind\": \"column_equals\",\n          \"other_column\": null,\n          \"table\": \"wallets\"\n        }\n      ],\n      \"name\": \"credit_vs_resync_on_null_row\",\n      \"rationale\": \"Migration leaves balance_cents NULL; credit does cents+amount which stays NULL on unbackfilled rows while resync overwrites cents from dollars. Interleaving a credit to a NULL row with resync of that row checks whether the increment is lost or left NULL.\",\n      \"seed\": [\n        {\n          \"table\": \"wallets\",\n          \"values\": [\n            {\n              \"column\": \"id\",\n              \"value\": 1\n            },\n            {\n              \"column\": \"balance_dollars\",\n              \"value\": 10\n            },\n            {\n              \"column\": \"balance_cents\",\n              \"value\": null\n            }\n          ]\n        }\n      ]\n    },\n    {\n      \"actors\": [\n        {\n          \"calls\": [\n            {\n              \"bind_as\": null,\n              \"params\": [\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"amount_cents\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": 500\n                },\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"id\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": 1\n                }\n              ],\n              \"statement_id\": \"app_v2.py:credit#0\"\n            }\n          ],\n          \"function\": \"app_v2.py:credit\",\n          \"name\": \"credit-500\"\n        },\n        {\n          \"calls\": [\n            {\n              \"bind_as\": null,\n              \"params\": [\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"amount_cents\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": 700\n                },\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"id\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": 1\n                }\n              ],\n              \"statement_id\": \"app_v2.py:credit#0\"\n            }\n          ],\n          \"function\": \"app_v2.py:credit\",\n          \"name\": \"credit-700\"\n        },\n        {\n          \"calls\": [\n            {\n              \"bind_as\": \"q2\",\n              \"params\": [\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"limit\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": 1\n                }\n              ],\n              \"statement_id\": \"resync.py:resync_balances#0\"\n            },\n            {\n              \"bind_as\": null,\n              \"params\": [\n                {\n                  \"bind\": \"q2\",\n                  \"column\": \"id\",\n                  \"name\": \"id\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"row_ref\",\n                  \"transform\": \"none\",\n                  \"value\": null\n                }\n              ],\n              \"statement_id\": \"resync.py:resync_balances#1\"\n            }\n          ],\n          \"function\": \"resync.py:resync_balances\",\n          \"name\": \"resync-same-row\"\n        }\n      ],\n      \"invariants\": [\n        {\n          \"column\": \"balance_dollars\",\n          \"description\": \"dollars must include both credits: 10+5+7\",\n          \"expected\": [\n            22\n          ],\n          \"id\": \"t2-dollars\",\n          \"key_column\": \"id\",\n          \"key_value\": 1,\n          \"kind\": \"column_equals\",\n          \"other_column\": null,\n          \"table\": \"wallets\"\n        },\n        {\n          \"column\": \"balance_cents\",\n          \"description\": \"cents must include both credits and match dollars*100\",\n          \"expected\": [\n            2200\n          ],\n          \"id\": \"t2-cents\",\n          \"key_column\": \"id\",\n          \"key_value\": 1,\n          \"kind\": \"column_equals\",\n          \"other_column\": null,\n          \"table\": \"wallets\"\n        }\n      ],\n      \"name\": \"two_credits_vs_resync_consistent_row\",\n      \"rationale\": \"Resync overwrites cents from dollars while credits add to both. Distinct credit amounts make each increment distinguishable; a stale dollars read by resync would discard one increment and leave cents inconsistent.\",\n      \"seed\": [\n        {\n          \"table\": \"wallets\",\n          \"values\": [\n            {\n              \"column\": \"id\",\n              \"value\": 1\n            },\n            {\n              \"column\": \"balance_dollars\",\n              \"value\": 10\n            },\n            {\n              \"column\": \"balance_cents\",\n              \"value\": 1000\n            }\n          ]\n        }\n      ]\n    },\n    {\n      \"actors\": [\n        {\n          \"calls\": [\n            {\n              \"bind_as\": null,\n              \"params\": [\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"amount_cents\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": 100\n                },\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"id\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": 1\n                }\n              ],\n              \"statement_id\": \"app_v2.py:credit#0\"\n            }\n          ],\n          \"function\": \"app_v2.py:credit\",\n          \"name\": \"credit-w1\"\n        },\n        {\n          \"calls\": [\n            {\n              \"bind_as\": null,\n              \"params\": [\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"amount_cents\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": 200\n                },\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"id\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": 2\n                }\n              ],\n              \"statement_id\": \"app_v2.py:credit#0\"\n            }\n          ],\n          \"function\": \"app_v2.py:credit\",\n          \"name\": \"credit-w2\"\n        },\n        {\n          \"calls\": [\n            {\n              \"bind_as\": \"q3\",\n              \"params\": [\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"limit\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": 2\n                }\n              ],\n              \"statement_id\": \"resync.py:resync_balances#0\"\n            },\n            {\n              \"bind_as\": null,\n              \"params\": [\n                {\n                  \"bind\": \"q3\",\n                  \"column\": \"id\",\n                  \"name\": \"id\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"row_ref\",\n                  \"transform\": \"none\",\n                  \"value\": null\n                }\n              ],\n              \"statement_id\": \"resync.py:resync_balances#1\"\n            },\n            {\n              \"bind_as\": null,\n              \"params\": [\n                {\n                  \"bind\": \"q3\",\n                  \"column\": \"id\",\n                  \"name\": \"id\",\n                  \"operand\": null,\n                  \"row\": 1,\n                  \"source\": \"row_ref\",\n                  \"transform\": \"none\",\n                  \"value\": null\n                }\n              ],\n              \"statement_id\": \"resync.py:resync_balances#1\"\n            }\n          ],\n          \"function\": \"resync.py:resync_balances\",\n          \"name\": \"resync-both\"\n        }\n      ],\n      \"invariants\": [\n        {\n          \"column\": \"balance_dollars\",\n          \"description\": \"w1 dollars include its credit\",\n          \"expected\": [\n            11\n          ],\n          \"id\": \"t3-w1-dollars\",\n          \"key_column\": \"id\",\n          \"key_value\": 1,\n          \"kind\": \"column_equals\",\n          \"other_column\": null,\n          \"table\": \"wallets\"\n        },\n        {\n          \"column\": \"balance_cents\",\n          \"description\": \"w1 cents resynced and include credit\",\n          \"expected\": [\n            1100\n          ],\n          \"id\": \"t3-w1-cents\",\n          \"key_column\": \"id\",\n          \"key_value\": 1,\n          \"kind\": \"column_equals\",\n          \"other_column\": null,\n          \"table\": \"wallets\"\n        },\n        {\n          \"column\": \"balance_dollars\",\n          \"description\": \"w2 dollars include its credit\",\n          \"expected\": [\n            22\n          ],\n          \"id\": \"t3-w2-dollars\",\n          \"key_column\": \"id\",\n          \"key_value\": 2,\n          \"kind\": \"column_equals\",\n          \"other_column\": null,\n          \"table\": \"wallets\"\n        },\n        {\n          \"column\": \"balance_cents\",\n          \"description\": \"w2 cents resynced and include credit\",\n          \"expected\": [\n            2200\n          ],\n          \"id\": \"t3-w2-cents\",\n          \"key_column\": \"id\",\n          \"key_value\": 2,\n          \"kind\": \"column_equals\",\n          \"other_column\": null,\n          \"table\": \"wallets\"\n        }\n      ],\n      \"name\": \"stale_rows_full_resync_with_credits\",\n      \"rationale\": \"Both rows start stale (cents 0). Resync SELECTs ids then updates each row separately, so a credit can land before, between, or after the two per-row UPDATEs. Final state must have both rows consistent with their distinct credits.\",\n      \"seed\": [\n        {\n          \"table\": \"wallets\",\n          \"values\": [\n            {\n              \"column\": \"id\",\n              \"value\": 1\n            },\n            {\n              \"column\": \"balance_dollars\",\n              \"value\": 10\n            },\n            {\n              \"column\": \"balance_cents\",\n              \"value\": 0\n            }\n          ]\n        },\n        {\n          \"table\": \"wallets\",\n          \"values\": [\n            {\n              \"column\": \"id\",\n              \"value\": 2\n            },\n            {\n              \"column\": \"balance_dollars\",\n              \"value\": 20\n            },\n            {\n              \"column\": \"balance_cents\",\n              \"value\": 0\n            }\n          ]\n        }\n      ]\n    },\n    {\n      \"actors\": [\n        {\n          \"calls\": [\n            {\n              \"bind_as\": null,\n              \"params\": [\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"amount_cents\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": 200\n                },\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"id\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": 1\n                }\n              ],\n              \"statement_id\": \"app_v2.py:credit#0\"\n            }\n          ],\n          \"function\": \"app_v2.py:credit\",\n          \"name\": \"credit-200\"\n        },\n        {\n          \"calls\": [\n            {\n              \"bind_as\": null,\n              \"params\": [\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"amount_cents\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": 300\n                },\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"id\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": 1\n                }\n              ],\n              \"statement_id\": \"app_v2.py:credit#0\"\n            }\n          ],\n          \"function\": \"app_v2.py:credit\",\n          \"name\": \"credit-300\"\n        }\n      ],\n      \"invariants\": [\n        {\n          \"column\": \"balance_dollars\",\n          \"description\": \"dollars sum both credits: 5+2+3\",\n          \"expected\": [\n            10\n          ],\n          \"id\": \"t4-dollars\",\n          \"key_column\": \"id\",\n          \"key_value\": 1,\n          \"kind\": \"column_equals\",\n          \"other_column\": null,\n          \"table\": \"wallets\"\n        },\n        {\n          \"column\": \"balance_cents\",\n          \"description\": \"cents sum both credits: 500+200+300\",\n          \"expected\": [\n            1000\n          ],\n          \"id\": \"t4-cents\",\n          \"key_column\": \"id\",\n          \"key_value\": 1,\n          \"kind\": \"column_equals\",\n          \"other_column\": null,\n          \"table\": \"wallets\"\n        }\n      ],\n      \"name\": \"concurrent_dual_writes_same_wallet\",\n      \"rationale\": \"V2 credit updates both columns in one statement. Concurrent credits to the same wallet test atomicity of the dual write; a lost update would leave dollars or cents short of the summed increments or break the dollars*100 correspondence.\",\n      \"seed\": [\n        {\n          \"table\": \"wallets\",\n          \"values\": [\n            {\n              \"column\": \"id\",\n              \"value\": 1\n            },\n            {\n              \"column\": \"balance_dollars\",\n              \"value\": 5\n            },\n            {\n              \"column\": \"balance_cents\",\n              \"value\": 500\n            }\n          ]\n        }\n      ]\n    }\n  ]\n}",
+        "status": "completed",
+        "latency_seconds": 50.832,
+        "input_tokens": 1878,
+        "output_tokens": 14439,
+        "reasoning_tokens": 10343,
+        "approx_cost_usd": 0.063713
+      },
+      "parse_error": null
+    }
+  ],
+  "output": {
+    "operations": [
+      {
+        "function": "app_v2.py:credit",
+        "summary": "Single-statement dual-column increment of balance_dollars and balance_cents for one wallet.",
+        "tables_read": [
+          "wallets"
+        ],
+        "tables_written": [
+          "wallets"
+        ]
+      },
+      {
+        "function": "resync.py:resync_balances",
+        "summary": "Backfill balance_cents from balance_dollars via SELECT ids then per-row UPDATE balance_cents=(balance_dollars*100).",
+        "tables_read": [
+          "wallets"
+        ],
+        "tables_written": [
+          "wallets"
+        ]
+      }
+    ],
+    "conflicts": [
+      {
+        "functions": [
+          "app_v2.py:credit",
+          "resync.py:resync_balances"
+        ],
+        "table": "wallets",
+        "column": "balance_cents",
+        "risk_explanation": "credit does balance_cents=balance_cents+amount while resync blind-overwrites balance_cents=(balance_dollars*100). If resync computes from stale dollars it discards a concurrent increment; on unbackfilled rows NULL+amount stays NULL, so final cents can be NULL, stale, or inconsistent with dollars."
+      },
+      {
+        "functions": [
+          "app_v2.py:credit",
+          "resync.py:resync_balances"
+        ],
+        "table": "wallets",
+        "column": "balance_dollars",
+        "risk_explanation": "resync reads balance_dollars to derive balance_cents while credit increments balance_dollars. A stale read of dollars propagates an old value into cents, leaving cents behind dollars even when dollars itself includes all credits."
+      }
+    ],
+    "tests": [
+      {
+        "name": "credit_vs_resync_on_null_row",
+        "rationale": "Migration leaves balance_cents NULL; credit does cents+amount which stays NULL on unbackfilled rows while resync overwrites cents from dollars. Interleaving a credit to a NULL row with resync of that row checks whether the increment is lost or left NULL.",
+        "seed": [
+          {
+            "table": "wallets",
+            "values": [
+              {
+                "column": "id",
+                "value": 1
+              },
+              {
+                "column": "balance_dollars",
+                "value": 10
+              },
+              {
+                "column": "balance_cents",
+                "value": null
+              }
+            ]
+          }
+        ],
+        "actors": [
+          {
+            "name": "credit-null-row",
+            "function": "app_v2.py:credit",
+            "calls": [
+              {
+                "statement_id": "app_v2.py:credit#0",
+                "params": [
+                  {
+                    "name": "amount_cents",
+                    "source": "literal",
+                    "value": 500,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          },
+          {
+            "name": "resync-null-row",
+            "function": "resync.py:resync_balances",
+            "calls": [
+              {
+                "statement_id": "resync.py:resync_balances#0",
+                "params": [
+                  {
+                    "name": "limit",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": "q1"
+              },
+              {
+                "statement_id": "resync.py:resync_balances#1",
+                "params": [
+                  {
+                    "name": "id",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "q1",
+                    "row": 0,
+                    "column": "id",
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          }
+        ],
+        "invariants": [
+          {
+            "id": "t1-dollars",
+            "description": "dollars must include the 500c credit",
+            "kind": "column_equals",
+            "table": "wallets",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "balance_dollars",
+            "expected": [
+              15
+            ],
+            "other_column": null
+          },
+          {
+            "id": "t1-cents",
+            "description": "cents must equal dollars*100 after backfill and credit",
+            "kind": "column_equals",
+            "table": "wallets",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "balance_cents",
+            "expected": [
+              1500
+            ],
+            "other_column": null
+          }
+        ]
+      },
+      {
+        "name": "two_credits_vs_resync_consistent_row",
+        "rationale": "Resync overwrites cents from dollars while credits add to both. Distinct credit amounts make each increment distinguishable; a stale dollars read by resync would discard one increment and leave cents inconsistent.",
+        "seed": [
+          {
+            "table": "wallets",
+            "values": [
+              {
+                "column": "id",
+                "value": 1
+              },
+              {
+                "column": "balance_dollars",
+                "value": 10
+              },
+              {
+                "column": "balance_cents",
+                "value": 1000
+              }
+            ]
+          }
+        ],
+        "actors": [
+          {
+            "name": "credit-500",
+            "function": "app_v2.py:credit",
+            "calls": [
+              {
+                "statement_id": "app_v2.py:credit#0",
+                "params": [
+                  {
+                    "name": "amount_cents",
+                    "source": "literal",
+                    "value": 500,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          },
+          {
+            "name": "credit-700",
+            "function": "app_v2.py:credit",
+            "calls": [
+              {
+                "statement_id": "app_v2.py:credit#0",
+                "params": [
+                  {
+                    "name": "amount_cents",
+                    "source": "literal",
+                    "value": 700,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          },
+          {
+            "name": "resync-same-row",
+            "function": "resync.py:resync_balances",
+            "calls": [
+              {
+                "statement_id": "resync.py:resync_balances#0",
+                "params": [
+                  {
+                    "name": "limit",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": "q2"
+              },
+              {
+                "statement_id": "resync.py:resync_balances#1",
+                "params": [
+                  {
+                    "name": "id",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "q2",
+                    "row": 0,
+                    "column": "id",
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          }
+        ],
+        "invariants": [
+          {
+            "id": "t2-dollars",
+            "description": "dollars must include both credits: 10+5+7",
+            "kind": "column_equals",
+            "table": "wallets",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "balance_dollars",
+            "expected": [
+              22
+            ],
+            "other_column": null
+          },
+          {
+            "id": "t2-cents",
+            "description": "cents must include both credits and match dollars*100",
+            "kind": "column_equals",
+            "table": "wallets",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "balance_cents",
+            "expected": [
+              2200
+            ],
+            "other_column": null
+          }
+        ]
+      },
+      {
+        "name": "stale_rows_full_resync_with_credits",
+        "rationale": "Both rows start stale (cents 0). Resync SELECTs ids then updates each row separately, so a credit can land before, between, or after the two per-row UPDATEs. Final state must have both rows consistent with their distinct credits.",
+        "seed": [
+          {
+            "table": "wallets",
+            "values": [
+              {
+                "column": "id",
+                "value": 1
+              },
+              {
+                "column": "balance_dollars",
+                "value": 10
+              },
+              {
+                "column": "balance_cents",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "table": "wallets",
+            "values": [
+              {
+                "column": "id",
+                "value": 2
+              },
+              {
+                "column": "balance_dollars",
+                "value": 20
+              },
+              {
+                "column": "balance_cents",
+                "value": 0
+              }
+            ]
+          }
+        ],
+        "actors": [
+          {
+            "name": "credit-w1",
+            "function": "app_v2.py:credit",
+            "calls": [
+              {
+                "statement_id": "app_v2.py:credit#0",
+                "params": [
+                  {
+                    "name": "amount_cents",
+                    "source": "literal",
+                    "value": 100,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          },
+          {
+            "name": "credit-w2",
+            "function": "app_v2.py:credit",
+            "calls": [
+              {
+                "statement_id": "app_v2.py:credit#0",
+                "params": [
+                  {
+                    "name": "amount_cents",
+                    "source": "literal",
+                    "value": 200,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 2,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          },
+          {
+            "name": "resync-both",
+            "function": "resync.py:resync_balances",
+            "calls": [
+              {
+                "statement_id": "resync.py:resync_balances#0",
+                "params": [
+                  {
+                    "name": "limit",
+                    "source": "literal",
+                    "value": 2,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": "q3"
+              },
+              {
+                "statement_id": "resync.py:resync_balances#1",
+                "params": [
+                  {
+                    "name": "id",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "q3",
+                    "row": 0,
+                    "column": "id",
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              },
+              {
+                "statement_id": "resync.py:resync_balances#1",
+                "params": [
+                  {
+                    "name": "id",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "q3",
+                    "row": 1,
+                    "column": "id",
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          }
+        ],
+        "invariants": [
+          {
+            "id": "t3-w1-dollars",
+            "description": "w1 dollars include its credit",
+            "kind": "column_equals",
+            "table": "wallets",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "balance_dollars",
+            "expected": [
+              11
+            ],
+            "other_column": null
+          },
+          {
+            "id": "t3-w1-cents",
+            "description": "w1 cents resynced and include credit",
+            "kind": "column_equals",
+            "table": "wallets",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "balance_cents",
+            "expected": [
+              1100
+            ],
+            "other_column": null
+          },
+          {
+            "id": "t3-w2-dollars",
+            "description": "w2 dollars include its credit",
+            "kind": "column_equals",
+            "table": "wallets",
+            "key_column": "id",
+            "key_value": 2,
+            "column": "balance_dollars",
+            "expected": [
+              22
+            ],
+            "other_column": null
+          },
+          {
+            "id": "t3-w2-cents",
+            "description": "w2 cents resynced and include credit",
+            "kind": "column_equals",
+            "table": "wallets",
+            "key_column": "id",
+            "key_value": 2,
+            "column": "balance_cents",
+            "expected": [
+              2200
+            ],
+            "other_column": null
+          }
+        ]
+      },
+      {
+        "name": "concurrent_dual_writes_same_wallet",
+        "rationale": "V2 credit updates both columns in one statement. Concurrent credits to the same wallet test atomicity of the dual write; a lost update would leave dollars or cents short of the summed increments or break the dollars*100 correspondence.",
+        "seed": [
+          {
+            "table": "wallets",
+            "values": [
+              {
+                "column": "id",
+                "value": 1
+              },
+              {
+                "column": "balance_dollars",
+                "value": 5
+              },
+              {
+                "column": "balance_cents",
+                "value": 500
+              }
+            ]
+          }
+        ],
+        "actors": [
+          {
+            "name": "credit-200",
+            "function": "app_v2.py:credit",
+            "calls": [
+              {
+                "statement_id": "app_v2.py:credit#0",
+                "params": [
+                  {
+                    "name": "amount_cents",
+                    "source": "literal",
+                    "value": 200,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          },
+          {
+            "name": "credit-300",
+            "function": "app_v2.py:credit",
+            "calls": [
+              {
+                "statement_id": "app_v2.py:credit#0",
+                "params": [
+                  {
+                    "name": "amount_cents",
+                    "source": "literal",
+                    "value": 300,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          }
+        ],
+        "invariants": [
+          {
+            "id": "t4-dollars",
+            "description": "dollars sum both credits: 5+2+3",
+            "kind": "column_equals",
+            "table": "wallets",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "balance_dollars",
+            "expected": [
+              10
+            ],
+            "other_column": null
+          },
+          {
+            "id": "t4-cents",
+            "description": "cents sum both credits: 500+200+300",
+            "kind": "column_equals",
+            "table": "wallets",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "balance_cents",
+            "expected": [
+              1000
+            ],
+            "other_column": null
+          }
+        ]
+      }
+    ]
+  }
+}

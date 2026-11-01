@@ -1,0 +1,3363 @@
+[
+ {
+  "response": "backfill_overwrite__buggy__r0.json",
+  "scenario": "backfill_overwrite",
+  "variant": "buggy",
+  "repeat": "r0",
+  "test": "backfill_blind_overwrite_loses_v2_write",
+  "invariant": {
+   "id": "t1_display_preserved",
+   "description": "display_name for id 1 should remain the concurrent v2 value; a correct backfill must not overwrite a non-NULL concurrent write",
+   "kind": "column_equals",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "display_name",
+   "expected": [
+    "v2_display"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 84,
+   "failed": 61,
+   "serial_failed": 0,
+   "oracle_same_target": 61,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 1,
+   "example": null
+  },
+  "other_variant": "corrected",
+  "other_variant_result": {
+   "schedules": 84,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "independently verified (same row and column as an oracle violation)"
+ },
+ {
+  "response": "backfill_overwrite__buggy__r0.json",
+  "scenario": "backfill_overwrite",
+  "variant": "buggy",
+  "repeat": "r0",
+  "test": "concurrent_backfills_duplicate_same_row",
+  "invariant": {
+   "id": "t2_second_row_filled",
+   "description": "after two serial limit-1 backfills both rows must be filled; second row must hold its legacy copy",
+   "kind": "column_equals",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 2,
+   "column": "display_name",
+   "expected": [
+    "legacy_two"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 100,
+   "failed": 86,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 86,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 1,
+   "example": {
+    "schedule": {
+     "index": 2,
+     "schedule": [
+      "backfill_a",
+      "backfill_a",
+      "backfill_a",
+      "backfill_a",
+      "backfill_a",
+      "backfill_b",
+      "backfill_b",
+      "backfill_b",
+      "backfill_b",
+      "backfill_b",
+      "backfill_b",
+      "backfill_a"
+     ],
+     "preemptions": 1,
+     "requirement_ids": []
+    },
+    "final_state": {
+     "profiles": [
+      {
+       "id": 1,
+       "legacy_name": "legacy_one",
+       "bio": null,
+       "display_name": "legacy_one"
+      },
+      {
+       "id": 2,
+       "legacy_name": "legacy_two",
+       "bio": null,
+       "display_name": null
+      }
+     ]
+    },
+    "outcome": "completed",
+    "reads": [
+     [
+      {
+       "id": 1,
+       "legacy_name": "legacy_one"
+      }
+     ],
+     [
+      {
+       "id": 1,
+       "legacy_name": "legacy_one"
+      }
+     ]
+    ]
+   }
+  },
+  "other_variant": "corrected",
+  "other_variant_result": {
+   "schedules": 100,
+   "failed": 86,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 86,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 1,
+   "example": {
+    "schedule": {
+     "index": 2,
+     "schedule": [
+      "backfill_a",
+      "backfill_a",
+      "backfill_a",
+      "backfill_a",
+      "backfill_a",
+      "backfill_b",
+      "backfill_b",
+      "backfill_b",
+      "backfill_b",
+      "backfill_b",
+      "backfill_b",
+      "backfill_a"
+     ],
+     "preemptions": 1,
+     "requirement_ids": []
+    },
+    "final_state": {
+     "profiles": [
+      {
+       "id": 1,
+       "legacy_name": "legacy_one",
+       "bio": null,
+       "display_name": "legacy_one"
+      },
+      {
+       "id": 2,
+       "legacy_name": "legacy_two",
+       "bio": null,
+       "display_name": null
+      }
+     ]
+    },
+    "outcome": "completed",
+    "reads": [
+     [
+      {
+       "id": 1,
+       "legacy_name": "legacy_one"
+      }
+     ],
+     [
+      {
+       "id": 1,
+       "legacy_name": "legacy_one"
+      }
+     ]
+    ]
+   }
+  },
+  "other_variant_rejected": [],
+  "category": "potentially real, needs additional oracle evidence"
+ },
+ {
+  "response": "backfill_overwrite__buggy__r0.json",
+  "scenario": "backfill_overwrite",
+  "variant": "buggy",
+  "repeat": "r0",
+  "test": "backfill_overwrites_contended_display_writes",
+  "invariant": {
+   "id": "t3_winner_is_v2",
+   "description": "final display_name must be one of the two concurrent v2 values, not the stale legacy copy",
+   "kind": "column_in",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "display_name",
+   "expected": [
+    "v2_A",
+    "v2_B"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 100,
+   "failed": 12,
+   "serial_failed": 0,
+   "oracle_same_target": 12,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 1,
+   "example": null
+  },
+  "other_variant": "corrected",
+  "other_variant_result": {
+   "schedules": 100,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "independently verified (same row and column as an oracle violation)"
+ },
+ {
+  "response": "backfill_overwrite__buggy__r1.json",
+  "scenario": "backfill_overwrite",
+  "variant": "buggy",
+  "repeat": "r1",
+  "test": "backfill_overwrites_concurrent_display_write",
+  "invariant": {
+   "id": "t1-display-preserved",
+   "description": "Concurrent v2 display value must survive backfill; guarded backfill would leave it intact in all orders.",
+   "kind": "column_equals",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "display_name",
+   "expected": [
+    "picked-by-user"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 84,
+   "failed": 61,
+   "serial_failed": 0,
+   "oracle_same_target": 61,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 1,
+   "example": null
+  },
+  "other_variant": "corrected",
+  "other_variant_result": {
+   "schedules": 84,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "independently verified (same row and column as an oracle violation)"
+ },
+ {
+  "response": "backfill_overwrite__buggy__r1.json",
+  "scenario": "backfill_overwrite",
+  "variant": "buggy",
+  "repeat": "r1",
+  "test": "backfill_copies_stale_legacy_value",
+  "invariant": {
+   "id": "t2-display-matches-final-legacy",
+   "description": "With dual-write/atomic copy, display must equal final legacy v1-new-name in all orders.",
+   "kind": "column_equals",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "display_name",
+   "expected": [
+    "v1-new-name"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 84,
+   "failed": 80,
+   "serial_failed": 1,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 80,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 1,
+   "example": {
+    "schedule": {
+     "index": 0,
+     "schedule": [
+      "bf",
+      "bf",
+      "bf",
+      "bf",
+      "bf",
+      "bf",
+      "v1",
+      "v1",
+      "v1"
+     ],
+     "preemptions": 0,
+     "requirement_ids": []
+    },
+    "final_state": {
+     "profiles": [
+      {
+       "id": 1,
+       "legacy_name": "v1-new-name",
+       "bio": null,
+       "display_name": "orig-name"
+      }
+     ]
+    },
+    "outcome": "completed",
+    "reads": [
+     [
+      {
+       "id": 1,
+       "legacy_name": "orig-name"
+      }
+     ]
+    ]
+   }
+  },
+  "other_variant": "corrected",
+  "other_variant_result": {
+   "schedules": 84,
+   "failed": 80,
+   "serial_failed": 1,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 80,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 1,
+   "example": {
+    "schedule": {
+     "index": 0,
+     "schedule": [
+      "bf",
+      "bf",
+      "bf",
+      "bf",
+      "bf",
+      "bf",
+      "v1",
+      "v1",
+      "v1"
+     ],
+     "preemptions": 0,
+     "requirement_ids": []
+    },
+    "final_state": {
+     "profiles": [
+      {
+       "id": 1,
+       "legacy_name": "v1-new-name",
+       "bio": null,
+       "display_name": "orig-name"
+      }
+     ]
+    },
+    "outcome": "completed",
+    "reads": [
+     [
+      {
+       "id": 1,
+       "legacy_name": "orig-name"
+      }
+     ]
+    ]
+   }
+  },
+  "other_variant_rejected": [],
+  "category": "incorrect or unsupported invariant (fails in a serial order)"
+ },
+ {
+  "response": "backfill_overwrite__buggy__r1.json",
+  "scenario": "backfill_overwrite",
+  "variant": "buggy",
+  "repeat": "r1",
+  "test": "old_and_new_writes_diverge_columns",
+  "invariant": {
+   "id": "t3-columns-stay-in-sync",
+   "description": "Synced releases would keep both name columns equal via last-writer-wins.",
+   "kind": "column_equals_column",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "legacy_name",
+   "expected": [],
+   "other_column": "display_name"
+  },
+  "result": {
+   "schedules": 20,
+   "failed": 20,
+   "serial_failed": 2,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 20,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 1,
+   "example": {
+    "schedule": {
+     "index": 0,
+     "schedule": [
+      "v1",
+      "v1",
+      "v1",
+      "v2",
+      "v2",
+      "v2"
+     ],
+     "preemptions": 0,
+     "requirement_ids": []
+    },
+    "final_state": {
+     "profiles": [
+      {
+       "id": 1,
+       "legacy_name": "name-from-v1",
+       "bio": null,
+       "display_name": "name-from-v2"
+      }
+     ]
+    },
+    "outcome": "completed",
+    "reads": []
+   }
+  },
+  "other_variant": "corrected",
+  "other_variant_result": {
+   "schedules": 20,
+   "failed": 20,
+   "serial_failed": 2,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 20,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 1,
+   "example": {
+    "schedule": {
+     "index": 0,
+     "schedule": [
+      "v1",
+      "v1",
+      "v1",
+      "v2",
+      "v2",
+      "v2"
+     ],
+     "preemptions": 0,
+     "requirement_ids": []
+    },
+    "final_state": {
+     "profiles": [
+      {
+       "id": 1,
+       "legacy_name": "name-from-v1",
+       "bio": null,
+       "display_name": "name-from-v2"
+      }
+     ]
+    },
+    "outcome": "completed",
+    "reads": []
+   }
+  },
+  "other_variant_rejected": [],
+  "category": "incorrect or unsupported invariant (fails in a serial order)"
+ },
+ {
+  "response": "backfill_overwrite__buggy__r2.json",
+  "scenario": "backfill_overwrite",
+  "variant": "buggy",
+  "repeat": "r2",
+  "test": "backfill_clobbers_concurrent_display_write",
+  "invariant": {
+   "id": "t1-display",
+   "description": "explicit v2 display value must survive backfill in every serial order",
+   "kind": "column_equals",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "display_name",
+   "expected": [
+    "AliceV2"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 84,
+   "failed": 61,
+   "serial_failed": 0,
+   "oracle_same_target": 61,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 1,
+   "example": null
+  },
+  "other_variant": "corrected",
+  "other_variant_result": {
+   "schedules": 84,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "independently verified (same row and column as an oracle violation)"
+ },
+ {
+  "response": "backfill_overwrite__buggy__r2.json",
+  "scenario": "backfill_overwrite",
+  "variant": "buggy",
+  "repeat": "r2",
+  "test": "backfill_loses_to_two_concurrent_display_writes",
+  "invariant": {
+   "id": "t2-display",
+   "description": "final display must be one of the two explicit v2 values, never the backfill copy",
+   "kind": "column_in",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "display_name",
+   "expected": [
+    "V2_A",
+    "V2_B"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 100,
+   "failed": 12,
+   "serial_failed": 0,
+   "oracle_same_target": 12,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 1,
+   "example": null
+  },
+  "other_variant": "corrected",
+  "other_variant_result": {
+   "schedules": 100,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "independently verified (same row and column as an oracle violation)"
+ },
+ {
+  "response": "backfill_overwrite__buggy__r2.json",
+  "scenario": "backfill_overwrite",
+  "variant": "buggy",
+  "repeat": "r2",
+  "test": "backfill_overwrite_with_concurrent_legacy_and_display_writes",
+  "invariant": {
+   "id": "t3-legacy",
+   "description": "v1 legacy update is never touched by backfill",
+   "kind": "column_equals",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "legacy_name",
+   "expected": [
+    "legacy_v1"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 100,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "corrected",
+  "other_variant_result": {
+   "schedules": 100,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "backfill_overwrite__buggy__r2.json",
+  "scenario": "backfill_overwrite",
+  "variant": "buggy",
+  "repeat": "r2",
+  "test": "backfill_overwrite_with_concurrent_legacy_and_display_writes",
+  "invariant": {
+   "id": "t3-display",
+   "description": "explicit v2 display must survive despite concurrent legacy change and backfill",
+   "kind": "column_equals",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "display_name",
+   "expected": [
+    "display_v2"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 100,
+   "failed": 22,
+   "serial_failed": 0,
+   "oracle_same_target": 22,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 2,
+   "example": null
+  },
+  "other_variant": "corrected",
+  "other_variant_result": {
+   "schedules": 100,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "independently verified (same row and column as an oracle violation)"
+ },
+ {
+  "response": "backfill_overwrite__buggy__r2.json",
+  "scenario": "backfill_overwrite",
+  "variant": "buggy",
+  "repeat": "r2",
+  "test": "backfill_limit_snapshot_overwrites_first_row",
+  "invariant": {
+   "id": "t4-display",
+   "description": "first row explicit value must survive limit-1 backfill in every serial order",
+   "kind": "column_equals",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "display_name",
+   "expected": [
+    "V2AAA"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 84,
+   "failed": 61,
+   "serial_failed": 0,
+   "oracle_same_target": 61,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 1,
+   "example": null
+  },
+  "other_variant": "corrected",
+  "other_variant_result": {
+   "schedules": 84,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "independently verified (same row and column as an oracle violation)"
+ },
+ {
+  "response": "backfill_overwrite__corrected__r0.json",
+  "scenario": "backfill_overwrite",
+  "variant": "corrected",
+  "repeat": "r0",
+  "test": "backfill_vs_display_update",
+  "invariant": {
+   "id": "t1-display-preserved",
+   "description": "concurrent v2 display value must survive; backfill must not overwrite non-NULL display",
+   "kind": "column_equals",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "display_name",
+   "expected": [
+    "carol_v2"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 84,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": {
+   "schedules": 84,
+   "failed": 61,
+   "serial_failed": 0,
+   "oracle_same_target": 61,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 1,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "backfill_overwrite__corrected__r0.json",
+  "scenario": "backfill_overwrite",
+  "variant": "corrected",
+  "repeat": "r0",
+  "test": "backfill_vs_display_update",
+  "invariant": {
+   "id": "t1-legacy-untouched",
+   "description": "neither backfill nor v2 modifies legacy_name",
+   "kind": "column_equals",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "legacy_name",
+   "expected": [
+    "alice"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 84,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": {
+   "schedules": 84,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "backfill_overwrite__corrected__r0.json",
+  "scenario": "backfill_overwrite",
+  "variant": "corrected",
+  "repeat": "r0",
+  "test": "rolling_three_way_backfill_v1_v2",
+  "invariant": {
+   "id": "t2-legacy-final",
+   "description": "only v1 writes legacy_name so final must be v1 value",
+   "kind": "column_equals",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 2,
+   "column": "legacy_name",
+   "expected": [
+    "v1_new"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 100,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": {
+   "schedules": 100,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "backfill_overwrite__corrected__r0.json",
+  "scenario": "backfill_overwrite",
+  "variant": "corrected",
+  "repeat": "r0",
+  "test": "rolling_three_way_backfill_v1_v2",
+  "invariant": {
+   "id": "t2-display-final",
+   "description": "v2 display must win over backfill copy in every order due to conditional backfill",
+   "kind": "column_equals",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 2,
+   "column": "display_name",
+   "expected": [
+    "v2_new"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 100,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": {
+   "schedules": 100,
+   "failed": 22,
+   "serial_failed": 0,
+   "oracle_same_target": 22,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 2,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "backfill_overwrite__corrected__r0.json",
+  "scenario": "backfill_overwrite",
+  "variant": "corrected",
+  "repeat": "r0",
+  "test": "dual_column_isolation_v1_v2",
+  "invariant": {
+   "id": "t3-legacy-kept",
+   "description": "v1 column update must persist",
+   "kind": "column_equals",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 3,
+   "column": "legacy_name",
+   "expected": [
+    "legacy_new"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 20,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": {
+   "schedules": 20,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "backfill_overwrite__corrected__r0.json",
+  "scenario": "backfill_overwrite",
+  "variant": "corrected",
+  "repeat": "r0",
+  "test": "dual_column_isolation_v1_v2",
+  "invariant": {
+   "id": "t3-display-kept",
+   "description": "v2 column update must persist alongside v1",
+   "kind": "column_equals",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 3,
+   "column": "display_name",
+   "expected": [
+    "display_new"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 20,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": {
+   "schedules": 20,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "backfill_overwrite__corrected__r0.json",
+  "scenario": "backfill_overwrite",
+  "variant": "corrected",
+  "repeat": "r0",
+  "test": "backfill_vs_legacy_update",
+  "invariant": {
+   "id": "t4-legacy-final",
+   "description": "backfill never writes legacy_name so v1 value must remain",
+   "kind": "column_equals",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 4,
+   "column": "legacy_name",
+   "expected": [
+    "orig_updated"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 84,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": {
+   "schedules": 84,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "backfill_overwrite__corrected__r0.json",
+  "scenario": "backfill_overwrite",
+  "variant": "corrected",
+  "repeat": "r0",
+  "test": "backfill_vs_legacy_update",
+  "invariant": {
+   "id": "t4-display-from-legacy",
+   "description": "backfill must populate display from some observed legacy value, never NULL or corrupt",
+   "kind": "column_in",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 4,
+   "column": "display_name",
+   "expected": [
+    "orig",
+    "orig_updated"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 84,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": {
+   "schedules": 84,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "backfill_overwrite__corrected__r1.json",
+  "scenario": "backfill_overwrite",
+  "variant": "corrected",
+  "repeat": "r1",
+  "test": "backfill_stale_copy_vs_legacy_write",
+  "invariant": {
+   "id": "legacy_preserved",
+   "description": "v1 write to legacy_name must not be lost",
+   "kind": "column_equals",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "legacy_name",
+   "expected": [
+    "v1_new"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 84,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": {
+   "schedules": 84,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "backfill_overwrite__corrected__r1.json",
+  "scenario": "backfill_overwrite",
+  "variant": "corrected",
+  "repeat": "r1",
+  "test": "backfill_stale_copy_vs_legacy_write",
+  "invariant": {
+   "id": "display_synced",
+   "description": "display_name should stay in sync with final legacy_name if correctly maintained",
+   "kind": "column_equals_column",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "display_name",
+   "expected": [],
+   "other_column": "legacy_name"
+  },
+  "result": {
+   "schedules": 84,
+   "failed": 80,
+   "serial_failed": 1,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 80,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 1,
+   "example": {
+    "schedule": {
+     "index": 0,
+     "schedule": [
+      "backfill",
+      "backfill",
+      "backfill",
+      "backfill",
+      "backfill",
+      "backfill",
+      "legacy_writer",
+      "legacy_writer",
+      "legacy_writer"
+     ],
+     "preemptions": 0,
+     "requirement_ids": []
+    },
+    "final_state": {
+     "profiles": [
+      {
+       "id": 1,
+       "legacy_name": "v1_new",
+       "bio": null,
+       "display_name": "orig"
+      }
+     ]
+    },
+    "outcome": "completed",
+    "reads": [
+     [
+      {
+       "id": 1,
+       "legacy_name": "orig"
+      }
+     ]
+    ]
+   }
+  },
+  "other_variant": "buggy",
+  "other_variant_result": {
+   "schedules": 84,
+   "failed": 80,
+   "serial_failed": 1,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 80,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 1,
+   "example": {
+    "schedule": {
+     "index": 0,
+     "schedule": [
+      "backfill",
+      "backfill",
+      "backfill",
+      "backfill",
+      "backfill",
+      "backfill",
+      "legacy_writer",
+      "legacy_writer",
+      "legacy_writer"
+     ],
+     "preemptions": 0,
+     "requirement_ids": []
+    },
+    "final_state": {
+     "profiles": [
+      {
+       "id": 1,
+       "legacy_name": "v1_new",
+       "bio": null,
+       "display_name": "orig"
+      }
+     ]
+    },
+    "outcome": "completed",
+    "reads": [
+     [
+      {
+       "id": 1,
+       "legacy_name": "orig"
+      }
+     ]
+    ]
+   }
+  },
+  "other_variant_rejected": [],
+  "category": "incorrect or unsupported invariant (fails in a serial order)"
+ },
+ {
+  "response": "backfill_overwrite__corrected__r1.json",
+  "scenario": "backfill_overwrite",
+  "variant": "corrected",
+  "repeat": "r1",
+  "test": "v1_v2_split_brain_divergence",
+  "invariant": {
+   "id": "legacy_one_of_writers",
+   "description": "final legacy_name is one of the two writers values under any correct last-writer-wins sync",
+   "kind": "column_in",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "legacy_name",
+   "expected": [
+    "v1_new",
+    "v2_new"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 20,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": {
+   "schedules": 20,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "backfill_overwrite__corrected__r1.json",
+  "scenario": "backfill_overwrite",
+  "variant": "corrected",
+  "repeat": "r1",
+  "test": "v1_v2_split_brain_divergence",
+  "invariant": {
+   "id": "display_one_of_writers",
+   "description": "final display_name is one of the two writers values under any correct sync",
+   "kind": "column_in",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "display_name",
+   "expected": [
+    "v1_new",
+    "v2_new"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 20,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": {
+   "schedules": 20,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "backfill_overwrite__corrected__r1.json",
+  "scenario": "backfill_overwrite",
+  "variant": "corrected",
+  "repeat": "r1",
+  "test": "v1_v2_split_brain_divergence",
+  "invariant": {
+   "id": "columns_agree",
+   "description": "both name columns should agree if dual-write is correct; current code leaves them split",
+   "kind": "column_equals_column",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "display_name",
+   "expected": [],
+   "other_column": "legacy_name"
+  },
+  "result": {
+   "schedules": 20,
+   "failed": 20,
+   "serial_failed": 2,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 20,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 1,
+   "example": {
+    "schedule": {
+     "index": 0,
+     "schedule": [
+      "writer_v1",
+      "writer_v1",
+      "writer_v1",
+      "writer_v2",
+      "writer_v2",
+      "writer_v2"
+     ],
+     "preemptions": 0,
+     "requirement_ids": []
+    },
+    "final_state": {
+     "profiles": [
+      {
+       "id": 1,
+       "legacy_name": "v1_new",
+       "bio": null,
+       "display_name": "v2_new"
+      }
+     ]
+    },
+    "outcome": "completed",
+    "reads": []
+   }
+  },
+  "other_variant": "buggy",
+  "other_variant_result": {
+   "schedules": 20,
+   "failed": 20,
+   "serial_failed": 2,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 20,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 1,
+   "example": {
+    "schedule": {
+     "index": 0,
+     "schedule": [
+      "writer_v1",
+      "writer_v1",
+      "writer_v1",
+      "writer_v2",
+      "writer_v2",
+      "writer_v2"
+     ],
+     "preemptions": 0,
+     "requirement_ids": []
+    },
+    "final_state": {
+     "profiles": [
+      {
+       "id": 1,
+       "legacy_name": "v1_new",
+       "bio": null,
+       "display_name": "v2_new"
+      }
+     ]
+    },
+    "outcome": "completed",
+    "reads": []
+   }
+  },
+  "other_variant_rejected": [],
+  "category": "incorrect or unsupported invariant (fails in a serial order)"
+ },
+ {
+  "response": "backfill_overwrite__corrected__r1.json",
+  "scenario": "backfill_overwrite",
+  "variant": "corrected",
+  "repeat": "r1",
+  "test": "backfill_must_not_clobber_v2",
+  "invariant": {
+   "id": "v2_not_clobbered",
+   "description": "v2 value must survive; guarded backfill must not overwrite it in any interleaving",
+   "kind": "column_equals",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "display_name",
+   "expected": [
+    "v2_new"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 84,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": {
+   "schedules": 84,
+   "failed": 61,
+   "serial_failed": 0,
+   "oracle_same_target": 61,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 1,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "backfill_overwrite__corrected__r1.json",
+  "scenario": "backfill_overwrite",
+  "variant": "corrected",
+  "repeat": "r1",
+  "test": "backfill_must_not_clobber_v2",
+  "invariant": {
+   "id": "legacy_unchanged",
+   "description": "legacy_name untouched by either backfill or v2",
+   "kind": "column_equals",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "legacy_name",
+   "expected": [
+    "orig"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 84,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": {
+   "schedules": 84,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "backfill_overwrite__corrected__r1.json",
+  "scenario": "backfill_overwrite",
+  "variant": "corrected",
+  "repeat": "r1",
+  "test": "backfill_batch_with_concurrent_row_writes",
+  "invariant": {
+   "id": "row1_v2_wins",
+   "description": "guarded backfill must not overwrite concurrent v2 on row 1 in any order",
+   "kind": "column_equals",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "display_name",
+   "expected": [
+    "row1_v2"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 100,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": {
+   "schedules": 100,
+   "failed": 16,
+   "serial_failed": 0,
+   "oracle_same_target": 16,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 2,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "backfill_overwrite__corrected__r1.json",
+  "scenario": "backfill_overwrite",
+  "variant": "corrected",
+  "repeat": "r1",
+  "test": "backfill_batch_with_concurrent_row_writes",
+  "invariant": {
+   "id": "row2_legacy",
+   "description": "v1 write to row 2 legacy must not be lost",
+   "kind": "column_equals",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 2,
+   "column": "legacy_name",
+   "expected": [
+    "row2_v1"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 100,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": {
+   "schedules": 100,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "backfill_overwrite__corrected__r1.json",
+  "scenario": "backfill_overwrite",
+  "variant": "corrected",
+  "repeat": "r1",
+  "test": "backfill_batch_with_concurrent_row_writes",
+  "invariant": {
+   "id": "row2_synced",
+   "description": "row 2 display should match final legacy if kept in sync; stale SELECT leaves orig",
+   "kind": "column_equals_column",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 2,
+   "column": "display_name",
+   "expected": [],
+   "other_column": "legacy_name"
+  },
+  "result": {
+   "schedules": 100,
+   "failed": 77,
+   "serial_failed": 3,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 77,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 1,
+   "example": {
+    "schedule": {
+     "index": 0,
+     "schedule": [
+      "backfill_batch",
+      "backfill_batch",
+      "backfill_batch",
+      "backfill_batch",
+      "backfill_batch",
+      "backfill_batch",
+      "backfill_batch",
+      "backfill_batch",
+      "backfill_batch",
+      "v1_on_row2",
+      "v1_on_row2",
+      "v1_on_row2",
+      "v2_on_row1",
+      "v2_on_row1",
+      "v2_on_row1"
+     ],
+     "preemptions": 0,
+     "requirement_ids": []
+    },
+    "final_state": {
+     "profiles": [
+      {
+       "id": 1,
+       "legacy_name": "row1_orig",
+       "bio": null,
+       "display_name": "row1_v2"
+      },
+      {
+       "id": 2,
+       "legacy_name": "row2_v1",
+       "bio": null,
+       "display_name": "row2_orig"
+      }
+     ]
+    },
+    "outcome": "completed",
+    "reads": [
+     [
+      {
+       "id": 1,
+       "legacy_name": "row1_orig"
+      },
+      {
+       "id": 2,
+       "legacy_name": "row2_orig"
+      }
+     ]
+    ]
+   }
+  },
+  "other_variant": "buggy",
+  "other_variant_result": {
+   "schedules": 100,
+   "failed": 77,
+   "serial_failed": 3,
+   "oracle_same_target": 0,
+   "oracle_other_target": 11,
+   "no_oracle_violation": 66,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 2,
+   "example": {
+    "schedule": {
+     "index": 0,
+     "schedule": [
+      "backfill_batch",
+      "backfill_batch",
+      "backfill_batch",
+      "backfill_batch",
+      "backfill_batch",
+      "backfill_batch",
+      "backfill_batch",
+      "backfill_batch",
+      "backfill_batch",
+      "v1_on_row2",
+      "v1_on_row2",
+      "v1_on_row2",
+      "v2_on_row1",
+      "v2_on_row1",
+      "v2_on_row1"
+     ],
+     "preemptions": 0,
+     "requirement_ids": []
+    },
+    "final_state": {
+     "profiles": [
+      {
+       "id": 1,
+       "legacy_name": "row1_orig",
+       "bio": null,
+       "display_name": "row1_v2"
+      },
+      {
+       "id": 2,
+       "legacy_name": "row2_v1",
+       "bio": null,
+       "display_name": "row2_orig"
+      }
+     ]
+    },
+    "outcome": "completed",
+    "reads": [
+     [
+      {
+       "id": 1,
+       "legacy_name": "row1_orig"
+      },
+      {
+       "id": 2,
+       "legacy_name": "row2_orig"
+      }
+     ]
+    ]
+   }
+  },
+  "other_variant_rejected": [],
+  "category": "incorrect or unsupported invariant (fails in a serial order)"
+ },
+ {
+  "response": "backfill_overwrite__corrected__r2.json",
+  "scenario": "backfill_overwrite",
+  "variant": "corrected",
+  "repeat": "r2",
+  "test": "backfill_must_not_overwrite_concurrent_display_name",
+  "invariant": {
+   "id": "t1-display",
+   "description": "user display_name must survive; backfill must not overwrite it with stale legacy value",
+   "kind": "column_equals",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "display_name",
+   "expected": [
+    "Alice Custom"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 84,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": {
+   "schedules": 84,
+   "failed": 61,
+   "serial_failed": 0,
+   "oracle_same_target": 61,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 1,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "backfill_overwrite__corrected__r2.json",
+  "scenario": "backfill_overwrite",
+  "variant": "corrected",
+  "repeat": "r2",
+  "test": "backfill_must_not_overwrite_concurrent_display_name",
+  "invariant": {
+   "id": "t1-legacy",
+   "description": "legacy_name untouched by either actor except backfill read",
+   "kind": "column_equals",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "legacy_name",
+   "expected": [
+    "alice_legacy"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 84,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": {
+   "schedules": 84,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "backfill_overwrite__corrected__r2.json",
+  "scenario": "backfill_overwrite",
+  "variant": "corrected",
+  "repeat": "r2",
+  "test": "concurrent_legacy_and_display_updates_both_persist",
+  "invariant": {
+   "id": "t2-legacy",
+   "description": "v1 different-column update must persist",
+   "kind": "column_equals",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 7,
+   "column": "legacy_name",
+   "expected": [
+    "new_legacy"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 20,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": {
+   "schedules": 20,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "backfill_overwrite__corrected__r2.json",
+  "scenario": "backfill_overwrite",
+  "variant": "corrected",
+  "repeat": "r2",
+  "test": "concurrent_legacy_and_display_updates_both_persist",
+  "invariant": {
+   "id": "t2-display",
+   "description": "v2 different-column update must persist",
+   "kind": "column_equals",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 7,
+   "column": "display_name",
+   "expected": [
+    "new_display"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 20,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": {
+   "schedules": 20,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "backfill_overwrite__corrected__r2.json",
+  "scenario": "backfill_overwrite",
+  "variant": "corrected",
+  "repeat": "r2",
+  "test": "backfill_skips_set_row_and_fills_null_row",
+  "invariant": {
+   "id": "t3-r1-legacy",
+   "description": "concurrent legacy update on already-backfilled row must persist",
+   "kind": "column_equals",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "legacy_name",
+   "expected": [
+    "keep_a2"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 84,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": {
+   "schedules": 84,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "backfill_overwrite__corrected__r2.json",
+  "scenario": "backfill_overwrite",
+  "variant": "corrected",
+  "repeat": "r2",
+  "test": "backfill_skips_set_row_and_fills_null_row",
+  "invariant": {
+   "id": "t3-r1-display",
+   "description": "backfill must not touch already-set display_name",
+   "kind": "column_equals",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "display_name",
+   "expected": [
+    "already_set"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 84,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": {
+   "schedules": 84,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "backfill_overwrite__corrected__r2.json",
+  "scenario": "backfill_overwrite",
+  "variant": "corrected",
+  "repeat": "r2",
+  "test": "backfill_skips_set_row_and_fills_null_row",
+  "invariant": {
+   "id": "t3-r2-display",
+   "description": "NULL row must be backfilled from its legacy_name",
+   "kind": "column_equals",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 2,
+   "column": "display_name",
+   "expected": [
+    "need_b"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 84,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": {
+   "schedules": 84,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "backfill_overwrite__corrected__r2.json",
+  "scenario": "backfill_overwrite",
+  "variant": "corrected",
+  "repeat": "r2",
+  "test": "backfill_skips_set_row_and_fills_null_row",
+  "invariant": {
+   "id": "t3-r2-legacy",
+   "description": "backfilled row legacy unchanged",
+   "kind": "column_equals",
+   "table": "profiles",
+   "key_column": "id",
+   "key_value": 2,
+   "column": "legacy_name",
+   "expected": [
+    "need_b"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 84,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": {
+   "schedules": 84,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "mixed_version_overwrite__buggy__r0.json",
+  "scenario": "mixed_version_overwrite",
+  "variant": "buggy",
+  "repeat": "r0",
+  "test": "email_vs_plan_lost_update",
+  "invariant": {
+   "id": "inv_plan",
+   "description": "plan should be pro after serial execution: email preserves whatever it read",
+   "kind": "column_equals",
+   "table": "accounts",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "plan",
+   "expected": [
+    "pro"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 35,
+   "failed": 18,
+   "serial_failed": 0,
+   "oracle_same_target": 18,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 1,
+   "example": null
+  },
+  "other_variant": "corrected",
+  "other_variant_result": null,
+  "other_variant_rejected": [
+   [
+    "actor 'email_legacy': app_v1.py:change_email#1 needs params ['email', 'id'], got ['email', 'plan', 'id']"
+   ]
+  ],
+  "category": "independently verified (same row and column as an oracle violation)"
+ },
+ {
+  "response": "mixed_version_overwrite__buggy__r0.json",
+  "scenario": "mixed_version_overwrite",
+  "variant": "buggy",
+  "repeat": "r0",
+  "test": "email_vs_plan_lost_update",
+  "invariant": {
+   "id": "inv_email",
+   "description": "email should be updated by legacy txn",
+   "kind": "column_equals",
+   "table": "accounts",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "email",
+   "expected": [
+    "new@example.com"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 35,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "corrected",
+  "other_variant_result": null,
+  "other_variant_rejected": [
+   [
+    "actor 'email_legacy': app_v1.py:change_email#1 needs params ['email', 'id'], got ['email', 'plan', 'id']"
+   ]
+  ],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "mixed_version_overwrite__buggy__r0.json",
+  "scenario": "mixed_version_overwrite",
+  "variant": "buggy",
+  "repeat": "r0",
+  "test": "email_vs_plan_lost_update",
+  "invariant": {
+   "id": "inv_actor",
+   "description": "attribution should be alice",
+   "kind": "column_equals",
+   "table": "accounts",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "plan_changed_by",
+   "expected": [
+    "alice"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 35,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "corrected",
+  "other_variant_result": null,
+  "other_variant_rejected": [
+   [
+    "actor 'email_legacy': app_v1.py:change_email#1 needs params ['email', 'id'], got ['email', 'plan', 'id']"
+   ]
+  ],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "mixed_version_overwrite__buggy__r0.json",
+  "scenario": "mixed_version_overwrite",
+  "variant": "buggy",
+  "repeat": "r0",
+  "test": "two_emails_vs_plan",
+  "invariant": {
+   "id": "inv_plan",
+   "description": "only plan writer is pro so serial final plan is always pro",
+   "kind": "column_equals",
+   "table": "accounts",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "plan",
+   "expected": [
+    "pro"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 100,
+   "failed": 32,
+   "serial_failed": 0,
+   "oracle_same_target": 32,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 2,
+   "example": null
+  },
+  "other_variant": "corrected",
+  "other_variant_result": null,
+  "other_variant_rejected": [
+   [
+    "actor 'email1': app_v1.py:change_email#1 needs params ['email', 'id'], got ['email', 'plan', 'id']",
+    "actor 'email2': app_v1.py:change_email#1 needs params ['email', 'id'], got ['email', 'plan', 'id']"
+   ]
+  ],
+  "category": "independently verified (same row and column as an oracle violation)"
+ },
+ {
+  "response": "mixed_version_overwrite__buggy__r0.json",
+  "scenario": "mixed_version_overwrite",
+  "variant": "buggy",
+  "repeat": "r0",
+  "test": "two_emails_vs_plan",
+  "invariant": {
+   "id": "inv_email",
+   "description": "final email is last writer of the two legacy txns",
+   "kind": "column_in",
+   "table": "accounts",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "email",
+   "expected": [
+    "new1@example.com",
+    "new2@example.com"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 100,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "corrected",
+  "other_variant_result": null,
+  "other_variant_rejected": [
+   [
+    "actor 'email1': app_v1.py:change_email#1 needs params ['email', 'id'], got ['email', 'plan', 'id']",
+    "actor 'email2': app_v1.py:change_email#1 needs params ['email', 'id'], got ['email', 'plan', 'id']"
+   ]
+  ],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "mixed_version_overwrite__buggy__r0.json",
+  "scenario": "mixed_version_overwrite",
+  "variant": "buggy",
+  "repeat": "r0",
+  "test": "two_emails_vs_plan",
+  "invariant": {
+   "id": "inv_actor",
+   "description": "only actor is alice",
+   "kind": "column_equals",
+   "table": "accounts",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "plan_changed_by",
+   "expected": [
+    "alice"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 100,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "corrected",
+  "other_variant_result": null,
+  "other_variant_rejected": [
+   [
+    "actor 'email1': app_v1.py:change_email#1 needs params ['email', 'id'], got ['email', 'plan', 'id']",
+    "actor 'email2': app_v1.py:change_email#1 needs params ['email', 'id'], got ['email', 'plan', 'id']"
+   ]
+  ],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "mixed_version_overwrite__buggy__r0.json",
+  "scenario": "mixed_version_overwrite",
+  "variant": "buggy",
+  "repeat": "r0",
+  "test": "email_vs_two_plans",
+  "invariant": {
+   "id": "inv_email",
+   "description": "only email writer",
+   "kind": "column_equals",
+   "table": "accounts",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "email",
+   "expected": [
+    "new@example.com"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 100,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "corrected",
+  "other_variant_result": null,
+  "other_variant_rejected": [
+   [
+    "actor 'email_legacy': app_v1.py:change_email#1 needs params ['email', 'id'], got ['email', 'plan', 'id']"
+   ]
+  ],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "mixed_version_overwrite__buggy__r0.json",
+  "scenario": "mixed_version_overwrite",
+  "variant": "buggy",
+  "repeat": "r0",
+  "test": "email_vs_two_plans",
+  "invariant": {
+   "id": "inv_plan",
+   "description": "serial final plan is last plan writer, never stale free",
+   "kind": "column_in",
+   "table": "accounts",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "plan",
+   "expected": [
+    "pro",
+    "team"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 100,
+   "failed": 12,
+   "serial_failed": 0,
+   "oracle_same_target": 12,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 2,
+   "example": null
+  },
+  "other_variant": "corrected",
+  "other_variant_result": null,
+  "other_variant_rejected": [
+   [
+    "actor 'email_legacy': app_v1.py:change_email#1 needs params ['email', 'id'], got ['email', 'plan', 'id']"
+   ]
+  ],
+  "category": "independently verified (same row and column as an oracle violation)"
+ },
+ {
+  "response": "mixed_version_overwrite__buggy__r0.json",
+  "scenario": "mixed_version_overwrite",
+  "variant": "buggy",
+  "repeat": "r0",
+  "test": "email_vs_two_plans",
+  "invariant": {
+   "id": "inv_actor",
+   "description": "serial final attribution is one of the two actors",
+   "kind": "column_in",
+   "table": "accounts",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "plan_changed_by",
+   "expected": [
+    "alice",
+    "bob"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 100,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "corrected",
+  "other_variant_result": null,
+  "other_variant_rejected": [
+   [
+    "actor 'email_legacy': app_v1.py:change_email#1 needs params ['email', 'id'], got ['email', 'plan', 'id']"
+   ]
+  ],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "mixed_version_overwrite__buggy__r1.json",
+  "scenario": "mixed_version_overwrite",
+  "variant": "buggy",
+  "repeat": "r1",
+  "test": "concurrent_email_and_plan_change_loses_plan",
+  "invariant": {
+   "id": "email-preserved",
+   "description": "email change must survive concurrent plan change",
+   "kind": "column_equals",
+   "table": "accounts",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "email",
+   "expected": [
+    "new@example.com"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 35,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "corrected",
+  "other_variant_result": null,
+  "other_variant_rejected": [
+   [
+    "actor 'email_changer': app_v1.py:change_email#1 needs params ['email', 'id'], got ['email', 'plan', 'id']"
+   ]
+  ],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "mixed_version_overwrite__buggy__r1.json",
+  "scenario": "mixed_version_overwrite",
+  "variant": "buggy",
+  "repeat": "r1",
+  "test": "concurrent_email_and_plan_change_loses_plan",
+  "invariant": {
+   "id": "plan-preserved",
+   "description": "plan change must not be lost by stale rewrite from email change",
+   "kind": "column_equals",
+   "table": "accounts",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "plan",
+   "expected": [
+    "pro"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 35,
+   "failed": 18,
+   "serial_failed": 0,
+   "oracle_same_target": 18,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 1,
+   "example": null
+  },
+  "other_variant": "corrected",
+  "other_variant_result": null,
+  "other_variant_rejected": [
+   [
+    "actor 'email_changer': app_v1.py:change_email#1 needs params ['email', 'id'], got ['email', 'plan', 'id']"
+   ]
+  ],
+  "category": "independently verified (same row and column as an oracle violation)"
+ },
+ {
+  "response": "mixed_version_overwrite__buggy__r1.json",
+  "scenario": "mixed_version_overwrite",
+  "variant": "buggy",
+  "repeat": "r1",
+  "test": "concurrent_email_and_plan_change_loses_plan",
+  "invariant": {
+   "id": "actor-preserved",
+   "description": "plan_changed_by must reflect the plan writer",
+   "kind": "column_equals",
+   "table": "accounts",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "plan_changed_by",
+   "expected": [
+    "alice"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 35,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "corrected",
+  "other_variant_result": null,
+  "other_variant_rejected": [
+   [
+    "actor 'email_changer': app_v1.py:change_email#1 needs params ['email', 'id'], got ['email', 'plan', 'id']"
+   ]
+  ],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "mixed_version_overwrite__buggy__r1.json",
+  "scenario": "mixed_version_overwrite",
+  "variant": "buggy",
+  "repeat": "r1",
+  "test": "email_race_with_two_plan_changes",
+  "invariant": {
+   "id": "email-preserved-3way",
+   "description": "email update must survive regardless of plan interleaving",
+   "kind": "column_equals",
+   "table": "accounts",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "email",
+   "expected": [
+    "new@example.com"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 100,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "corrected",
+  "other_variant_result": null,
+  "other_variant_rejected": [
+   [
+    "actor 'email_changer': app_v1.py:change_email#1 needs params ['email', 'id'], got ['email', 'plan', 'id']"
+   ]
+  ],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "mixed_version_overwrite__buggy__r1.json",
+  "scenario": "mixed_version_overwrite",
+  "variant": "buggy",
+  "repeat": "r1",
+  "test": "email_race_with_two_plan_changes",
+  "invariant": {
+   "id": "plan-one-winner",
+   "description": "final plan must be one of the two concurrent new plans, never stale free",
+   "kind": "column_in",
+   "table": "accounts",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "plan",
+   "expected": [
+    "pro",
+    "team"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 100,
+   "failed": 12,
+   "serial_failed": 0,
+   "oracle_same_target": 12,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 2,
+   "example": null
+  },
+  "other_variant": "corrected",
+  "other_variant_result": null,
+  "other_variant_rejected": [
+   [
+    "actor 'email_changer': app_v1.py:change_email#1 needs params ['email', 'id'], got ['email', 'plan', 'id']"
+   ]
+  ],
+  "category": "independently verified (same row and column as an oracle violation)"
+ },
+ {
+  "response": "mixed_version_overwrite__buggy__r1.json",
+  "scenario": "mixed_version_overwrite",
+  "variant": "buggy",
+  "repeat": "r1",
+  "test": "email_race_with_two_plan_changes",
+  "invariant": {
+   "id": "actor-one-winner",
+   "description": "final actor must be one of the two plan writers",
+   "kind": "column_in",
+   "table": "accounts",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "plan_changed_by",
+   "expected": [
+    "alice",
+    "bob"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 100,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "corrected",
+  "other_variant_result": null,
+  "other_variant_rejected": [
+   [
+    "actor 'email_changer': app_v1.py:change_email#1 needs params ['email', 'id'], got ['email', 'plan', 'id']"
+   ]
+  ],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "mixed_version_overwrite__buggy__r2.json",
+  "scenario": "mixed_version_overwrite",
+  "variant": "buggy",
+  "repeat": "r2",
+  "test": "lost_plan_update_email_vs_plan",
+  "invariant": {
+   "id": "inv-email",
+   "description": "email must be new value in all serial orders",
+   "kind": "column_equals",
+   "table": "accounts",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "email",
+   "expected": [
+    "alice@new.example"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 35,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "corrected",
+  "other_variant_result": null,
+  "other_variant_rejected": [
+   [
+    "actor 'email_change': app_v1.py:change_email#1 needs params ['email', 'id'], got ['email', 'plan', 'id']"
+   ]
+  ],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "mixed_version_overwrite__buggy__r2.json",
+  "scenario": "mixed_version_overwrite",
+  "variant": "buggy",
+  "repeat": "r2",
+  "test": "lost_plan_update_email_vs_plan",
+  "invariant": {
+   "id": "inv-plan",
+   "description": "plan must be pro in all serial orders; stale rewrite reverts to free",
+   "kind": "column_equals",
+   "table": "accounts",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "plan",
+   "expected": [
+    "pro"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 35,
+   "failed": 18,
+   "serial_failed": 0,
+   "oracle_same_target": 18,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 1,
+   "example": null
+  },
+  "other_variant": "corrected",
+  "other_variant_result": null,
+  "other_variant_rejected": [
+   [
+    "actor 'email_change': app_v1.py:change_email#1 needs params ['email', 'id'], got ['email', 'plan', 'id']"
+   ]
+  ],
+  "category": "independently verified (same row and column as an oracle violation)"
+ },
+ {
+  "response": "mixed_version_overwrite__buggy__r2.json",
+  "scenario": "mixed_version_overwrite",
+  "variant": "buggy",
+  "repeat": "r2",
+  "test": "lost_plan_update_email_vs_plan",
+  "invariant": {
+   "id": "inv-actor",
+   "description": "actor recorded by plan change",
+   "kind": "column_equals",
+   "table": "accounts",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "plan_changed_by",
+   "expected": [
+    "alice"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 35,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "corrected",
+  "other_variant_result": null,
+  "other_variant_rejected": [
+   [
+    "actor 'email_change': app_v1.py:change_email#1 needs params ['email', 'id'], got ['email', 'plan', 'id']"
+   ]
+  ],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "mixed_version_overwrite__buggy__r2.json",
+  "scenario": "mixed_version_overwrite",
+  "variant": "buggy",
+  "repeat": "r2",
+  "test": "lost_plan_update_two_emails_vs_plan",
+  "invariant": {
+   "id": "inv-plan",
+   "description": "plan must remain pro regardless of email order; stale email rewrite loses it",
+   "kind": "column_equals",
+   "table": "accounts",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "plan",
+   "expected": [
+    "pro"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 100,
+   "failed": 32,
+   "serial_failed": 0,
+   "oracle_same_target": 32,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 2,
+   "example": null
+  },
+  "other_variant": "corrected",
+  "other_variant_result": null,
+  "other_variant_rejected": [
+   [
+    "actor 'email_a': app_v1.py:change_email#1 needs params ['email', 'id'], got ['email', 'plan', 'id']",
+    "actor 'email_b': app_v1.py:change_email#1 needs params ['email', 'id'], got ['email', 'plan', 'id']"
+   ]
+  ],
+  "category": "independently verified (same row and column as an oracle violation)"
+ },
+ {
+  "response": "mixed_version_overwrite__buggy__r2.json",
+  "scenario": "mixed_version_overwrite",
+  "variant": "buggy",
+  "repeat": "r2",
+  "test": "lost_plan_update_two_emails_vs_plan",
+  "invariant": {
+   "id": "inv-email",
+   "description": "email is last-writer-wins between the two email changes",
+   "kind": "column_in",
+   "table": "accounts",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "email",
+   "expected": [
+    "a@new.example",
+    "b@new.example"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 100,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "corrected",
+  "other_variant_result": null,
+  "other_variant_rejected": [
+   [
+    "actor 'email_a': app_v1.py:change_email#1 needs params ['email', 'id'], got ['email', 'plan', 'id']",
+    "actor 'email_b': app_v1.py:change_email#1 needs params ['email', 'id'], got ['email', 'plan', 'id']"
+   ]
+  ],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "mixed_version_overwrite__buggy__r2.json",
+  "scenario": "mixed_version_overwrite",
+  "variant": "buggy",
+  "repeat": "r2",
+  "test": "lost_plan_update_email_vs_two_plans",
+  "invariant": {
+   "id": "inv-email",
+   "description": "email always updated by v1 writer",
+   "kind": "column_equals",
+   "table": "accounts",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "email",
+   "expected": [
+    "alice@new.example"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 100,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "corrected",
+  "other_variant_result": null,
+  "other_variant_rejected": [
+   [
+    "actor 'email_change': app_v1.py:change_email#1 needs params ['email', 'id'], got ['email', 'plan', 'id']"
+   ]
+  ],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "mixed_version_overwrite__buggy__r2.json",
+  "scenario": "mixed_version_overwrite",
+  "variant": "buggy",
+  "repeat": "r2",
+  "test": "lost_plan_update_email_vs_two_plans",
+  "invariant": {
+   "id": "inv-plan",
+   "description": "plan must be one of the two blind writes; stale rewrite reverts to free",
+   "kind": "column_in",
+   "table": "accounts",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "plan",
+   "expected": [
+    "pro",
+    "team"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 100,
+   "failed": 12,
+   "serial_failed": 0,
+   "oracle_same_target": 12,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 2,
+   "example": null
+  },
+  "other_variant": "corrected",
+  "other_variant_result": null,
+  "other_variant_rejected": [
+   [
+    "actor 'email_change': app_v1.py:change_email#1 needs params ['email', 'id'], got ['email', 'plan', 'id']"
+   ]
+  ],
+  "category": "independently verified (same row and column as an oracle violation)"
+ },
+ {
+  "response": "mixed_version_overwrite__corrected__r0.json",
+  "scenario": "mixed_version_overwrite",
+  "variant": "corrected",
+  "repeat": "r0",
+  "test": "email_vs_plan_same_row",
+  "invariant": {
+   "id": "t1-email",
+   "description": "email-only update must persist despite concurrent plan update",
+   "kind": "column_equals",
+   "table": "accounts",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "email",
+   "expected": [
+    "new1@example.com"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 35,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": null,
+  "other_variant_rejected": [
+   [
+    "actor 'email_updater': app_v1.py:change_email#1 needs params ['email', 'plan', 'id'], got ['email', 'id']"
+   ]
+  ],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "mixed_version_overwrite__corrected__r0.json",
+  "scenario": "mixed_version_overwrite",
+  "variant": "corrected",
+  "repeat": "r0",
+  "test": "email_vs_plan_same_row",
+  "invariant": {
+   "id": "t1-plan",
+   "description": "plan update must persist despite concurrent email update",
+   "kind": "column_equals",
+   "table": "accounts",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "plan",
+   "expected": [
+    "pro"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 35,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": null,
+  "other_variant_rejected": [
+   [
+    "actor 'email_updater': app_v1.py:change_email#1 needs params ['email', 'plan', 'id'], got ['email', 'id']"
+   ]
+  ],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "mixed_version_overwrite__corrected__r0.json",
+  "scenario": "mixed_version_overwrite",
+  "variant": "corrected",
+  "repeat": "r0",
+  "test": "email_vs_plan_same_row",
+  "invariant": {
+   "id": "t1-by",
+   "description": "attribution set by v2 must not be wiped by v1 email update",
+   "kind": "column_equals",
+   "table": "accounts",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "plan_changed_by",
+   "expected": [
+    "bob"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 35,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": null,
+  "other_variant_rejected": [
+   [
+    "actor 'email_updater': app_v1.py:change_email#1 needs params ['email', 'plan', 'id'], got ['email', 'id']"
+   ]
+  ],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "mixed_version_overwrite__corrected__r0.json",
+  "scenario": "mixed_version_overwrite",
+  "variant": "corrected",
+  "repeat": "r0",
+  "test": "concurrent_emails_preserve_attribution",
+  "invariant": {
+   "id": "t2-email",
+   "description": "one of the two concurrent emails must win",
+   "kind": "column_in",
+   "table": "accounts",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "email",
+   "expected": [
+    "email_a@example.com",
+    "email_b@example.com"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 70,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": null,
+  "other_variant_rejected": [
+   [
+    "actor 'email_a': app_v1.py:change_email#1 needs params ['email', 'plan', 'id'], got ['email', 'id']",
+    "actor 'email_b': app_v1.py:change_email#1 needs params ['email', 'plan', 'id'], got ['email', 'id']"
+   ]
+  ],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "mixed_version_overwrite__corrected__r0.json",
+  "scenario": "mixed_version_overwrite",
+  "variant": "corrected",
+  "repeat": "r0",
+  "test": "concurrent_emails_preserve_attribution",
+  "invariant": {
+   "id": "t2-plan",
+   "description": "concurrent email writes must not modify plan",
+   "kind": "column_equals",
+   "table": "accounts",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "plan",
+   "expected": [
+    "team"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 70,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": null,
+  "other_variant_rejected": [
+   [
+    "actor 'email_a': app_v1.py:change_email#1 needs params ['email', 'plan', 'id'], got ['email', 'id']",
+    "actor 'email_b': app_v1.py:change_email#1 needs params ['email', 'plan', 'id'], got ['email', 'id']"
+   ]
+  ],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "mixed_version_overwrite__corrected__r0.json",
+  "scenario": "mixed_version_overwrite",
+  "variant": "corrected",
+  "repeat": "r0",
+  "test": "concurrent_emails_preserve_attribution",
+  "invariant": {
+   "id": "t2-by",
+   "description": "concurrent email writes must not clear pre-existing attribution",
+   "kind": "column_equals",
+   "table": "accounts",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "plan_changed_by",
+   "expected": [
+    "carol"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 70,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": null,
+  "other_variant_rejected": [
+   [
+    "actor 'email_a': app_v1.py:change_email#1 needs params ['email', 'plan', 'id'], got ['email', 'id']",
+    "actor 'email_b': app_v1.py:change_email#1 needs params ['email', 'plan', 'id'], got ['email', 'id']"
+   ]
+  ],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "mixed_version_overwrite__corrected__r0.json",
+  "scenario": "mixed_version_overwrite",
+  "variant": "corrected",
+  "repeat": "r0",
+  "test": "concurrent_plans_preserve_email",
+  "invariant": {
+   "id": "t3-email",
+   "description": "concurrent plan writes must not modify email",
+   "kind": "column_equals",
+   "table": "accounts",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "email",
+   "expected": [
+    "stable@example.com"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 20,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": {
+   "schedules": 20,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "mixed_version_overwrite__corrected__r0.json",
+  "scenario": "mixed_version_overwrite",
+  "variant": "corrected",
+  "repeat": "r0",
+  "test": "concurrent_plans_preserve_email",
+  "invariant": {
+   "id": "t3-plan",
+   "description": "one of the two concurrent plans must win",
+   "kind": "column_in",
+   "table": "accounts",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "plan",
+   "expected": [
+    "pro",
+    "team"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 20,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": {
+   "schedules": 20,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "held in every schedule run"
+ },
+ {
+  "response": "mixed_version_overwrite__corrected__r0.json",
+  "scenario": "mixed_version_overwrite",
+  "variant": "corrected",
+  "repeat": "r0",
+  "test": "concurrent_plans_preserve_email",
+  "invariant": {
+   "id": "t3-by",
+   "description": "attribution must be one of the two writers, never wiped to NULL",
+   "kind": "column_in",
+   "table": "accounts",
+   "key_column": "id",
+   "key_value": 1,
+   "column": "plan_changed_by",
+   "expected": [
+    "alice",
+    "bob"
+   ],
+   "other_column": null
+  },
+  "result": {
+   "schedules": 20,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant": "buggy",
+  "other_variant_result": {
+   "schedules": 20,
+   "failed": 0,
+   "serial_failed": 0,
+   "oracle_same_target": 0,
+   "oracle_other_target": 0,
+   "no_oracle_violation": 0,
+   "execution_or_conflict": 0,
+   "distinct_failing_final_states": 0,
+   "example": null
+  },
+  "other_variant_rejected": [],
+  "category": "held in every schedule run"
+ }
+]

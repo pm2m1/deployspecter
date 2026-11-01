@@ -1,0 +1,743 @@
+{
+  "prompt_version": "v2",
+  "prompt_sha256": "6c08c5d0def2bc75aa8591356763fd488e8aba3fd205b9b84f98f1eb4c56fa9d",
+  "model": "muse-spark-1.3",
+  "attempts": [
+    {
+      "kind": "initial",
+      "reply": {
+        "text": "{\"conflicts\": [{\"column\": \"email\", \"functions\": [\"app_v1.py:update_email\", \"copy_job.py:copy_users\"], \"risk_explanation\": \"update_email writes only users.email while copy_job SELECTs users.email then INSERTs into users_v2 with DO NOTHING. A SELECT of old email pinned in users_v2 can never be corrected, so a concurrent V1 update is lost in users_v2 forever and tables diverge.\", \"table\": \"users\"}, {\"column\": \"email\", \"functions\": [\"copy_job.py:copy_users\", \"app_v2.py:delete_user\"], \"risk_explanation\": \"Both write users_v2.id with different emails: copy uses row email with DO NOTHING, delete uses arg email with ON CONFLICT DO UPDATE SET deleted_at only. First INSERT wins email, second never fixes it, so concurrent copy can pin old email and delete tombstone email is lost (or vice versa). Final email is order-dependent.\", \"table\": \"users_v2\"}, {\"column\": \"id\", \"functions\": [\"app_v2.py:delete_user\", \"app_v1.py:update_email\"], \"risk_explanation\": \"delete_user is non-atomic: INSERT tombstone then DELETE users. A V1 UPDATE between those statements changes users but never reaches the already-inserted tombstone, then is deleted. Tombstone email stays stale and update is lost.\", \"table\": \"users\"}], \"operations\": [{\"function\": \"app_v1.py:update_email\", \"summary\": \"V1 updates users.email only, never touches users_v2\", \"tables_read\": [\"users\"], \"tables_written\": [\"users\"]}, {\"function\": \"app_v2.py:delete_user\", \"summary\": \"V2 inserts tombstone into users_v2 then deletes from users\", \"tables_read\": [], \"tables_written\": [\"users\", \"users_v2\"]}, {\"function\": \"copy_job.py:copy_users\", \"summary\": \"Backfill SELECTs users rows then INSERTs each into users_v2 with DO NOTHING\", \"tables_read\": [\"users\"], \"tables_written\": [\"users_v2\"]}], \"tests\": [{\"actors\": [{\"calls\": [{\"bind_as\": \"r\", \"params\": [{\"bind\": null, \"column\": null, \"name\": \"limit\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 10}], \"statement_id\": \"copy_job.py:copy_users#0\"}, {\"bind_as\": null, \"params\": [{\"bind\": \"r\", \"column\": \"id\", \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}, {\"bind\": \"r\", \"column\": \"email\", \"name\": \"email\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}], \"statement_id\": \"copy_job.py:copy_users#1\"}], \"function\": \"copy_job.py:copy_users\", \"name\": \"backfill\"}, {\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"email\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"new@example.com\"}, {\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v1.py:update_email#0\"}], \"function\": \"app_v1.py:update_email\", \"name\": \"v1_updater\"}], \"invariants\": [{\"column\": \"email\", \"description\": \"users row reflects V1 update\", \"expected\": [\"new@example.com\"], \"id\": \"users_updated\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"users\"}, {\"column\": \"email\", \"description\": \"users_v2 should reflect latest email, stale copy must not persist\", \"expected\": [\"new@example.com\"], \"id\": \"v2_matches_users\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"users_v2\"}], \"name\": \"v1_update_lost_in_v2_copy\", \"rationale\": \"Old release writes only users while backfill pins email in users_v2 with DO NOTHING. Concurrent SELECT of old email then INSERT after V1 update leaves users=new but users_v2=old forever.\", \"seed\": [{\"table\": \"users\", \"values\": [{\"column\": \"id\", \"value\": 1}, {\"column\": \"email\", \"value\": \"old@example.com\"}]}]}, {\"actors\": [{\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}, {\"bind\": null, \"column\": null, \"name\": \"email\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"del@example.com\"}], \"statement_id\": \"app_v2.py:delete_user#0\"}, {\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v2.py:delete_user#1\"}], \"function\": \"app_v2.py:delete_user\", \"name\": \"deleter\"}, {\"calls\": [{\"bind_as\": \"r\", \"params\": [{\"bind\": null, \"column\": null, \"name\": \"limit\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 10}], \"statement_id\": \"copy_job.py:copy_users#0\"}, {\"bind_as\": null, \"params\": [{\"bind\": \"r\", \"column\": \"id\", \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}, {\"bind\": \"r\", \"column\": \"email\", \"name\": \"email\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}], \"statement_id\": \"copy_job.py:copy_users#1\"}], \"function\": \"copy_job.py:copy_users\", \"name\": \"backfill\"}], \"invariants\": [{\"column\": null, \"description\": \"deleted users row stays gone\", \"expected\": [], \"id\": \"users_gone\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"row_absent\", \"other_column\": null, \"table\": \"users\"}, {\"column\": \"email\", \"description\": \"tombstone should carry delete email, not stale copied email\", \"expected\": [\"del@example.com\"], \"id\": \"tombstone_email\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"users_v2\"}, {\"column\": \"deleted_at\", \"description\": \"tombstone marker present\", \"expected\": [], \"id\": \"tombstone_mark\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_not_null\", \"other_column\": null, \"table\": \"users_v2\"}], \"name\": \"tombstone_email_first_writer_wins\", \"rationale\": \"Delete upsert only sets deleted_at on conflict, copy uses DO NOTHING. If copy inserts old email first, delete preserves old email and loses del email; if delete first, del wins. Final email order-dependent.\", \"seed\": [{\"table\": \"users\", \"values\": [{\"column\": \"id\", \"value\": 1}, {\"column\": \"email\", \"value\": \"old@example.com\"}]}]}, {\"actors\": [{\"calls\": [{\"bind_as\": \"s\", \"params\": [{\"bind\": null, \"column\": null, \"name\": \"limit\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 2}], \"statement_id\": \"copy_job.py:copy_users#0\"}, {\"bind_as\": null, \"params\": [{\"bind\": \"s\", \"column\": \"id\", \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}, {\"bind\": \"s\", \"column\": \"email\", \"name\": \"email\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}], \"statement_id\": \"copy_job.py:copy_users#1\"}, {\"bind_as\": null, \"params\": [{\"bind\": \"s\", \"column\": \"id\", \"name\": \"id\", \"operand\": null, \"row\": 1, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}, {\"bind\": \"s\", \"column\": \"email\", \"name\": \"email\", \"operand\": null, \"row\": 1, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}], \"statement_id\": \"copy_job.py:copy_users#1\"}], \"function\": \"copy_job.py:copy_users\", \"name\": \"backfill2\"}, {\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"email\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"new1@example.com\"}, {\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v1.py:update_email#0\"}], \"function\": \"app_v1.py:update_email\", \"name\": \"v1_updater1\"}], \"invariants\": [{\"column\": \"email\", \"description\": \"users id1 reflects update\", \"expected\": [\"new1@example.com\"], \"id\": \"users1_new\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"users\"}, {\"column\": \"email\", \"description\": \"users_v2 id1 should reflect update, not snapshot stale\", \"expected\": [\"new1@example.com\"], \"id\": \"v2_1_new\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"users_v2\"}, {\"column\": \"email\", \"description\": \"untouched row copied correctly\", \"expected\": [\"old2@example.com\"], \"id\": \"v2_2_old\", \"key_column\": \"id\", \"key_value\": 2, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"users_v2\"}], \"name\": \"snapshot_pins_stale_across_rows\", \"rationale\": \"Copy SELECTs snapshot of two rows then INSERTs per-row in separate transactions. Update to id1 between SELECT and per-row INSERTs pins stale old1 in users_v2 with DO NOTHING, diverging from users.\", \"seed\": [{\"table\": \"users\", \"values\": [{\"column\": \"id\", \"value\": 1}, {\"column\": \"email\", \"value\": \"old1@example.com\"}]}, {\"table\": \"users\", \"values\": [{\"column\": \"id\", \"value\": 2}, {\"column\": \"email\", \"value\": \"old2@example.com\"}]}]}, {\"actors\": [{\"calls\": [{\"bind_as\": \"s\", \"params\": [{\"bind\": null, \"column\": null, \"name\": \"limit\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 2}], \"statement_id\": \"copy_job.py:copy_users#0\"}, {\"bind_as\": null, \"params\": [{\"bind\": \"s\", \"column\": \"id\", \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}, {\"bind\": \"s\", \"column\": \"email\", \"name\": \"email\", \"operand\": null, \"row\": 0, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}], \"statement_id\": \"copy_job.py:copy_users#1\"}, {\"bind_as\": null, \"params\": [{\"bind\": \"s\", \"column\": \"id\", \"name\": \"id\", \"operand\": null, \"row\": 1, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}, {\"bind\": \"s\", \"column\": \"email\", \"name\": \"email\", \"operand\": null, \"row\": 1, \"source\": \"row_ref\", \"transform\": \"none\", \"value\": null}], \"statement_id\": \"copy_job.py:copy_users#1\"}], \"function\": \"copy_job.py:copy_users\", \"name\": \"backfill2\"}, {\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}, {\"bind\": null, \"column\": null, \"name\": \"email\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": \"del@example.com\"}], \"statement_id\": \"app_v2.py:delete_user#0\"}, {\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"app_v2.py:delete_user#1\"}], \"function\": \"app_v2.py:delete_user\", \"name\": \"deleter1\"}], \"invariants\": [{\"column\": null, \"description\": \"deleted row stays gone from users\", \"expected\": [], \"id\": \"users1_gone\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"row_absent\", \"other_column\": null, \"table\": \"users\"}, {\"column\": \"email\", \"description\": \"tombstone email should be delete arg not stale copy\", \"expected\": [\"del@example.com\"], \"id\": \"tomb1_del\", \"key_column\": \"id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"users_v2\"}, {\"column\": \"email\", \"description\": \"surviving row copied correctly\", \"expected\": [\"old2@example.com\"], \"id\": \"v2_2_ok\", \"key_column\": \"id\", \"key_value\": 2, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"users_v2\"}], \"name\": \"multirocopy_vs_delete_tombstone\", \"rationale\": \"With two rows, copy SELECTs both then INSERTs one-by-one. If copy inserts old1 before delete tombstone, delete conflict keeps old1 email and loses del email; extra row distinguishes effects and exercises per-row interleavings.\", \"seed\": [{\"table\": \"users\", \"values\": [{\"column\": \"id\", \"value\": 1}, {\"column\": \"email\", \"value\": \"old1@example.com\"}]}, {\"table\": \"users\", \"values\": [{\"column\": \"id\", \"value\": 2}, {\"column\": \"email\", \"value\": \"old2@example.com\"}]}]}]}",
+        "status": "completed",
+        "latency_seconds": 88.066,
+        "input_tokens": 2139,
+        "output_tokens": 18241,
+        "reasoning_tokens": 14747,
+        "approx_cost_usd": 0.080198
+      },
+      "parse_error": null
+    }
+  ],
+  "output": {
+    "operations": [
+      {
+        "function": "app_v1.py:update_email",
+        "summary": "V1 updates users.email only, never touches users_v2",
+        "tables_read": [
+          "users"
+        ],
+        "tables_written": [
+          "users"
+        ]
+      },
+      {
+        "function": "app_v2.py:delete_user",
+        "summary": "V2 inserts tombstone into users_v2 then deletes from users",
+        "tables_read": [],
+        "tables_written": [
+          "users",
+          "users_v2"
+        ]
+      },
+      {
+        "function": "copy_job.py:copy_users",
+        "summary": "Backfill SELECTs users rows then INSERTs each into users_v2 with DO NOTHING",
+        "tables_read": [
+          "users"
+        ],
+        "tables_written": [
+          "users_v2"
+        ]
+      }
+    ],
+    "conflicts": [
+      {
+        "functions": [
+          "app_v1.py:update_email",
+          "copy_job.py:copy_users"
+        ],
+        "table": "users",
+        "column": "email",
+        "risk_explanation": "update_email writes only users.email while copy_job SELECTs users.email then INSERTs into users_v2 with DO NOTHING. A SELECT of old email pinned in users_v2 can never be corrected, so a concurrent V1 update is lost in users_v2 forever and tables diverge."
+      },
+      {
+        "functions": [
+          "copy_job.py:copy_users",
+          "app_v2.py:delete_user"
+        ],
+        "table": "users_v2",
+        "column": "email",
+        "risk_explanation": "Both write users_v2.id with different emails: copy uses row email with DO NOTHING, delete uses arg email with ON CONFLICT DO UPDATE SET deleted_at only. First INSERT wins email, second never fixes it, so concurrent copy can pin old email and delete tombstone email is lost (or vice versa). Final email is order-dependent."
+      },
+      {
+        "functions": [
+          "app_v2.py:delete_user",
+          "app_v1.py:update_email"
+        ],
+        "table": "users",
+        "column": "id",
+        "risk_explanation": "delete_user is non-atomic: INSERT tombstone then DELETE users. A V1 UPDATE between those statements changes users but never reaches the already-inserted tombstone, then is deleted. Tombstone email stays stale and update is lost."
+      }
+    ],
+    "tests": [
+      {
+        "name": "v1_update_lost_in_v2_copy",
+        "rationale": "Old release writes only users while backfill pins email in users_v2 with DO NOTHING. Concurrent SELECT of old email then INSERT after V1 update leaves users=new but users_v2=old forever.",
+        "seed": [
+          {
+            "table": "users",
+            "values": [
+              {
+                "column": "id",
+                "value": 1
+              },
+              {
+                "column": "email",
+                "value": "old@example.com"
+              }
+            ]
+          }
+        ],
+        "actors": [
+          {
+            "name": "backfill",
+            "function": "copy_job.py:copy_users",
+            "calls": [
+              {
+                "statement_id": "copy_job.py:copy_users#0",
+                "params": [
+                  {
+                    "name": "limit",
+                    "source": "literal",
+                    "value": 10,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": "r"
+              },
+              {
+                "statement_id": "copy_job.py:copy_users#1",
+                "params": [
+                  {
+                    "name": "id",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "r",
+                    "row": 0,
+                    "column": "id",
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "email",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "r",
+                    "row": 0,
+                    "column": "email",
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          },
+          {
+            "name": "v1_updater",
+            "function": "app_v1.py:update_email",
+            "calls": [
+              {
+                "statement_id": "app_v1.py:update_email#0",
+                "params": [
+                  {
+                    "name": "email",
+                    "source": "literal",
+                    "value": "new@example.com",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          }
+        ],
+        "invariants": [
+          {
+            "id": "users_updated",
+            "description": "users row reflects V1 update",
+            "kind": "column_equals",
+            "table": "users",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "email",
+            "expected": [
+              "new@example.com"
+            ],
+            "other_column": null
+          },
+          {
+            "id": "v2_matches_users",
+            "description": "users_v2 should reflect latest email, stale copy must not persist",
+            "kind": "column_equals",
+            "table": "users_v2",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "email",
+            "expected": [
+              "new@example.com"
+            ],
+            "other_column": null
+          }
+        ]
+      },
+      {
+        "name": "tombstone_email_first_writer_wins",
+        "rationale": "Delete upsert only sets deleted_at on conflict, copy uses DO NOTHING. If copy inserts old email first, delete preserves old email and loses del email; if delete first, del wins. Final email order-dependent.",
+        "seed": [
+          {
+            "table": "users",
+            "values": [
+              {
+                "column": "id",
+                "value": 1
+              },
+              {
+                "column": "email",
+                "value": "old@example.com"
+              }
+            ]
+          }
+        ],
+        "actors": [
+          {
+            "name": "deleter",
+            "function": "app_v2.py:delete_user",
+            "calls": [
+              {
+                "statement_id": "app_v2.py:delete_user#0",
+                "params": [
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "email",
+                    "source": "literal",
+                    "value": "del@example.com",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              },
+              {
+                "statement_id": "app_v2.py:delete_user#1",
+                "params": [
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          },
+          {
+            "name": "backfill",
+            "function": "copy_job.py:copy_users",
+            "calls": [
+              {
+                "statement_id": "copy_job.py:copy_users#0",
+                "params": [
+                  {
+                    "name": "limit",
+                    "source": "literal",
+                    "value": 10,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": "r"
+              },
+              {
+                "statement_id": "copy_job.py:copy_users#1",
+                "params": [
+                  {
+                    "name": "id",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "r",
+                    "row": 0,
+                    "column": "id",
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "email",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "r",
+                    "row": 0,
+                    "column": "email",
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          }
+        ],
+        "invariants": [
+          {
+            "id": "users_gone",
+            "description": "deleted users row stays gone",
+            "kind": "row_absent",
+            "table": "users",
+            "key_column": "id",
+            "key_value": 1,
+            "column": null,
+            "expected": [],
+            "other_column": null
+          },
+          {
+            "id": "tombstone_email",
+            "description": "tombstone should carry delete email, not stale copied email",
+            "kind": "column_equals",
+            "table": "users_v2",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "email",
+            "expected": [
+              "del@example.com"
+            ],
+            "other_column": null
+          },
+          {
+            "id": "tombstone_mark",
+            "description": "tombstone marker present",
+            "kind": "column_not_null",
+            "table": "users_v2",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "deleted_at",
+            "expected": [],
+            "other_column": null
+          }
+        ]
+      },
+      {
+        "name": "snapshot_pins_stale_across_rows",
+        "rationale": "Copy SELECTs snapshot of two rows then INSERTs per-row in separate transactions. Update to id1 between SELECT and per-row INSERTs pins stale old1 in users_v2 with DO NOTHING, diverging from users.",
+        "seed": [
+          {
+            "table": "users",
+            "values": [
+              {
+                "column": "id",
+                "value": 1
+              },
+              {
+                "column": "email",
+                "value": "old1@example.com"
+              }
+            ]
+          },
+          {
+            "table": "users",
+            "values": [
+              {
+                "column": "id",
+                "value": 2
+              },
+              {
+                "column": "email",
+                "value": "old2@example.com"
+              }
+            ]
+          }
+        ],
+        "actors": [
+          {
+            "name": "backfill2",
+            "function": "copy_job.py:copy_users",
+            "calls": [
+              {
+                "statement_id": "copy_job.py:copy_users#0",
+                "params": [
+                  {
+                    "name": "limit",
+                    "source": "literal",
+                    "value": 2,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": "s"
+              },
+              {
+                "statement_id": "copy_job.py:copy_users#1",
+                "params": [
+                  {
+                    "name": "id",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "s",
+                    "row": 0,
+                    "column": "id",
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "email",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "s",
+                    "row": 0,
+                    "column": "email",
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              },
+              {
+                "statement_id": "copy_job.py:copy_users#1",
+                "params": [
+                  {
+                    "name": "id",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "s",
+                    "row": 1,
+                    "column": "id",
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "email",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "s",
+                    "row": 1,
+                    "column": "email",
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          },
+          {
+            "name": "v1_updater1",
+            "function": "app_v1.py:update_email",
+            "calls": [
+              {
+                "statement_id": "app_v1.py:update_email#0",
+                "params": [
+                  {
+                    "name": "email",
+                    "source": "literal",
+                    "value": "new1@example.com",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          }
+        ],
+        "invariants": [
+          {
+            "id": "users1_new",
+            "description": "users id1 reflects update",
+            "kind": "column_equals",
+            "table": "users",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "email",
+            "expected": [
+              "new1@example.com"
+            ],
+            "other_column": null
+          },
+          {
+            "id": "v2_1_new",
+            "description": "users_v2 id1 should reflect update, not snapshot stale",
+            "kind": "column_equals",
+            "table": "users_v2",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "email",
+            "expected": [
+              "new1@example.com"
+            ],
+            "other_column": null
+          },
+          {
+            "id": "v2_2_old",
+            "description": "untouched row copied correctly",
+            "kind": "column_equals",
+            "table": "users_v2",
+            "key_column": "id",
+            "key_value": 2,
+            "column": "email",
+            "expected": [
+              "old2@example.com"
+            ],
+            "other_column": null
+          }
+        ]
+      },
+      {
+        "name": "multirocopy_vs_delete_tombstone",
+        "rationale": "With two rows, copy SELECTs both then INSERTs one-by-one. If copy inserts old1 before delete tombstone, delete conflict keeps old1 email and loses del email; extra row distinguishes effects and exercises per-row interleavings.",
+        "seed": [
+          {
+            "table": "users",
+            "values": [
+              {
+                "column": "id",
+                "value": 1
+              },
+              {
+                "column": "email",
+                "value": "old1@example.com"
+              }
+            ]
+          },
+          {
+            "table": "users",
+            "values": [
+              {
+                "column": "id",
+                "value": 2
+              },
+              {
+                "column": "email",
+                "value": "old2@example.com"
+              }
+            ]
+          }
+        ],
+        "actors": [
+          {
+            "name": "backfill2",
+            "function": "copy_job.py:copy_users",
+            "calls": [
+              {
+                "statement_id": "copy_job.py:copy_users#0",
+                "params": [
+                  {
+                    "name": "limit",
+                    "source": "literal",
+                    "value": 2,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": "s"
+              },
+              {
+                "statement_id": "copy_job.py:copy_users#1",
+                "params": [
+                  {
+                    "name": "id",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "s",
+                    "row": 0,
+                    "column": "id",
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "email",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "s",
+                    "row": 0,
+                    "column": "email",
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              },
+              {
+                "statement_id": "copy_job.py:copy_users#1",
+                "params": [
+                  {
+                    "name": "id",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "s",
+                    "row": 1,
+                    "column": "id",
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "email",
+                    "source": "row_ref",
+                    "value": null,
+                    "bind": "s",
+                    "row": 1,
+                    "column": "email",
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          },
+          {
+            "name": "deleter1",
+            "function": "app_v2.py:delete_user",
+            "calls": [
+              {
+                "statement_id": "app_v2.py:delete_user#0",
+                "params": [
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "email",
+                    "source": "literal",
+                    "value": "del@example.com",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              },
+              {
+                "statement_id": "app_v2.py:delete_user#1",
+                "params": [
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          }
+        ],
+        "invariants": [
+          {
+            "id": "users1_gone",
+            "description": "deleted row stays gone from users",
+            "kind": "row_absent",
+            "table": "users",
+            "key_column": "id",
+            "key_value": 1,
+            "column": null,
+            "expected": [],
+            "other_column": null
+          },
+          {
+            "id": "tomb1_del",
+            "description": "tombstone email should be delete arg not stale copy",
+            "kind": "column_equals",
+            "table": "users_v2",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "email",
+            "expected": [
+              "del@example.com"
+            ],
+            "other_column": null
+          },
+          {
+            "id": "v2_2_ok",
+            "description": "surviving row copied correctly",
+            "kind": "column_equals",
+            "table": "users_v2",
+            "key_column": "id",
+            "key_value": 2,
+            "column": "email",
+            "expected": [
+              "old2@example.com"
+            ],
+            "other_column": null
+          }
+        ]
+      }
+    ]
+  }
+}

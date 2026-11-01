@@ -1,0 +1,19 @@
+{
+  "title": "Stale backfill overwrites a newer user update",
+  "split": "dev",
+  "description": "A background job copies legacy_name into display_name while the new application lets users set display_name.",
+  "requirements": [
+    {
+      "id": "BR-display-name",
+      "text": "A backfill must not overwrite a committed, explicitly supplied user display name.",
+      "kind": "authoritative_write_preserved",
+      "table": "profiles",
+      "key_column": "id",
+      "column": "display_name",
+      "writers": [
+        {"function": "app_v2.py:update_display_name", "key_param": "id", "value_param": "display_name"}
+      ],
+      "assumptions": ["update_display_name is the only source of explicitly user-supplied display names."]
+    }
+  ]
+}

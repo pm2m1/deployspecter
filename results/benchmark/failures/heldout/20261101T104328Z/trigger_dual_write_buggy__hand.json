@@ -1,0 +1,373 @@
+{
+  "schema_version": 1,
+  "case_id": "trigger_dual_write/buggy",
+  "setup_sql": "CREATE TABLE customers (\n    id    integer PRIMARY KEY,\n    email text NOT NULL,\n    phone text\n);\n\nALTER TABLE customers ADD COLUMN email_normalized text;\n\nCREATE FUNCTION sync_email_normalized() RETURNS trigger AS $$\nBEGIN\n    NEW.email_normalized := lower(NEW.email);\n    RETURN NEW;\nEND;\n$$ LANGUAGE plpgsql;\n\nCREATE TRIGGER customers_sync_email BEFORE UPDATE ON customers\n    FOR EACH ROW EXECUTE FUNCTION sync_email_normalized();\n",
+  "requirements": [
+    {
+      "id": "BR-normalized",
+      "text": "email_normalized must hold the newest committed intent: the new release's explicit value, or the lowercased email after an email change.",
+      "kind": "authoritative_write_preserved",
+      "table": "customers",
+      "key_column": "id",
+      "column": "email_normalized",
+      "writers": [
+        {
+          "function": "app_v2.py:set_normalized_email",
+          "key_param": "id",
+          "value_param": "normalized",
+          "value_transform": "none"
+        },
+        {
+          "function": "app_v1.py:update_email",
+          "key_param": "id",
+          "value_param": "email",
+          "value_transform": "lower"
+        }
+      ],
+      "base_column": null,
+      "base_multiplier": 1.0,
+      "assumptions": [
+        "An email change supersedes an earlier explicit normalized value.",
+        "A no-op email change (same value as stored) is outside this reference model."
+      ]
+    }
+  ],
+  "spec": {
+    "name": "hand: canonical write vs phone update",
+    "generator": "hand",
+    "seed": [
+      {
+        "table": "customers",
+        "values": [
+          {
+            "column": "id",
+            "value": 1
+          },
+          {
+            "column": "email",
+            "value": "Ann+tag@Example.com"
+          }
+        ]
+      }
+    ],
+    "actors": [
+      {
+        "name": "v2set",
+        "function": "app_v2.py:set_normalized_email",
+        "steps": [
+          {
+            "kind": "begin",
+            "sql": null,
+            "params": {},
+            "bind_as": null,
+            "statement_id": null,
+            "removable": false
+          },
+          {
+            "kind": "sql",
+            "sql": "UPDATE customers SET email_normalized = %(normalized)s WHERE id = %(id)s",
+            "params": {
+              "normalized": {
+                "name": "normalized",
+                "source": "literal",
+                "value": "ann@example.com",
+                "bind": null,
+                "row": 0,
+                "column": null,
+                "transform": "none",
+                "operand": null
+              },
+              "id": {
+                "name": "id",
+                "source": "literal",
+                "value": 1,
+                "bind": null,
+                "row": 0,
+                "column": null,
+                "transform": "none",
+                "operand": null
+              }
+            },
+            "bind_as": null,
+            "statement_id": "app_v2.py:set_normalized_email#0",
+            "removable": false
+          },
+          {
+            "kind": "commit",
+            "sql": null,
+            "params": {},
+            "bind_as": null,
+            "statement_id": null,
+            "removable": false
+          }
+        ]
+      },
+      {
+        "name": "v1phone",
+        "function": "app_v1.py:update_phone",
+        "steps": [
+          {
+            "kind": "begin",
+            "sql": null,
+            "params": {},
+            "bind_as": null,
+            "statement_id": null,
+            "removable": false
+          },
+          {
+            "kind": "sql",
+            "sql": "UPDATE customers SET phone = %(phone)s WHERE id = %(id)s",
+            "params": {
+              "phone": {
+                "name": "phone",
+                "source": "literal",
+                "value": "555-0100",
+                "bind": null,
+                "row": 0,
+                "column": null,
+                "transform": "none",
+                "operand": null
+              },
+              "id": {
+                "name": "id",
+                "source": "literal",
+                "value": 1,
+                "bind": null,
+                "row": 0,
+                "column": null,
+                "transform": "none",
+                "operand": null
+              }
+            },
+            "bind_as": null,
+            "statement_id": "app_v1.py:update_phone#0",
+            "removable": false
+          },
+          {
+            "kind": "commit",
+            "sql": null,
+            "params": {},
+            "bind_as": null,
+            "statement_id": null,
+            "removable": false
+          }
+        ]
+      }
+    ],
+    "invariants": [],
+    "rationale": ""
+  },
+  "schedule": [
+    "v1phone",
+    "v1phone",
+    "v1phone",
+    "v2set",
+    "v2set",
+    "v2set"
+  ],
+  "seed": null,
+  "trace": {
+    "requested_schedule": [
+      "v1phone",
+      "v1phone",
+      "v1phone",
+      "v2set",
+      "v2set",
+      "v2set"
+    ],
+    "issue_order": [
+      "v1phone",
+      "v1phone",
+      "v1phone",
+      "v2set",
+      "v2set",
+      "v2set"
+    ],
+    "records": [
+      {
+        "seq": 0,
+        "actor": "v1phone",
+        "step_index": 0,
+        "kind": "begin",
+        "function": "app_v1.py:update_phone",
+        "statement_id": null,
+        "sql": "BEGIN",
+        "params": {},
+        "status": "ok",
+        "rowcount": -1,
+        "rows": null,
+        "command_tag": "BEGIN",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": null,
+        "commit_seq": null,
+        "durable_commit_seq": null
+      },
+      {
+        "seq": 1,
+        "actor": "v1phone",
+        "step_index": 1,
+        "kind": "sql",
+        "function": "app_v1.py:update_phone",
+        "statement_id": "app_v1.py:update_phone#0",
+        "sql": "UPDATE customers SET phone = %(phone)s WHERE id = %(id)s",
+        "params": {
+          "phone": "555-0100",
+          "id": 1
+        },
+        "status": "ok",
+        "rowcount": 1,
+        "rows": null,
+        "command_tag": "UPDATE 1",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": true,
+        "commit_seq": null,
+        "durable_commit_seq": 1
+      },
+      {
+        "seq": 2,
+        "actor": "v1phone",
+        "step_index": 2,
+        "kind": "commit",
+        "function": "app_v1.py:update_phone",
+        "statement_id": null,
+        "sql": "COMMIT",
+        "params": {},
+        "status": "ok",
+        "rowcount": -1,
+        "rows": null,
+        "command_tag": "COMMIT",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": true,
+        "commit_seq": 1,
+        "durable_commit_seq": null
+      },
+      {
+        "seq": 3,
+        "actor": "v2set",
+        "step_index": 0,
+        "kind": "begin",
+        "function": "app_v2.py:set_normalized_email",
+        "statement_id": null,
+        "sql": "BEGIN",
+        "params": {},
+        "status": "ok",
+        "rowcount": -1,
+        "rows": null,
+        "command_tag": "BEGIN",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": null,
+        "commit_seq": null,
+        "durable_commit_seq": null
+      },
+      {
+        "seq": 4,
+        "actor": "v2set",
+        "step_index": 1,
+        "kind": "sql",
+        "function": "app_v2.py:set_normalized_email",
+        "statement_id": "app_v2.py:set_normalized_email#0",
+        "sql": "UPDATE customers SET email_normalized = %(normalized)s WHERE id = %(id)s",
+        "params": {
+          "normalized": "ann@example.com",
+          "id": 1
+        },
+        "status": "ok",
+        "rowcount": 1,
+        "rows": null,
+        "command_tag": "UPDATE 1",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": true,
+        "commit_seq": null,
+        "durable_commit_seq": 2
+      },
+      {
+        "seq": 5,
+        "actor": "v2set",
+        "step_index": 2,
+        "kind": "commit",
+        "function": "app_v2.py:set_normalized_email",
+        "statement_id": null,
+        "sql": "COMMIT",
+        "params": {},
+        "status": "ok",
+        "rowcount": -1,
+        "rows": null,
+        "command_tag": "COMMIT",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": true,
+        "commit_seq": 2,
+        "durable_commit_seq": null
+      }
+    ],
+    "outcome": "completed",
+    "initial_state": {
+      "customers": [
+        {
+          "id": 1,
+          "email": "Ann+tag@Example.com",
+          "phone": null,
+          "email_normalized": null
+        }
+      ]
+    },
+    "final_state": {
+      "customers": [
+        {
+          "id": 1,
+          "email": "Ann+tag@Example.com",
+          "phone": "555-0100",
+          "email_normalized": "ann+tag@example.com"
+        }
+      ]
+    },
+    "diagnostics": [],
+    "duration_ms": 23.71
+  },
+  "verdict": {
+    "classification": "true_violation",
+    "violations": [
+      {
+        "requirement_id": "BR-normalized",
+        "requirement": "email_normalized must hold the newest committed intent: the new release's explicit value, or the lowercased email after an email change.",
+        "table": "customers",
+        "key": 1,
+        "column": "email_normalized",
+        "expected": "ann@example.com",
+        "actual": "ann+tag@example.com",
+        "evidence": [
+          4
+        ],
+        "explanation": "v2set committed email_normalized='ann@example.com' at step 4, but the final value is 'ann+tag@example.com'."
+      }
+    ],
+    "checked": [
+      "BR-normalized"
+    ],
+    "vacuous": [],
+    "assumptions": [
+      "Scheduling is at statement and transaction boundaries only; PostgreSQL-internal interleavings are not controlled.",
+      "Each schedule starts from freshly rebuilt schema and seed state.",
+      "A passing result covers only the schedules executed with these inputs; it is not a proof of correctness.",
+      "An email change supersedes an earlier explicit normalized value.",
+      "A no-op email change (same value as stored) is outside this reference model."
+    ]
+  },
+  "fingerprint": "ae9d29e94fce75aac6df23ede8de4abc9668674db7b30b76dcf5446eed872544",
+  "provenance": {
+    "system": "hand",
+    "test": "hand: canonical write vs phone update",
+    "schedule_index": 0
+  }
+}

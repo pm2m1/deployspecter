@@ -1,0 +1,13 @@
+{"name":"hand: settings save vs plan change","seed":[{"table":"accounts","values":[{"column":"id","value":1},{"column":"email","value":"a@example.com"},{"column":"plan","value":"free"}]}],
+ "actors":[
+  {"name":"v1save","function":"app_v1.py:change_email","calls":[
+    {"statement_id":"app_v1.py:change_email#0","bind_as":"row","params":[{"name":"id","source":"literal","value":1}]},
+    {"statement_id":"app_v1.py:change_email#1","params":[
+      {"name":"email","source":"literal","value":"new@example.com"},
+      {"name":"plan","source":"row_ref","bind":"row","column":"plan"},
+      {"name":"id","source":"row_ref","bind":"row","column":"id"}]}]},
+  {"name":"v2plan","function":"app_v2.py:change_plan","calls":[
+    {"statement_id":"app_v2.py:change_plan#0","params":[
+      {"name":"plan","source":"literal","value":"pro"},
+      {"name":"actor","source":"literal","value":"admin"},
+      {"name":"id","source":"literal","value":1}]}]}]}

@@ -1,0 +1,621 @@
+{
+  "prompt_version": "v2",
+  "prompt_sha256": "3ce4e06ad48625044847323e31cfcf46a3c31a73735627e50f29226acfd8fa4f",
+  "model": "muse-spark-1.3",
+  "attempts": [
+    {
+      "kind": "initial",
+      "reply": {
+        "text": "{\n  \"conflicts\": [\n    {\n      \"column\": \"email_normalized\",\n      \"functions\": [\n        \"app_v1.py:update_phone\",\n        \"app_v2.py:set_normalized_email\"\n      ],\n      \"risk_explanation\": \"Old release is unaware of email_normalized and updates phone on the same row that the new release canonicalizes. Concurrent partial UPDATEs to different columns of the same row risk lost update if either path does read-modify-write or full-row write, silently resetting the canonical address to stale/NULL.\",\n      \"table\": \"customers\"\n    },\n    {\n      \"column\": \"email_normalized\",\n      \"functions\": [\n        \"app_v1.py:update_email\",\n        \"app_v2.py:set_normalized_email\"\n      ],\n      \"risk_explanation\": \"Email update fires trigger sync_email_normalized which overwrites email_normalized with lower(email) retaining plus-tags, while v2 writes stripped canonical form. Whichever UPDATE commits last wins, so canonical can be clobbered by trigger value or trigger value replaced by stale canonical, leaving mismatched email/normalized pair.\",\n      \"table\": \"customers\"\n    },\n    {\n      \"column\": \"phone\",\n      \"functions\": [\n        \"app_v1.py:update_phone\",\n        \"app_v1.py:update_email\"\n      ],\n      \"risk_explanation\": \"Concurrent updates to different columns (phone vs email) of the same row plus trigger-amplified write (email also writes email_normalized) risk lost update where one column's new value overwrites the other's new value.\",\n      \"table\": \"customers\"\n    }\n  ],\n  \"operations\": [\n    {\n      \"function\": \"app_v1.py:update_phone\",\n      \"summary\": \"old release updates phone only, unaware of email_normalized\",\n      \"tables_read\": [\n        \"customers\"\n      ],\n      \"tables_written\": [\n        \"customers\"\n      ]\n    },\n    {\n      \"function\": \"app_v1.py:update_email\",\n      \"summary\": \"old release updates email only; trigger derives email_normalized as lower(email)\",\n      \"tables_read\": [\n        \"customers\"\n      ],\n      \"tables_written\": [\n        \"customers\"\n      ]\n    },\n    {\n      \"function\": \"app_v2.py:set_normalized_email\",\n      \"summary\": \"new release writes canonical email_normalized e.g. plus-tags removed\",\n      \"tables_read\": [\n        \"customers\"\n      ],\n      \"tables_written\": [\n        \"customers\"\n      ]\n    }\n  ],\n  \"tests\": [\n    {\n      \"actors\": [\n        {\n          \"calls\": [\n            {\n              \"bind_as\": null,\n              \"params\": [\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"phone\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": \"222-2222\"\n                },\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"id\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": 1\n                }\n              ],\n              \"statement_id\": \"app_v1.py:update_phone#0\"\n            }\n          ],\n          \"function\": \"app_v1.py:update_phone\",\n          \"name\": \"phone_updater\"\n        },\n        {\n          \"calls\": [\n            {\n              \"bind_as\": null,\n              \"params\": [\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"normalized\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": \"alice.canonical@example.com\"\n                },\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"id\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": 1\n                }\n              ],\n              \"statement_id\": \"app_v2.py:set_normalized_email#0\"\n            }\n          ],\n          \"function\": \"app_v2.py:set_normalized_email\",\n          \"name\": \"canonicalizer\"\n        }\n      ],\n      \"invariants\": [\n        {\n          \"column\": \"phone\",\n          \"description\": \"phone reflects phone updater\",\n          \"expected\": [\n            \"222-2222\"\n          ],\n          \"id\": \"t1_phone\",\n          \"key_column\": \"id\",\n          \"key_value\": 1,\n          \"kind\": \"column_equals\",\n          \"other_column\": null,\n          \"table\": \"customers\"\n        },\n        {\n          \"column\": \"email_normalized\",\n          \"description\": \"canonical not clobbered by old unaware write\",\n          \"expected\": [\n            \"alice.canonical@example.com\"\n          ],\n          \"id\": \"t1_norm\",\n          \"key_column\": \"id\",\n          \"key_value\": 1,\n          \"kind\": \"column_equals\",\n          \"other_column\": null,\n          \"table\": \"customers\"\n        },\n        {\n          \"column\": \"email\",\n          \"description\": \"email unchanged\",\n          \"expected\": [\n            \"alice@example.com\"\n          ],\n          \"id\": \"t1_email\",\n          \"key_column\": \"id\",\n          \"key_value\": 1,\n          \"kind\": \"column_equals\",\n          \"other_column\": null,\n          \"table\": \"customers\"\n        }\n      ],\n      \"name\": \"old_phone_vs_new_normalized_lost_update\",\n      \"rationale\": \"During rollout old phone updates run with new canonicalizer on same row. Distinct phone and normalized values make it observable if either partial UPDATE is lost or old code resets new column.\",\n      \"seed\": [\n        {\n          \"table\": \"customers\",\n          \"values\": [\n            {\n              \"column\": \"id\",\n              \"value\": 1\n            },\n            {\n              \"column\": \"email\",\n              \"value\": \"alice@example.com\"\n            },\n            {\n              \"column\": \"phone\",\n              \"value\": \"111-1111\"\n            },\n            {\n              \"column\": \"email_normalized\",\n              \"value\": \"alice@example.com\"\n            }\n          ]\n        }\n      ]\n    },\n    {\n      \"actors\": [\n        {\n          \"calls\": [\n            {\n              \"bind_as\": null,\n              \"params\": [\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"email\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": \"User+Tag@Example.COM\"\n                },\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"id\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": 1\n                }\n              ],\n              \"statement_id\": \"app_v1.py:update_email#0\"\n            }\n          ],\n          \"function\": \"app_v1.py:update_email\",\n          \"name\": \"email_updater\"\n        },\n        {\n          \"calls\": [\n            {\n              \"bind_as\": null,\n              \"params\": [\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"normalized\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": \"user@example.com\"\n                },\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"id\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": 1\n                }\n              ],\n              \"statement_id\": \"app_v2.py:set_normalized_email#0\"\n            }\n          ],\n          \"function\": \"app_v2.py:set_normalized_email\",\n          \"name\": \"canonicalizer\"\n        }\n      ],\n      \"invariants\": [\n        {\n          \"column\": \"email\",\n          \"description\": \"email is the new email regardless of order\",\n          \"expected\": [\n            \"User+Tag@Example.COM\"\n          ],\n          \"id\": \"t2_email\",\n          \"key_column\": \"id\",\n          \"key_value\": 1,\n          \"kind\": \"column_equals\",\n          \"other_column\": null,\n          \"table\": \"customers\"\n        },\n        {\n          \"column\": \"email_normalized\",\n          \"description\": \"normalized is either trigger lower(email) or stripped canonical, never stale\",\n          \"expected\": [\n            \"user+tag@example.com\",\n            \"user@example.com\"\n          ],\n          \"id\": \"t2_norm\",\n          \"key_column\": \"id\",\n          \"key_value\": 1,\n          \"kind\": \"column_in\",\n          \"other_column\": null,\n          \"table\": \"customers\"\n        },\n        {\n          \"column\": \"phone\",\n          \"description\": \"phone unchanged\",\n          \"expected\": [\n            \"000-0000\"\n          ],\n          \"id\": \"t2_phone\",\n          \"key_column\": \"id\",\n          \"key_value\": 1,\n          \"kind\": \"column_equals\",\n          \"other_column\": null,\n          \"table\": \"customers\"\n        }\n      ],\n      \"name\": \"email_trigger_vs_canonical_clobber\",\n      \"rationale\": \"Trigger writes lower(email) with plus-tag retained while v2 writes stripped canonical. Concurrent execution exposes which wins and whether stale seed survives or pair becomes mismatched.\",\n      \"seed\": [\n        {\n          \"table\": \"customers\",\n          \"values\": [\n            {\n              \"column\": \"id\",\n              \"value\": 1\n            },\n            {\n              \"column\": \"email\",\n              \"value\": \"old@example.com\"\n            },\n            {\n              \"column\": \"phone\",\n              \"value\": \"000-0000\"\n            },\n            {\n              \"column\": \"email_normalized\",\n              \"value\": \"old@example.com\"\n            }\n          ]\n        }\n      ]\n    },\n    {\n      \"actors\": [\n        {\n          \"calls\": [\n            {\n              \"bind_as\": null,\n              \"params\": [\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"phone\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": \"999-9999\"\n                },\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"id\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": 1\n                }\n              ],\n              \"statement_id\": \"app_v1.py:update_phone#0\"\n            }\n          ],\n          \"function\": \"app_v1.py:update_phone\",\n          \"name\": \"phone_updater\"\n        },\n        {\n          \"calls\": [\n            {\n              \"bind_as\": null,\n              \"params\": [\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"email\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": \"bob.new@example.com\"\n                },\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"id\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": 1\n                }\n              ],\n              \"statement_id\": \"app_v1.py:update_email#0\"\n            }\n          ],\n          \"function\": \"app_v1.py:update_email\",\n          \"name\": \"email_updater\"\n        }\n      ],\n      \"invariants\": [\n        {\n          \"column\": \"phone\",\n          \"description\": \"phone update survives\",\n          \"expected\": [\n            \"999-9999\"\n          ],\n          \"id\": \"t3_phone\",\n          \"key_column\": \"id\",\n          \"key_value\": 1,\n          \"kind\": \"column_equals\",\n          \"other_column\": null,\n          \"table\": \"customers\"\n        },\n        {\n          \"column\": \"email\",\n          \"description\": \"email update survives\",\n          \"expected\": [\n            \"bob.new@example.com\"\n          ],\n          \"id\": \"t3_email\",\n          \"key_column\": \"id\",\n          \"key_value\": 1,\n          \"kind\": \"column_equals\",\n          \"other_column\": null,\n          \"table\": \"customers\"\n        },\n        {\n          \"column\": \"email_normalized\",\n          \"description\": \"trigger-derived normalized follows new email\",\n          \"expected\": [\n            \"bob.new@example.com\"\n          ],\n          \"id\": \"t3_norm\",\n          \"key_column\": \"id\",\n          \"key_value\": 1,\n          \"kind\": \"column_equals\",\n          \"other_column\": null,\n          \"table\": \"customers\"\n        }\n      ],\n      \"name\": \"phone_vs_email_different_columns\",\n      \"rationale\": \"Concurrent updates to different columns of same row must both survive; email path also writes normalized via trigger so phone write must not clobber it and vice versa.\",\n      \"seed\": [\n        {\n          \"table\": \"customers\",\n          \"values\": [\n            {\n              \"column\": \"id\",\n              \"value\": 1\n            },\n            {\n              \"column\": \"email\",\n              \"value\": \"bob@example.com\"\n            },\n            {\n              \"column\": \"phone\",\n              \"value\": \"111-0000\"\n            },\n            {\n              \"column\": \"email_normalized\",\n              \"value\": \"bob@example.com\"\n            }\n          ]\n        }\n      ]\n    },\n    {\n      \"actors\": [\n        {\n          \"calls\": [\n            {\n              \"bind_as\": null,\n              \"params\": [\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"email\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": \"alice@example.com\"\n                },\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"id\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": 1\n                }\n              ],\n              \"statement_id\": \"app_v1.py:update_email#0\"\n            }\n          ],\n          \"function\": \"app_v1.py:update_email\",\n          \"name\": \"email_a\"\n        },\n        {\n          \"calls\": [\n            {\n              \"bind_as\": null,\n              \"params\": [\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"email\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": \"bob@example.com\"\n                },\n                {\n                  \"bind\": null,\n                  \"column\": null,\n                  \"name\": \"id\",\n                  \"operand\": null,\n                  \"row\": 0,\n                  \"source\": \"literal\",\n                  \"transform\": \"none\",\n                  \"value\": 1\n                }\n              ],\n              \"statement_id\": \"app_v1.py:update_email#0\"\n            }\n          ],\n          \"function\": \"app_v1.py:update_email\",\n          \"name\": \"email_b\"\n        }\n      ],\n      \"invariants\": [\n        {\n          \"column\": \"email\",\n          \"description\": \"final email is one of the two writers, never stale\",\n          \"expected\": [\n            \"alice@example.com\",\n            \"bob@example.com\"\n          ],\n          \"id\": \"t4_email\",\n          \"key_column\": \"id\",\n          \"key_value\": 1,\n          \"kind\": \"column_in\",\n          \"other_column\": null,\n          \"table\": \"customers\"\n        },\n        {\n          \"column\": \"email_normalized\",\n          \"description\": \"normalized stays in sync with final email\",\n          \"expected\": [],\n          \"id\": \"t4_sync\",\n          \"key_column\": \"id\",\n          \"key_value\": 1,\n          \"kind\": \"column_equals_column\",\n          \"other_column\": \"email\",\n          \"table\": \"customers\"\n        },\n        {\n          \"column\": \"phone\",\n          \"description\": \"phone unchanged\",\n          \"expected\": [\n            \"555-0000\"\n          ],\n          \"id\": \"t4_phone\",\n          \"key_column\": \"id\",\n          \"key_value\": 1,\n          \"kind\": \"column_equals\",\n          \"other_column\": null,\n          \"table\": \"customers\"\n        }\n      ],\n      \"name\": \"concurrent_email_updates_pair_consistency\",\n      \"rationale\": \"Two concurrent email changes each atomically set email plus trigger-derived normalized. Lowercased inputs make equality checkable; torn write would mix email from one winner with normalized from the other.\",\n      \"seed\": [\n        {\n          \"table\": \"customers\",\n          \"values\": [\n            {\n              \"column\": \"id\",\n              \"value\": 1\n            },\n            {\n              \"column\": \"email\",\n              \"value\": \"start@example.com\"\n            },\n            {\n              \"column\": \"phone\",\n              \"value\": \"555-0000\"\n            },\n            {\n              \"column\": \"email_normalized\",\n              \"value\": \"start@example.com\"\n            }\n          ]\n        }\n      ]\n    }\n  ]\n}",
+        "status": "completed",
+        "latency_seconds": 50.741,
+        "input_tokens": 1926,
+        "output_tokens": 13158,
+        "reasoning_tokens": 9411,
+        "approx_cost_usd": 0.058329
+      },
+      "parse_error": null
+    }
+  ],
+  "output": {
+    "operations": [
+      {
+        "function": "app_v1.py:update_phone",
+        "summary": "old release updates phone only, unaware of email_normalized",
+        "tables_read": [
+          "customers"
+        ],
+        "tables_written": [
+          "customers"
+        ]
+      },
+      {
+        "function": "app_v1.py:update_email",
+        "summary": "old release updates email only; trigger derives email_normalized as lower(email)",
+        "tables_read": [
+          "customers"
+        ],
+        "tables_written": [
+          "customers"
+        ]
+      },
+      {
+        "function": "app_v2.py:set_normalized_email",
+        "summary": "new release writes canonical email_normalized e.g. plus-tags removed",
+        "tables_read": [
+          "customers"
+        ],
+        "tables_written": [
+          "customers"
+        ]
+      }
+    ],
+    "conflicts": [
+      {
+        "functions": [
+          "app_v1.py:update_phone",
+          "app_v2.py:set_normalized_email"
+        ],
+        "table": "customers",
+        "column": "email_normalized",
+        "risk_explanation": "Old release is unaware of email_normalized and updates phone on the same row that the new release canonicalizes. Concurrent partial UPDATEs to different columns of the same row risk lost update if either path does read-modify-write or full-row write, silently resetting the canonical address to stale/NULL."
+      },
+      {
+        "functions": [
+          "app_v1.py:update_email",
+          "app_v2.py:set_normalized_email"
+        ],
+        "table": "customers",
+        "column": "email_normalized",
+        "risk_explanation": "Email update fires trigger sync_email_normalized which overwrites email_normalized with lower(email) retaining plus-tags, while v2 writes stripped canonical form. Whichever UPDATE commits last wins, so canonical can be clobbered by trigger value or trigger value replaced by stale canonical, leaving mismatched email/normalized pair."
+      },
+      {
+        "functions": [
+          "app_v1.py:update_phone",
+          "app_v1.py:update_email"
+        ],
+        "table": "customers",
+        "column": "phone",
+        "risk_explanation": "Concurrent updates to different columns (phone vs email) of the same row plus trigger-amplified write (email also writes email_normalized) risk lost update where one column's new value overwrites the other's new value."
+      }
+    ],
+    "tests": [
+      {
+        "name": "old_phone_vs_new_normalized_lost_update",
+        "rationale": "During rollout old phone updates run with new canonicalizer on same row. Distinct phone and normalized values make it observable if either partial UPDATE is lost or old code resets new column.",
+        "seed": [
+          {
+            "table": "customers",
+            "values": [
+              {
+                "column": "id",
+                "value": 1
+              },
+              {
+                "column": "email",
+                "value": "alice@example.com"
+              },
+              {
+                "column": "phone",
+                "value": "111-1111"
+              },
+              {
+                "column": "email_normalized",
+                "value": "alice@example.com"
+              }
+            ]
+          }
+        ],
+        "actors": [
+          {
+            "name": "phone_updater",
+            "function": "app_v1.py:update_phone",
+            "calls": [
+              {
+                "statement_id": "app_v1.py:update_phone#0",
+                "params": [
+                  {
+                    "name": "phone",
+                    "source": "literal",
+                    "value": "222-2222",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          },
+          {
+            "name": "canonicalizer",
+            "function": "app_v2.py:set_normalized_email",
+            "calls": [
+              {
+                "statement_id": "app_v2.py:set_normalized_email#0",
+                "params": [
+                  {
+                    "name": "normalized",
+                    "source": "literal",
+                    "value": "alice.canonical@example.com",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          }
+        ],
+        "invariants": [
+          {
+            "id": "t1_phone",
+            "description": "phone reflects phone updater",
+            "kind": "column_equals",
+            "table": "customers",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "phone",
+            "expected": [
+              "222-2222"
+            ],
+            "other_column": null
+          },
+          {
+            "id": "t1_norm",
+            "description": "canonical not clobbered by old unaware write",
+            "kind": "column_equals",
+            "table": "customers",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "email_normalized",
+            "expected": [
+              "alice.canonical@example.com"
+            ],
+            "other_column": null
+          },
+          {
+            "id": "t1_email",
+            "description": "email unchanged",
+            "kind": "column_equals",
+            "table": "customers",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "email",
+            "expected": [
+              "alice@example.com"
+            ],
+            "other_column": null
+          }
+        ]
+      },
+      {
+        "name": "email_trigger_vs_canonical_clobber",
+        "rationale": "Trigger writes lower(email) with plus-tag retained while v2 writes stripped canonical. Concurrent execution exposes which wins and whether stale seed survives or pair becomes mismatched.",
+        "seed": [
+          {
+            "table": "customers",
+            "values": [
+              {
+                "column": "id",
+                "value": 1
+              },
+              {
+                "column": "email",
+                "value": "old@example.com"
+              },
+              {
+                "column": "phone",
+                "value": "000-0000"
+              },
+              {
+                "column": "email_normalized",
+                "value": "old@example.com"
+              }
+            ]
+          }
+        ],
+        "actors": [
+          {
+            "name": "email_updater",
+            "function": "app_v1.py:update_email",
+            "calls": [
+              {
+                "statement_id": "app_v1.py:update_email#0",
+                "params": [
+                  {
+                    "name": "email",
+                    "source": "literal",
+                    "value": "User+Tag@Example.COM",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          },
+          {
+            "name": "canonicalizer",
+            "function": "app_v2.py:set_normalized_email",
+            "calls": [
+              {
+                "statement_id": "app_v2.py:set_normalized_email#0",
+                "params": [
+                  {
+                    "name": "normalized",
+                    "source": "literal",
+                    "value": "user@example.com",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          }
+        ],
+        "invariants": [
+          {
+            "id": "t2_email",
+            "description": "email is the new email regardless of order",
+            "kind": "column_equals",
+            "table": "customers",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "email",
+            "expected": [
+              "User+Tag@Example.COM"
+            ],
+            "other_column": null
+          },
+          {
+            "id": "t2_norm",
+            "description": "normalized is either trigger lower(email) or stripped canonical, never stale",
+            "kind": "column_in",
+            "table": "customers",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "email_normalized",
+            "expected": [
+              "user+tag@example.com",
+              "user@example.com"
+            ],
+            "other_column": null
+          },
+          {
+            "id": "t2_phone",
+            "description": "phone unchanged",
+            "kind": "column_equals",
+            "table": "customers",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "phone",
+            "expected": [
+              "000-0000"
+            ],
+            "other_column": null
+          }
+        ]
+      },
+      {
+        "name": "phone_vs_email_different_columns",
+        "rationale": "Concurrent updates to different columns of same row must both survive; email path also writes normalized via trigger so phone write must not clobber it and vice versa.",
+        "seed": [
+          {
+            "table": "customers",
+            "values": [
+              {
+                "column": "id",
+                "value": 1
+              },
+              {
+                "column": "email",
+                "value": "bob@example.com"
+              },
+              {
+                "column": "phone",
+                "value": "111-0000"
+              },
+              {
+                "column": "email_normalized",
+                "value": "bob@example.com"
+              }
+            ]
+          }
+        ],
+        "actors": [
+          {
+            "name": "phone_updater",
+            "function": "app_v1.py:update_phone",
+            "calls": [
+              {
+                "statement_id": "app_v1.py:update_phone#0",
+                "params": [
+                  {
+                    "name": "phone",
+                    "source": "literal",
+                    "value": "999-9999",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          },
+          {
+            "name": "email_updater",
+            "function": "app_v1.py:update_email",
+            "calls": [
+              {
+                "statement_id": "app_v1.py:update_email#0",
+                "params": [
+                  {
+                    "name": "email",
+                    "source": "literal",
+                    "value": "bob.new@example.com",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          }
+        ],
+        "invariants": [
+          {
+            "id": "t3_phone",
+            "description": "phone update survives",
+            "kind": "column_equals",
+            "table": "customers",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "phone",
+            "expected": [
+              "999-9999"
+            ],
+            "other_column": null
+          },
+          {
+            "id": "t3_email",
+            "description": "email update survives",
+            "kind": "column_equals",
+            "table": "customers",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "email",
+            "expected": [
+              "bob.new@example.com"
+            ],
+            "other_column": null
+          },
+          {
+            "id": "t3_norm",
+            "description": "trigger-derived normalized follows new email",
+            "kind": "column_equals",
+            "table": "customers",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "email_normalized",
+            "expected": [
+              "bob.new@example.com"
+            ],
+            "other_column": null
+          }
+        ]
+      },
+      {
+        "name": "concurrent_email_updates_pair_consistency",
+        "rationale": "Two concurrent email changes each atomically set email plus trigger-derived normalized. Lowercased inputs make equality checkable; torn write would mix email from one winner with normalized from the other.",
+        "seed": [
+          {
+            "table": "customers",
+            "values": [
+              {
+                "column": "id",
+                "value": 1
+              },
+              {
+                "column": "email",
+                "value": "start@example.com"
+              },
+              {
+                "column": "phone",
+                "value": "555-0000"
+              },
+              {
+                "column": "email_normalized",
+                "value": "start@example.com"
+              }
+            ]
+          }
+        ],
+        "actors": [
+          {
+            "name": "email_a",
+            "function": "app_v1.py:update_email",
+            "calls": [
+              {
+                "statement_id": "app_v1.py:update_email#0",
+                "params": [
+                  {
+                    "name": "email",
+                    "source": "literal",
+                    "value": "alice@example.com",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          },
+          {
+            "name": "email_b",
+            "function": "app_v1.py:update_email",
+            "calls": [
+              {
+                "statement_id": "app_v1.py:update_email#0",
+                "params": [
+                  {
+                    "name": "email",
+                    "source": "literal",
+                    "value": "bob@example.com",
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  {
+                    "name": "id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                ],
+                "bind_as": null
+              }
+            ]
+          }
+        ],
+        "invariants": [
+          {
+            "id": "t4_email",
+            "description": "final email is one of the two writers, never stale",
+            "kind": "column_in",
+            "table": "customers",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "email",
+            "expected": [
+              "alice@example.com",
+              "bob@example.com"
+            ],
+            "other_column": null
+          },
+          {
+            "id": "t4_sync",
+            "description": "normalized stays in sync with final email",
+            "kind": "column_equals_column",
+            "table": "customers",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "email_normalized",
+            "expected": [],
+            "other_column": "email"
+          },
+          {
+            "id": "t4_phone",
+            "description": "phone unchanged",
+            "kind": "column_equals",
+            "table": "customers",
+            "key_column": "id",
+            "key_value": 1,
+            "column": "phone",
+            "expected": [
+              "555-0000"
+            ],
+            "other_column": null
+          }
+        ]
+      }
+    ]
+  }
+}
