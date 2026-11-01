@@ -1,0 +1,146 @@
+{
+  "scenario": "gitlab_authorization_sync",
+  "generated_at": "20261101T134447Z",
+  "model_requests": 0,
+  "scope": [
+    "This is a minimal fixture with its own table names, not GitLab's schema, services, locks or workload.",
+    "It shows the trigger logic in isolated PostgreSQL. It says nothing about GitLab's production systems.",
+    "Passing this test means this test passed. It is not a proof that a trigger is safe in general."
+  ],
+  "sources": [
+    {
+      "label": "GitLab MR !246505 (trigger fix)",
+      "url": "https://gitlab.com/gitlab-org/gitlab/-/merge_requests/246505"
+    },
+    {
+      "label": "GitLab MR !246509 (backfill requeue)",
+      "url": "https://gitlab.com/gitlab-org/gitlab/-/merge_requests/246509"
+    }
+  ],
+  "variants": {
+    "buggy": {
+      "facts": {
+        "source_table": "project_grants",
+        "destination_table": "project_grants_compact",
+        "key_columns": [
+          "user_id",
+          "project_id"
+        ],
+        "source_before": [
+          {
+            "user_id": 1,
+            "project_id": 1,
+            "access_level": 20
+          },
+          {
+            "user_id": 1,
+            "project_id": 1,
+            "access_level": 30
+          }
+        ],
+        "source_after": [
+          {
+            "user_id": 1,
+            "project_id": 1,
+            "access_level": 20
+          }
+        ],
+        "destination_before": [
+          {
+            "user_id": 1,
+            "project_id": 1,
+            "access_level": 30
+          }
+        ],
+        "destination_after": [],
+        "destination_row_disappeared": [
+          {
+            "user_id": 1,
+            "project_id": 1,
+            "access_level": 30
+          }
+        ],
+        "source_rows_remaining": [
+          {
+            "user_id": 1,
+            "project_id": 1,
+            "access_level": 20
+          }
+        ],
+        "schedules": 20,
+        "space_size": 20,
+        "exhausted_space": true,
+        "violating_schedules": 20,
+        "fails_in_serial_order": true,
+        "failure_class": "serial_migration_defect",
+        "transactions_in_minimal_failure": 1,
+        "actors_in_minimal_failure": 1
+      },
+      "schedules": 20,
+      "violating_schedules": 20,
+      "artifact": "results/external_public/gitlab_authorization_sync/20261101T134447Z/failures/gitlab_authorization_sync_buggy__hand__min.json",
+      "replay_reproduced": true
+    },
+    "corrected": {
+      "facts": {
+        "source_table": "project_grants",
+        "destination_table": "project_grants_compact",
+        "key_columns": [
+          "user_id",
+          "project_id"
+        ],
+        "source_before": [
+          {
+            "user_id": 1,
+            "project_id": 1,
+            "access_level": 20
+          },
+          {
+            "user_id": 1,
+            "project_id": 1,
+            "access_level": 30
+          }
+        ],
+        "source_after": [
+          {
+            "user_id": 1,
+            "project_id": 1,
+            "access_level": 20
+          }
+        ],
+        "destination_before": [
+          {
+            "user_id": 1,
+            "project_id": 1,
+            "access_level": 30
+          }
+        ],
+        "destination_after": [
+          {
+            "user_id": 1,
+            "project_id": 1,
+            "access_level": 20
+          }
+        ],
+        "destination_row_disappeared": [],
+        "source_rows_remaining": [
+          {
+            "user_id": 1,
+            "project_id": 1,
+            "access_level": 20
+          }
+        ],
+        "schedules": 20,
+        "space_size": 20,
+        "exhausted_space": true,
+        "violating_schedules": 0,
+        "fails_in_serial_order": false,
+        "failure_class": "none_in_this_test",
+        "transactions_in_minimal_failure": 0,
+        "actors_in_minimal_failure": null
+      },
+      "schedules": 20,
+      "violating_schedules": 0
+    }
+  }
+}

@@ -4,17 +4,19 @@ DeploySpecter finds and reproduces data corruption caused by rolling database de
 
 ## The problem
 
-During a rollout, old code, new code and migrations share one schema. Each can be correct alone and still lose data together. A backfill reads a row, a user updates it, and the backfill's later write discards the update. Serial tests can't see this, because the failure needs a particular ordering of committed transactions.
+During a rollout, old code, new code and migrations share one schema. Each can be correct alone and still lose data together. A backfill reads a row, a user updates it, and the backfill's later write discards the update. Other defects need no concurrency at all, yet still only appear once a migration meets real data.
 
-## Features
+## What it does
 
-- Real PostgreSQL execution, with one session per actor and explicit transaction boundaries
-- Bounded enumeration of legal interleavings, fewest preemptions first
-- Lock waits read from `pg_blocking_pids`; deadlocks, errors and timeouts are classified separately from corruption
-- An oracle over committed history and final state, hidden from all test generators
-- Verified replay and minimization of every failure
-- Test generation by Muse Spark, a non-LLM harness or a person, all on the same engine and budget
-- A local web interface showing code, interleaving, database state, violation, replay and comparison
+- Executes tests on real PostgreSQL, with one session per actor and explicit transaction boundaries
+- Enumerates legal interleavings, fewest preemptions first, within schedule and time budgets
+- Reads lock waits from `pg_blocking_pids`, and classifies deadlocks, errors and timeouts separately from corruption
+- Judges results with an oracle over committed history and final state, hidden from all test generators
+- Replays and minimizes every failure, verifying each step by re-execution
+- Generates tests with Muse Spark, non-LLM harnesses or by hand, all on the same engine
+- Shows code, interleaving, database state, violation, replay and comparison in a local web interface
+
+It supports the Python and SQL patterns described under Limitations. It does not analyze arbitrary codebases.
 
 ## Architecture
 
@@ -22,13 +24,14 @@ During a rollout, old code, new code and migrations share one schema. Each can b
 |---|---|---|
 | Source extraction | Parses Python with `ast`, without running it, for SQL, transaction blocks and data flow | `source_model.py` |
 | Test proposals | Declarative format with no SQL field, shared by every generator | `models.py` |
-| Validator | Accepts only statements in the submitted source, on paths the code can take; checks known data flow and schema names | `validation.py` |
-| Scheduler, explorer | Execute schedules within schedule and time budgets | `scheduler.py`, `explorer.py` |
+| Validator | Accepts only statements in the submitted source, on paths the code can take | `validation.py` |
+| Scheduler, explorer | Execute schedules within budgets | `scheduler.py`, `explorer.py` |
 | Oracle | Reference models for each stated requirement | `oracle.py` |
 | Replay, minimizer | Re-execute saved failures and verify each reduction | `replay.py`, `minimizer.py` |
 | Model client, analyzer | Muse Spark requests with hard spending limits | `meta_client.py`, `analyzer.py` |
-| Baselines, benchmark | Static rules, non-LLM harness and scoring | `baselines.py`, `benchmark.py` |
-| Interface | FastAPI service and one page | `api.py`, `static/` |
+| Baselines, benchmark | Static rules, non-LLM harnesses and scoring | `baselines.py`, `baseline_c.py`, `benchmark.py` |
+| External example | The GitLab-derived case, kept apart from the benchmark | `documented.py` |
+| Interface | FastAPI service and one dependency-free page | `api.py`, `static/` |
 
 Actors run as a non-superuser role in a dedicated `deployspecter_test` database, with explicit timeouts, and the schema is rebuilt before each schedule.
 
@@ -45,18 +48,15 @@ uv sync
 
 `MODEL_API_KEY` is needed only for new model requests. Everything below works without it.
 
-## Usage
+## Local demonstration
 
 ```sh
-uv run pytest                # offline; the one paid test needs an explicit -m live
-uv run ruff check .
-uv run deployspecter serve   # http://127.0.0.1:8765
-uv run deployspecter usage   # recorded model usage
+uv run deployspecter serve
 ```
 
-## Example
+Then open http://127.0.0.1:8765. The page runs tests on your local PostgreSQL and uses recorded model responses only. It makes no model requests.
 
-Find the failure with no schedule supplied, then replay a saved one:
+## Reproduce one failure
 
 ```sh
 uv run deployspecter explore backfill_overwrite buggy
@@ -64,64 +64,75 @@ uv run deployspecter explore backfill_overwrite corrected
 uv run deployspecter replay results/benchmark/failures/dev/backfill_overwrite_buggy__hand__min.json
 ```
 
-The buggy case violates its requirement in 61 of 84 schedules: a user commits `Alicia`, and the backfill's stale write leaves `Alice`. No serial order fails. The corrected case, whose update adds `AND display_name IS NULL`, violates nothing across all 84. That covers these inputs only and doesn't prove the code safe.
+The first command finds a stale backfill overwrite with no schedule supplied: 61 of 84 schedules violate the requirement, and no serial order does. The corrected case has no violation in those 84. That covers these inputs only and doesn't prove the code safe.
 
-## Meta AI integration
+Tests and lint:
 
-`muse-spark-1.3` receives the source, the extracted statement catalog and the schema, through Meta's Responses API. It returns typed JSON describing operations, conflicts, tests and candidate invariants. It receives no scenario names, variant labels, requirements or schedules; a guard enforces this, and a test confirms each recorded response answers the prompt built from the current code.
+```sh
+uv run pytest        # offline; the one paid test needs an explicit -m live
+uv run ruff check .
+```
 
-Its output is data. It can't contain SQL or code, and any statement it names must exist in the submitted source. Its invariants are hypotheses, reported separately, and only the oracle can produce a finding.
+## Muse Spark integration
 
-Model requests are off by default. The interface never makes them, and uses recorded responses only. `explore` and `benchmark` send requests only when given `--max-requests` and `--max-estimated-usd`, which are enforced before each request, and automatic retries are disabled.
+`muse-spark-1.3`, through Meta's Responses API, turns code into executable test proposals:
 
-## Evaluation
+```
+source code → operation catalog → Muse Spark proposal → validator → PostgreSQL → oracle → reproducible failure
+```
 
-5 scenarios, each with a buggy and a corrected variant: 4 development cases and 6 held-out cases. Budget: 300 schedules and 60 s per system per case. Muse Spark ran up to 3 times per development case and once per held-out case, with a prompt frozen before any held-out model run. See [`results/README.md`](results/README.md).
+- **Muse Spark** receives the source, extracted statement catalog and schema. It proposes actors, inputs, seed rows and candidate invariants. It never receives scenario names, labels, requirements or schedules.
+- **The validator** rejects unsupported or unsafe proposals. Output can't contain SQL or code, and every statement it names must exist in the submitted source.
+- **PostgreSQL** executes the accepted tests.
+- **The oracle** alone decides whether a violation exists. Candidate invariants are hypotheses and can never produce a finding.
 
-**The execution engine works on these fixtures.** Hand-written tests explored each fixture's full schedule space: every buggy case violated its requirement and no corrected case did. All 50 saved failures replay with identical behaviour.
+The interface's pipeline tab shows each stage for any recorded response, including the generated tests. Model requests are off by default, and `explore` and `benchmark` send them only with `--max-requests` and `--max-estimated-usd`, with automatic retries disabled.
 
-**Muse Spark usually generates valid tests.** On first response, 27 of 32 development tests and 18 of 22 held-out tests were valid. The rejected ones came from bare function names in 2 development responses and hyphenated actor names in 1 held-out response.
+## Benchmark findings
 
-**It found no more bugs than the non-LLM harness.**
+5 synthetic scenarios, each with a buggy and a corrected variant: 4 development cases and 6 held-out cases. Budget: 300 schedules and 60 s per system per case. Muse Spark ran up to 3 times per development case and once per held-out case, with a prompt frozen before any held-out model run. See [`results/README.md`](results/README.md).
 
-| Held-out | Bugs found | Replayed | False flags | Median schedules to failure | Requests | Est. cost |
+| Held-out | Defects found | Replayed | False flags | Median schedules to failure | Requests | Est. cost |
 |---|---|---|---|---|---|---|
 | Static rules | 3/3 (warnings, not executed) | n/a | 0/3 | n/a | 0 | 0 |
-| Non-LLM harness | 3/3 (1 by a guessed value) | 3/3 | 0/3 | 1 | 0 | 0 |
+| Baseline B (non-LLM) | 3/3 (1 by a guessed value) | 3/3 | 0/3 | 1 | 0 | 0 |
 | Muse Spark | 3/3 | 3/3 | 0/2 (1 not executed) | 3 | 6 | $0.39 |
 | Hand-written | 3/3 | 3/3 | 0/3 | 3 | 0 | 0 |
 
-| Development | Bugs found | Replayed | False flags | Median schedules to failure | Requests | Est. cost |
+| Development | Defects found | Replayed | False flags | Median schedules to failure | Requests | Est. cost |
 |---|---|---|---|---|---|---|
 | Static rules | 2/2 (warnings, not executed) | n/a | 0/2 | n/a | 0 | 0 |
-| Non-LLM harness | 2/2 | 2/2 | 0/2 | 26 | 0 | 0 |
+| Baseline B (non-LLM) | 2/2 | 2/2 | 0/2 | 26 | 0 | 0 |
 | Muse Spark (per run) | 6/6 | 6/6 | 0/4 | 4 | 12 | $0.64 |
 | Hand-written | 2/2 | 2/2 | 0/2 | 4 | 0 | 0 |
 
-| Schedules to first failure | Split | Non-LLM harness | Muse Spark |
-|---|---|---|---|
-| `backfill_overwrite` | dev | 48 | 4 |
-| `mixed_version_overwrite` | dev | 4 | 4 |
-| `soft_delete_resurrection` | held-out | 53 | 4 |
-| `trigger_dual_write` | held-out | 1 | 1 |
-| `wallet_credit_resync` | held-out | 1, by a guessed value | 3 |
+- **Muse Spark found no more defects than the non-LLM systems.**
+- Its measured edges are narrow: fewer schedules on 2 of 5 scenarios (4 vs 48, 4 vs 53), and sounder data flow on one, where Baseline B reached a violation with a guessed value.
+- The non-LLM harnesses were far faster overall, because a schedule takes milliseconds and a model response about a minute.
+- First-response validity was 27 of 32 tests on development cases and 18 of 22 on held-out cases, where one whole response was rejected over actor names and never executed.
+- Baseline C, added later with these fixtures in view, also found all 5 defects with no false flags. It isn't part of the tables above.
 
-Its measured contributions are narrow:
+Costs are estimates at [Meta's published standard rates](https://dev.meta.ai/docs/pricing-rate-limits), not billing data.
 
-- **Fewer schedules** on 2 of 5 scenarios, and the same or more on the rest.
-- **Sounder data flow** on the wallet case. The non-LLM harness guessed a value and failed in a serial order, while Muse Spark's test failed only under concurrency, like the hand-written reference.
+## GitLab-derived example
 
-The non-LLM harness was still far faster overall, because a schedule takes milliseconds and a model response takes about a minute. Costs are estimates at [Meta's published standard rates](https://dev.meta.ai/docs/pricing-rate-limits), not billing data. Tokens are as reported by the API.
+This example is separate from the benchmark and changes none of its numbers. It is a minimal fixture modelled on a defect GitLab published in [MR !246505](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/246505), with recovery in [MR !246509](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/246509). It isn't GitLab's schema, services, locks or workload. See [`SOURCE.md`](scenarios_external/gitlab_authorization_sync/SOURCE.md).
 
-After the held-out run, the validator was changed to normalize actor names. Re-executing the rejected `wallet_credit_resync/corrected` response then gave 4 of 4 valid tests, 245 schedules and no violation, though one of those tests never exercised the requirement. This post-hoc check isn't counted in the table above.
+```sh
+uv run deployspecter documented-defect
+```
+
+A source table holds one row per access level, and a trigger maintains a one-row-per-pair destination table. With the original delete logic, deleting one access level removes the destination row while another source row remains. This fails in a single transaction and in every schedule tested, so it is a migration semantics defect rather than a race. With the delete logic of GitLab's fix, the same test keeps the pair at the lowest remaining level, which is not a proof of safety in general.
+
+Baseline B misses this defect, because it seeds one row per pair. Baseline C, which was written with this defect known, finds it. Muse Spark has not been evaluated on this example.
 
 ## Limitations
 
-- **Small benchmark, not independent.** The fixtures, oracles and baselines were designed with knowledge of each other, including the static rules and non-LLM harness. Their perfect scores are optimistic, and the results don't generalize.
-- **Little model data.** Each held-out case has one Muse Spark run, so variation there is unknown, and 2 development repeats are missing. The held-out fixtures have now been seen, so a fair re-test needs new ones.
+- **Small benchmark, not independent.** The fixtures, oracles and baselines were designed with knowledge of each other, so scores are optimistic and don't generalize.
+- **Little model data.** Each held-out case has one Muse Spark run, 2 development repeats are missing, and the held-out fixtures have now been seen.
 - **Authoring effort is unmeasured.** Whether Muse Spark saves people time remains an open question.
-- **Requirements are written by hand per scenario.** A new codebase needs its own. Without them, only final-state serializability is available, as a diagnostic.
-- **Scheduling stops at statement boundaries.** PostgreSQL internals aren't controlled, and only `READ COMMITTED` is exercised.
-- **Python logic between statements is modelled, not run.** Generators supply data flow using a few allowed transforms, and flow the extractor can't see is counted as unverified.
-- **Extraction is limited.** It handles constant SQL through `execute` and `with conn.transaction()`. Other patterns produce warnings, and ORMs and other languages are unsupported.
-- **Submitted code must be trusted.** Migrations run with admin rights on the test database, and SQL in the source could undo the actor role. Model output is restricted, but this isn't a sandbox for hostile code.
+- **Requirements are written by hand per scenario.** A new codebase needs its own.
+- **Scheduling stops at statement boundaries.** PostgreSQL internals aren't controlled, and the benchmark uses `READ COMMITTED`.
+- **Python logic between statements is modelled, not run.** Flow the extractor can't see is counted as unverified.
+- **Extraction is limited.** It handles constant SQL through `execute` and `with conn.transaction()`. ORMs and other languages are unsupported.
+- **Submitted code must be trusted.** Migrations run with admin rights on the test database. Model output is restricted, but this isn't a sandbox for hostile code.

@@ -1,4 +1,4 @@
-from deployspecter.models import ExecutionTrace, InvariantProposal, Requirement, StepRecord, WriterDecl
+from deployspecter.models import ExecutionTrace, InvariantProposal, Requirement, SourceOp, StepRecord, WriterDecl
 from deployspecter.oracle import evaluate, invariant_holds
 
 REQ = Requirement(
@@ -110,3 +110,47 @@ def test_candidate_invariant_kinds():
     assert invariant_holds(InvariantProposal(**base, kind="row_exists"), state)
     assert not invariant_holds(InvariantProposal(**base, kind="row_absent"), state)
     assert invariant_holds(InvariantProposal(**base, kind="column_equals_column", column="v", other_column="w"), state)
+
+
+REPLICA = Requirement(
+    id="P", text="pair stays", kind="replica_pair_retained", table="d", key_column="u", column="a",
+    source_table="s", key_columns=["u", "p"], source_ops=[
+        SourceOp(function="f:del", op="delete", params={"u": "u", "p": "p", "access_level": "a"}),
+        SourceOp(function="f:ins", op="insert", params={"u": "u", "p": "p", "access_level": "a"}),
+    ],
+)
+
+
+def replica_trace(records, initial, final):
+    return ExecutionTrace(
+        requested_schedule=[], issue_order=[], records=records, outcome="completed",
+        initial_state=initial, final_state=final,
+    )
+
+
+def op(function, a, commit=1, committed=True, rowcount=1):
+    return StepRecord(
+        seq=commit, actor="x", step_index=0, kind="sql", function=function, sql="-", committed=committed,
+        rowcount=rowcount, durable_commit_seq=commit, params={"u": 1, "p": 1, "a": a},
+    )
+
+
+TWO = {"s": [{"u": 1, "p": 1, "a": 20}, {"u": 1, "p": 1, "a": 30}], "d": [{"u": 1, "p": 1, "a": 30}]}
+
+
+def test_replica_retained_flags_a_lost_pair_and_nothing_else():
+    lost = {"s": [{"u": 1, "p": 1, "a": 20}], "d": []}
+    kept = {"s": [{"u": 1, "p": 1, "a": 20}], "d": [{"u": 1, "p": 1, "a": 20}]}
+    assert evaluate([REPLICA], replica_trace([op("f:del", 30)], TWO, lost)).violations
+    assert not evaluate([REPLICA], replica_trace([op("f:del", 30)], TWO, kept)).violations
+
+
+def test_replica_rolled_back_or_empty_operations_are_ignored():
+    for record in (op("f:del", 30, committed=False), op("f:del", 99, rowcount=0)):
+        verdict = evaluate([REPLICA], replica_trace([record], TWO, TWO))
+        assert verdict.classification == "vacuous"
+
+
+def test_replica_pair_absent_before_any_sync_is_not_judged():
+    unsynced = {"s": [{"u": 1, "p": 1, "a": 20}], "d": []}
+    assert not evaluate([REPLICA], replica_trace([], unsynced, unsynced)).violations

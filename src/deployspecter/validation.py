@@ -28,7 +28,7 @@ MAX_STEPS_PER_ACTOR = 16
 MAX_SEED_ROWS = 10
 _ACTOR_ID_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,30}$")
 _MAX_ACTOR_ID = 31
-_ALLOWED_STATEMENTS = {"SELECT", "INSERT", "UPDATE", "DELETE"}
+_ALLOWED_STATEMENTS = {"SELECT", "INSERT", "UPDATE", "DELETE", "WITH"}
 
 Catalog = dict[str, set[str]]
 
@@ -122,7 +122,7 @@ def _compile_actor(
     proposal: ActorProposal, actor_id: str, source: SourceModel, reasons: list[str], unverified: list[str]
 ) -> Actor | None:
     where = f"actor {proposal.name!r}"
-    fn = source.functions.get(proposal.function)
+    fn = _find_function(proposal.function, source)
     if fn is None:
         reasons.append(f"{where}: unknown function {proposal.function!r}")
         return None
@@ -137,7 +137,7 @@ def _compile_actor(
         st = fn.statements[index_of[call.statement_id]]
         first_word = st.sql.split(None, 1)[0].upper() if st.sql.strip() else ""
         if first_word not in _ALLOWED_STATEMENTS or ";" in st.sql:
-            reasons.append(f"{where}: {st.statement_id} is not a single SELECT/INSERT/UPDATE/DELETE statement")
+            reasons.append(f"{where}: {st.statement_id} is not a single query or DML statement")
             continue
         chosen.append((index_of[call.statement_id], st))
         _check_params(where, call.params, st, bound, reasons, unverified)
@@ -156,6 +156,14 @@ def _compile_actor(
         reasons.append(f"{where}: {len(steps)} steps exceeds {MAX_STEPS_PER_ACTOR}")
         return None
     return Actor(name=actor_id, function=fn.ref, steps=steps)
+
+
+def _find_function(name: str, source: SourceModel) -> FunctionModel | None:
+    """Exact reference, or a bare name that matches exactly one function. Statement ids stay strict."""
+    if name in source.functions:
+        return source.functions[name]
+    matches = [fn for fn in source.functions.values() if fn.name == name]
+    return matches[0] if len(matches) == 1 else None
 
 
 def _check_path(where, fn: FunctionModel, chosen, reasons: list[str]) -> None:

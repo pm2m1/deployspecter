@@ -40,6 +40,8 @@ class Settings:
     timeouts: Timeouts = Timeouts()
     results_dir: Path = PROJECT_ROOT / "results"
     scenarios_dir: Path = PROJECT_ROOT / "scenarios"
+    # Kept apart so external cases cannot change the original benchmark's discovery or sample counts.
+    external_scenarios_dir: Path = PROJECT_ROOT / "scenarios_external"
 
 
 def redact(text: str) -> str:

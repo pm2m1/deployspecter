@@ -15,12 +15,15 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
-from .analyzer import PROMPT_VERSION
+from .analyzer import PROMPT_VERSION, AnalysisRecord
+from .analyzer_support import read_catalog
+from .benchmark_report import usage_ledger
 from .config import PROJECT_ROOT, load_settings, redact
 from .database import Sandbox
+from .documented import EXTERNAL_CASES, documented_source, run_documented
 from .meta_client import PRICING_NOTE
 from .models import ExecutableSpec
-from .pipeline import SystemRun, run_ai, run_baseline, run_hand
+from .pipeline import SystemRun, compile_all, run_ai, run_baseline, run_baseline_c, run_hand
 from .replay import load_artifact, replay
 from .report import render_markdown, timeline
 from .scenarios import VARIANTS, Case, list_scenarios, load_case
@@ -34,9 +37,14 @@ _exec_lock = threading.Lock()  # the sandbox runs one exploration at a time
 
 class RunRequest(BaseModel):
     variant: Literal["buggy", "corrected"]
-    generator: Literal["hand", "baseline", "ai"] = "hand"
+    generator: Literal["hand", "baseline", "baseline_c", "ai"] = "hand"
+    repeat: int = Field(default=0, ge=0, le=2)
     max_schedules: int = Field(default=300, ge=1, le=2000)
     max_seconds: float = Field(default=60, gt=0, le=300)
+
+
+class DocumentedRequest(BaseModel):
+    variant: Literal["buggy", "corrected"]
 
 
 def _runs_dir() -> Path:
@@ -158,9 +166,11 @@ def _execute(run_id: str, scenario_id: str, request: RunRequest) -> None:
                     run = run_hand(*shared)
                 elif request.generator == "baseline":
                     run = run_baseline(*shared)
+                elif request.generator == "baseline_c":
+                    run = run_baseline_c(*shared)
                 else:
                     cache = (settings.results_dir / "ai_responses" / PROMPT_VERSION
-                             / f"{case.case_id.replace('/', '__')}__r0.json")
+                             / f"{case.case_id.replace('/', '__')}__r{request.repeat}.json")
                     # The interface never spends credits: it only replays recorded responses.
                     run = run_ai(*shared, None, cache, reuse=True)
         record |= {"status": "finished", "result": _view(run, case)}
@@ -220,13 +230,142 @@ def get_run(run_id: str) -> dict[str, Any]:
     return json.loads(path.read_text())
 
 
+def _latest_report(split: str) -> dict[str, Any] | None:
+    path = load_settings().results_dir / "benchmark" / f"latest_{split}.json"
+    return json.loads(path.read_text()) if path.exists() else None
+
+
 @app.get("/comparison")
 def comparison() -> dict[str, Any]:
-    """Latest saved benchmark per split. Empty when no benchmark has been run."""
-    directory = load_settings().results_dir / "benchmark"
+    """Saved benchmark per split, plus Baseline C's own newest report. Empty when nothing has been run."""
     out: dict[str, Any] = {}
     for split in ("dev", "heldout"):
-        path = directory / f"latest_{split}.json"
-        if path.exists():
-            out[split] = json.loads(path.read_text()) | {"pricing_note": PRICING_NOTE}
+        report = _latest_report(split)
+        if report:
+            out[split] = report | {"pricing_note": PRICING_NOTE}
+    baseline_c = sorted((load_settings().results_dir / "baseline_c").glob("all_*.json"))
+    if baseline_c:
+        out["baseline_c"] = json.loads(baseline_c[-1].read_text())
     return out
+
+
+@app.get("/usage")
+def usage() -> dict[str, Any]:
+    return usage_ledger(load_settings().results_dir / "ai_responses")
+
+
+@app.get("/scenarios/{scenario_id}/recordings")
+def recordings(scenario_id: str) -> dict[str, list[int]]:
+    settings = load_settings()
+    if scenario_id not in list_scenarios(settings.scenarios_dir):
+        raise HTTPException(404, "unknown scenario")
+    directory = settings.results_dir / "ai_responses" / PROMPT_VERSION
+    return {
+        variant: [r for r in range(3) if (directory / f"{scenario_id}__{variant}__r{r}.json").exists()]
+        for variant in VARIANTS
+    }
+
+
+@app.get("/scenarios/{scenario_id}/ai-pipeline")
+def ai_pipeline(
+    scenario_id: str, variant: Literal["buggy", "corrected"] = "buggy", repeat: int = Query(default=0, ge=0, le=2)
+) -> dict[str, Any]:
+    """The path from source to generated test, built from one recorded response. Sends no model request."""
+    settings = load_settings()
+    if scenario_id not in list_scenarios(settings.scenarios_dir):
+        raise HTTPException(404, "unknown scenario")
+    case = load_case(settings.scenarios_dir, scenario_id, variant)
+    path = settings.results_dir / "ai_responses" / PROMPT_VERSION / f"{scenario_id}__{variant}__r{repeat}.json"
+    if not path.exists():
+        raise HTTPException(404, f"no recorded model response for {case.case_id} repeat {repeat}")
+    record = AnalysisRecord.model_validate_json(path.read_text())
+    source = case.source_model()
+    catalog = [
+        {
+            "statement_id": st.statement_id, "function": fn.ref, "sql": st.sql, "params": st.placeholders,
+            "required": not (st.conditional or st.in_loop),
+        }
+        for fn in source.functions.values() for st in fn.statements
+    ]
+    tests = []
+    with _exec_lock, Sandbox(settings) as sandbox:
+        known = read_catalog(sandbox, case.setup_sql)
+        for proposal in record.output.tests if record.output else []:
+            reports, rejected = compile_all([proposal], case, sandbox, "ai")
+            tests.append({
+                "proposal": proposal.model_dump(),
+                "accepted": bool(reports),
+                "rejections": [reason for r in rejected for reason in r.reasons],
+                "renamed_actors": reports[0].renamed_actors if reports else {},
+                "dropped_invariants": reports[0].dropped_invariants if reports else [],
+            })
+    report = _latest_report(case.split)
+    score = next(
+        (s for s in (report or {}).get("scores", [])
+         if s["case_id"] == case.case_id and s["system"] == "ai" and s["repeat"] == repeat),
+        None,
+    )
+    return {
+        "case_id": case.case_id, "split": case.split, "repeat": repeat, "files": case.files,
+        "tables": sorted(known), "catalog": catalog, "model": record.model,
+        "prompt_version": record.prompt_version, "prompt_sha256": record.prompt_sha256,
+        "attempts": [{
+            "kind": a.kind, "status": a.reply.status, "input_tokens": a.reply.input_tokens,
+            "output_tokens": a.reply.output_tokens, "latency_seconds": a.reply.latency_seconds,
+            "parse_error": bool(a.parse_error),
+        } for a in record.attempts],
+        "operations": [o.model_dump() for o in record.output.operations] if record.output else [],
+        "conflicts": [c.model_dump() for c in record.output.conflicts] if record.output else [],
+        "tests": tests,
+        "as_scored_in_saved_benchmark": score and {
+            "tests_valid": score["tests_valid"], "tests_proposed": score["tests_proposed"],
+            "first_attempt_valid": score.get("first_attempt_valid"),
+            "first_attempt_proposed": score.get("first_attempt_proposed"),
+            "rejections": score["rejections"], "generated_at": report["generated_at"],
+        },
+    }
+
+
+@app.get("/external-cases")
+def external_cases() -> list[dict[str, Any]]:
+    return list(EXTERNAL_CASES.values())
+
+
+@app.get("/external-cases/{case_id}/source")
+def external_source(case_id: str) -> dict[str, Any]:
+    if case_id not in EXTERNAL_CASES:
+        raise HTTPException(404, "unknown external case")
+    return documented_source(load_settings(), case_id)
+
+
+def _execute_documented(run_id: str, case_id: str, variant: str) -> None:
+    record = _runs[run_id]
+    settings = load_settings()
+    try:
+        artifacts = settings.results_dir / "failures" / "ui" / run_id
+        with _exec_lock:
+            record["status"] = "running"
+            with Sandbox(settings) as sandbox, ScheduleRunner(sandbox) as runner:
+                run, case, focused, facts = run_documented(sandbox, runner, settings, case_id, variant, artifacts)
+                view = _view(run, case)
+        record |= {"status": "finished", "result": view | {
+            "timeline": timeline(focused), "schedule": focused.requested_schedule, "issue_order": focused.issue_order,
+            "initial_state": focused.initial_state, "final_state": focused.final_state, "documented": facts,
+        }}
+    except Exception as exc:  # surfaced to the caller as a failed run, never as a clean result
+        traceback.print_exc()
+        record |= {"status": "failed", "error": redact(f"{type(exc).__name__}: {str(exc)[:500]}")}
+    finally:
+        directory = _runs_dir()
+        directory.mkdir(parents=True, exist_ok=True)
+        (directory / f"{run_id}.json").write_text(json.dumps(record, indent=2, default=str))
+
+
+@app.post("/external-cases/{case_id}/documented-defect/run", status_code=202)
+def start_documented(case_id: str, request: DocumentedRequest) -> dict[str, Any]:
+    if case_id not in EXTERNAL_CASES:
+        raise HTTPException(404, "unknown external case")
+    run_id = uuid.uuid4().hex
+    _runs[run_id] = {"run_id": run_id, "external_case": case_id, "request": request.model_dump(), "status": "queued"}
+    threading.Thread(target=_execute_documented, args=(run_id, case_id, request.variant), daemon=True).start()
+    return {"run_id": run_id, "status": "queued"}

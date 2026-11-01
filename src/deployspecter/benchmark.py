@@ -17,7 +17,7 @@ from .baselines import StaticFinding, static_scan
 from .config import Settings
 from .database import Sandbox
 from .meta_client import PRICING_NOTE, MetaClient
-from .pipeline import SystemRun, run_ai, run_baseline, run_hand
+from .pipeline import SystemRun, run_ai, run_baseline, run_baseline_c, run_hand
 from .scenarios import Case, load_all_cases
 from .scheduler import ScheduleRunner
 
@@ -195,7 +195,8 @@ def run_benchmark(
     with Sandbox(settings) as sandbox, ScheduleRunner(sandbox) as runner:
         for case in cases:
             shared = (sandbox, runner, case, budget_schedules, budget_seconds, artifacts)
-            hand = run_hand(*shared) if ("hand" in systems or "ai" in systems or "baseline_b" in systems) else None
+            needs_hand = {"hand", "ai", "baseline_b", "baseline_c"} & set(systems)
+            hand = run_hand(*shared) if needs_hand else None
             if "static" in systems:
                 findings = static_scan(case.files, case.source_model())
                 keep(CaseScore(
@@ -206,6 +207,8 @@ def run_benchmark(
                 keep(_score_run(case, hand, 0, hand))
             if "baseline_b" in systems:
                 keep(_score_run(case, run_baseline(*shared), 0, hand))
+            if "baseline_c" in systems:
+                keep(_score_run(case, run_baseline_c(*shared), 0, hand))
             if "ai" in systems:
                 for repeat in range(ai_repeats):
                     cache = ai_cache / f"{case.case_id.replace('/', '__')}__r{repeat}.json"
@@ -227,7 +230,7 @@ def run_benchmark(
         "model": settings.model_name,
         "pricing_note": PRICING_NOTE,
         "ai_repeats": ai_repeats,
-        "artifacts_dir": str(artifacts.relative_to(settings.results_dir)),
+        "artifacts_dir": str(artifacts.relative_to(results_dir.parent)),
         "new_model_requests_sent": client.requests_sent if client else 0,
         "complete": not missing and "ai" in systems,
         "missing_ai_responses": missing,

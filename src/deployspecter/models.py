@@ -199,24 +199,33 @@ class WriterDecl(BaseModel):
     value_transform: Literal["none", "lower"] = "none"
 
 
+class SourceOp(BaseModel):
+    """How a source function changes a replicated table, for the reference replay."""
+
+    model_config = ConfigDict(extra="forbid")
+    function: str
+    op: Literal["insert", "delete", "update", "backfill"]
+    params: dict[str, str]
+
+
 class Requirement(BaseModel):
     """Hand-written business requirement. Never shown to any test generator."""
 
     model_config = ConfigDict(extra="forbid")
     id: str
     text: str
-    kind: Literal[
-        "authoritative_write_preserved",
-        "committed_delta_sum",
-        "tombstone_preserved",
-    ]
+    kind: str  # names a check in oracle._CHECKS
     table: str
     key_column: str
     column: str
-    writers: list[WriterDecl]
+    writers: list[WriterDecl] = Field(default_factory=list)
     # committed_delta_sum: expected = seed(base_column) * base_multiplier + sum(deltas)
     base_column: str | None = None
     base_multiplier: float = 1.0
+    # replica_* kinds: `table` is kept in sync with `source_table`, one row per `key_columns`.
+    source_table: str | None = None
+    key_columns: list[str] = Field(default_factory=list)
+    source_ops: list[SourceOp] = Field(default_factory=list)
     assumptions: list[str] = Field(default_factory=list)
 
 

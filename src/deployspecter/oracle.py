@@ -143,7 +143,84 @@ def _check_delta_sum(trace: ExecutionTrace, req: Requirement) -> tuple[list[Viol
     return violations, checked
 
 
+def _pairs(rows: list[dict[str, Any]], req: Requirement) -> dict[tuple[str, ...], list[dict[str, Any]]]:
+    grouped: dict[tuple[str, ...], list[dict[str, Any]]] = {}
+    for row in rows:
+        grouped.setdefault(tuple(str(row[c]) for c in req.key_columns), []).append(row)
+    return grouped
+
+
+def _replay_replica(trace: ExecutionTrace, req: Requirement):
+    """Replays committed source operations in commit order; never reads the trigger under test."""
+    source = {
+        pair: {float(r[req.column]) for r in rows}
+        for pair, rows in _pairs(trace.initial_state.get(req.source_table or "", []), req).items()
+    }
+    replica = {
+        pair: float(rows[0][req.column])
+        for pair, rows in _pairs(trace.initial_state.get(req.table, []), req).items()
+    }
+    ops = {op.function: op for op in req.source_ops}
+    touched: dict[tuple[str, ...], list[int]] = {}
+    records = sorted(
+        (r for r in trace.records if r.function in ops and r.kind == "sql" and r.status == "ok" and r.committed),
+        key=lambda r: (r.durable_commit_seq or 0, r.seq),
+    )
+    for rec in records:
+        decl = ops[rec.function]
+        value = {name: rec.params.get(param) for name, param in decl.params.items()}
+        if decl.op == "backfill":
+            low, high = float(value["first_user_id"]), float(value["last_user_id"])
+            for pair, levels in source.items():
+                if low <= float(pair[0]) <= high and pair not in replica and levels:
+                    replica[pair] = min(levels)
+                    touched.setdefault(pair, []).append(rec.seq)
+            continue
+        if not rec.rowcount:
+            continue
+        pair = tuple(str(value[c]) for c in req.key_columns)
+        level = float(value["access_level"])
+        levels = source.setdefault(pair, set())
+        touched.setdefault(pair, []).append(rec.seq)
+        if decl.op == "insert":
+            levels.add(level)
+            replica[pair] = level
+        elif decl.op == "update":
+            levels.discard(level)
+            levels.add(float(value["new_level"]))
+            replica[pair] = float(value["new_level"])
+        else:
+            levels.discard(level)
+            if levels:
+                replica[pair] = min(levels)
+            else:
+                replica.pop(pair, None)
+    return replica, touched
+
+
+def _replica_violation(req: Requirement, pair, expected, actual, evidence, explanation) -> Violation:
+    return Violation(
+        requirement_id=req.id, requirement=req.text, table=req.table, key=list(pair), column=req.column,
+        expected=expected, actual=actual, evidence=evidence, explanation=explanation,
+    )
+
+
+def _check_replica_retained(trace: ExecutionTrace, req: Requirement) -> tuple[list[Violation], bool]:
+    expected, touched = _replay_replica(trace, req)
+    actual = _pairs(trace.final_state.get(req.table, []), req)
+    source = _pairs(trace.final_state.get(req.source_table or "", []), req)
+    violations = [
+        _replica_violation(
+            req, pair, "row present", "<row missing>", touched.get(pair, []),
+            f"Pair {list(pair)} has {len(source[pair])} source row(s), but its destination row is gone.",
+        )
+        for pair in sorted(source) if pair in expected and pair not in actual
+    ]
+    return violations, bool(touched)
+
+
 _CHECKS = {
+    "replica_pair_retained": _check_replica_retained,
     "authoritative_write_preserved": _check_authoritative,
     "tombstone_preserved": _check_tombstone,
     "committed_delta_sum": _check_delta_sum,

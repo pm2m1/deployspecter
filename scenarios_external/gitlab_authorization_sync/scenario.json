@@ -1,0 +1,66 @@
+{
+  "title": "Sync trigger drops a destination row while source rows remain",
+  "split": "external",
+  "description": "Minimal fixture modelled on a defect published in GitLab MR !246505. A source table holds one row per access level; a trigger keeps a one-row-per-pair destination table in sync during a backfill.",
+  "requirements": [
+    {
+      "id": "EXT-pair-retained",
+      "text": "If a synchronized user/project pair still has source rows, its destination row must exist.",
+      "kind": "replica_pair_retained",
+      "table": "project_grants_compact",
+      "key_column": "user_id",
+      "column": "access_level",
+      "source_table": "project_grants",
+      "key_columns": [
+        "user_id",
+        "project_id"
+      ],
+      "source_ops": [
+        {
+          "function": "permissions.py:grant_access",
+          "op": "insert",
+          "params": {
+            "user_id": "user_id",
+            "project_id": "project_id",
+            "access_level": "access_level"
+          }
+        },
+        {
+          "function": "permissions.py:revoke_access",
+          "op": "delete",
+          "params": {
+            "user_id": "user_id",
+            "project_id": "project_id",
+            "access_level": "access_level"
+          }
+        },
+        {
+          "function": "permissions.py:change_access",
+          "op": "update",
+          "params": {
+            "user_id": "user_id",
+            "project_id": "project_id",
+            "access_level": "old_level",
+            "new_level": "new_level"
+          }
+        },
+        {
+          "function": "backfill.py:backfill_batch",
+          "op": "backfill",
+          "params": {
+            "first_user_id": "first_user_id",
+            "last_user_id": "last_user_id"
+          }
+        }
+      ],
+      "assumptions": [
+        "A source row present before the trigger and not yet backfilled is not yet synchronized, so its absence is not judged.",
+        "This is a minimal fixture, not GitLab's schema, services, locking or production workload."
+      ]
+    }
+  ],
+  "variant_labels": {
+    "buggy": "the original trigger's delete logic",
+    "corrected": "the delete logic of GitLab's published fix; passing a test here is not a proof of safety"
+  }
+}

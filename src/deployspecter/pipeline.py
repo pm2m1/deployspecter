@@ -17,6 +17,7 @@ from .analyzer import (
     prompt_identity,
 )
 from .analyzer_support import read_catalog, read_schema
+from .baseline_c import baseline_c_proposals, trigger_written_tables
 from .baselines import baseline_proposals
 from .config import PROJECT_ROOT, redact
 from .database import Sandbox, SetupError
@@ -186,6 +187,16 @@ def run_hand(sandbox, runner, case, budget_schedules, budget_seconds, artifacts_
     run = SystemRun(system="hand", case_id=case.case_id)
     proposals = [case.hand_spec] if case.hand_spec else []
     reports, run.rejections = compile_all(proposals, case, sandbox, "hand")
+    run.tests_proposed, run.tests_valid = len(proposals), len(reports)
+    return run_tests(sandbox, runner, case, reports, run, budget_schedules, budget_seconds, artifacts_dir)
+
+
+def run_baseline_c(sandbox, runner, case, budget_schedules, budget_seconds, artifacts_dir) -> SystemRun:
+    run = SystemRun(system="baseline_c", case_id=case.case_id)
+    schema = read_schema(sandbox, case.setup_sql)
+    skip = trigger_written_tables(sandbox, case.setup_sql)
+    proposals = baseline_c_proposals(schema, case.source_model(), skip)
+    reports, run.rejections = compile_all(proposals, case, sandbox, "baseline_c")
     run.tests_proposed, run.tests_valid = len(proposals), len(reports)
     return run_tests(sandbox, runner, case, reports, run, budget_schedules, budget_seconds, artifacts_dir)
 

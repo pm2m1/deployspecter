@@ -1,0 +1,97 @@
+{
+ "focus_actor": "revoke_30",
+ "test": {
+  "name": "revoke one of two access levels",
+  "rationale": "The behaviour GitLab documents in MR !246505.",
+  "seed": [
+   {
+    "table": "project_grants",
+    "values": [
+     {
+      "column": "user_id",
+      "value": 1
+     },
+     {
+      "column": "project_id",
+      "value": 1
+     },
+     {
+      "column": "access_level",
+      "value": 20
+     }
+    ]
+   },
+   {
+    "table": "project_grants",
+    "values": [
+     {
+      "column": "user_id",
+      "value": 1
+     },
+     {
+      "column": "project_id",
+      "value": 1
+     },
+     {
+      "column": "access_level",
+      "value": 30
+     }
+    ]
+   }
+  ],
+  "actors": [
+   {
+    "name": "revoke_30",
+    "function": "permissions.py:revoke_access",
+    "calls": [
+     {
+      "statement_id": "permissions.py:revoke_access#0",
+      "params": [
+       {
+        "name": "user_id",
+        "source": "literal",
+        "value": 1
+       },
+       {
+        "name": "project_id",
+        "source": "literal",
+        "value": 1
+       },
+       {
+        "name": "access_level",
+        "source": "literal",
+        "value": 30
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "name": "other_pair",
+    "function": "permissions.py:grant_access",
+    "calls": [
+     {
+      "statement_id": "permissions.py:grant_access#0",
+      "params": [
+       {
+        "name": "user_id",
+        "source": "literal",
+        "value": 2
+       },
+       {
+        "name": "project_id",
+        "source": "literal",
+        "value": 2
+       },
+       {
+        "name": "access_level",
+        "source": "literal",
+        "value": 30
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

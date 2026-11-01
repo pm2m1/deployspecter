@@ -1,0 +1,546 @@
+{
+  "schema_version": 1,
+  "case_id": "soft_delete_resurrection/buggy",
+  "setup_sql": "CREATE TABLE users (\n    id    integer PRIMARY KEY,\n    email text NOT NULL\n);\n\nCREATE TABLE users_v2 (\n    id         integer PRIMARY KEY,\n    email      text NOT NULL,\n    deleted_at timestamptz\n);\n",
+  "requirements": [
+    {
+      "id": "BR-stay-deleted",
+      "text": "A user whose deletion committed must not become live again.",
+      "kind": "tombstone_preserved",
+      "table": "users_v2",
+      "key_column": "id",
+      "column": "deleted_at",
+      "writers": [
+        {
+          "function": "app_v2.py:delete_user",
+          "key_param": "id",
+          "value_param": null,
+          "value_transform": "none"
+        }
+      ],
+      "base_column": null,
+      "base_multiplier": 1.0,
+      "source_table": null,
+      "key_columns": [],
+      "source_ops": [],
+      "assumptions": [
+        "No flow in this release legitimately restores a deleted user."
+      ]
+    }
+  ],
+  "spec": {
+    "name": "app_v2.py:delete_user vs copy_job.py:copy_users (sparse seed)",
+    "generator": "baseline_c",
+    "seed": [
+      {
+        "table": "users",
+        "values": [
+          {
+            "column": "id",
+            "value": 1
+          },
+          {
+            "column": "email",
+            "value": "email_0"
+          }
+        ]
+      }
+    ],
+    "actors": [
+      {
+        "name": "a0_delete_user",
+        "function": "app_v2.py:delete_user",
+        "steps": [
+          {
+            "kind": "begin",
+            "sql": null,
+            "params": {},
+            "bind_as": null,
+            "statement_id": null,
+            "removable": false
+          },
+          {
+            "kind": "sql",
+            "sql": "INSERT INTO users_v2 (id, email, deleted_at) VALUES (%(id)s, %(email)s, now()) ON CONFLICT (id) DO UPDATE SET deleted_at = now()",
+            "params": {
+              "id": {
+                "name": "id",
+                "source": "literal",
+                "value": 1,
+                "bind": null,
+                "row": 0,
+                "column": null,
+                "transform": "none",
+                "operand": null
+              },
+              "email": {
+                "name": "email",
+                "source": "literal",
+                "value": "email_1",
+                "bind": null,
+                "row": 0,
+                "column": null,
+                "transform": "none",
+                "operand": null
+              }
+            },
+            "bind_as": null,
+            "statement_id": "app_v2.py:delete_user#0",
+            "removable": false
+          },
+          {
+            "kind": "sql",
+            "sql": "DELETE FROM users WHERE id = %(id)s",
+            "params": {
+              "id": {
+                "name": "id",
+                "source": "literal",
+                "value": 1,
+                "bind": null,
+                "row": 0,
+                "column": null,
+                "transform": "none",
+                "operand": null
+              }
+            },
+            "bind_as": null,
+            "statement_id": "app_v2.py:delete_user#1",
+            "removable": false
+          },
+          {
+            "kind": "commit",
+            "sql": null,
+            "params": {},
+            "bind_as": null,
+            "statement_id": null,
+            "removable": false
+          }
+        ]
+      },
+      {
+        "name": "a1_copy_users",
+        "function": "copy_job.py:copy_users",
+        "steps": [
+          {
+            "kind": "begin",
+            "sql": null,
+            "params": {},
+            "bind_as": null,
+            "statement_id": null,
+            "removable": false
+          },
+          {
+            "kind": "sql",
+            "sql": "SELECT id, email FROM users ORDER BY id LIMIT %(limit)s",
+            "params": {
+              "limit": {
+                "name": "limit",
+                "source": "literal",
+                "value": 50,
+                "bind": null,
+                "row": 0,
+                "column": null,
+                "transform": "none",
+                "operand": null
+              }
+            },
+            "bind_as": "r0",
+            "statement_id": "copy_job.py:copy_users#0",
+            "removable": false
+          },
+          {
+            "kind": "commit",
+            "sql": null,
+            "params": {},
+            "bind_as": null,
+            "statement_id": null,
+            "removable": false
+          },
+          {
+            "kind": "begin",
+            "sql": null,
+            "params": {},
+            "bind_as": null,
+            "statement_id": null,
+            "removable": false
+          },
+          {
+            "kind": "sql",
+            "sql": "INSERT INTO users_v2 (id, email) VALUES (%(id)s, %(email)s) ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, deleted_at = NULL",
+            "params": {
+              "id": {
+                "name": "id",
+                "source": "row_ref",
+                "value": null,
+                "bind": "r0",
+                "row": 0,
+                "column": "id",
+                "transform": "none",
+                "operand": null
+              },
+              "email": {
+                "name": "email",
+                "source": "row_ref",
+                "value": null,
+                "bind": "r0",
+                "row": 0,
+                "column": "email",
+                "transform": "none",
+                "operand": null
+              }
+            },
+            "bind_as": null,
+            "statement_id": "copy_job.py:copy_users#1",
+            "removable": true
+          },
+          {
+            "kind": "commit",
+            "sql": null,
+            "params": {},
+            "bind_as": null,
+            "statement_id": null,
+            "removable": false
+          }
+        ]
+      }
+    ],
+    "invariants": [],
+    "rationale": ""
+  },
+  "schedule": [
+    "a0_delete_user",
+    "a0_delete_user",
+    "a0_delete_user",
+    "a1_copy_users",
+    "a1_copy_users",
+    "a1_copy_users",
+    "a1_copy_users",
+    "a1_copy_users",
+    "a1_copy_users",
+    "a0_delete_user"
+  ],
+  "seed": null,
+  "trace": {
+    "requested_schedule": [
+      "a0_delete_user",
+      "a0_delete_user",
+      "a0_delete_user",
+      "a1_copy_users",
+      "a1_copy_users",
+      "a1_copy_users",
+      "a1_copy_users",
+      "a1_copy_users",
+      "a1_copy_users",
+      "a0_delete_user"
+    ],
+    "issue_order": [
+      "a0_delete_user",
+      "a0_delete_user",
+      "a0_delete_user",
+      "a1_copy_users",
+      "a1_copy_users",
+      "a1_copy_users",
+      "a1_copy_users",
+      "a1_copy_users",
+      "a0_delete_user",
+      "a1_copy_users"
+    ],
+    "records": [
+      {
+        "seq": 0,
+        "actor": "a0_delete_user",
+        "step_index": 0,
+        "kind": "begin",
+        "function": "app_v2.py:delete_user",
+        "statement_id": null,
+        "sql": "BEGIN",
+        "params": {},
+        "status": "ok",
+        "rowcount": -1,
+        "rows": null,
+        "command_tag": "BEGIN",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": null,
+        "commit_seq": null,
+        "durable_commit_seq": null
+      },
+      {
+        "seq": 1,
+        "actor": "a0_delete_user",
+        "step_index": 1,
+        "kind": "sql",
+        "function": "app_v2.py:delete_user",
+        "statement_id": "app_v2.py:delete_user#0",
+        "sql": "INSERT INTO users_v2 (id, email, deleted_at) VALUES (%(id)s, %(email)s, now()) ON CONFLICT (id) DO UPDATE SET deleted_at = now()",
+        "params": {
+          "id": 1,
+          "email": "email_1"
+        },
+        "status": "ok",
+        "rowcount": 1,
+        "rows": null,
+        "command_tag": "INSERT 0 1",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": true,
+        "commit_seq": null,
+        "durable_commit_seq": 2
+      },
+      {
+        "seq": 2,
+        "actor": "a0_delete_user",
+        "step_index": 2,
+        "kind": "sql",
+        "function": "app_v2.py:delete_user",
+        "statement_id": "app_v2.py:delete_user#1",
+        "sql": "DELETE FROM users WHERE id = %(id)s",
+        "params": {
+          "id": 1
+        },
+        "status": "ok",
+        "rowcount": 1,
+        "rows": null,
+        "command_tag": "DELETE 1",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": true,
+        "commit_seq": null,
+        "durable_commit_seq": 2
+      },
+      {
+        "seq": 3,
+        "actor": "a1_copy_users",
+        "step_index": 0,
+        "kind": "begin",
+        "function": "copy_job.py:copy_users",
+        "statement_id": null,
+        "sql": "BEGIN",
+        "params": {},
+        "status": "ok",
+        "rowcount": -1,
+        "rows": null,
+        "command_tag": "BEGIN",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": null,
+        "commit_seq": null,
+        "durable_commit_seq": null
+      },
+      {
+        "seq": 4,
+        "actor": "a1_copy_users",
+        "step_index": 1,
+        "kind": "sql",
+        "function": "copy_job.py:copy_users",
+        "statement_id": "copy_job.py:copy_users#0",
+        "sql": "SELECT id, email FROM users ORDER BY id LIMIT %(limit)s",
+        "params": {
+          "limit": 50
+        },
+        "status": "ok",
+        "rowcount": 1,
+        "rows": [
+          {
+            "id": 1,
+            "email": "email_0"
+          }
+        ],
+        "command_tag": "SELECT 1",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": true,
+        "commit_seq": null,
+        "durable_commit_seq": 1
+      },
+      {
+        "seq": 5,
+        "actor": "a1_copy_users",
+        "step_index": 2,
+        "kind": "commit",
+        "function": "copy_job.py:copy_users",
+        "statement_id": null,
+        "sql": "COMMIT",
+        "params": {},
+        "status": "ok",
+        "rowcount": -1,
+        "rows": null,
+        "command_tag": "COMMIT",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": true,
+        "commit_seq": 1,
+        "durable_commit_seq": null
+      },
+      {
+        "seq": 6,
+        "actor": "a1_copy_users",
+        "step_index": 3,
+        "kind": "begin",
+        "function": "copy_job.py:copy_users",
+        "statement_id": null,
+        "sql": "BEGIN",
+        "params": {},
+        "status": "ok",
+        "rowcount": -1,
+        "rows": null,
+        "command_tag": "BEGIN",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": null,
+        "commit_seq": null,
+        "durable_commit_seq": null
+      },
+      {
+        "seq": 7,
+        "actor": "a1_copy_users",
+        "step_index": 4,
+        "kind": "sql",
+        "function": "copy_job.py:copy_users",
+        "statement_id": "copy_job.py:copy_users#1",
+        "sql": "INSERT INTO users_v2 (id, email) VALUES (%(id)s, %(email)s) ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, deleted_at = NULL",
+        "params": {
+          "id": 1,
+          "email": "email_0"
+        },
+        "status": "ok",
+        "rowcount": 1,
+        "rows": null,
+        "command_tag": "INSERT 0 1",
+        "blocked_by": [
+          "a0_delete_user"
+        ],
+        "sqlstate": null,
+        "error": null,
+        "committed": true,
+        "commit_seq": null,
+        "durable_commit_seq": 3
+      },
+      {
+        "seq": 8,
+        "actor": "a0_delete_user",
+        "step_index": 3,
+        "kind": "commit",
+        "function": "app_v2.py:delete_user",
+        "statement_id": null,
+        "sql": "COMMIT",
+        "params": {},
+        "status": "ok",
+        "rowcount": -1,
+        "rows": null,
+        "command_tag": "COMMIT",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": true,
+        "commit_seq": 2,
+        "durable_commit_seq": null
+      },
+      {
+        "seq": 9,
+        "actor": "a1_copy_users",
+        "step_index": 5,
+        "kind": "commit",
+        "function": "copy_job.py:copy_users",
+        "statement_id": null,
+        "sql": "COMMIT",
+        "params": {},
+        "status": "ok",
+        "rowcount": -1,
+        "rows": null,
+        "command_tag": "COMMIT",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": true,
+        "commit_seq": 3,
+        "durable_commit_seq": null
+      }
+    ],
+    "outcome": "completed",
+    "initial_state": {
+      "users": [
+        {
+          "id": 1,
+          "email": "email_0"
+        }
+      ],
+      "users_v2": []
+    },
+    "final_state": {
+      "users": [],
+      "users_v2": [
+        {
+          "id": 1,
+          "email": "email_0",
+          "deleted_at": null
+        }
+      ]
+    },
+    "diagnostics": [],
+    "duration_ms": 11.61
+  },
+  "verdict": {
+    "classification": "true_violation",
+    "violations": [
+      {
+        "requirement_id": "BR-stay-deleted",
+        "requirement": "A user whose deletion committed must not become live again.",
+        "table": "users_v2",
+        "key": 1,
+        "column": "deleted_at",
+        "expected": "row absent or tombstoned",
+        "actual": {
+          "id": 1,
+          "email": "email_0",
+          "deleted_at": null
+        },
+        "evidence": [
+          1,
+          7
+        ],
+        "explanation": "a0_delete_user committed a delete at step 1, but the row is live again."
+      },
+      {
+        "requirement_id": "BR-stay-deleted",
+        "requirement": "A user whose deletion committed must not become live again.",
+        "table": "users_v2",
+        "key": 1,
+        "column": "deleted_at",
+        "expected": "row absent or tombstoned",
+        "actual": {
+          "id": 1,
+          "email": "email_0",
+          "deleted_at": null
+        },
+        "evidence": [
+          2,
+          7
+        ],
+        "explanation": "a0_delete_user committed a delete at step 2, but the row is live again."
+      }
+    ],
+    "checked": [
+      "BR-stay-deleted"
+    ],
+    "vacuous": [],
+    "assumptions": [
+      "Scheduling is at statement and transaction boundaries only; PostgreSQL-internal interleavings are not controlled.",
+      "Each schedule starts from freshly rebuilt schema and seed state.",
+      "A passing result covers only the schedules executed with these inputs; it is not a proof of correctness.",
+      "No flow in this release legitimately restores a deleted user."
+    ]
+  },
+  "fingerprint": "be9d25e6f8e68f6e6c615c0fa74ed35a1a46b696482aa2c019282834db7cf4f0",
+  "provenance": {
+    "system": "baseline_c",
+    "minimized_from": "results/baseline_c/failures/all/20261101T123924Z/soft_delete_resurrection_buggy__baseline_c.json"
+  }
+}

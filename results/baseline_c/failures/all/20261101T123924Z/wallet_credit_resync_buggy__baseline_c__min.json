@@ -1,0 +1,476 @@
+{
+  "schema_version": 1,
+  "case_id": "wallet_credit_resync/buggy",
+  "setup_sql": "CREATE TABLE wallets (\n    id              integer PRIMARY KEY,\n    balance_dollars numeric(12, 2) NOT NULL\n);\n\nALTER TABLE wallets ADD COLUMN balance_cents bigint;\n",
+  "requirements": [
+    {
+      "id": "BR-credits",
+      "text": "balance_cents must equal the starting dollars times 100 plus every committed credit.",
+      "kind": "committed_delta_sum",
+      "table": "wallets",
+      "key_column": "id",
+      "column": "balance_cents",
+      "writers": [
+        {
+          "function": "app_v2.py:credit",
+          "key_param": "id",
+          "value_param": "amount_cents",
+          "value_transform": "none"
+        }
+      ],
+      "base_column": "balance_dollars",
+      "base_multiplier": 100.0,
+      "source_table": null,
+      "key_columns": [],
+      "source_ops": [],
+      "assumptions": [
+        "credit is the only money movement in this scenario; a NULL balance_cents means not yet migrated and is not checked."
+      ]
+    }
+  ],
+  "spec": {
+    "name": "app_v2.py:credit vs resync.py:resync_balances (sparse seed)",
+    "generator": "baseline_c",
+    "seed": [
+      {
+        "table": "wallets",
+        "values": [
+          {
+            "column": "id",
+            "value": 1
+          },
+          {
+            "column": "balance_dollars",
+            "value": 10
+          }
+        ]
+      }
+    ],
+    "actors": [
+      {
+        "name": "a0_credit",
+        "function": "app_v2.py:credit",
+        "steps": [
+          {
+            "kind": "begin",
+            "sql": null,
+            "params": {},
+            "bind_as": null,
+            "statement_id": null,
+            "removable": false
+          },
+          {
+            "kind": "sql",
+            "sql": "UPDATE wallets SET balance_dollars = balance_dollars + %(amount_cents)s::numeric / 100, balance_cents = balance_cents + %(amount_cents)s::bigint WHERE id = %(id)s",
+            "params": {
+              "amount_cents": {
+                "name": "amount_cents",
+                "source": "literal",
+                "value": 30,
+                "bind": null,
+                "row": 0,
+                "column": null,
+                "transform": "none",
+                "operand": null
+              },
+              "id": {
+                "name": "id",
+                "source": "literal",
+                "value": 1,
+                "bind": null,
+                "row": 0,
+                "column": null,
+                "transform": "none",
+                "operand": null
+              }
+            },
+            "bind_as": null,
+            "statement_id": "app_v2.py:credit#0",
+            "removable": false
+          },
+          {
+            "kind": "commit",
+            "sql": null,
+            "params": {},
+            "bind_as": null,
+            "statement_id": null,
+            "removable": false
+          }
+        ]
+      },
+      {
+        "name": "a1_resync_balances",
+        "function": "resync.py:resync_balances",
+        "steps": [
+          {
+            "kind": "begin",
+            "sql": null,
+            "params": {},
+            "bind_as": null,
+            "statement_id": null,
+            "removable": false
+          },
+          {
+            "kind": "sql",
+            "sql": "SELECT id, balance_dollars FROM wallets ORDER BY id LIMIT %(limit)s",
+            "params": {
+              "limit": {
+                "name": "limit",
+                "source": "literal",
+                "value": 50,
+                "bind": null,
+                "row": 0,
+                "column": null,
+                "transform": "none",
+                "operand": null
+              }
+            },
+            "bind_as": "r0",
+            "statement_id": "resync.py:resync_balances#0",
+            "removable": false
+          },
+          {
+            "kind": "commit",
+            "sql": null,
+            "params": {},
+            "bind_as": null,
+            "statement_id": null,
+            "removable": false
+          },
+          {
+            "kind": "begin",
+            "sql": null,
+            "params": {},
+            "bind_as": null,
+            "statement_id": null,
+            "removable": false
+          },
+          {
+            "kind": "sql",
+            "sql": "UPDATE wallets SET balance_cents = %(cents)s WHERE id = %(id)s",
+            "params": {
+              "cents": {
+                "name": "cents",
+                "source": "literal",
+                "value": 40,
+                "bind": null,
+                "row": 0,
+                "column": null,
+                "transform": "none",
+                "operand": null
+              },
+              "id": {
+                "name": "id",
+                "source": "row_ref",
+                "value": null,
+                "bind": "r0",
+                "row": 0,
+                "column": "id",
+                "transform": "none",
+                "operand": null
+              }
+            },
+            "bind_as": null,
+            "statement_id": "resync.py:resync_balances#1",
+            "removable": true
+          },
+          {
+            "kind": "commit",
+            "sql": null,
+            "params": {},
+            "bind_as": null,
+            "statement_id": null,
+            "removable": false
+          }
+        ]
+      }
+    ],
+    "invariants": [],
+    "rationale": ""
+  },
+  "schedule": [
+    "a0_credit",
+    "a0_credit",
+    "a0_credit",
+    "a1_resync_balances",
+    "a1_resync_balances",
+    "a1_resync_balances",
+    "a1_resync_balances",
+    "a1_resync_balances",
+    "a1_resync_balances"
+  ],
+  "seed": null,
+  "trace": {
+    "requested_schedule": [
+      "a0_credit",
+      "a0_credit",
+      "a0_credit",
+      "a1_resync_balances",
+      "a1_resync_balances",
+      "a1_resync_balances",
+      "a1_resync_balances",
+      "a1_resync_balances",
+      "a1_resync_balances"
+    ],
+    "issue_order": [
+      "a0_credit",
+      "a0_credit",
+      "a0_credit",
+      "a1_resync_balances",
+      "a1_resync_balances",
+      "a1_resync_balances",
+      "a1_resync_balances",
+      "a1_resync_balances",
+      "a1_resync_balances"
+    ],
+    "records": [
+      {
+        "seq": 0,
+        "actor": "a0_credit",
+        "step_index": 0,
+        "kind": "begin",
+        "function": "app_v2.py:credit",
+        "statement_id": null,
+        "sql": "BEGIN",
+        "params": {},
+        "status": "ok",
+        "rowcount": -1,
+        "rows": null,
+        "command_tag": "BEGIN",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": null,
+        "commit_seq": null,
+        "durable_commit_seq": null
+      },
+      {
+        "seq": 1,
+        "actor": "a0_credit",
+        "step_index": 1,
+        "kind": "sql",
+        "function": "app_v2.py:credit",
+        "statement_id": "app_v2.py:credit#0",
+        "sql": "UPDATE wallets SET balance_dollars = balance_dollars + %(amount_cents)s::numeric / 100, balance_cents = balance_cents + %(amount_cents)s::bigint WHERE id = %(id)s",
+        "params": {
+          "amount_cents": 30,
+          "id": 1
+        },
+        "status": "ok",
+        "rowcount": 1,
+        "rows": null,
+        "command_tag": "UPDATE 1",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": true,
+        "commit_seq": null,
+        "durable_commit_seq": 1
+      },
+      {
+        "seq": 2,
+        "actor": "a0_credit",
+        "step_index": 2,
+        "kind": "commit",
+        "function": "app_v2.py:credit",
+        "statement_id": null,
+        "sql": "COMMIT",
+        "params": {},
+        "status": "ok",
+        "rowcount": -1,
+        "rows": null,
+        "command_tag": "COMMIT",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": true,
+        "commit_seq": 1,
+        "durable_commit_seq": null
+      },
+      {
+        "seq": 3,
+        "actor": "a1_resync_balances",
+        "step_index": 0,
+        "kind": "begin",
+        "function": "resync.py:resync_balances",
+        "statement_id": null,
+        "sql": "BEGIN",
+        "params": {},
+        "status": "ok",
+        "rowcount": -1,
+        "rows": null,
+        "command_tag": "BEGIN",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": null,
+        "commit_seq": null,
+        "durable_commit_seq": null
+      },
+      {
+        "seq": 4,
+        "actor": "a1_resync_balances",
+        "step_index": 1,
+        "kind": "sql",
+        "function": "resync.py:resync_balances",
+        "statement_id": "resync.py:resync_balances#0",
+        "sql": "SELECT id, balance_dollars FROM wallets ORDER BY id LIMIT %(limit)s",
+        "params": {
+          "limit": 50
+        },
+        "status": "ok",
+        "rowcount": 1,
+        "rows": [
+          {
+            "id": 1,
+            "balance_dollars": "10.30"
+          }
+        ],
+        "command_tag": "SELECT 1",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": true,
+        "commit_seq": null,
+        "durable_commit_seq": 2
+      },
+      {
+        "seq": 5,
+        "actor": "a1_resync_balances",
+        "step_index": 2,
+        "kind": "commit",
+        "function": "resync.py:resync_balances",
+        "statement_id": null,
+        "sql": "COMMIT",
+        "params": {},
+        "status": "ok",
+        "rowcount": -1,
+        "rows": null,
+        "command_tag": "COMMIT",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": true,
+        "commit_seq": 2,
+        "durable_commit_seq": null
+      },
+      {
+        "seq": 6,
+        "actor": "a1_resync_balances",
+        "step_index": 3,
+        "kind": "begin",
+        "function": "resync.py:resync_balances",
+        "statement_id": null,
+        "sql": "BEGIN",
+        "params": {},
+        "status": "ok",
+        "rowcount": -1,
+        "rows": null,
+        "command_tag": "BEGIN",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": null,
+        "commit_seq": null,
+        "durable_commit_seq": null
+      },
+      {
+        "seq": 7,
+        "actor": "a1_resync_balances",
+        "step_index": 4,
+        "kind": "sql",
+        "function": "resync.py:resync_balances",
+        "statement_id": "resync.py:resync_balances#1",
+        "sql": "UPDATE wallets SET balance_cents = %(cents)s WHERE id = %(id)s",
+        "params": {
+          "cents": 40,
+          "id": 1
+        },
+        "status": "ok",
+        "rowcount": 1,
+        "rows": null,
+        "command_tag": "UPDATE 1",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": true,
+        "commit_seq": null,
+        "durable_commit_seq": 3
+      },
+      {
+        "seq": 8,
+        "actor": "a1_resync_balances",
+        "step_index": 5,
+        "kind": "commit",
+        "function": "resync.py:resync_balances",
+        "statement_id": null,
+        "sql": "COMMIT",
+        "params": {},
+        "status": "ok",
+        "rowcount": -1,
+        "rows": null,
+        "command_tag": "COMMIT",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": true,
+        "commit_seq": 3,
+        "durable_commit_seq": null
+      }
+    ],
+    "outcome": "completed",
+    "initial_state": {
+      "wallets": [
+        {
+          "id": 1,
+          "balance_dollars": "1E+1",
+          "balance_cents": null
+        }
+      ]
+    },
+    "final_state": {
+      "wallets": [
+        {
+          "id": 1,
+          "balance_dollars": "10.30",
+          "balance_cents": 40
+        }
+      ]
+    },
+    "diagnostics": [],
+    "duration_ms": 8.11
+  },
+  "verdict": {
+    "classification": "true_violation",
+    "violations": [
+      {
+        "requirement_id": "BR-credits",
+        "requirement": "balance_cents must equal the starting dollars times 100 plus every committed credit.",
+        "table": "wallets",
+        "key": 1,
+        "column": "balance_cents",
+        "expected": 1030.0,
+        "actual": 40,
+        "evidence": [
+          1
+        ],
+        "explanation": "Starting value plus committed deltas gives 1030.0, but the final value is 40."
+      }
+    ],
+    "checked": [
+      "BR-credits"
+    ],
+    "vacuous": [],
+    "assumptions": [
+      "Scheduling is at statement and transaction boundaries only; PostgreSQL-internal interleavings are not controlled.",
+      "Each schedule starts from freshly rebuilt schema and seed state.",
+      "A passing result covers only the schedules executed with these inputs; it is not a proof of correctness.",
+      "credit is the only money movement in this scenario; a NULL balance_cents means not yet migrated and is not checked."
+    ]
+  },
+  "fingerprint": "44d566bf9f4946867da2eb018094c33715086bd4c9045ff73d36fd0be958c2f1",
+  "provenance": {
+    "system": "baseline_c",
+    "minimized_from": "results/baseline_c/failures/all/20261101T123924Z/wallet_credit_resync_buggy__baseline_c.json"
+  }
+}

@@ -86,14 +86,32 @@ def _cmd_benchmark(args) -> int:
     from .benchmark_report import write_report
 
     settings = load_settings()
+    out_dir = Path(args.out_dir) if args.out_dir else None
     report = run_benchmark(
         settings, args.split, args.systems.split(","), ai_repeats=args.ai_repeats,
         budget_schedules=args.max_schedules, budget_seconds=args.max_seconds, reuse_ai=not args.fresh,
         max_requests=args.max_requests, max_estimated_usd=args.max_estimated_usd, allow_repair=args.allow_repair,
+        out_dir=out_dir,
     )
-    path = write_report(report, settings.results_dir / "benchmark", update_latest=args.update_latest)
+    path = write_report(report, out_dir or settings.results_dir / "benchmark", update_latest=args.update_latest)
     print(json.dumps(report["summary"], indent=2))
     print(f"\nwritten: {path}")
+    return 0
+
+
+def _cmd_documented(args) -> int:
+    from .documented import write_documented_report
+
+    report, path = write_documented_report(load_settings())
+    for variant, data in report["variants"].items():
+        facts = data["facts"]
+        print(f"{variant}: {data['violating_schedules']}/{data['schedules']} schedules violate; "
+              f"class={facts['failure_class']}; destination before={facts['destination_before']} "
+              f"after={facts['destination_after']}; source after={facts['source_after']}")
+        if data.get("artifact"):
+            print(f"  replay reproduced: {data['replay_reproduced']}; "
+                  f"uv run deployspecter replay {data['artifact']}")
+    print(f"written: {path}")
     return 0
 
 
@@ -145,10 +163,16 @@ def main() -> None:
     bench.add_argument("--max-schedules", type=int, default=300)
     bench.add_argument("--max-seconds", type=float, default=60)
     bench.add_argument("--fresh", action="store_true")
+    bench.add_argument("--out-dir", help="write reports and artifacts here instead of results/benchmark")
     bench.add_argument("--update-latest", action="store_true", help="make this report the one the interface shows")
     bench.add_argument("--allow-repair", action="store_true", help="spend one extra request on an unusable response")
     _add_spending_limits(bench)
     bench.set_defaults(func=_cmd_benchmark)
+
+    documented = sub.add_parser(
+        "documented-defect", help="run the published GitLab defect on PostgreSQL; makes no model requests"
+    )
+    documented.set_defaults(func=_cmd_documented)
 
     usage = sub.add_parser("usage", help="summarize recorded model usage; makes no requests")
     usage.set_defaults(func=_cmd_usage)
