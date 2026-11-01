@@ -1,0 +1,1 @@
+window.DEPLOYSPECTER = {staticSite: false};

@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DeploySpecter: find data loss in rolling deployments</title>
+<meta name="description" content="DeploySpecter runs old code, new code and background jobs through real PostgreSQL interleavings, checks results against independent requirements, and replays every failure.">
+<meta name="theme-color" content="#0b0d11">
+<link rel="icon" href="static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="static/css/tokens.css">
+<link rel="stylesheet" href="static/css/site.css">
+<script src="static/js/config.js"></script>
+<script>document.documentElement.dataset.site = window.DEPLOYSPECTER.staticSite ? "static" : "local";</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<nav class="site-nav" aria-label="Main"><div class="wrap">
+  <a class="brand" href="./"><img src="static/favicon.svg" alt="" width="26" height="26">DeploySpecter</a>
+  <div class="site-links">
+    <a href="#hazard">The hazard</a><a href="#how">How it works</a><a href="#muse">Muse Spark</a><a href="#gitlab-example">GitLab example</a><a href="#results">Results</a><a href="#architecture">Architecture</a>
+  </div>
+  <div class="cta">
+    <a class="btn" href="https://github.com/pm2m1/deployspecter" rel="noreferrer">GitHub</a>
+    <a class="btn primary live-only" href="app">Open the workbench</a>
+    <a class="btn primary static-only" href="demo.html">See the walkthrough</a>
+  </div>
+</div></nav>
+<main id="main">
+  <header class="hero"><div class="wrap">
+    <p class="eyebrow">PostgreSQL deployment testing</p>
+    <h1>Your migration passes every test. Then a backfill erases a user's update.</h1>
+    <p class="lede">During a rollout, old code, new code and background jobs share one database. DeploySpecter runs them through real PostgreSQL interleavings, checks the outcome against independent requirements, and saves every failure so you can replay it.</p>
+    <div class="actions">
+      <a class="btn primary live-only" href="app">Open the workbench</a>
+      <a class="btn" href="demo.html">Watch the recorded walkthrough</a>
+      <a class="btn static-only" href="#run">Run it locally</a>
+    </div>
+    <section class="evidence" aria-labelledby="evidence-title">
+      <div class="evidence-head"><h2 id="evidence-title">A real failure, step by step</h2><span id="evidence-badge" class="badge recorded">Loading recorded evidence…</span></div>
+      <div id="evidence"><p class="note">Loading the recorded run…</p></div>
+    </section>
+  </div></header>
+
+  <section class="band" id="hazard"><div class="wrap">
+    <p class="eyebrow">The hazard</p>
+    <h2>Each release is correct. Together they can lose data.</h2>
+    <p class="intro">Rolling deployments keep several versions of your code on one schema for minutes or hours. Failures appear only when their operations land in a particular order, or when a migration meets data its authors didn't picture.</p>
+    <figure class="figure">
+      <svg viewBox="0 0 1000 214" role="img" aria-labelledby="rollout-title rollout-desc">
+        <title id="rollout-title">Overlap during a rolling deployment</title>
+        <desc id="rollout-desc">Old release, new release and a background job all run at the same time against one PostgreSQL schema, during the rollout window.</desc>
+        <rect x="350" y="6" width="330" height="150" rx="8" fill="#15243d"/>
+        <text x="515" y="30" fill="#9cc6ff" font-size="15" font-weight="600" text-anchor="middle">Rollout window: all three write to the same rows</text>
+        <g font-size="15" fill="#eef1f6" font-weight="600">
+          <rect x="150" y="46" width="530" height="28" rx="6" fill="#343c49"/><text x="166" y="65">Old release</text>
+          <rect x="350" y="84" width="600" height="28" rx="6" fill="#2f6fe0"/><text x="366" y="103">New release</text>
+          <rect x="430" y="122" width="250" height="28" rx="6" fill="#117a8b"/><text x="446" y="141">Background job</text>
+        </g>
+        <line x1="150" y1="176" x2="950" y2="176" stroke="#3b4350" stroke-width="2"/>
+        <text x="150" y="202" fill="#9aa4b4" font-size="15">Migration applied</text>
+        <text x="950" y="202" fill="#9aa4b4" font-size="15" text-anchor="end">Rollout finished</text>
+      </svg>
+      <figcaption>An illustration of the overlap, not measured data.</figcaption>
+    </figure>
+    <div class="grid-3">
+      <div class="panel card"><h3>Stale writes</h3><p>A job reads a row, a user changes it, and the job's later write puts back the old value.</p></div>
+      <div class="panel card"><h3>Whole-record saves</h3><p>The old release loads a record and saves every column, undoing a change the new release just made.</p></div>
+      <div class="panel card"><h3>Migration logic</h3><p>Some defects need no race at all. A sync trigger can be wrong in a single transaction, once real data has the right shape.</p></div>
+    </div>
+  </div></section>
+
+  <section class="band" id="how"><div class="wrap">
+    <p class="eyebrow">How it works</p>
+    <h2>From source code to a failure you can replay</h2>
+    <ol class="flow">
+      <li><h3>Extract operations</h3><p>Parses the code without running it, and lists its SQL statements, transactions and data flow.</p><span class="who">Static analysis</span></li>
+      <li class="ai"><h3>Propose tests</h3><p>Muse Spark, a non-LLM generator or a person writes a test: actors, inputs and starting rows.</p><span class="who">Muse Spark or non-AI generator</span></li>
+      <li><h3>Validate</h3><p>Rejects anything unsupported. A test can't contain SQL, and only names statements in your code.</p><span class="who">Rule-based validator</span></li>
+      <li><h3>Execute interleavings</h3><p>Runs legal orderings on PostgreSQL, one session per actor, within schedule and time budgets.</p><span class="who">Real PostgreSQL</span></li>
+      <li><h3>Check independently</h3><p>A hand-written oracle compares what committed with the final state. It alone produces findings.</p><span class="who">Independent oracle</span></li>
+      <li><h3>Minimize and replay</h3><p>Shrinks the failure, saves it, and re-executes it to confirm that behaviour is identical.</p><span class="who">Real PostgreSQL</span></li>
+    </ol>
+  </div></section>
+
+  <section class="band" id="muse"><div class="wrap">
+    <p class="eyebrow">Meta Muse Spark</p>
+    <h2>The model proposes tests. It doesn't decide what's true.</h2>
+    <div class="grid-2">
+      <div>
+        <p class="intro" style="margin-top:0">Muse Spark reads the source, the extracted statements and the schema, then proposes application-aware tests and candidate invariants. It never sees scenario names, requirements or schedules.</p>
+        <ul class="plain-list">
+          <li>Its output is data, so it can't carry SQL or code.</li>
+          <li>Its invariants are hypotheses, and can't produce a finding.</li>
+          <li id="muse-validity">Loading recorded validity…</li>
+          <li id="muse-parity">Loading the measured comparison…</li>
+        </ul>
+        <p style="margin-top:18px"><a href="demo.html#2">See the recorded proposal in the walkthrough</a></p>
+      </div>
+      <div id="muse-example"><p class="note">Loading the recorded test…</p></div>
+    </div>
+  </div></section>
+
+  <section class="band" id="gitlab-example"><div class="wrap">
+    <p class="eyebrow">Real-world example</p>
+    <h2>A defect GitLab published, reproduced in a minimal fixture</h2>
+    <p class="intro">GitLab documented a sync trigger that removed a user's destination row when one access level was deleted, even though another remained. This independently written fixture models that behaviour. It isn't GitLab's schema or workload.</p>
+    <div class="stat-row" id="gitlab-stats"></div>
+    <p class="intro" style="font-size:17px">This defect needs no concurrency: it fails in a single transaction, so it's a migration semantics defect. The stale backfill above is the opposite: no serial order fails.</p>
+    <ul class="plain-list" id="gitlab-limits"></ul>
+    <p style="margin-top:16px" id="gitlab-links"></p>
+  </div></section>
+
+  <section class="band" id="results"><div class="wrap">
+    <p class="eyebrow">Measured results</p>
+    <h2>What the benchmark shows, including what it doesn't</h2>
+    <p class="intro" id="results-intro">Loading saved benchmark data…</p>
+    <div class="panel" style="margin-top:26px">
+      <div class="table-scroll" tabindex="0" role="region" aria-label="Held-out benchmark results" id="results-table"></div>
+    </div>
+    <div class="grid-2">
+      <div><h3 style="font-size:20px">Reading these numbers</h3><ul class="plain-list" id="results-reading"></ul></div>
+      <div><h3 style="font-size:20px">Limitations</h3><ul class="plain-list">
+        <li>A small benchmark, designed together with its oracles and baselines, so scores are optimistic and don't generalize.</li>
+        <li>Requirements are written by hand per scenario.</li>
+        <li>Scheduling stops at statement boundaries, and extraction covers limited Python and SQL patterns.</li>
+        <li>This isn't a production-safety guarantee, and it can't analyze arbitrary repositories.</li>
+      </ul></div>
+    </div>
+  </div></section>
+
+  <section class="band" id="architecture"><div class="wrap">
+    <p class="eyebrow">Architecture</p>
+    <h2>Small, separated components</h2>
+    <div class="arch">
+      <div><h3>Source extraction</h3><p>Reads Python with <code>ast</code>, without importing or running it.</p></div>
+      <div><h3>Test proposals</h3><p>One declarative format for every generator, with no SQL field.</p></div>
+      <div><h3>Validator</h3><p>The trust boundary between generated specs and execution.</p></div>
+      <div><h3>Scheduler and explorer</h3><p>One session per actor. Lock waits come from <code>pg_blocking_pids</code>.</p></div>
+      <div><h3>Oracle</h3><p>Reference models over committed history, hidden from generators.</p></div>
+      <div><h3>Replay and minimizer</h3><p>Self-contained artifacts, with every reduction re-executed.</p></div>
+      <div><h3>Disposable database</h3><p>A dedicated test database, a non-superuser role, and a rebuilt schema per schedule.</p></div>
+      <div><h3>Model client</h3><p>Off by default, with hard request and spending limits and no retries.</p></div>
+    </div>
+  </div></section>
+
+  <section class="final" id="run"><div class="wrap">
+    <h2>See the failure for yourself</h2>
+    <div class="actions">
+      <a class="btn primary live-only" href="app">Open the workbench</a>
+      <a class="btn" href="demo.html">Watch the recorded walkthrough</a>
+      <a class="btn" href="https://github.com/pm2m1/deployspecter" rel="noreferrer">View on GitHub</a>
+    </div>
+    <div class="code-card" style="margin-top:24px;max-width:760px"><header><span>Run it locally</span></header>
+<pre class="code" tabindex="0">docker run -d --name deployspecter-pg -p 127.0.0.1:55432:5432 \
+  -e POSTGRES_USER=deployspecter -e POSTGRES_DB=deployspecter \
+  -e POSTGRES_PASSWORD=CHANGE_ME postgres:16
+cp .env.example .env   # match the password in DATABASE_URL
+uv sync
+uv run deployspecter serve   # http://127.0.0.1:8765</pre></div>
+  </div></section>
+</main>
+<footer class="site-foot"><div class="wrap">DeploySpecter is a research project built for the Meta Global AI Developer Hackathon. Numbers on this page come from saved benchmark files in the repository.</div></footer>
+<script type="module" src="static/js/landing.js"></script>
+</body>
+</html>

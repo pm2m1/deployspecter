@@ -115,6 +115,24 @@ def _cmd_documented(args) -> int:
     return 0
 
 
+def _cmd_build_demo(args) -> int:
+    from .guided import write_recording
+    from .site import write_site_data
+
+    settings = load_settings()
+    print(f"written: {write_recording(settings)}")
+    print(f"written: {write_site_data(settings)}")
+    return 0
+
+
+def _cmd_export_site(args) -> int:
+    from .site import export_static_site
+
+    files = export_static_site(Path(args.out))
+    print(f"exported {len(files)} files to {args.out}")
+    return 0
+
+
 def _cmd_serve(args) -> int:
     import uvicorn
 
@@ -173,6 +191,15 @@ def main() -> None:
         "documented-defect", help="run the published GitLab defect on PostgreSQL; makes no model requests"
     )
     documented.set_defaults(func=_cmd_documented)
+
+    build = sub.add_parser(
+        "build-demo-data", help="record the walkthrough on PostgreSQL and rebuild site data; makes no model requests"
+    )
+    build.set_defaults(func=_cmd_build_demo)
+
+    export = sub.add_parser("export-site", help="write the recorded site as static files; needs no database")
+    export.add_argument("--out", default="dist/site")
+    export.set_defaults(func=_cmd_export_site)
 
     usage = sub.add_parser("usage", help="summarize recorded model usage; makes no requests")
     usage.set_defaults(func=_cmd_usage)

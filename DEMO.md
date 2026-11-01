@@ -1,13 +1,13 @@
 # Three-minute demo
 
-Prepare first: start PostgreSQL, run `uv run deployspecter serve`, and open http://127.0.0.1:8765. Record your own run; the values on screen come from it.
+Prepare first: start PostgreSQL, run `uv run deployspecter serve`, and open http://127.0.0.1:8765/app. Switch the walkthrough to **Live local PostgreSQL**. Record your own run; the values on screen come from it. The homepage is at http://127.0.0.1:8765/, and http://127.0.0.1:8765/demo.html is the recorded version, which needs no database.
 
-**0:00 The problem (20 s).** During a rollout, old code, new code and migrations share one schema. DeploySpecter runs them on real PostgreSQL and checks the result against independently written requirements.
+**0:00 The problem (20 s).** On the homepage, show the headline and the recorded timeline. During a rollout, old code, new code and migrations share one schema. DeploySpecter runs them on real PostgreSQL and checks the result against independently written requirements.
 
-**0:20 GitLab-derived case (55 s).** On the first tab, show the published merge request links and the two trigger versions. Click **Run the documented defect on both versions**. Point out the destination row that disappeared, the source row that remains, and the timeline. Explain why it needs no concurrency, using the measured numbers on screen. Click **Replay this failure on PostgreSQL**. Compare with GitLab's corrected logic, and say that this is a minimal fixture, not GitLab's production system.
+**0:20 The stale backfill (70 s).** Open the workbench. In **Stale-backfill demo**, show the three code panes, the extracted operations and Muse Spark's recorded test, then its validator result. On **The interleaving**, run the failing schedule and use **Play step by step**, pointing at the step where the committed value is replaced. Run a serial schedule to show that it stays correct. On **Verified violation**, show expected versus actual and the count of failing interleavings. Replay the failure, then compare the corrected version, and say this covers these inputs only.
 
-**1:15 A concurrency failure (30 s).** On **Benchmark scenarios**, choose the stale backfill scenario with the hand-authored generator and click **Run both versions**. Show the interleaving, expected versus actual, and "no serial order failed". Note that the corrected card says this is not a proof of safety.
+**1:30 GitLab-derived case (40 s).** On **GitLab-derived case**, show the published merge request links and the two trigger versions. Run the documented defect. Point out the destination row that disappeared and the source row that remains. It fails in one transaction, so this is a migration semantics defect rather than a race. Say that this is a minimal fixture, not GitLab's production system.
 
-**1:45 Muse Spark's role (50 s).** On **Muse Spark pipeline**, walk through the stages: source, operation catalog, a concrete recorded test, validator, execution and oracle. Click **Execute these recorded tests on PostgreSQL**. Stress that these are recorded responses, that the model proposes tests, and that only the oracle produces findings.
+**2:10 Muse Spark's role (25 s).** On **Muse Spark pipeline**, show the stages for a recorded response: catalog, generated test, validator, then execution and the oracle. Stress that these are recorded responses, that the model proposes tests, and that only the oracle produces findings.
 
 **2:35 Honest results (25 s).** On **AI vs non-AI**, read the detection line: Muse Spark found no more defects than the non-LLM baselines. Mention its narrow measured gains and the recorded failures. Close on what the project contributes: reproducible failures, verified by real execution.

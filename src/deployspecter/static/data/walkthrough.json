@@ -1,0 +1,2918 @@
+{
+ "generated_at": "2026-11-01",
+ "postgres_version": "16.15",
+ "isolation": "read committed",
+ "model_requests": 0,
+ "sources": {
+  "reference": "Hand-written reference test",
+  "muse": "Muse Spark recorded test"
+ },
+ "presets": {
+  "stale_read": {
+   "label": "Job reads, user commits, job writes",
+   "summary": "The job reads the row, then the user's update commits before the job writes."
+  },
+  "job_first": {
+   "label": "Job finishes first",
+   "summary": "A serial order: the whole job, then the user."
+  },
+  "user_first": {
+   "label": "User finishes first",
+   "summary": "A serial order: the user, then the whole job."
+  }
+ },
+ "scenario": {
+  "id": "backfill_overwrite",
+  "title": "Stale backfill overwrites a newer user update",
+  "description": "A background job copies legacy_name into display_name while the new application lets users set display_name.",
+  "requirement": "A backfill must not overwrite a committed, explicitly supplied user display name.",
+  "requirement_id": "BR-display-name",
+  "assumptions": [
+   "update_display_name is the only source of explicitly user-supplied display names."
+  ]
+ },
+ "files": {
+  "buggy": {
+   "app_v1.py": "\"\"\"Application release 1: only knows about legacy_name.\"\"\"\n\n\ndef update_legacy_name(conn, user_id, name):\n    with conn.transaction():\n        conn.execute(\n            \"UPDATE profiles SET legacy_name = %(name)s WHERE id = %(id)s\",\n            {\"name\": name, \"id\": user_id},\n        )\n",
+   "app_v2.py": "\"\"\"Application release 2: users manage display_name directly.\"\"\"\n\n\ndef update_display_name(conn, user_id, display_name):\n    with conn.transaction():\n        conn.execute(\n            \"UPDATE profiles SET display_name = %(display_name)s WHERE id = %(id)s\",\n            {\"display_name\": display_name, \"id\": user_id},\n        )\n",
+   "backfill.py": "\"\"\"Populates display_name for existing profiles, one row per transaction.\"\"\"\n\nSELECT_BATCH = \"SELECT id, legacy_name FROM profiles WHERE display_name IS NULL ORDER BY id LIMIT %(limit)s\"\n\n\ndef backfill_display_names(conn, limit):\n    with conn.transaction():\n        rows = conn.execute(SELECT_BATCH, {\"limit\": limit}).fetchall()\n    for row in rows:\n        with conn.transaction():\n            conn.execute(\n                \"UPDATE profiles SET display_name = %(display_name)s WHERE id = %(id)s\",\n                {\"display_name\": row[\"legacy_name\"], \"id\": row[\"id\"]},\n            )\n",
+   "migration.sql": "ALTER TABLE profiles ADD COLUMN display_name text;\n"
+  },
+  "corrected_backfill": "\"\"\"Populates display_name for existing profiles, one row per transaction.\"\"\"\n\nSELECT_BATCH = \"SELECT id, legacy_name FROM profiles WHERE display_name IS NULL ORDER BY id LIMIT %(limit)s\"\n\n\ndef backfill_display_names(conn, limit):\n    with conn.transaction():\n        rows = conn.execute(SELECT_BATCH, {\"limit\": limit}).fetchall()\n    for row in rows:\n        with conn.transaction():\n            conn.execute(\n                \"UPDATE profiles SET display_name = %(display_name)s WHERE id = %(id)s AND display_name IS NULL\",\n                {\"display_name\": row[\"legacy_name\"], \"id\": row[\"id\"]},\n            )\n"
+ },
+ "catalog": [
+  {
+   "statement_id": "app_v1.py:update_legacy_name#0",
+   "function": "app_v1.py:update_legacy_name",
+   "sql": "UPDATE profiles SET legacy_name = %(name)s WHERE id = %(id)s",
+   "params": [
+    "name",
+    "id"
+   ]
+  },
+  {
+   "statement_id": "app_v2.py:update_display_name#0",
+   "function": "app_v2.py:update_display_name",
+   "sql": "UPDATE profiles SET display_name = %(display_name)s WHERE id = %(id)s",
+   "params": [
+    "display_name",
+    "id"
+   ]
+  },
+  {
+   "statement_id": "backfill.py:backfill_display_names#0",
+   "function": "backfill.py:backfill_display_names",
+   "sql": "SELECT id, legacy_name FROM profiles WHERE display_name IS NULL ORDER BY id LIMIT %(limit)s",
+   "params": [
+    "limit"
+   ]
+  },
+  {
+   "statement_id": "backfill.py:backfill_display_names#1",
+   "function": "backfill.py:backfill_display_names",
+   "sql": "UPDATE profiles SET display_name = %(display_name)s WHERE id = %(id)s",
+   "params": [
+    "display_name",
+    "id"
+   ]
+  }
+ ],
+ "muse": {
+  "response_file": "results/ai_responses/v2/backfill_overwrite__buggy__r0.json",
+  "model": "muse-spark-1.3",
+  "prompt_version": "v2",
+  "input_tokens": 2002,
+  "output_tokens": 15910,
+  "latency_seconds": 75.013,
+  "approx_cost_usd": 0.07012,
+  "pricing_note": "estimated at Meta's published standard rates, $1.25 input and $4.25 output per MTok; not billing data",
+  "tests_in_response": 3,
+  "conflict": {
+   "functions": [
+    "backfill.py:backfill_display_names",
+    "app_v2.py:update_display_name"
+   ],
+   "table": "profiles",
+   "column": "display_name",
+   "risk_explanation": "Backfill SELECTs rows WHERE display_name IS NULL in one transaction then UPDATEs SET display_name by id in a later transaction without re-checking IS NULL. A concurrent app_v2 UPDATE setting display_name between SELECT and UPDATE is blindly overwritten with stale legacy_name, a lost update."
+  },
+  "proposal": {
+   "name": "backfill_blind_overwrite_loses_v2_write",
+   "rationale": "Backfill SELECTs the NULL row then blind UPDATEs display_name by id. If v2 sets display_name between SELECT and UPDATE, the stale backfill UPDATE wins and loses v2 write. Serially v2 always wins, so final must be v2 value.",
+   "seed": [
+    {
+     "table": "profiles",
+     "values": [
+      {
+       "column": "id",
+       "value": 1
+      },
+      {
+       "column": "legacy_name",
+       "value": "legacy_orig"
+      },
+      {
+       "column": "display_name",
+       "value": null
+      }
+     ]
+    }
+   ],
+   "actors": [
+    {
+     "name": "backfill",
+     "function": "backfill.py:backfill_display_names",
+     "calls": [
+      {
+       "statement_id": "backfill.py:backfill_display_names#0",
+       "params": [
+        {
+         "name": "limit",
+         "source": "literal",
+         "value": 1,
+         "bind": null,
+         "row": 0,
+         "column": null,
+         "transform": "none",
+         "operand": null
+        }
+       ],
+       "bind_as": "batch"
+      },
+      {
+       "statement_id": "backfill.py:backfill_display_names#1",
+       "params": [
+        {
+         "name": "display_name",
+         "source": "row_ref",
+         "value": null,
+         "bind": "batch",
+         "row": 0,
+         "column": "legacy_name",
+         "transform": "none",
+         "operand": null
+        },
+        {
+         "name": "id",
+         "source": "row_ref",
+         "value": null,
+         "bind": "batch",
+         "row": 0,
+         "column": "id",
+         "transform": "none",
+         "operand": null
+        }
+       ],
+       "bind_as": null
+      }
+     ]
+    },
+    {
+     "name": "v2_writer",
+     "function": "app_v2.py:update_display_name",
+     "calls": [
+      {
+       "statement_id": "app_v2.py:update_display_name#0",
+       "params": [
+        {
+         "name": "display_name",
+         "source": "literal",
+         "value": "v2_display",
+         "bind": null,
+         "row": 0,
+         "column": null,
+         "transform": "none",
+         "operand": null
+        },
+        {
+         "name": "id",
+         "source": "literal",
+         "value": 1,
+         "bind": null,
+         "row": 0,
+         "column": null,
+         "transform": "none",
+         "operand": null
+        }
+       ],
+       "bind_as": null
+      }
+     ]
+    }
+   ],
+   "invariants": [
+    {
+     "id": "t1_display_preserved",
+     "description": "display_name for id 1 should remain the concurrent v2 value; a correct backfill must not overwrite a non-NULL concurrent write",
+     "kind": "column_equals",
+     "table": "profiles",
+     "key_column": "id",
+     "key_value": 1,
+     "column": "display_name",
+     "expected": [
+      "v2_display"
+     ],
+     "other_column": null
+    }
+   ]
+  },
+  "validator": {
+   "accepted": true,
+   "reasons": []
+  }
+ },
+ "runs": {
+  "reference/buggy/stale_read": {
+   "source": "reference",
+   "variant": "buggy",
+   "preset": "stale_read",
+   "schedule": [
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "user",
+    "user",
+    "user",
+    "backfill",
+    "backfill"
+   ],
+   "issue_order": [
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "user",
+    "user",
+    "user",
+    "backfill",
+    "backfill"
+   ],
+   "outcome": "completed",
+   "events": [
+    {
+     "seq": 0,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 1,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "sql",
+     "label": "reads legacy_name = Alice",
+     "sql": "SELECT id, legacy_name FROM profiles WHERE display_name IS NULL ORDER BY id LIMIT %(limit)s",
+     "params": {
+      "limit": 10
+     },
+     "status": "ok",
+     "rowcount": 1,
+     "rows": [
+      {
+       "id": 1,
+       "legacy_name": "Alice"
+      }
+     ],
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 2,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 3,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 4,
+     "actor": "user",
+     "role": "user",
+     "lane": "New application",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 5,
+     "actor": "user",
+     "role": "user",
+     "lane": "New application",
+     "kind": "sql",
+     "label": "writes display_name = Alicia",
+     "sql": "UPDATE profiles SET display_name = %(display_name)s WHERE id = %(id)s",
+     "params": {
+      "display_name": "Alicia",
+      "id": 1
+     },
+     "status": "ok",
+     "rowcount": 1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 6,
+     "actor": "user",
+     "role": "user",
+     "lane": "New application",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "Alicia"
+    },
+    {
+     "seq": 7,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "sql",
+     "label": "writes display_name = Alice",
+     "sql": "UPDATE profiles SET display_name = %(display_name)s WHERE id = %(id)s",
+     "params": {
+      "display_name": "Alice",
+      "id": 1
+     },
+     "status": "ok",
+     "rowcount": 1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "Alicia"
+    },
+    {
+     "seq": 8,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "Alice"
+    }
+   ],
+   "marks": {
+    "user_commit_seq": 6,
+    "overwrite_seq": 7,
+    "overwrite_commit_seq": 8
+   },
+   "initial_state": {
+    "profiles": [
+     {
+      "id": 1,
+      "legacy_name": "Alice",
+      "bio": null,
+      "display_name": null
+     }
+    ]
+   },
+   "final_state": {
+    "profiles": [
+     {
+      "id": 1,
+      "legacy_name": "Alice",
+      "bio": null,
+      "display_name": "Alice"
+     }
+    ]
+   },
+   "final_value": "Alice",
+   "classification": "true_violation",
+   "violations": [
+    {
+     "requirement_id": "BR-display-name",
+     "requirement": "A backfill must not overwrite a committed, explicitly supplied user display name.",
+     "table": "profiles",
+     "key": 1,
+     "column": "display_name",
+     "expected": "Alicia",
+     "actual": "Alice",
+     "evidence": [
+      5,
+      7
+     ],
+     "explanation": "user committed display_name='Alicia' at step 5, but the final value is 'Alice'; later committed write by backfill (step 7)."
+    }
+   ],
+   "expected_value": "Alicia",
+   "fingerprint": "69902d271231418c2467361e3bbfd638242b107bc59d224e6246803c9a9c98e0",
+   "minimized": {
+    "before": {
+     "actors": 2,
+     "steps": 9,
+     "seed_rows": 1,
+     "preemptions": 1
+    },
+    "after": {
+     "actors": 2,
+     "steps": 9,
+     "seed_rows": 1,
+     "preemptions": 1
+    }
+   },
+   "replay": {
+    "attempts": 3,
+    "fingerprints_match": 3,
+    "violations_match": 3,
+    "reproduced": true
+   }
+  },
+  "reference/buggy/job_first": {
+   "source": "reference",
+   "variant": "buggy",
+   "preset": "job_first",
+   "schedule": [
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "user",
+    "user",
+    "user"
+   ],
+   "issue_order": [
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "user",
+    "user",
+    "user"
+   ],
+   "outcome": "completed",
+   "events": [
+    {
+     "seq": 0,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 1,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "sql",
+     "label": "reads legacy_name = Alice",
+     "sql": "SELECT id, legacy_name FROM profiles WHERE display_name IS NULL ORDER BY id LIMIT %(limit)s",
+     "params": {
+      "limit": 10
+     },
+     "status": "ok",
+     "rowcount": 1,
+     "rows": [
+      {
+       "id": 1,
+       "legacy_name": "Alice"
+      }
+     ],
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 2,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 3,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 4,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "sql",
+     "label": "writes display_name = Alice",
+     "sql": "UPDATE profiles SET display_name = %(display_name)s WHERE id = %(id)s",
+     "params": {
+      "display_name": "Alice",
+      "id": 1
+     },
+     "status": "ok",
+     "rowcount": 1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 5,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "Alice"
+    },
+    {
+     "seq": 6,
+     "actor": "user",
+     "role": "user",
+     "lane": "New application",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": "Alice"
+    },
+    {
+     "seq": 7,
+     "actor": "user",
+     "role": "user",
+     "lane": "New application",
+     "kind": "sql",
+     "label": "writes display_name = Alicia",
+     "sql": "UPDATE profiles SET display_name = %(display_name)s WHERE id = %(id)s",
+     "params": {
+      "display_name": "Alicia",
+      "id": 1
+     },
+     "status": "ok",
+     "rowcount": 1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "Alice"
+    },
+    {
+     "seq": 8,
+     "actor": "user",
+     "role": "user",
+     "lane": "New application",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "Alicia"
+    }
+   ],
+   "marks": {
+    "user_commit_seq": null,
+    "overwrite_seq": null,
+    "overwrite_commit_seq": null
+   },
+   "initial_state": {
+    "profiles": [
+     {
+      "id": 1,
+      "legacy_name": "Alice",
+      "bio": null,
+      "display_name": null
+     }
+    ]
+   },
+   "final_state": {
+    "profiles": [
+     {
+      "id": 1,
+      "legacy_name": "Alice",
+      "bio": null,
+      "display_name": "Alicia"
+     }
+    ]
+   },
+   "final_value": "Alicia",
+   "classification": "no_violation",
+   "violations": [],
+   "expected_value": null,
+   "fingerprint": "0dea25f1e2ef450343c28f9c635c86b04d229ce60bf92855924de5436121c18b"
+  },
+  "reference/buggy/user_first": {
+   "source": "reference",
+   "variant": "buggy",
+   "preset": "user_first",
+   "schedule": [
+    "user",
+    "user",
+    "user",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill"
+   ],
+   "issue_order": [
+    "user",
+    "user",
+    "user",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill"
+   ],
+   "outcome": "completed",
+   "events": [
+    {
+     "seq": 0,
+     "actor": "user",
+     "role": "user",
+     "lane": "New application",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 1,
+     "actor": "user",
+     "role": "user",
+     "lane": "New application",
+     "kind": "sql",
+     "label": "writes display_name = Alicia",
+     "sql": "UPDATE profiles SET display_name = %(display_name)s WHERE id = %(id)s",
+     "params": {
+      "display_name": "Alicia",
+      "id": 1
+     },
+     "status": "ok",
+     "rowcount": 1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 2,
+     "actor": "user",
+     "role": "user",
+     "lane": "New application",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "Alicia"
+    },
+    {
+     "seq": 3,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": "Alicia"
+    },
+    {
+     "seq": 4,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "sql",
+     "label": "reads no rows",
+     "sql": "SELECT id, legacy_name FROM profiles WHERE display_name IS NULL ORDER BY id LIMIT %(limit)s",
+     "params": {
+      "limit": 10
+     },
+     "status": "ok",
+     "rowcount": 0,
+     "rows": [],
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "Alicia"
+    },
+    {
+     "seq": 5,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "Alicia"
+    },
+    {
+     "seq": 6,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": "Alicia"
+    },
+    {
+     "seq": 7,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "sql",
+     "label": "skipped: the read found no rows",
+     "sql": "UPDATE profiles SET display_name = %(display_name)s WHERE id = %(id)s",
+     "params": {},
+     "status": "skipped_no_rows",
+     "rowcount": null,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": "Alicia"
+    },
+    {
+     "seq": 8,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "Alicia"
+    }
+   ],
+   "marks": {
+    "user_commit_seq": null,
+    "overwrite_seq": null,
+    "overwrite_commit_seq": null
+   },
+   "initial_state": {
+    "profiles": [
+     {
+      "id": 1,
+      "legacy_name": "Alice",
+      "bio": null,
+      "display_name": null
+     }
+    ]
+   },
+   "final_state": {
+    "profiles": [
+     {
+      "id": 1,
+      "legacy_name": "Alice",
+      "bio": null,
+      "display_name": "Alicia"
+     }
+    ]
+   },
+   "final_value": "Alicia",
+   "classification": "no_violation",
+   "violations": [],
+   "expected_value": null,
+   "fingerprint": "bffb857791a7924bce97552aaf3af17d3ff6e7c0b83351647d781ae55a32070b"
+  },
+  "reference/corrected/stale_read": {
+   "source": "reference",
+   "variant": "corrected",
+   "preset": "stale_read",
+   "schedule": [
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "user",
+    "user",
+    "user",
+    "backfill",
+    "backfill"
+   ],
+   "issue_order": [
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "user",
+    "user",
+    "user",
+    "backfill",
+    "backfill"
+   ],
+   "outcome": "completed",
+   "events": [
+    {
+     "seq": 0,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 1,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "sql",
+     "label": "reads legacy_name = Alice",
+     "sql": "SELECT id, legacy_name FROM profiles WHERE display_name IS NULL ORDER BY id LIMIT %(limit)s",
+     "params": {
+      "limit": 10
+     },
+     "status": "ok",
+     "rowcount": 1,
+     "rows": [
+      {
+       "id": 1,
+       "legacy_name": "Alice"
+      }
+     ],
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 2,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 3,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 4,
+     "actor": "user",
+     "role": "user",
+     "lane": "New application",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 5,
+     "actor": "user",
+     "role": "user",
+     "lane": "New application",
+     "kind": "sql",
+     "label": "writes display_name = Alicia",
+     "sql": "UPDATE profiles SET display_name = %(display_name)s WHERE id = %(id)s",
+     "params": {
+      "display_name": "Alicia",
+      "id": 1
+     },
+     "status": "ok",
+     "rowcount": 1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 6,
+     "actor": "user",
+     "role": "user",
+     "lane": "New application",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "Alicia"
+    },
+    {
+     "seq": 7,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "sql",
+     "label": "tries Alice: no row matched",
+     "sql": "UPDATE profiles SET display_name = %(display_name)s WHERE id = %(id)s AND display_name IS NULL",
+     "params": {
+      "display_name": "Alice",
+      "id": 1
+     },
+     "status": "ok",
+     "rowcount": 0,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "Alicia"
+    },
+    {
+     "seq": 8,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "Alicia"
+    }
+   ],
+   "marks": {
+    "user_commit_seq": null,
+    "overwrite_seq": null,
+    "overwrite_commit_seq": null
+   },
+   "initial_state": {
+    "profiles": [
+     {
+      "id": 1,
+      "legacy_name": "Alice",
+      "bio": null,
+      "display_name": null
+     }
+    ]
+   },
+   "final_state": {
+    "profiles": [
+     {
+      "id": 1,
+      "legacy_name": "Alice",
+      "bio": null,
+      "display_name": "Alicia"
+     }
+    ]
+   },
+   "final_value": "Alicia",
+   "classification": "no_violation",
+   "violations": [],
+   "expected_value": null,
+   "fingerprint": "3ecac8aaaf827f4cf8582c36d4586da1928d7bc9fb90298ad6394099942b2c62"
+  },
+  "reference/corrected/job_first": {
+   "source": "reference",
+   "variant": "corrected",
+   "preset": "job_first",
+   "schedule": [
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "user",
+    "user",
+    "user"
+   ],
+   "issue_order": [
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "user",
+    "user",
+    "user"
+   ],
+   "outcome": "completed",
+   "events": [
+    {
+     "seq": 0,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 1,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "sql",
+     "label": "reads legacy_name = Alice",
+     "sql": "SELECT id, legacy_name FROM profiles WHERE display_name IS NULL ORDER BY id LIMIT %(limit)s",
+     "params": {
+      "limit": 10
+     },
+     "status": "ok",
+     "rowcount": 1,
+     "rows": [
+      {
+       "id": 1,
+       "legacy_name": "Alice"
+      }
+     ],
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 2,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 3,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 4,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "sql",
+     "label": "writes display_name = Alice",
+     "sql": "UPDATE profiles SET display_name = %(display_name)s WHERE id = %(id)s AND display_name IS NULL",
+     "params": {
+      "display_name": "Alice",
+      "id": 1
+     },
+     "status": "ok",
+     "rowcount": 1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 5,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "Alice"
+    },
+    {
+     "seq": 6,
+     "actor": "user",
+     "role": "user",
+     "lane": "New application",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": "Alice"
+    },
+    {
+     "seq": 7,
+     "actor": "user",
+     "role": "user",
+     "lane": "New application",
+     "kind": "sql",
+     "label": "writes display_name = Alicia",
+     "sql": "UPDATE profiles SET display_name = %(display_name)s WHERE id = %(id)s",
+     "params": {
+      "display_name": "Alicia",
+      "id": 1
+     },
+     "status": "ok",
+     "rowcount": 1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "Alice"
+    },
+    {
+     "seq": 8,
+     "actor": "user",
+     "role": "user",
+     "lane": "New application",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "Alicia"
+    }
+   ],
+   "marks": {
+    "user_commit_seq": null,
+    "overwrite_seq": null,
+    "overwrite_commit_seq": null
+   },
+   "initial_state": {
+    "profiles": [
+     {
+      "id": 1,
+      "legacy_name": "Alice",
+      "bio": null,
+      "display_name": null
+     }
+    ]
+   },
+   "final_state": {
+    "profiles": [
+     {
+      "id": 1,
+      "legacy_name": "Alice",
+      "bio": null,
+      "display_name": "Alicia"
+     }
+    ]
+   },
+   "final_value": "Alicia",
+   "classification": "no_violation",
+   "violations": [],
+   "expected_value": null,
+   "fingerprint": "0dea25f1e2ef450343c28f9c635c86b04d229ce60bf92855924de5436121c18b"
+  },
+  "reference/corrected/user_first": {
+   "source": "reference",
+   "variant": "corrected",
+   "preset": "user_first",
+   "schedule": [
+    "user",
+    "user",
+    "user",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill"
+   ],
+   "issue_order": [
+    "user",
+    "user",
+    "user",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill"
+   ],
+   "outcome": "completed",
+   "events": [
+    {
+     "seq": 0,
+     "actor": "user",
+     "role": "user",
+     "lane": "New application",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 1,
+     "actor": "user",
+     "role": "user",
+     "lane": "New application",
+     "kind": "sql",
+     "label": "writes display_name = Alicia",
+     "sql": "UPDATE profiles SET display_name = %(display_name)s WHERE id = %(id)s",
+     "params": {
+      "display_name": "Alicia",
+      "id": 1
+     },
+     "status": "ok",
+     "rowcount": 1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 2,
+     "actor": "user",
+     "role": "user",
+     "lane": "New application",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "Alicia"
+    },
+    {
+     "seq": 3,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": "Alicia"
+    },
+    {
+     "seq": 4,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "sql",
+     "label": "reads no rows",
+     "sql": "SELECT id, legacy_name FROM profiles WHERE display_name IS NULL ORDER BY id LIMIT %(limit)s",
+     "params": {
+      "limit": 10
+     },
+     "status": "ok",
+     "rowcount": 0,
+     "rows": [],
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "Alicia"
+    },
+    {
+     "seq": 5,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "Alicia"
+    },
+    {
+     "seq": 6,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": "Alicia"
+    },
+    {
+     "seq": 7,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "sql",
+     "label": "skipped: the read found no rows",
+     "sql": "UPDATE profiles SET display_name = %(display_name)s WHERE id = %(id)s AND display_name IS NULL",
+     "params": {},
+     "status": "skipped_no_rows",
+     "rowcount": null,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": "Alicia"
+    },
+    {
+     "seq": 8,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "Alicia"
+    }
+   ],
+   "marks": {
+    "user_commit_seq": null,
+    "overwrite_seq": null,
+    "overwrite_commit_seq": null
+   },
+   "initial_state": {
+    "profiles": [
+     {
+      "id": 1,
+      "legacy_name": "Alice",
+      "bio": null,
+      "display_name": null
+     }
+    ]
+   },
+   "final_state": {
+    "profiles": [
+     {
+      "id": 1,
+      "legacy_name": "Alice",
+      "bio": null,
+      "display_name": "Alicia"
+     }
+    ]
+   },
+   "final_value": "Alicia",
+   "classification": "no_violation",
+   "violations": [],
+   "expected_value": null,
+   "fingerprint": "bffb857791a7924bce97552aaf3af17d3ff6e7c0b83351647d781ae55a32070b"
+  },
+  "muse/buggy/stale_read": {
+   "source": "muse",
+   "variant": "buggy",
+   "preset": "stale_read",
+   "schedule": [
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "v2_writer",
+    "v2_writer",
+    "v2_writer",
+    "backfill",
+    "backfill"
+   ],
+   "issue_order": [
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "v2_writer",
+    "v2_writer",
+    "v2_writer",
+    "backfill",
+    "backfill"
+   ],
+   "outcome": "completed",
+   "events": [
+    {
+     "seq": 0,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 1,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "sql",
+     "label": "reads legacy_name = legacy_orig",
+     "sql": "SELECT id, legacy_name FROM profiles WHERE display_name IS NULL ORDER BY id LIMIT %(limit)s",
+     "params": {
+      "limit": 1
+     },
+     "status": "ok",
+     "rowcount": 1,
+     "rows": [
+      {
+       "id": 1,
+       "legacy_name": "legacy_orig"
+      }
+     ],
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 2,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 3,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 4,
+     "actor": "v2_writer",
+     "role": "user",
+     "lane": "New application",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 5,
+     "actor": "v2_writer",
+     "role": "user",
+     "lane": "New application",
+     "kind": "sql",
+     "label": "writes display_name = v2_display",
+     "sql": "UPDATE profiles SET display_name = %(display_name)s WHERE id = %(id)s",
+     "params": {
+      "display_name": "v2_display",
+      "id": 1
+     },
+     "status": "ok",
+     "rowcount": 1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 6,
+     "actor": "v2_writer",
+     "role": "user",
+     "lane": "New application",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "v2_display"
+    },
+    {
+     "seq": 7,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "sql",
+     "label": "writes display_name = legacy_orig",
+     "sql": "UPDATE profiles SET display_name = %(display_name)s WHERE id = %(id)s",
+     "params": {
+      "display_name": "legacy_orig",
+      "id": 1
+     },
+     "status": "ok",
+     "rowcount": 1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "v2_display"
+    },
+    {
+     "seq": 8,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "legacy_orig"
+    }
+   ],
+   "marks": {
+    "user_commit_seq": 6,
+    "overwrite_seq": 7,
+    "overwrite_commit_seq": 8
+   },
+   "initial_state": {
+    "profiles": [
+     {
+      "id": 1,
+      "legacy_name": "legacy_orig",
+      "bio": null,
+      "display_name": null
+     }
+    ]
+   },
+   "final_state": {
+    "profiles": [
+     {
+      "id": 1,
+      "legacy_name": "legacy_orig",
+      "bio": null,
+      "display_name": "legacy_orig"
+     }
+    ]
+   },
+   "final_value": "legacy_orig",
+   "classification": "true_violation",
+   "violations": [
+    {
+     "requirement_id": "BR-display-name",
+     "requirement": "A backfill must not overwrite a committed, explicitly supplied user display name.",
+     "table": "profiles",
+     "key": 1,
+     "column": "display_name",
+     "expected": "v2_display",
+     "actual": "legacy_orig",
+     "evidence": [
+      5,
+      7
+     ],
+     "explanation": "v2_writer committed display_name='v2_display' at step 5, but the final value is 'legacy_orig'; later committed write by backfill (step 7)."
+    }
+   ],
+   "expected_value": "v2_display",
+   "fingerprint": "3ec5714ebbb964b25d6055fd2d29edb406b8f58063942909006d844803f6e7c9",
+   "minimized": {
+    "before": {
+     "actors": 2,
+     "steps": 9,
+     "seed_rows": 1,
+     "preemptions": 1
+    },
+    "after": {
+     "actors": 2,
+     "steps": 9,
+     "seed_rows": 1,
+     "preemptions": 1
+    }
+   },
+   "replay": {
+    "attempts": 3,
+    "fingerprints_match": 3,
+    "violations_match": 3,
+    "reproduced": true
+   }
+  },
+  "muse/buggy/job_first": {
+   "source": "muse",
+   "variant": "buggy",
+   "preset": "job_first",
+   "schedule": [
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "v2_writer",
+    "v2_writer",
+    "v2_writer"
+   ],
+   "issue_order": [
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "v2_writer",
+    "v2_writer",
+    "v2_writer"
+   ],
+   "outcome": "completed",
+   "events": [
+    {
+     "seq": 0,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 1,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "sql",
+     "label": "reads legacy_name = legacy_orig",
+     "sql": "SELECT id, legacy_name FROM profiles WHERE display_name IS NULL ORDER BY id LIMIT %(limit)s",
+     "params": {
+      "limit": 1
+     },
+     "status": "ok",
+     "rowcount": 1,
+     "rows": [
+      {
+       "id": 1,
+       "legacy_name": "legacy_orig"
+      }
+     ],
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 2,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 3,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 4,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "sql",
+     "label": "writes display_name = legacy_orig",
+     "sql": "UPDATE profiles SET display_name = %(display_name)s WHERE id = %(id)s",
+     "params": {
+      "display_name": "legacy_orig",
+      "id": 1
+     },
+     "status": "ok",
+     "rowcount": 1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 5,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "legacy_orig"
+    },
+    {
+     "seq": 6,
+     "actor": "v2_writer",
+     "role": "user",
+     "lane": "New application",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": "legacy_orig"
+    },
+    {
+     "seq": 7,
+     "actor": "v2_writer",
+     "role": "user",
+     "lane": "New application",
+     "kind": "sql",
+     "label": "writes display_name = v2_display",
+     "sql": "UPDATE profiles SET display_name = %(display_name)s WHERE id = %(id)s",
+     "params": {
+      "display_name": "v2_display",
+      "id": 1
+     },
+     "status": "ok",
+     "rowcount": 1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "legacy_orig"
+    },
+    {
+     "seq": 8,
+     "actor": "v2_writer",
+     "role": "user",
+     "lane": "New application",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "v2_display"
+    }
+   ],
+   "marks": {
+    "user_commit_seq": null,
+    "overwrite_seq": null,
+    "overwrite_commit_seq": null
+   },
+   "initial_state": {
+    "profiles": [
+     {
+      "id": 1,
+      "legacy_name": "legacy_orig",
+      "bio": null,
+      "display_name": null
+     }
+    ]
+   },
+   "final_state": {
+    "profiles": [
+     {
+      "id": 1,
+      "legacy_name": "legacy_orig",
+      "bio": null,
+      "display_name": "v2_display"
+     }
+    ]
+   },
+   "final_value": "v2_display",
+   "classification": "no_violation",
+   "violations": [],
+   "expected_value": null,
+   "fingerprint": "9c46ebc64c38eaa636701e741c4ac3d71d3a816fe3da0913b10d0d76b9ab8d7c"
+  },
+  "muse/buggy/user_first": {
+   "source": "muse",
+   "variant": "buggy",
+   "preset": "user_first",
+   "schedule": [
+    "v2_writer",
+    "v2_writer",
+    "v2_writer",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill"
+   ],
+   "issue_order": [
+    "v2_writer",
+    "v2_writer",
+    "v2_writer",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill"
+   ],
+   "outcome": "completed",
+   "events": [
+    {
+     "seq": 0,
+     "actor": "v2_writer",
+     "role": "user",
+     "lane": "New application",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 1,
+     "actor": "v2_writer",
+     "role": "user",
+     "lane": "New application",
+     "kind": "sql",
+     "label": "writes display_name = v2_display",
+     "sql": "UPDATE profiles SET display_name = %(display_name)s WHERE id = %(id)s",
+     "params": {
+      "display_name": "v2_display",
+      "id": 1
+     },
+     "status": "ok",
+     "rowcount": 1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 2,
+     "actor": "v2_writer",
+     "role": "user",
+     "lane": "New application",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "v2_display"
+    },
+    {
+     "seq": 3,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": "v2_display"
+    },
+    {
+     "seq": 4,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "sql",
+     "label": "reads no rows",
+     "sql": "SELECT id, legacy_name FROM profiles WHERE display_name IS NULL ORDER BY id LIMIT %(limit)s",
+     "params": {
+      "limit": 1
+     },
+     "status": "ok",
+     "rowcount": 0,
+     "rows": [],
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "v2_display"
+    },
+    {
+     "seq": 5,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "v2_display"
+    },
+    {
+     "seq": 6,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": "v2_display"
+    },
+    {
+     "seq": 7,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "sql",
+     "label": "skipped: the read found no rows",
+     "sql": "UPDATE profiles SET display_name = %(display_name)s WHERE id = %(id)s",
+     "params": {},
+     "status": "skipped_no_rows",
+     "rowcount": null,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": "v2_display"
+    },
+    {
+     "seq": 8,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "v2_display"
+    }
+   ],
+   "marks": {
+    "user_commit_seq": null,
+    "overwrite_seq": null,
+    "overwrite_commit_seq": null
+   },
+   "initial_state": {
+    "profiles": [
+     {
+      "id": 1,
+      "legacy_name": "legacy_orig",
+      "bio": null,
+      "display_name": null
+     }
+    ]
+   },
+   "final_state": {
+    "profiles": [
+     {
+      "id": 1,
+      "legacy_name": "legacy_orig",
+      "bio": null,
+      "display_name": "v2_display"
+     }
+    ]
+   },
+   "final_value": "v2_display",
+   "classification": "no_violation",
+   "violations": [],
+   "expected_value": null,
+   "fingerprint": "ea5696d119f6dd956059fa1b2fa5d874a8144b3fe33446ea6980428800e3cff3"
+  },
+  "muse/corrected/stale_read": {
+   "source": "muse",
+   "variant": "corrected",
+   "preset": "stale_read",
+   "schedule": [
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "v2_writer",
+    "v2_writer",
+    "v2_writer",
+    "backfill",
+    "backfill"
+   ],
+   "issue_order": [
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "v2_writer",
+    "v2_writer",
+    "v2_writer",
+    "backfill",
+    "backfill"
+   ],
+   "outcome": "completed",
+   "events": [
+    {
+     "seq": 0,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 1,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "sql",
+     "label": "reads legacy_name = legacy_orig",
+     "sql": "SELECT id, legacy_name FROM profiles WHERE display_name IS NULL ORDER BY id LIMIT %(limit)s",
+     "params": {
+      "limit": 1
+     },
+     "status": "ok",
+     "rowcount": 1,
+     "rows": [
+      {
+       "id": 1,
+       "legacy_name": "legacy_orig"
+      }
+     ],
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 2,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 3,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 4,
+     "actor": "v2_writer",
+     "role": "user",
+     "lane": "New application",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 5,
+     "actor": "v2_writer",
+     "role": "user",
+     "lane": "New application",
+     "kind": "sql",
+     "label": "writes display_name = v2_display",
+     "sql": "UPDATE profiles SET display_name = %(display_name)s WHERE id = %(id)s",
+     "params": {
+      "display_name": "v2_display",
+      "id": 1
+     },
+     "status": "ok",
+     "rowcount": 1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 6,
+     "actor": "v2_writer",
+     "role": "user",
+     "lane": "New application",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "v2_display"
+    },
+    {
+     "seq": 7,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "sql",
+     "label": "tries legacy_orig: no row matched",
+     "sql": "UPDATE profiles SET display_name = %(display_name)s WHERE id = %(id)s AND display_name IS NULL",
+     "params": {
+      "display_name": "legacy_orig",
+      "id": 1
+     },
+     "status": "ok",
+     "rowcount": 0,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "v2_display"
+    },
+    {
+     "seq": 8,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "v2_display"
+    }
+   ],
+   "marks": {
+    "user_commit_seq": null,
+    "overwrite_seq": null,
+    "overwrite_commit_seq": null
+   },
+   "initial_state": {
+    "profiles": [
+     {
+      "id": 1,
+      "legacy_name": "legacy_orig",
+      "bio": null,
+      "display_name": null
+     }
+    ]
+   },
+   "final_state": {
+    "profiles": [
+     {
+      "id": 1,
+      "legacy_name": "legacy_orig",
+      "bio": null,
+      "display_name": "v2_display"
+     }
+    ]
+   },
+   "final_value": "v2_display",
+   "classification": "no_violation",
+   "violations": [],
+   "expected_value": null,
+   "fingerprint": "a98e21694b75e97dd95e8bfa512c2b607a016907bef90378496f1be8c6d7e63a"
+  },
+  "muse/corrected/job_first": {
+   "source": "muse",
+   "variant": "corrected",
+   "preset": "job_first",
+   "schedule": [
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "v2_writer",
+    "v2_writer",
+    "v2_writer"
+   ],
+   "issue_order": [
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "v2_writer",
+    "v2_writer",
+    "v2_writer"
+   ],
+   "outcome": "completed",
+   "events": [
+    {
+     "seq": 0,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 1,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "sql",
+     "label": "reads legacy_name = legacy_orig",
+     "sql": "SELECT id, legacy_name FROM profiles WHERE display_name IS NULL ORDER BY id LIMIT %(limit)s",
+     "params": {
+      "limit": 1
+     },
+     "status": "ok",
+     "rowcount": 1,
+     "rows": [
+      {
+       "id": 1,
+       "legacy_name": "legacy_orig"
+      }
+     ],
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 2,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 3,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 4,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "sql",
+     "label": "writes display_name = legacy_orig",
+     "sql": "UPDATE profiles SET display_name = %(display_name)s WHERE id = %(id)s AND display_name IS NULL",
+     "params": {
+      "display_name": "legacy_orig",
+      "id": 1
+     },
+     "status": "ok",
+     "rowcount": 1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 5,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "legacy_orig"
+    },
+    {
+     "seq": 6,
+     "actor": "v2_writer",
+     "role": "user",
+     "lane": "New application",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": "legacy_orig"
+    },
+    {
+     "seq": 7,
+     "actor": "v2_writer",
+     "role": "user",
+     "lane": "New application",
+     "kind": "sql",
+     "label": "writes display_name = v2_display",
+     "sql": "UPDATE profiles SET display_name = %(display_name)s WHERE id = %(id)s",
+     "params": {
+      "display_name": "v2_display",
+      "id": 1
+     },
+     "status": "ok",
+     "rowcount": 1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "legacy_orig"
+    },
+    {
+     "seq": 8,
+     "actor": "v2_writer",
+     "role": "user",
+     "lane": "New application",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "v2_display"
+    }
+   ],
+   "marks": {
+    "user_commit_seq": null,
+    "overwrite_seq": null,
+    "overwrite_commit_seq": null
+   },
+   "initial_state": {
+    "profiles": [
+     {
+      "id": 1,
+      "legacy_name": "legacy_orig",
+      "bio": null,
+      "display_name": null
+     }
+    ]
+   },
+   "final_state": {
+    "profiles": [
+     {
+      "id": 1,
+      "legacy_name": "legacy_orig",
+      "bio": null,
+      "display_name": "v2_display"
+     }
+    ]
+   },
+   "final_value": "v2_display",
+   "classification": "no_violation",
+   "violations": [],
+   "expected_value": null,
+   "fingerprint": "9c46ebc64c38eaa636701e741c4ac3d71d3a816fe3da0913b10d0d76b9ab8d7c"
+  },
+  "muse/corrected/user_first": {
+   "source": "muse",
+   "variant": "corrected",
+   "preset": "user_first",
+   "schedule": [
+    "v2_writer",
+    "v2_writer",
+    "v2_writer",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill"
+   ],
+   "issue_order": [
+    "v2_writer",
+    "v2_writer",
+    "v2_writer",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill",
+    "backfill"
+   ],
+   "outcome": "completed",
+   "events": [
+    {
+     "seq": 0,
+     "actor": "v2_writer",
+     "role": "user",
+     "lane": "New application",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 1,
+     "actor": "v2_writer",
+     "role": "user",
+     "lane": "New application",
+     "kind": "sql",
+     "label": "writes display_name = v2_display",
+     "sql": "UPDATE profiles SET display_name = %(display_name)s WHERE id = %(id)s",
+     "params": {
+      "display_name": "v2_display",
+      "id": 1
+     },
+     "status": "ok",
+     "rowcount": 1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": null
+    },
+    {
+     "seq": 2,
+     "actor": "v2_writer",
+     "role": "user",
+     "lane": "New application",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "v2_display"
+    },
+    {
+     "seq": 3,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": "v2_display"
+    },
+    {
+     "seq": 4,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "sql",
+     "label": "reads no rows",
+     "sql": "SELECT id, legacy_name FROM profiles WHERE display_name IS NULL ORDER BY id LIMIT %(limit)s",
+     "params": {
+      "limit": 1
+     },
+     "status": "ok",
+     "rowcount": 0,
+     "rows": [],
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "v2_display"
+    },
+    {
+     "seq": 5,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "v2_display"
+    },
+    {
+     "seq": 6,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "begin",
+     "label": "BEGIN",
+     "sql": "BEGIN",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": "v2_display"
+    },
+    {
+     "seq": 7,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "sql",
+     "label": "skipped: the read found no rows",
+     "sql": "UPDATE profiles SET display_name = %(display_name)s WHERE id = %(id)s AND display_name IS NULL",
+     "params": {},
+     "status": "skipped_no_rows",
+     "rowcount": null,
+     "rows": null,
+     "committed": null,
+     "blocked_by": [],
+     "committed_value": "v2_display"
+    },
+    {
+     "seq": 8,
+     "actor": "backfill",
+     "role": "job",
+     "lane": "Background job",
+     "kind": "commit",
+     "label": "COMMIT",
+     "sql": "COMMIT",
+     "params": {},
+     "status": "ok",
+     "rowcount": -1,
+     "rows": null,
+     "committed": true,
+     "blocked_by": [],
+     "committed_value": "v2_display"
+    }
+   ],
+   "marks": {
+    "user_commit_seq": null,
+    "overwrite_seq": null,
+    "overwrite_commit_seq": null
+   },
+   "initial_state": {
+    "profiles": [
+     {
+      "id": 1,
+      "legacy_name": "legacy_orig",
+      "bio": null,
+      "display_name": null
+     }
+    ]
+   },
+   "final_state": {
+    "profiles": [
+     {
+      "id": 1,
+      "legacy_name": "legacy_orig",
+      "bio": null,
+      "display_name": "v2_display"
+     }
+    ]
+   },
+   "final_value": "v2_display",
+   "classification": "no_violation",
+   "violations": [],
+   "expected_value": null,
+   "fingerprint": "ea5696d119f6dd956059fa1b2fa5d874a8144b3fe33446ea6980428800e3cff3"
+  }
+ },
+ "exploration": {
+  "reference/buggy": {
+   "source": "reference",
+   "variant": "buggy",
+   "executed": 84,
+   "space_size": 84,
+   "exhausted_space": true,
+   "violating": 61,
+   "violates_in_serial_order": false,
+   "outcomes": {
+    "completed": 84
+   }
+  },
+  "reference/corrected": {
+   "source": "reference",
+   "variant": "corrected",
+   "executed": 84,
+   "space_size": 84,
+   "exhausted_space": true,
+   "violating": 0,
+   "violates_in_serial_order": false,
+   "outcomes": {
+    "completed": 84
+   }
+  },
+  "muse/buggy": {
+   "source": "muse",
+   "variant": "buggy",
+   "executed": 84,
+   "space_size": 84,
+   "exhausted_space": true,
+   "violating": 61,
+   "violates_in_serial_order": false,
+   "outcomes": {
+    "completed": 84
+   }
+  },
+  "muse/corrected": {
+   "source": "muse",
+   "variant": "corrected",
+   "executed": 84,
+   "space_size": 84,
+   "exhausted_space": true,
+   "violating": 0,
+   "violates_in_serial_order": false,
+   "outcomes": {
+    "completed": 84
+   }
+  }
+ }
+}

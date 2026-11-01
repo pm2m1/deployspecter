@@ -12,14 +12,16 @@ from typing import Any, Literal
 
 import psycopg
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import HTMLResponse
-from pydantic import BaseModel, Field
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, ConfigDict, Field
 
+from . import guided
 from .analyzer import PROMPT_VERSION, AnalysisRecord
 from .analyzer_support import read_catalog
 from .benchmark_report import usage_ledger
 from .config import PROJECT_ROOT, load_settings, redact
-from .database import Sandbox
+from .database import Sandbox, SandboxBusy
 from .documented import EXTERNAL_CASES, documented_source, run_documented
 from .meta_client import PRICING_NOTE
 from .models import ExecutableSpec
@@ -51,9 +53,33 @@ def _runs_dir() -> Path:
     return load_settings().results_dir / "runs"
 
 
+STATIC = Path(__file__).parent / "static"
+app.mount("/static", StaticFiles(directory=STATIC), name="static")
+
+
+def _page(name: str) -> str:
+    return (STATIC / name).read_text()
+
+
 @app.get("/", response_class=HTMLResponse)
-def index() -> str:
-    return (Path(__file__).parent / "static" / "index.html").read_text()
+def landing() -> str:
+    return _page("landing.html")
+
+
+@app.get("/app", response_class=HTMLResponse)
+def workbench() -> str:
+    return _page("app.html")
+
+
+@app.get("/demo", response_class=HTMLResponse)
+@app.get("/demo.html", response_class=HTMLResponse)
+def recorded_demo() -> str:
+    return _page("demo.html")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon() -> FileResponse:
+    return FileResponse(STATIC / "favicon.svg", media_type="image/svg+xml")
 
 
 @app.get("/health")
@@ -288,17 +314,20 @@ def ai_pipeline(
         for fn in source.functions.values() for st in fn.statements
     ]
     tests = []
-    with _exec_lock, Sandbox(settings) as sandbox:
-        known = read_catalog(sandbox, case.setup_sql)
-        for proposal in record.output.tests if record.output else []:
-            reports, rejected = compile_all([proposal], case, sandbox, "ai")
-            tests.append({
-                "proposal": proposal.model_dump(),
-                "accepted": bool(reports),
-                "rejections": [reason for r in rejected for reason in r.reasons],
-                "renamed_actors": reports[0].renamed_actors if reports else {},
-                "dropped_invariants": reports[0].dropped_invariants if reports else [],
-            })
+    try:
+        with _exec_lock, Sandbox(settings) as sandbox:
+            known = read_catalog(sandbox, case.setup_sql)
+            for proposal in record.output.tests if record.output else []:
+                reports, rejected = compile_all([proposal], case, sandbox, "ai")
+                tests.append({
+                    "proposal": proposal.model_dump(),
+                    "accepted": bool(reports),
+                    "rejections": [reason for r in rejected for reason in r.reasons],
+                    "renamed_actors": reports[0].renamed_actors if reports else {},
+                    "dropped_invariants": reports[0].dropped_invariants if reports else [],
+                })
+    except (psycopg.OperationalError, SandboxBusy) as exc:
+        raise HTTPException(503, f"PostgreSQL is not available: {type(exc).__name__}") from exc
     report = _latest_report(case.split)
     score = next(
         (s for s in (report or {}).get("scores", [])
@@ -324,6 +353,47 @@ def ai_pipeline(
             "rejections": score["rejections"], "generated_at": report["generated_at"],
         },
     }
+
+
+class GuidedRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    source: Literal["reference", "muse"] = "reference"
+    variant: Literal["buggy", "corrected"] = "buggy"
+    preset: Literal["stale_read", "job_first", "user_first"] = "stale_read"
+
+
+class GuidedExplore(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    source: Literal["reference", "muse"] = "reference"
+    variant: Literal["buggy", "corrected"] = "buggy"
+
+
+def _guided(work):
+    settings = load_settings()
+    try:
+        with _exec_lock, Sandbox(settings) as sandbox, ScheduleRunner(sandbox) as runner:
+            return work(sandbox, runner, settings)
+    except (psycopg.OperationalError, SandboxBusy) as exc:
+        raise HTTPException(503, f"PostgreSQL is not available: {type(exc).__name__}") from exc
+
+
+@app.post("/guided/stale-backfill/execute")
+def guided_execute(request: GuidedRequest) -> dict[str, Any]:
+    """Runs one schedule from a fixed list on PostgreSQL. Nothing in the request becomes SQL."""
+    run_id = uuid.uuid4().hex
+    artifacts = load_settings().results_dir / "failures" / "ui" / run_id
+    view = _guided(lambda sandbox, runner, settings: guided.execute(
+        sandbox, runner, settings, request.source, request.variant, request.preset, artifacts
+    ))
+    _runs[run_id] = {"run_id": run_id, "status": "finished", "result": {"artifact_path": view.get("artifact_path")}}
+    return view | {"run_id": run_id}
+
+
+@app.post("/guided/stale-backfill/explore")
+def guided_explore(request: GuidedExplore) -> dict[str, Any]:
+    return _guided(lambda sandbox, runner, settings: guided.explore_summary(
+        sandbox, runner, settings, request.source, request.variant
+    ))
 
 
 @app.get("/external-cases")

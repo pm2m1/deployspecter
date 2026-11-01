@@ -1,10 +1,10 @@
 """End-to-end through FastAPI against real PostgreSQL. No results are stubbed."""
 
 import dataclasses
-import re
 import shutil
 import subprocess
 import time
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -77,22 +77,28 @@ def test_path_traversal_in_run_id_is_refused(client):
     assert client.get("/runs/..%2F..%2Fpyproject").status_code == 404
 
 
-def test_page_contains_no_measured_values(client):
-    page = client.get("/").text
-    assert "DeploySpecter" in page
-    for fake in ("Alicia", "muse-spark", "true_violation", "2/2", "84"):
-        assert fake not in page
+def _front_end_files():
+    static = Path(api.__file__).parent / "static"
+    return [static / "app.html", *sorted((static / "js").rglob("*.js"))]
 
 
-def test_page_script_parses(client, tmp_path):
-    """A syntax error once left the whole page blank while every API test passed."""
+def test_workbench_is_served_and_holds_no_measured_values(client):
+    assert "DeploySpecter" in client.get("/app").text
+    for path in _front_end_files():
+        for fake in ("Alicia", "muse-spark", "true_violation", "2/2", "61 of"):
+            assert fake not in path.read_text(), (path.name, fake)
+
+
+def test_every_script_parses(tmp_path):
+    """A syntax error once left a whole page blank while every API test passed."""
     node = shutil.which("node")
     if node is None:
         pytest.skip("node is not installed")
-    script = tmp_path / "page.js"
-    script.write_text(re.search(r"<script>(.*)</script>", client.get("/").text, re.S).group(1))
-    result = subprocess.run([node, "--check", str(script)], capture_output=True, text=True)
-    assert result.returncode == 0, result.stderr
+    for path in _front_end_files()[1:]:
+        copy = tmp_path / f"{path.stem}.mjs"
+        copy.write_text(path.read_text())
+        result = subprocess.run([node, "--check", str(copy)], capture_output=True, text=True)
+        assert result.returncode == 0, (path.name, result.stderr)
 
 
 def test_buggy_run_returns_real_violation_and_replay(client):
@@ -145,8 +151,8 @@ def test_replay_refuses_a_run_with_no_failure(client):
     assert client.post(f"/runs/{record['run_id']}/replay").status_code == 409
 
 
-def test_page_never_treats_an_unexecuted_case_as_clean(client):
-    assert "not executed" in client.get("/").text
+def test_page_never_treats_an_unexecuted_case_as_clean():
+    assert "not executed" in (Path(api.__file__).parent / "static" / "js" / "app" / "comparison.js").read_text()
 
 
 def test_generated_specs_are_exposed_for_comparison(client):

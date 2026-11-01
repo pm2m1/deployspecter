@@ -31,7 +31,7 @@ It supports the Python and SQL patterns described under Limitations. It does not
 | Model client, analyzer | Muse Spark requests with hard spending limits | `meta_client.py`, `analyzer.py` |
 | Baselines, benchmark | Static rules, non-LLM harnesses and scoring | `baselines.py`, `baseline_c.py`, `benchmark.py` |
 | External example | The GitLab-derived case, kept apart from the benchmark | `documented.py` |
-| Interface | FastAPI service and one dependency-free page | `api.py`, `static/` |
+| Site | Homepage, recorded walkthrough and workbench, with no frontend dependencies | `api.py`, `guided.py`, `site.py`, `static/` |
 
 Actors run as a non-superuser role in a dedicated `deployspecter_test` database, with explicit timeouts, and the schema is rebuilt before each schedule.
 
@@ -54,7 +54,20 @@ uv sync
 uv run deployspecter serve
 ```
 
-Then open http://127.0.0.1:8765. The page runs tests on your local PostgreSQL and uses recorded model responses only. It makes no model requests.
+| URL | What it is |
+|---|---|
+| http://127.0.0.1:8765/ | Product overview, with numbers read from saved results |
+| http://127.0.0.1:8765/app | Workbench: runs tests on your local PostgreSQL |
+| http://127.0.0.1:8765/demo.html | Recorded walkthrough: saved runs, no database needed |
+
+The site uses recorded model responses only and makes no model requests. It takes no SQL from visitors, and live runs choose from a fixed list of schedules.
+
+```sh
+uv run deployspecter build-demo-data          # re-record the walkthrough on PostgreSQL
+uv run deployspecter export-site --out dist/site   # static copy of the homepage and recorded walkthrough
+```
+
+The static copy has no workbench, API or database.
 
 ## Reproduce one failure
 
