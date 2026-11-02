@@ -2,6 +2,9 @@
 
 New requests use explicit medium reasoning and store=False. Pass both options as None
 only to reproduce historical provider-default requests; never rewrite frozen records.
+
+Reasoning levels follow https://dev.meta.ai/docs/reasoning for muse-spark-1.3, read 2026-11-02. Other models
+may accept fewer, and the provider can reject a combination this check doesn't know about.
 """
 
 from __future__ import annotations
@@ -20,6 +23,7 @@ from .config import Settings
 PRICE_INPUT_PER_MTOK = 1.25
 PRICE_OUTPUT_PER_MTOK = 4.25
 PRICING_NOTE = "estimated at Meta's published standard rates, $1.25 input and $4.25 output per MTok; not billing data"
+REASONING_EFFORTS = ("minimal", "low", "medium", "high", "xhigh", "max")
 
 
 class MissingApiKey(RuntimeError):
@@ -74,8 +78,10 @@ class MetaClient:
         reasoning_effort: str | None = "medium", store: bool | None = False,
     ) -> None:
         self.model = settings.model_name
-        if reasoning_effort not in {None, "low", "medium", "high"}:
-            raise ValueError("reasoning_effort must be low, medium, high or None (legacy)")
+        if reasoning_effort is not None and reasoning_effort not in REASONING_EFFORTS:
+            raise ValueError(f"reasoning_effort must be one of {', '.join(REASONING_EFFORTS)}, or None (legacy)")
+        if reasoning_effort == "max" and self.model.endswith("-contributor"):
+            raise ValueError(f"reasoning_effort max is not available on {self.model}")
         self.reasoning_effort = reasoning_effort
         self.store = store
         self.max_requests = max_requests

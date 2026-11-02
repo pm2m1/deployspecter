@@ -130,7 +130,8 @@ def write_site_data(settings: Settings, path: Path = SITE_DATA) -> Path:
 
 
 def _static_markup(html: str) -> str:
-    """Removes workbench links and text, so they can't appear even with JavaScript off, and sets the static mode."""
+    """Removes local-only links and text, so they can't appear even with JavaScript off, and sets the static mode."""
+    html = re.sub(r'\s*<!-- local-only -->.*?<!-- /local-only -->', "", html, flags=re.S)
     html = re.sub(r'\s*<a\b[^>]*\blive-only\b[^>]*>.*?</a>', "", html, flags=re.S)
     html = re.sub(r'<span\b[^>]*\blive-only\b[^>]*>.*?</span>', "", html, flags=re.S)
     return html.replace('<html lang="en">', '<html lang="en" data-site="static">', 1)

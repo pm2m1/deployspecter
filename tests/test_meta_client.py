@@ -1,6 +1,8 @@
 """Validator and client plumbing. A stub stands in for the network only; the live
 call is the `live` test. Nothing here asserts that a bug detector found anything."""
 
+import dataclasses
+import inspect
 import json
 import types
 
@@ -135,6 +137,73 @@ def test_invalid_reasoning_effort_fails_without_request(settings):
     with pytest.raises(ValueError, match="reasoning_effort"):
         MetaClient(settings, client=types.SimpleNamespace(responses=responses), reasoning_effort="maximum")
     assert not responses.calls
+
+
+@pytest.mark.parametrize("effort", ["minimal", "low", "medium", "high", "xhigh", "max"])
+def test_every_documented_reasoning_level_is_sent_as_given(settings, effort):
+    responses = StubResponses(["{}"])
+    client = MetaClient(
+        settings, client=types.SimpleNamespace(responses=responses), max_requests=1, max_estimated_usd=1,
+        reasoning_effort=effort,
+    )
+    client.generate("i", "p", "n", {"type": "object"})
+    assert responses.calls[0]["reasoning"] == {"effort": effort} and responses.calls[0]["store"] is False
+
+
+@pytest.mark.parametrize("effort", ["none", "None", "", "MEDIUM", "maximum", "ultra", 1, False, ["low"]])
+def test_undocumented_reasoning_levels_fail_before_any_request(settings, effort):
+    responses = StubResponses(["{}"])
+    with pytest.raises(ValueError, match="reasoning_effort"):
+        MetaClient(settings, client=types.SimpleNamespace(responses=responses), reasoning_effort=effort)
+    assert not responses.calls
+
+
+def test_max_is_refused_on_the_contributor_variant_only(settings):
+    responses = StubResponses(["{}", "{}"])
+    sdk = types.SimpleNamespace(responses=responses)
+    contributor = dataclasses.replace(settings, model_name="muse-spark-1.3-contributor")
+    with pytest.raises(ValueError, match="max is not available on muse-spark-1.3-contributor"):
+        MetaClient(contributor, client=sdk, reasoning_effort="max")
+    assert not responses.calls
+    allowed = MetaClient(contributor, client=sdk, max_requests=1, max_estimated_usd=1, reasoning_effort="xhigh")
+    allowed.generate("i", "p", "n", {"type": "object"})
+    assert responses.calls[0]["reasoning"] == {"effort": "xhigh"}
+    standard = dataclasses.replace(settings, model_name="muse-spark-1.3")
+    MetaClient(standard, client=sdk, reasoning_effort="max")
+
+
+def test_defaults_stay_medium_and_not_stored(settings):
+    parameters = inspect.signature(MetaClient).parameters
+    assert parameters["reasoning_effort"].default == "medium" and parameters["store"].default is False
+
+
+def test_legacy_mode_sends_no_reasoning_value_at_all(settings):
+    responses = StubResponses(["{}"])
+    client = MetaClient(
+        settings, client=types.SimpleNamespace(responses=responses), max_requests=1, max_estimated_usd=1,
+        reasoning_effort=None, store=None,
+    )
+    client.generate("i", "p", "n", {"type": "object"})
+    assert sorted(responses.calls[0]) == ["input", "instructions", "max_output_tokens", "model", "text"]
+
+
+@pytest.mark.parametrize("effort", [None, "minimal", "medium", "max"])
+def test_reasoning_level_does_not_change_request_or_cost_limits(settings, effort):
+    responses = StubResponses(["{}", "{}"])
+    client = MetaClient(
+        settings, client=types.SimpleNamespace(responses=responses), max_requests=1, max_estimated_usd=1,
+        reasoning_effort=effort,
+    )
+    assert client.generate("i", "p", "n", {"type": "object"}).approx_cost_usd == pytest.approx(0.00975)
+    with pytest.raises(ModelBudgetExceeded, match="request limit"):
+        client.generate("i", "p", "n", {"type": "object"})
+    assert len(responses.calls) == 1
+    tight = MetaClient(
+        settings, client=types.SimpleNamespace(responses=StubResponses(["{}"])), max_requests=1,
+        max_estimated_usd=0.05, reasoning_effort=effort,
+    )
+    with pytest.raises(ModelBudgetExceeded, match="estimated limit"):
+        tight.generate("i", "p", "n", {"type": "object"})
 
 
 @pytest.mark.parametrize("case", load_all_cases(load_settings().scenarios_dir), ids=lambda c: c.case_id)

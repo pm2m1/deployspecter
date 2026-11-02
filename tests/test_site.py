@@ -67,7 +67,10 @@ class TestPages:
 
     def test_external_links_are_only_the_project_and_published_sources(self):
         text = (STATIC / "landing.html").read_text()
-        assert set(re.findall(r'href="(https?://[^"]+)"', text)) == {"https://github.com/pm2m1/deployspecter"}
+        assert set(re.findall(r'href="(https?://[^"]+)"', text)) == {
+            "https://github.com/pm2m1/deployspecter/tree/hackathon-release",
+            "https://github.com/pm2m1/deployspecter/blob/hackathon-release/README.md#setup",
+        }
 
 
 class TestGuidedExecution:
@@ -198,6 +201,38 @@ class TestStaticExport:
             assert '<html lang="en" data-site="static">' in text
         assert "static-only" in (out / "index.html").read_text()
         assert 'own files. <span class="static-only">' in (out / "demo.html").read_text()
+
+    def test_export_links_to_the_public_repository_and_not_to_local_endpoints(self, tmp_path):
+        out = tmp_path / "site"
+        export_static_site(out)
+        allowed = {
+            "https://github.com/pm2m1/deployspecter/tree/hackathon-release",
+            "https://github.com/pm2m1/deployspecter/blob/hackathon-release/README.md#setup",
+        }
+        index = (out / "index.html").read_text()
+        assert set(re.findall(r'href="(https?://[^"]+)"', index)) == allowed
+        for page in ("index.html", "demo.html"):
+            text = (out / page).read_text()
+            assert set(re.findall(r'href="(https?://[^"]+)"', text)) <= allowed
+            assert "Run it locally" not in text and "127.0.0.1" not in text and "CHANGE_ME" not in text
+            assert "local-only" not in text and 'href="app"' not in text
+        assert 'href="demo.html"' in index
+
+    def test_export_says_the_walkthrough_is_recorded(self, tmp_path):
+        out = tmp_path / "site"
+        export_static_site(out)
+        assert "replays saved runs and doesn't touch a database" in (out / "index.html").read_text()
+        assert "This page needs no database" in (out / "demo.html").read_text()
+
+    def test_export_keeps_the_published_sources(self, tmp_path):
+        out = tmp_path / "site"
+        export_static_site(out)
+        data = (out / "static" / "data" / "site.json").read_text()
+        assert "merge_requests/246505" in data and "merge_requests/246509" in data
+
+    def test_local_page_keeps_its_links_and_setup(self):
+        text = (STATIC / "landing.html").read_text()
+        assert "github.com/pm2m1/deployspecter/tree/hackathon-release" in text and "Run it locally" in text
 
     def test_old_fragments_do_not_redirect_to_a_missing_workbench_in_the_export(self):
         assert "!window.DEPLOYSPECTER?.staticSite" in (STATIC / "js" / "landing.js").read_text()
