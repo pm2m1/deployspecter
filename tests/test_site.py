@@ -189,6 +189,19 @@ class TestStaticExport:
         assert not (out / "app.html").exists() and not (out / "static" / "js" / "app").exists()
         assert not list(out.rglob("*.py")) and not list(out.rglob("*.sqlite*"))
 
+    def test_export_has_no_workbench_link_even_without_javascript(self, tmp_path):
+        out = tmp_path / "site"
+        export_static_site(out)
+        for page in ("index.html", "demo.html"):
+            text = (out / page).read_text()
+            assert 'href="app"' not in text and "live-only" not in text
+            assert '<html lang="en" data-site="static">' in text
+        assert "static-only" in (out / "index.html").read_text()
+        assert 'own files. <span class="static-only">' in (out / "demo.html").read_text()
+
+    def test_old_fragments_do_not_redirect_to_a_missing_workbench_in_the_export(self):
+        assert "!window.DEPLOYSPECTER?.staticSite" in (STATIC / "js" / "landing.js").read_text()
+
     def test_links_in_export_resolve(self, tmp_path):
         out = tmp_path / "site"
         export_static_site(out)

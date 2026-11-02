@@ -7,6 +7,7 @@ copies an explicit list of files, so nothing else in the repository can reach it
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import statistics
 from pathlib import Path
@@ -128,6 +129,13 @@ def write_site_data(settings: Settings, path: Path = SITE_DATA) -> Path:
     return path
 
 
+def _static_markup(html: str) -> str:
+    """Removes workbench links and text, so they can't appear even with JavaScript off, and sets the static mode."""
+    html = re.sub(r'\s*<a\b[^>]*\blive-only\b[^>]*>.*?</a>', "", html, flags=re.S)
+    html = re.sub(r'<span\b[^>]*\blive-only\b[^>]*>.*?</span>', "", html, flags=re.S)
+    return html.replace('<html lang="en">', '<html lang="en" data-site="static">', 1)
+
+
 def export_static_site(out_dir: Path) -> list[str]:
     """Writes the recorded experience only: no workbench, no API and no database."""
     if out_dir.exists():
@@ -138,6 +146,9 @@ def export_static_site(out_dir: Path) -> list[str]:
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(STATIC / source, destination)
         written.append(target)
+    for page in ("index.html", "demo.html"):
+        path = out_dir / page
+        path.write_text(_static_markup(path.read_text()))
     config = out_dir / "static" / "js" / "config.js"
     config.write_text("window.DEPLOYSPECTER = {staticSite: true};\n")
     written.append("static/js/config.js")

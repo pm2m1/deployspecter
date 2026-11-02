@@ -67,7 +67,7 @@ uv run deployspecter build-demo-data          # re-record the walkthrough on Pos
 uv run deployspecter export-site --out dist/site   # static copy of the homepage and recorded walkthrough
 ```
 
-The static copy has no workbench, API or database.
+The static copy has no workbench, API or database. Host only that copy. The workbench is for your own machine: `serve` binds to 127.0.0.1, its API has no authentication, and it should not be exposed publicly.
 
 ## Reproduce one failure
 
@@ -120,10 +120,10 @@ The interface's pipeline tab shows each stage for any recorded response, includi
 | Hand-written | 2/2 | 2/2 | 0/2 | 4 | 0 | 0 |
 
 - **Muse Spark found no more defects than the non-LLM systems.**
-- Its measured edges are narrow: fewer schedules on 2 of 5 scenarios (4 vs 48, 4 vs 53), and sounder data flow on one, where Baseline B reached a violation with a guessed value.
+- Its measured edges are narrow: fewer schedules on 2 of 5 scenarios (4 vs 48, 4 vs 53), and sounder data flow on one, where Baseline B reached a violation with a guessed value. Baseline B needed fewer on another (1 vs 3).
 - The non-LLM harnesses were far faster overall, because a schedule takes milliseconds and a model response about a minute.
 - First-response validity was 27 of 32 tests on development cases and 18 of 22 on held-out cases, where one whole response was rejected over actor names and never executed.
-- Baseline C, added later with these fixtures in view, also found all 5 defects with no false flags. It isn't part of the tables above.
+- Baseline C, added later with these fixtures in view, also found all 5 defects with no false flags in its second run. Its first run's 2 false flags came from generator input mistakes, fixed before that run. It isn't part of the tables above.
 
 Costs are estimates at [Meta's published standard rates](https://dev.meta.ai/docs/pricing-rate-limits), not billing data.
 

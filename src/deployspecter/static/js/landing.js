@@ -3,7 +3,10 @@ import {renderCallouts, renderTimeline} from "./lib/timeline.js";
 
 // Links to the old single-page interface used these fragments on the root URL.
 const OLD_TABS = ["gitlab", "scenarios", "pipeline", "comparison"];
-const followOldLink = () => { if (OLD_TABS.includes(location.hash.slice(1))) location.replace(`app${location.hash}`); };
+// The static export has no workbench, so there these fragments stay on this page.
+const followOldLink = () => {
+  if (!window.DEPLOYSPECTER?.staticSite && OLD_TABS.includes(location.hash.slice(1))) location.replace(`app${location.hash}`);
+};
 followOldLink();
 window.addEventListener("hashchange", followOldLink);
 
