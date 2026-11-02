@@ -114,6 +114,27 @@ def test_usage_and_cost_are_captured(settings):
     assert (reply.input_tokens, reply.output_tokens, reply.reasoning_tokens) == (1000, 2000, 1500)
     assert reply.approx_cost_usd == pytest.approx(0.00975)
     assert responses.calls[0]["text"]["format"]["strict"] is True
+    assert responses.calls[0]["reasoning"] == {"effort": "medium"}
+    assert responses.calls[0]["store"] is False
+
+
+def test_legacy_request_configuration_omits_new_fields(settings):
+    responses = StubResponses(["{}"])
+    client = MetaClient(
+        settings, client=types.SimpleNamespace(responses=responses),
+        max_requests=1, max_estimated_usd=1,
+        reasoning_effort=None, store=None,
+    )
+    client.generate("i", "p", "n", {"type": "object"})
+    assert "reasoning" not in responses.calls[0]
+    assert "store" not in responses.calls[0]
+
+
+def test_invalid_reasoning_effort_fails_without_request(settings):
+    responses = StubResponses(["{}"])
+    with pytest.raises(ValueError, match="reasoning_effort"):
+        MetaClient(settings, client=types.SimpleNamespace(responses=responses), reasoning_effort="maximum")
+    assert not responses.calls
 
 
 @pytest.mark.parametrize("case", load_all_cases(load_settings().scenarios_dir), ids=lambda c: c.case_id)
