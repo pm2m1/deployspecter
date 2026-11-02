@@ -135,9 +135,17 @@ This example is separate from the benchmark and changes none of its numbers. It 
 uv run deployspecter documented-defect
 ```
 
-A source table holds one row per access level, and a trigger maintains a one-row-per-pair destination table. With the original delete logic, deleting one access level removes the destination row while another source row remains. This fails in a single transaction and in every schedule tested, so it is a migration semantics defect rather than a race. With the delete logic of GitLab's fix, the same test keeps the pair at the lowest remaining level, which is not a proof of safety in general.
+A source table holds one row per access level, and a trigger maintains a one-row-per-pair destination table. With the original delete logic, deleting one access level removes the destination row while another source row remains. This fails in a single transaction and in every schedule tested, so it is a migration semantics defect rather than a race. With the delete logic of GitLab's fix, the same hand-written test keeps the pair at the lowest remaining level. Passing that one test does not prove general safety, including under concurrency.
 
-Baseline B misses this defect, because it seeds one row per pair. Baseline C, which was written with this defect known, finds it. Muse Spark has not been evaluated on this example.
+Baseline B misses this defect, because it seeds one row per pair. Baseline C finds it, but it was written with this defect known, so that result is not blind. The hand-written test also finds it and is not blind either.
+
+### Muse Spark on this example
+
+Muse Spark did not detect this defect: 0 of 3 responses on the original trigger. This was a targeted, post-hoc experiment on a fixture whose defect was already known, not an independent or blind evaluation. The model received only the source, the extracted statement catalog and the schema, using prompt v2 unchanged. Each response had a budget of 300 schedules and 60 s.
+
+Across six responses, three on each trigger, 11 of 24 proposed tests were valid. Another 12 were rejected because they seeded a destination row the trigger had already created, and 1 omitted a required parameter. Each response on the original trigger proposed a test aimed at the delete behaviour, but all three tests were among those rejected seeds, so none of them ran. A response's written description of the behaviour doesn't count as detection. All 6 requests succeeded, with no retries or repairs, at about $0.36 estimated cost, which is not billing data.
+
+This section reports detection of the published defect only. It is not a safety result for the corrected trigger, and it says nothing about GitLab's production systems. The experiment's raw outputs are not in this repository.
 
 ## Limitations
 
