@@ -1,4 +1,8 @@
-"""Meta Model API client (Responses API through the OpenAI SDK). Never logs the key."""
+"""Meta Model API client (Responses API through the OpenAI SDK). Never logs the key.
+
+New requests use explicit medium reasoning and store=False. Pass both options as None
+only to reproduce historical provider-default requests; never rewrite frozen records.
+"""
 
 from __future__ import annotations
 
@@ -67,8 +71,13 @@ class MetaClient:
     def __init__(
         self, settings: Settings, client: Any | None = None, timeout: float = 300.0,
         max_requests: int = 0, max_estimated_usd: float = 0.0,
+        reasoning_effort: str | None = "medium", store: bool | None = False,
     ) -> None:
         self.model = settings.model_name
+        if reasoning_effort not in {None, "low", "medium", "high"}:
+            raise ValueError("reasoning_effort must be low, medium, high or None (legacy)")
+        self.reasoning_effort = reasoning_effort
+        self.store = store
         self.max_requests = max_requests
         self.max_estimated_usd = max_estimated_usd
         self.requests_sent = 0
@@ -103,7 +112,13 @@ class MetaClient:
         # Charged up front so a failed request still counts against the limit.
         self.estimated_usd += worst_case
         started = time.perf_counter()
+        request_options: dict[str, Any] = {}
+        if self.reasoning_effort is not None:
+            request_options["reasoning"] = {"effort": self.reasoning_effort}
+        if self.store is not None:
+            request_options["store"] = self.store
         response = self._client.responses.create(
+            **request_options,
             model=self.model,
             instructions=instructions,
             input=prompt,
