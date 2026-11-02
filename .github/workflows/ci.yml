@@ -1,0 +1,43 @@
+name: Offline checks
+
+on:
+  push:
+    branches: [main, hackathon-release]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: deployspecter
+          POSTGRES_DB: deployspecter
+          POSTGRES_PASSWORD: ci-only-not-a-secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U deployspecter"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      # A throwaway service database. No model key is supplied, so no model request can be authenticated.
+      DATABASE_URL: postgresql://deployspecter:ci-only-not-a-secret@127.0.0.1:5432/deployspecter
+      MODEL_API_KEY: ""
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        with:
+          python-version: "3.12"
+      - run: uv sync --frozen
+      - run: uv run --frozen ruff check .
+      - run: uv run --frozen pytest -m "not live"
+      - run: uv run --frozen deployspecter reproduce-public-evidence

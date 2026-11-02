@@ -125,6 +125,12 @@ def _cmd_build_demo(args) -> int:
     return 0
 
 
+def _cmd_reproduce_public_evidence(args) -> int:
+    from .public_reproduction import main as reproduce
+
+    return reproduce(["--json", args.json] if args.json else [])
+
+
 def _cmd_export_site(args) -> int:
     from .site import export_static_site
 
@@ -200,6 +206,13 @@ def main() -> None:
     export = sub.add_parser("export-site", help="write the recorded site as static files; needs no database")
     export.add_argument("--out", default="dist/site")
     export.set_defaults(func=_cmd_export_site)
+
+    reproduce = sub.add_parser(
+        "reproduce-public-evidence",
+        help="re-check the published GitLab-fixture evidence on PostgreSQL; makes no model requests",
+    )
+    reproduce.add_argument("--json", help="also write the full report to this file")
+    reproduce.set_defaults(func=_cmd_reproduce_public_evidence)
 
     usage = sub.add_parser("usage", help="summarize recorded model usage; makes no requests")
     usage.set_defaults(func=_cmd_usage)
