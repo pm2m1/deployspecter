@@ -79,4 +79,4 @@ This was post-hoc development on a known fixture, using a tool built after these
 
 ## Check it yourself
 
-Run `python verify_package.py` here. To rebuild the buggy-fixture prompt, check out commit `2dd347b`, load the case with `deployspecter.scenarios.load_case` and call `analyzer.build_prompt` with the fixture's schema. `analyzer.prompt_identity` should give the identity above.
+Run `python verify_package.py` here to check hashes without a database. From the repository root, with PostgreSQL running as in the main README's Setup section, run `uv run deployspecter reproduce-public-evidence` to re-execute the three buggy-fixture responses, the documented defect and the buggy-fixture baselines. It makes no model requests. To rebuild the buggy-fixture prompt, check out commit `2dd347b`, load the case with `deployspecter.scenarios.load_case` and call `analyzer.build_prompt` with the fixture's schema. `analyzer.prompt_identity` should give the identity above.

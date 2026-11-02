@@ -151,6 +151,16 @@ This section reports detection of the published defect only. It is not a safety 
 
 Evidence is in [`results/external_public/gitlab_authorization_sync/20261102T130607Z-public-evidence-gitlab-ai-2aef4b9c09c435b7/`](results/external_public/gitlab_authorization_sync/20261102T130607Z-public-evidence-gitlab-ai-2aef4b9c09c435b7/README.md), which holds the three buggy-fixture responses and their execution results. It is a partial record: some original evidence is withheld, so all six trials can't be fully reproduced from public files. [`OMISSIONS.md`](results/external_public/gitlab_authorization_sync/20261102T130607Z-public-evidence-gitlab-ai-2aef4b9c09c435b7/OMISSIONS.md) lists what is left out.
 
+### Reproduce the public evidence
+
+With PostgreSQL running as in [Setup](#setup), and no model key:
+
+```sh
+uv run deployspecter reproduce-public-evidence
+```
+
+This makes no model requests. It verifies the package's file hashes, replays the three published buggy-fixture responses through the validator, scheduler and oracle, and compares the outcome with the saved results, including the 0 of 3. It also reproduces the documented serial defect with replay, minimization and a separate plain-SQL check, and re-runs Baseline B and Baseline C on the buggy fixture. It prints what it can't reproduce: the withheld corrected-fixture trials, the combined six-request figures, and the original runner. [GitHub Actions](.github/workflows/ci.yml) runs this, the offline tests and Ruff on PostgreSQL 16, with no model key.
+
 ### Later retrospective observation
 
 After that experiment, a deterministic state constructor was developed on a separate branch. It searches orders of a proposal's own seed rows, without changing their values or the test's operations. Applied offline to the saved responses, it made the three defect-aimed proposals executable, and all three then reproduced the original serial defect.
