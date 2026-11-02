@@ -145,7 +145,17 @@ Muse Spark did not detect this defect: 0 of 3 responses on the original trigger.
 
 Across six responses, three on each trigger, 11 of 24 proposed tests were valid. Another 12 were rejected because they seeded a destination row the trigger had already created, and 1 omitted a required parameter. Each response on the original trigger proposed a test aimed at the delete behaviour, but all three tests were among those rejected seeds, so none of them ran. A response's written description of the behaviour doesn't count as detection. All 6 requests succeeded, with no retries or repairs, at about $0.36 estimated cost, which is not billing data.
 
-This section reports detection of the published defect only. It is not a safety result for the corrected trigger, and it says nothing about GitLab's production systems. The experiment's raw outputs are not in this repository.
+The requests left reasoning and storage unset. Each published raw response reports that the provider used high reasoning effort and stored the response.
+
+This section reports detection of the published defect only. It is not a safety result for the corrected trigger, and it says nothing about GitLab's production systems.
+
+Evidence is in [`results/external_public/gitlab_authorization_sync/20261102T130607Z-public-evidence-gitlab-ai-2aef4b9c09c435b7/`](results/external_public/gitlab_authorization_sync/20261102T130607Z-public-evidence-gitlab-ai-2aef4b9c09c435b7/README.md), which holds the three buggy-fixture responses and their execution results. It is a partial record: some original evidence is withheld, so all six trials can't be fully reproduced from public files. [`OMISSIONS.md`](results/external_public/gitlab_authorization_sync/20261102T130607Z-public-evidence-gitlab-ai-2aef4b9c09c435b7/OMISSIONS.md) lists what is left out.
+
+### Later retrospective observation
+
+After that experiment, a deterministic state constructor was developed on a separate branch. It searches orders of a proposal's own seed rows, without changing their values or the test's operations. Applied offline to the saved responses, it made the three defect-aimed proposals executable, and all three then reproduced the original serial defect.
+
+This was post-hoc development on a known fixture, using a tool built after those failures were seen. It is not an independent or blind evaluation. It does not change the recorded 0 of 3, and it doesn't show that any Muse Spark prompt or configuration detects defects better. The constructor is not part of this release. [The details are in the evidence package](results/external_public/gitlab_authorization_sync/20261102T130607Z-public-evidence-gitlab-ai-2aef4b9c09c435b7/derived/retrospective_state_construction.json).
 
 ## Limitations
 

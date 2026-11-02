@@ -1,0 +1,471 @@
+{
+  "schema_version": 1,
+  "case_id": "gitlab_authorization_sync/buggy",
+  "setup_sql": "CREATE TABLE project_grants (\n    user_id      bigint  NOT NULL,\n    project_id   bigint  NOT NULL,\n    access_level integer NOT NULL,\n    PRIMARY KEY (user_id, project_id, access_level)\n);\n\nCREATE TABLE project_grants_compact (\n    user_id      bigint   NOT NULL,\n    project_id   bigint   NOT NULL,\n    access_level smallint NOT NULL,\n    PRIMARY KEY (user_id, project_id)\n);\n\nCREATE FUNCTION sync_project_grants() RETURNS trigger AS $$\nBEGIN\n    IF TG_OP = 'DELETE' THEN\n        DELETE FROM project_grants_compact\n        WHERE user_id = OLD.user_id AND project_id = OLD.project_id;\n        RETURN OLD;\n    END IF;\n\n    INSERT INTO project_grants_compact (user_id, project_id, access_level)\n    VALUES (NEW.user_id, NEW.project_id, NEW.access_level)\n    ON CONFLICT (user_id, project_id) DO UPDATE SET access_level = EXCLUDED.access_level;\n    RETURN NEW;\nEND;\n$$ LANGUAGE plpgsql;\n\nCREATE TRIGGER project_grants_sync AFTER INSERT OR UPDATE OR DELETE ON project_grants\n    FOR EACH ROW EXECUTE FUNCTION sync_project_grants();\n",
+  "requirements": [
+    {
+      "id": "EXT-pair-retained",
+      "text": "If a synchronized user/project pair still has source rows, its destination row must exist.",
+      "kind": "replica_pair_retained",
+      "table": "project_grants_compact",
+      "key_column": "user_id",
+      "column": "access_level",
+      "writers": [],
+      "base_column": null,
+      "base_multiplier": 1.0,
+      "source_table": "project_grants",
+      "key_columns": [
+        "user_id",
+        "project_id"
+      ],
+      "source_ops": [
+        {
+          "function": "permissions.py:grant_access",
+          "op": "insert",
+          "params": {
+            "user_id": "user_id",
+            "project_id": "project_id",
+            "access_level": "access_level"
+          }
+        },
+        {
+          "function": "permissions.py:revoke_access",
+          "op": "delete",
+          "params": {
+            "user_id": "user_id",
+            "project_id": "project_id",
+            "access_level": "access_level"
+          }
+        },
+        {
+          "function": "permissions.py:change_access",
+          "op": "update",
+          "params": {
+            "user_id": "user_id",
+            "project_id": "project_id",
+            "access_level": "old_level",
+            "new_level": "new_level"
+          }
+        },
+        {
+          "function": "backfill.py:backfill_batch",
+          "op": "backfill",
+          "params": {
+            "first_user_id": "first_user_id",
+            "last_user_id": "last_user_id"
+          }
+        }
+      ],
+      "assumptions": [
+        "A source row present before the trigger and not yet backfilled is not yet synchronized, so its absence is not judged.",
+        "This is a minimal fixture, not GitLab's schema, services, locking or production workload."
+      ]
+    }
+  ],
+  "spec": {
+    "name": "revoke one of two access levels",
+    "generator": "hand",
+    "seed": [
+      {
+        "table": "project_grants",
+        "values": [
+          {
+            "column": "user_id",
+            "value": 1
+          },
+          {
+            "column": "project_id",
+            "value": 1
+          },
+          {
+            "column": "access_level",
+            "value": 20
+          }
+        ]
+      },
+      {
+        "table": "project_grants",
+        "values": [
+          {
+            "column": "user_id",
+            "value": 1
+          },
+          {
+            "column": "project_id",
+            "value": 1
+          },
+          {
+            "column": "access_level",
+            "value": 30
+          }
+        ]
+      }
+    ],
+    "actors": [
+      {
+        "name": "revoke_30",
+        "function": "permissions.py:revoke_access",
+        "steps": [
+          {
+            "kind": "begin",
+            "sql": null,
+            "params": {},
+            "bind_as": null,
+            "statement_id": null,
+            "removable": false
+          },
+          {
+            "kind": "sql",
+            "sql": "DELETE FROM project_grants WHERE user_id = %(user_id)s AND project_id = %(project_id)s AND access_level = %(access_level)s",
+            "params": {
+              "user_id": {
+                "name": "user_id",
+                "source": "literal",
+                "value": 1,
+                "bind": null,
+                "row": 0,
+                "column": null,
+                "transform": "none",
+                "operand": null
+              },
+              "project_id": {
+                "name": "project_id",
+                "source": "literal",
+                "value": 1,
+                "bind": null,
+                "row": 0,
+                "column": null,
+                "transform": "none",
+                "operand": null
+              },
+              "access_level": {
+                "name": "access_level",
+                "source": "literal",
+                "value": 30,
+                "bind": null,
+                "row": 0,
+                "column": null,
+                "transform": "none",
+                "operand": null
+              }
+            },
+            "bind_as": null,
+            "statement_id": "permissions.py:revoke_access#0",
+            "removable": false
+          },
+          {
+            "kind": "commit",
+            "sql": null,
+            "params": {},
+            "bind_as": null,
+            "statement_id": null,
+            "removable": false
+          }
+        ]
+      },
+      {
+        "name": "other_pair",
+        "function": "permissions.py:grant_access",
+        "steps": [
+          {
+            "kind": "begin",
+            "sql": null,
+            "params": {},
+            "bind_as": null,
+            "statement_id": null,
+            "removable": false
+          },
+          {
+            "kind": "sql",
+            "sql": "INSERT INTO project_grants (user_id, project_id, access_level) VALUES (%(user_id)s, %(project_id)s, %(access_level)s)",
+            "params": {
+              "user_id": {
+                "name": "user_id",
+                "source": "literal",
+                "value": 2,
+                "bind": null,
+                "row": 0,
+                "column": null,
+                "transform": "none",
+                "operand": null
+              },
+              "project_id": {
+                "name": "project_id",
+                "source": "literal",
+                "value": 2,
+                "bind": null,
+                "row": 0,
+                "column": null,
+                "transform": "none",
+                "operand": null
+              },
+              "access_level": {
+                "name": "access_level",
+                "source": "literal",
+                "value": 30,
+                "bind": null,
+                "row": 0,
+                "column": null,
+                "transform": "none",
+                "operand": null
+              }
+            },
+            "bind_as": null,
+            "statement_id": "permissions.py:grant_access#0",
+            "removable": false
+          },
+          {
+            "kind": "commit",
+            "sql": null,
+            "params": {},
+            "bind_as": null,
+            "statement_id": null,
+            "removable": false
+          }
+        ]
+      }
+    ],
+    "invariants": [],
+    "rationale": "The behaviour GitLab documents in MR !246505."
+  },
+  "schedule": [
+    "other_pair",
+    "other_pair",
+    "other_pair",
+    "revoke_30",
+    "revoke_30",
+    "revoke_30"
+  ],
+  "seed": null,
+  "trace": {
+    "requested_schedule": [
+      "other_pair",
+      "other_pair",
+      "other_pair",
+      "revoke_30",
+      "revoke_30",
+      "revoke_30"
+    ],
+    "issue_order": [
+      "other_pair",
+      "other_pair",
+      "other_pair",
+      "revoke_30",
+      "revoke_30",
+      "revoke_30"
+    ],
+    "records": [
+      {
+        "seq": 0,
+        "actor": "other_pair",
+        "step_index": 0,
+        "kind": "begin",
+        "function": "permissions.py:grant_access",
+        "statement_id": null,
+        "sql": "BEGIN",
+        "params": {},
+        "status": "ok",
+        "rowcount": -1,
+        "rows": null,
+        "command_tag": "BEGIN",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": null,
+        "commit_seq": null,
+        "durable_commit_seq": null
+      },
+      {
+        "seq": 1,
+        "actor": "other_pair",
+        "step_index": 1,
+        "kind": "sql",
+        "function": "permissions.py:grant_access",
+        "statement_id": "permissions.py:grant_access#0",
+        "sql": "INSERT INTO project_grants (user_id, project_id, access_level) VALUES (%(user_id)s, %(project_id)s, %(access_level)s)",
+        "params": {
+          "user_id": 2,
+          "project_id": 2,
+          "access_level": 30
+        },
+        "status": "ok",
+        "rowcount": 1,
+        "rows": null,
+        "command_tag": "INSERT 0 1",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": true,
+        "commit_seq": null,
+        "durable_commit_seq": 1
+      },
+      {
+        "seq": 2,
+        "actor": "other_pair",
+        "step_index": 2,
+        "kind": "commit",
+        "function": "permissions.py:grant_access",
+        "statement_id": null,
+        "sql": "COMMIT",
+        "params": {},
+        "status": "ok",
+        "rowcount": -1,
+        "rows": null,
+        "command_tag": "COMMIT",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": true,
+        "commit_seq": 1,
+        "durable_commit_seq": null
+      },
+      {
+        "seq": 3,
+        "actor": "revoke_30",
+        "step_index": 0,
+        "kind": "begin",
+        "function": "permissions.py:revoke_access",
+        "statement_id": null,
+        "sql": "BEGIN",
+        "params": {},
+        "status": "ok",
+        "rowcount": -1,
+        "rows": null,
+        "command_tag": "BEGIN",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": null,
+        "commit_seq": null,
+        "durable_commit_seq": null
+      },
+      {
+        "seq": 4,
+        "actor": "revoke_30",
+        "step_index": 1,
+        "kind": "sql",
+        "function": "permissions.py:revoke_access",
+        "statement_id": "permissions.py:revoke_access#0",
+        "sql": "DELETE FROM project_grants WHERE user_id = %(user_id)s AND project_id = %(project_id)s AND access_level = %(access_level)s",
+        "params": {
+          "user_id": 1,
+          "project_id": 1,
+          "access_level": 30
+        },
+        "status": "ok",
+        "rowcount": 1,
+        "rows": null,
+        "command_tag": "DELETE 1",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": true,
+        "commit_seq": null,
+        "durable_commit_seq": 2
+      },
+      {
+        "seq": 5,
+        "actor": "revoke_30",
+        "step_index": 2,
+        "kind": "commit",
+        "function": "permissions.py:revoke_access",
+        "statement_id": null,
+        "sql": "COMMIT",
+        "params": {},
+        "status": "ok",
+        "rowcount": -1,
+        "rows": null,
+        "command_tag": "COMMIT",
+        "blocked_by": [],
+        "sqlstate": null,
+        "error": null,
+        "committed": true,
+        "commit_seq": 2,
+        "durable_commit_seq": null
+      }
+    ],
+    "outcome": "completed",
+    "initial_state": {
+      "project_grants": [
+        {
+          "user_id": 1,
+          "project_id": 1,
+          "access_level": 20
+        },
+        {
+          "user_id": 1,
+          "project_id": 1,
+          "access_level": 30
+        }
+      ],
+      "project_grants_compact": [
+        {
+          "user_id": 1,
+          "project_id": 1,
+          "access_level": 30
+        }
+      ]
+    },
+    "final_state": {
+      "project_grants": [
+        {
+          "user_id": 1,
+          "project_id": 1,
+          "access_level": 20
+        },
+        {
+          "user_id": 2,
+          "project_id": 2,
+          "access_level": 30
+        }
+      ],
+      "project_grants_compact": [
+        {
+          "user_id": 2,
+          "project_id": 2,
+          "access_level": 30
+        }
+      ]
+    },
+    "diagnostics": [],
+    "duration_ms": 24.14
+  },
+  "verdict": {
+    "classification": "true_violation",
+    "violations": [
+      {
+        "requirement_id": "EXT-pair-retained",
+        "requirement": "If a synchronized user/project pair still has source rows, its destination row must exist.",
+        "table": "project_grants_compact",
+        "key": [
+          "1",
+          "1"
+        ],
+        "column": "access_level",
+        "expected": "row present",
+        "actual": "<row missing>",
+        "evidence": [
+          4
+        ],
+        "explanation": "Pair ['1', '1'] has 1 source row(s), but its destination row is gone."
+      }
+    ],
+    "checked": [
+      "EXT-pair-retained"
+    ],
+    "vacuous": [],
+    "assumptions": [
+      "Scheduling is at statement and transaction boundaries only; PostgreSQL-internal interleavings are not controlled.",
+      "Each schedule starts from freshly rebuilt schema and seed state.",
+      "A passing result covers only the schedules executed with these inputs; it is not a proof of correctness.",
+      "A source row present before the trigger and not yet backfilled is not yet synchronized, so its absence is not judged.",
+      "This is a minimal fixture, not GitLab's schema, services, locking or production workload."
+    ]
+  },
+  "fingerprint": "895080eb5e809e02f65e60e69e64628549a16a4b362e5154af78b25226c08422",
+  "provenance": {
+    "system": "hand",
+    "test": "revoke one of two access levels",
+    "schedule_index": 0
+  }
+}

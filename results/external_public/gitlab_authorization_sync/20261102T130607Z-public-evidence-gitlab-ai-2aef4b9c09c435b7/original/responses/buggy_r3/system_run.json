@@ -1,0 +1,1506 @@
+{
+  "system": "muse_spark_buggy_r3",
+  "case_id": "gitlab_authorization_sync/buggy",
+  "tests_proposed": 4,
+  "tests_valid": 2,
+  "rejections": [
+    {
+      "test": "revoke_deletes_surviving_levels",
+      "reasons": [
+        "seed rejected by PostgreSQL: duplicate key value violates unique constraint \"project_grants_compact_pkey\"\nDETAIL:  Key (user_id, project_id)=(1, 1) already exists."
+      ]
+    },
+    {
+      "test": "change_overwrites_min",
+      "reasons": [
+        "seed rejected by PostgreSQL: duplicate key value violates unique constraint \"project_grants_compact_pkey\"\nDETAIL:  Key (user_id, project_id)=(3, 1) already exists."
+      ]
+    }
+  ],
+  "runs": [
+    {
+      "exploration": {
+        "spec_name": "concurrent_grants_lose_min",
+        "generator": "ai",
+        "spec_digest": "fc11aa5a05b765f9",
+        "space_size": 20,
+        "executed": 20,
+        "exhausted_space": true,
+        "stopped_by": null,
+        "seed": null,
+        "elapsed_seconds": 0.3635,
+        "classifications": {
+          "no_violation": 20
+        },
+        "outcomes": {
+          "completed": 20
+        },
+        "distinct_behaviours": 14,
+        "deferred_schedules": 6,
+        "non_serial_final_states": 0,
+        "first_violation_index": null,
+        "first_violation_seconds": null,
+        "violates_in_serial_order": false,
+        "violating": [],
+        "violating_total": 0,
+        "first_trace": null,
+        "first_verdict": null,
+        "first_clean_trace": {
+          "requested_schedule": [
+            "grant_high",
+            "grant_high",
+            "grant_high",
+            "grant_low",
+            "grant_low",
+            "grant_low"
+          ],
+          "issue_order": [
+            "grant_high",
+            "grant_high",
+            "grant_high",
+            "grant_low",
+            "grant_low",
+            "grant_low"
+          ],
+          "records": [
+            {
+              "seq": 0,
+              "actor": "grant_high",
+              "step_index": 0,
+              "kind": "begin",
+              "function": "permissions.py:grant_access",
+              "statement_id": null,
+              "sql": "BEGIN",
+              "params": {},
+              "status": "ok",
+              "rowcount": -1,
+              "rows": null,
+              "command_tag": "BEGIN",
+              "blocked_by": [],
+              "sqlstate": null,
+              "error": null,
+              "committed": null,
+              "commit_seq": null,
+              "durable_commit_seq": null
+            },
+            {
+              "seq": 1,
+              "actor": "grant_high",
+              "step_index": 1,
+              "kind": "sql",
+              "function": "permissions.py:grant_access",
+              "statement_id": "permissions.py:grant_access#0",
+              "sql": "INSERT INTO project_grants (user_id, project_id, access_level) VALUES (%(user_id)s, %(project_id)s, %(access_level)s)",
+              "params": {
+                "user_id": 1,
+                "project_id": 1,
+                "access_level": 20
+              },
+              "status": "ok",
+              "rowcount": 1,
+              "rows": null,
+              "command_tag": "INSERT 0 1",
+              "blocked_by": [],
+              "sqlstate": null,
+              "error": null,
+              "committed": true,
+              "commit_seq": null,
+              "durable_commit_seq": 1
+            },
+            {
+              "seq": 2,
+              "actor": "grant_high",
+              "step_index": 2,
+              "kind": "commit",
+              "function": "permissions.py:grant_access",
+              "statement_id": null,
+              "sql": "COMMIT",
+              "params": {},
+              "status": "ok",
+              "rowcount": -1,
+              "rows": null,
+              "command_tag": "COMMIT",
+              "blocked_by": [],
+              "sqlstate": null,
+              "error": null,
+              "committed": true,
+              "commit_seq": 1,
+              "durable_commit_seq": null
+            },
+            {
+              "seq": 3,
+              "actor": "grant_low",
+              "step_index": 0,
+              "kind": "begin",
+              "function": "permissions.py:grant_access",
+              "statement_id": null,
+              "sql": "BEGIN",
+              "params": {},
+              "status": "ok",
+              "rowcount": -1,
+              "rows": null,
+              "command_tag": "BEGIN",
+              "blocked_by": [],
+              "sqlstate": null,
+              "error": null,
+              "committed": null,
+              "commit_seq": null,
+              "durable_commit_seq": null
+            },
+            {
+              "seq": 4,
+              "actor": "grant_low",
+              "step_index": 1,
+              "kind": "sql",
+              "function": "permissions.py:grant_access",
+              "statement_id": "permissions.py:grant_access#0",
+              "sql": "INSERT INTO project_grants (user_id, project_id, access_level) VALUES (%(user_id)s, %(project_id)s, %(access_level)s)",
+              "params": {
+                "user_id": 1,
+                "project_id": 1,
+                "access_level": 10
+              },
+              "status": "ok",
+              "rowcount": 1,
+              "rows": null,
+              "command_tag": "INSERT 0 1",
+              "blocked_by": [],
+              "sqlstate": null,
+              "error": null,
+              "committed": true,
+              "commit_seq": null,
+              "durable_commit_seq": 2
+            },
+            {
+              "seq": 5,
+              "actor": "grant_low",
+              "step_index": 2,
+              "kind": "commit",
+              "function": "permissions.py:grant_access",
+              "statement_id": null,
+              "sql": "COMMIT",
+              "params": {},
+              "status": "ok",
+              "rowcount": -1,
+              "rows": null,
+              "command_tag": "COMMIT",
+              "blocked_by": [],
+              "sqlstate": null,
+              "error": null,
+              "committed": true,
+              "commit_seq": 2,
+              "durable_commit_seq": null
+            }
+          ],
+          "outcome": "completed",
+          "initial_state": {
+            "project_grants": [],
+            "project_grants_compact": []
+          },
+          "final_state": {
+            "project_grants": [
+              {
+                "user_id": 1,
+                "project_id": 1,
+                "access_level": 10
+              },
+              {
+                "user_id": 1,
+                "project_id": 1,
+                "access_level": 20
+              }
+            ],
+            "project_grants_compact": [
+              {
+                "user_id": 1,
+                "project_id": 1,
+                "access_level": 10
+              }
+            ]
+          },
+          "diagnostics": [],
+          "duration_ms": 15.93
+        },
+        "invariants": [
+          {
+            "id": "compact_min",
+            "description": "compact for (1,1) must hold min 10 regardless of commit order",
+            "screened_out": true,
+            "serial_failures": 1,
+            "schedules_failed": 10,
+            "failed_matching_oracle_violation": 0,
+            "failed_with_unrelated_oracle_violation": 0,
+            "failed_without_oracle_violation": 10
+          }
+        ],
+        "assumptions": []
+      },
+      "unverified_flows": [],
+      "dropped_invariants": [],
+      "renamed_actors": {},
+      "spec": {
+        "name": "concurrent_grants_lose_min",
+        "generator": "ai",
+        "seed": [],
+        "actors": [
+          {
+            "name": "grant_low",
+            "function": "permissions.py:grant_access",
+            "steps": [
+              {
+                "kind": "begin",
+                "sql": null,
+                "params": {},
+                "bind_as": null,
+                "statement_id": null,
+                "removable": false
+              },
+              {
+                "kind": "sql",
+                "sql": "INSERT INTO project_grants (user_id, project_id, access_level) VALUES (%(user_id)s, %(project_id)s, %(access_level)s)",
+                "params": {
+                  "user_id": {
+                    "name": "user_id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  "project_id": {
+                    "name": "project_id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  "access_level": {
+                    "name": "access_level",
+                    "source": "literal",
+                    "value": 10,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                },
+                "bind_as": null,
+                "statement_id": "permissions.py:grant_access#0",
+                "removable": false
+              },
+              {
+                "kind": "commit",
+                "sql": null,
+                "params": {},
+                "bind_as": null,
+                "statement_id": null,
+                "removable": false
+              }
+            ]
+          },
+          {
+            "name": "grant_high",
+            "function": "permissions.py:grant_access",
+            "steps": [
+              {
+                "kind": "begin",
+                "sql": null,
+                "params": {},
+                "bind_as": null,
+                "statement_id": null,
+                "removable": false
+              },
+              {
+                "kind": "sql",
+                "sql": "INSERT INTO project_grants (user_id, project_id, access_level) VALUES (%(user_id)s, %(project_id)s, %(access_level)s)",
+                "params": {
+                  "user_id": {
+                    "name": "user_id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  "project_id": {
+                    "name": "project_id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  "access_level": {
+                    "name": "access_level",
+                    "source": "literal",
+                    "value": 20,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                },
+                "bind_as": null,
+                "statement_id": "permissions.py:grant_access#0",
+                "removable": false
+              },
+              {
+                "kind": "commit",
+                "sql": null,
+                "params": {},
+                "bind_as": null,
+                "statement_id": null,
+                "removable": false
+              }
+            ]
+          }
+        ],
+        "invariants": [
+          {
+            "id": "compact_min",
+            "description": "compact for (1,1) must hold min 10 regardless of commit order",
+            "kind": "column_equals",
+            "table": "project_grants_compact",
+            "key_column": "user_id",
+            "key_value": 1,
+            "column": "access_level",
+            "expected": [
+              10
+            ],
+            "other_column": null
+          }
+        ],
+        "rationale": "Same (user,project) granted two different levels concurrently. Correct compact is min 10. Trigger overwrites with NEW level so final can be 20 if high grant commits last."
+      }
+    },
+    {
+      "exploration": {
+        "spec_name": "backfill_preserves_wrong_min",
+        "generator": "ai",
+        "spec_digest": "58d789d37a3a06c3",
+        "space_size": 20,
+        "executed": 20,
+        "exhausted_space": true,
+        "stopped_by": null,
+        "seed": null,
+        "elapsed_seconds": 0.3258,
+        "classifications": {
+          "no_violation": 20
+        },
+        "outcomes": {
+          "completed": 20
+        },
+        "distinct_behaviours": 17,
+        "deferred_schedules": 3,
+        "non_serial_final_states": 0,
+        "first_violation_index": null,
+        "first_violation_seconds": null,
+        "violates_in_serial_order": false,
+        "violating": [],
+        "violating_total": 0,
+        "first_trace": null,
+        "first_verdict": null,
+        "first_clean_trace": {
+          "requested_schedule": [
+            "backfill",
+            "backfill",
+            "backfill",
+            "grant_high",
+            "grant_high",
+            "grant_high"
+          ],
+          "issue_order": [
+            "backfill",
+            "backfill",
+            "backfill",
+            "grant_high",
+            "grant_high",
+            "grant_high"
+          ],
+          "records": [
+            {
+              "seq": 0,
+              "actor": "backfill",
+              "step_index": 0,
+              "kind": "begin",
+              "function": "backfill.py:backfill_batch",
+              "statement_id": null,
+              "sql": "BEGIN",
+              "params": {},
+              "status": "ok",
+              "rowcount": -1,
+              "rows": null,
+              "command_tag": "BEGIN",
+              "blocked_by": [],
+              "sqlstate": null,
+              "error": null,
+              "committed": null,
+              "commit_seq": null,
+              "durable_commit_seq": null
+            },
+            {
+              "seq": 1,
+              "actor": "backfill",
+              "step_index": 1,
+              "kind": "sql",
+              "function": "backfill.py:backfill_batch",
+              "statement_id": "backfill.py:backfill_batch#0",
+              "sql": "INSERT INTO project_grants_compact (user_id, project_id, access_level) SELECT user_id, project_id, min(access_level) FROM project_grants WHERE user_id BETWEEN %(first_user_id)s AND %(last_user_id)s GROUP BY user_id, project_id ON CONFLICT (user_id, project_id) DO NOTHING",
+              "params": {
+                "first_user_id": 1,
+                "last_user_id": 1
+              },
+              "status": "ok",
+              "rowcount": 0,
+              "rows": null,
+              "command_tag": "INSERT 0 0",
+              "blocked_by": [],
+              "sqlstate": null,
+              "error": null,
+              "committed": true,
+              "commit_seq": null,
+              "durable_commit_seq": 1
+            },
+            {
+              "seq": 2,
+              "actor": "backfill",
+              "step_index": 2,
+              "kind": "commit",
+              "function": "backfill.py:backfill_batch",
+              "statement_id": null,
+              "sql": "COMMIT",
+              "params": {},
+              "status": "ok",
+              "rowcount": -1,
+              "rows": null,
+              "command_tag": "COMMIT",
+              "blocked_by": [],
+              "sqlstate": null,
+              "error": null,
+              "committed": true,
+              "commit_seq": 1,
+              "durable_commit_seq": null
+            },
+            {
+              "seq": 3,
+              "actor": "grant_high",
+              "step_index": 0,
+              "kind": "begin",
+              "function": "permissions.py:grant_access",
+              "statement_id": null,
+              "sql": "BEGIN",
+              "params": {},
+              "status": "ok",
+              "rowcount": -1,
+              "rows": null,
+              "command_tag": "BEGIN",
+              "blocked_by": [],
+              "sqlstate": null,
+              "error": null,
+              "committed": null,
+              "commit_seq": null,
+              "durable_commit_seq": null
+            },
+            {
+              "seq": 4,
+              "actor": "grant_high",
+              "step_index": 1,
+              "kind": "sql",
+              "function": "permissions.py:grant_access",
+              "statement_id": "permissions.py:grant_access#0",
+              "sql": "INSERT INTO project_grants (user_id, project_id, access_level) VALUES (%(user_id)s, %(project_id)s, %(access_level)s)",
+              "params": {
+                "user_id": 1,
+                "project_id": 1,
+                "access_level": 30
+              },
+              "status": "ok",
+              "rowcount": 1,
+              "rows": null,
+              "command_tag": "INSERT 0 1",
+              "blocked_by": [],
+              "sqlstate": null,
+              "error": null,
+              "committed": true,
+              "commit_seq": null,
+              "durable_commit_seq": 2
+            },
+            {
+              "seq": 5,
+              "actor": "grant_high",
+              "step_index": 2,
+              "kind": "commit",
+              "function": "permissions.py:grant_access",
+              "statement_id": null,
+              "sql": "COMMIT",
+              "params": {},
+              "status": "ok",
+              "rowcount": -1,
+              "rows": null,
+              "command_tag": "COMMIT",
+              "blocked_by": [],
+              "sqlstate": null,
+              "error": null,
+              "committed": true,
+              "commit_seq": 2,
+              "durable_commit_seq": null
+            }
+          ],
+          "outcome": "completed",
+          "initial_state": {
+            "project_grants": [
+              {
+                "user_id": 1,
+                "project_id": 1,
+                "access_level": 10
+              },
+              {
+                "user_id": 1,
+                "project_id": 1,
+                "access_level": 20
+              }
+            ],
+            "project_grants_compact": [
+              {
+                "user_id": 1,
+                "project_id": 1,
+                "access_level": 20
+              }
+            ]
+          },
+          "final_state": {
+            "project_grants": [
+              {
+                "user_id": 1,
+                "project_id": 1,
+                "access_level": 10
+              },
+              {
+                "user_id": 1,
+                "project_id": 1,
+                "access_level": 20
+              },
+              {
+                "user_id": 1,
+                "project_id": 1,
+                "access_level": 30
+              }
+            ],
+            "project_grants_compact": [
+              {
+                "user_id": 1,
+                "project_id": 1,
+                "access_level": 30
+              }
+            ]
+          },
+          "diagnostics": [],
+          "duration_ms": 16.74
+        },
+        "invariants": [
+          {
+            "id": "backfill_min",
+            "description": "min of 10,20,30 is 10 regardless of backfill snapshot timing",
+            "screened_out": true,
+            "serial_failures": 2,
+            "schedules_failed": 20,
+            "failed_matching_oracle_violation": 0,
+            "failed_with_unrelated_oracle_violation": 0,
+            "failed_without_oracle_violation": 20
+          }
+        ],
+        "assumptions": []
+      },
+      "unverified_flows": [],
+      "dropped_invariants": [],
+      "renamed_actors": {},
+      "spec": {
+        "name": "backfill_preserves_wrong_min",
+        "generator": "ai",
+        "seed": [
+          {
+            "table": "project_grants",
+            "values": [
+              {
+                "column": "user_id",
+                "value": 1
+              },
+              {
+                "column": "project_id",
+                "value": 1
+              },
+              {
+                "column": "access_level",
+                "value": 10
+              }
+            ]
+          },
+          {
+            "table": "project_grants",
+            "values": [
+              {
+                "column": "user_id",
+                "value": 1
+              },
+              {
+                "column": "project_id",
+                "value": 1
+              },
+              {
+                "column": "access_level",
+                "value": 20
+              }
+            ]
+          }
+        ],
+        "actors": [
+          {
+            "name": "backfill",
+            "function": "backfill.py:backfill_batch",
+            "steps": [
+              {
+                "kind": "begin",
+                "sql": null,
+                "params": {},
+                "bind_as": null,
+                "statement_id": null,
+                "removable": false
+              },
+              {
+                "kind": "sql",
+                "sql": "INSERT INTO project_grants_compact (user_id, project_id, access_level) SELECT user_id, project_id, min(access_level) FROM project_grants WHERE user_id BETWEEN %(first_user_id)s AND %(last_user_id)s GROUP BY user_id, project_id ON CONFLICT (user_id, project_id) DO NOTHING",
+                "params": {
+                  "first_user_id": {
+                    "name": "first_user_id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  "last_user_id": {
+                    "name": "last_user_id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                },
+                "bind_as": null,
+                "statement_id": "backfill.py:backfill_batch#0",
+                "removable": false
+              },
+              {
+                "kind": "commit",
+                "sql": null,
+                "params": {},
+                "bind_as": null,
+                "statement_id": null,
+                "removable": false
+              }
+            ]
+          },
+          {
+            "name": "grant_high",
+            "function": "permissions.py:grant_access",
+            "steps": [
+              {
+                "kind": "begin",
+                "sql": null,
+                "params": {},
+                "bind_as": null,
+                "statement_id": null,
+                "removable": false
+              },
+              {
+                "kind": "sql",
+                "sql": "INSERT INTO project_grants (user_id, project_id, access_level) VALUES (%(user_id)s, %(project_id)s, %(access_level)s)",
+                "params": {
+                  "user_id": {
+                    "name": "user_id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  "project_id": {
+                    "name": "project_id",
+                    "source": "literal",
+                    "value": 1,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  },
+                  "access_level": {
+                    "name": "access_level",
+                    "source": "literal",
+                    "value": 30,
+                    "bind": null,
+                    "row": 0,
+                    "column": null,
+                    "transform": "none",
+                    "operand": null
+                  }
+                },
+                "bind_as": null,
+                "statement_id": "permissions.py:grant_access#0",
+                "removable": false
+              },
+              {
+                "kind": "commit",
+                "sql": null,
+                "params": {},
+                "bind_as": null,
+                "statement_id": null,
+                "removable": false
+              }
+            ]
+          }
+        ],
+        "invariants": [
+          {
+            "id": "backfill_min",
+            "description": "min of 10,20,30 is 10 regardless of backfill snapshot timing",
+            "kind": "column_equals",
+            "table": "project_grants_compact",
+            "key_column": "user_id",
+            "key_value": 1,
+            "column": "access_level",
+            "expected": [
+              10
+            ],
+            "other_column": null
+          }
+        ],
+        "rationale": "Pre-backfill grants 10,20 with empty compact race with grant of higher level 30. Correct final min is 10. Buggy trigger overwrites compact to 30 and backfill DO NOTHING never corrects it, whether backfill sees 30 or not."
+      }
+    }
+  ],
+  "schedules_executed": 40,
+  "schedule_budget": 300,
+  "violating_schedules": 0,
+  "detected": false,
+  "schedules_to_first_failure": null,
+  "seconds_to_first_failure": null,
+  "detecting_test": null,
+  "violates_in_serial_order": null,
+  "detecting_flows_unverified": [],
+  "violated_requirements": [],
+  "artifact_path": null,
+  "replay": null,
+  "minimized": null,
+  "minimized_replay": null,
+  "minimized_artifact_path": null,
+  "execution_errors": 0,
+  "transaction_conflicts": 0,
+  "non_serial_final_states": 0,
+  "elapsed_seconds": 0.69,
+  "analysis": {
+    "prompt_version": "v2",
+    "prompt_sha256": "f2b8f708df908bc392b90b03635c5d1e98b34d74f07b8384c0e6eab84fc2f0af",
+    "model": "muse-spark-1.3",
+    "attempts": [
+      {
+        "kind": "initial",
+        "reply": {
+          "text": "{\"conflicts\": [{\"column\": \"access_level\", \"functions\": [\"permissions.py:grant_access\", \"permissions.py:grant_access\"], \"risk_explanation\": \"sync trigger does INSERT ... ON CONFLICT DO UPDATE SET access_level=EXCLUDED.access_level, copying NEW.access_level instead of min(access_level). Two concurrent grants for same (user,project) with different levels race last-writer-wins; loser min is lost.\", \"table\": \"project_grants_compact\"}, {\"column\": \"access_level\", \"functions\": [\"permissions.py:revoke_access\", \"backfill.py:backfill_batch\"], \"risk_explanation\": \"DELETE trigger blindly DELETEs compact row for OLD (user,project) even when other access_level rows for same pair remain. Backfill uses ON CONFLICT DO NOTHING so it never repairs a wrong or missing row if its SELECT snapshot missed the survivor or if row already exists with wrong value.\", \"table\": \"project_grants_compact\"}, {\"column\": \"access_level\", \"functions\": [\"permissions.py:change_access\", \"permissions.py:grant_access\"], \"risk_explanation\": \"UPDATE trigger uses same unconditional overwrite path as INSERT. Raising one of several levels for same (user,project) overwrites surviving min with NEW.access_level, losing the true min.\", \"table\": \"project_grants_compact\"}], \"operations\": [{\"function\": \"backfill.py:backfill_batch\", \"summary\": \"copies min(access_level) per (user,project) for user range into compact with ON CONFLICT DO NOTHING\", \"tables_read\": [\"project_grants\"], \"tables_written\": [\"project_grants_compact\"]}, {\"function\": \"permissions.py:grant_access\", \"summary\": \"inserts one row into project_grants; trigger upserts compact row\", \"tables_read\": [], \"tables_written\": [\"project_grants\", \"project_grants_compact\"]}, {\"function\": \"permissions.py:revoke_access\", \"summary\": \"deletes one row from project_grants; trigger deletes compact row\", \"tables_read\": [], \"tables_written\": [\"project_grants\", \"project_grants_compact\"]}, {\"function\": \"permissions.py:change_access\", \"summary\": \"updates access_level of one row; trigger overwrites compact row\", \"tables_read\": [\"project_grants\"], \"tables_written\": [\"project_grants\", \"project_grants_compact\"]}], \"tests\": [{\"actors\": [{\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"user_id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}, {\"bind\": null, \"column\": null, \"name\": \"project_id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}, {\"bind\": null, \"column\": null, \"name\": \"access_level\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 10}], \"statement_id\": \"permissions.py:grant_access#0\"}], \"function\": \"permissions.py:grant_access\", \"name\": \"grant_low\"}, {\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"user_id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}, {\"bind\": null, \"column\": null, \"name\": \"project_id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}, {\"bind\": null, \"column\": null, \"name\": \"access_level\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 20}], \"statement_id\": \"permissions.py:grant_access#0\"}], \"function\": \"permissions.py:grant_access\", \"name\": \"grant_high\"}], \"invariants\": [{\"column\": \"access_level\", \"description\": \"compact for (1,1) must hold min 10 regardless of commit order\", \"expected\": [10], \"id\": \"compact_min\", \"key_column\": \"user_id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"project_grants_compact\"}], \"name\": \"concurrent_grants_lose_min\", \"rationale\": \"Same (user,project) granted two different levels concurrently. Correct compact is min 10. Trigger overwrites with NEW level so final can be 20 if high grant commits last.\", \"seed\": []}, {\"actors\": [{\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"user_id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}, {\"bind\": null, \"column\": null, \"name\": \"project_id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}, {\"bind\": null, \"column\": null, \"name\": \"access_level\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 10}], \"statement_id\": \"permissions.py:revoke_access#0\"}], \"function\": \"permissions.py:revoke_access\", \"name\": \"revoke_min\"}, {\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"user_id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 2}, {\"bind\": null, \"column\": null, \"name\": \"project_id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}, {\"bind\": null, \"column\": null, \"name\": \"access_level\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 7}], \"statement_id\": \"permissions.py:grant_access#0\"}], \"function\": \"permissions.py:grant_access\", \"name\": \"grant_other\"}], \"invariants\": [{\"column\": \"access_level\", \"description\": \"after removing 10, survivor 20 must remain as compact min\", \"expected\": [20], \"id\": \"survivor_min\", \"key_column\": \"user_id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"project_grants_compact\"}, {\"column\": \"access_level\", \"description\": \"disjoint grant must create compact row\", \"expected\": [7], \"id\": \"other_row\", \"key_column\": \"user_id\", \"key_value\": 2, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"project_grants_compact\"}], \"name\": \"revoke_deletes_surviving_levels\", \"rationale\": \"Two levels 10,20 exist with correct compact 10. Revoking 10 should leave compact 20, but DELETE trigger deletes whole compact row. Disjoint grant satisfies 2-actor requirement without affecting invariant.\", \"seed\": [{\"table\": \"project_grants\", \"values\": [{\"column\": \"user_id\", \"value\": 1}, {\"column\": \"project_id\", \"value\": 1}, {\"column\": \"access_level\", \"value\": 10}]}, {\"table\": \"project_grants\", \"values\": [{\"column\": \"user_id\", \"value\": 1}, {\"column\": \"project_id\", \"value\": 1}, {\"column\": \"access_level\", \"value\": 20}]}, {\"table\": \"project_grants_compact\", \"values\": [{\"column\": \"user_id\", \"value\": 1}, {\"column\": \"project_id\", \"value\": 1}, {\"column\": \"access_level\", \"value\": 10}]}]}, {\"actors\": [{\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"first_user_id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}, {\"bind\": null, \"column\": null, \"name\": \"last_user_id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}], \"statement_id\": \"backfill.py:backfill_batch#0\"}], \"function\": \"backfill.py:backfill_batch\", \"name\": \"backfill\"}, {\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"user_id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}, {\"bind\": null, \"column\": null, \"name\": \"project_id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}, {\"bind\": null, \"column\": null, \"name\": \"access_level\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 30}], \"statement_id\": \"permissions.py:grant_access#0\"}], \"function\": \"permissions.py:grant_access\", \"name\": \"grant_high\"}], \"invariants\": [{\"column\": \"access_level\", \"description\": \"min of 10,20,30 is 10 regardless of backfill snapshot timing\", \"expected\": [10], \"id\": \"backfill_min\", \"key_column\": \"user_id\", \"key_value\": 1, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"project_grants_compact\"}], \"name\": \"backfill_preserves_wrong_min\", \"rationale\": \"Pre-backfill grants 10,20 with empty compact race with grant of higher level 30. Correct final min is 10. Buggy trigger overwrites compact to 30 and backfill DO NOTHING never corrects it, whether backfill sees 30 or not.\", \"seed\": [{\"table\": \"project_grants\", \"values\": [{\"column\": \"user_id\", \"value\": 1}, {\"column\": \"project_id\", \"value\": 1}, {\"column\": \"access_level\", \"value\": 10}]}, {\"table\": \"project_grants\", \"values\": [{\"column\": \"user_id\", \"value\": 1}, {\"column\": \"project_id\", \"value\": 1}, {\"column\": \"access_level\", \"value\": 20}]}]}, {\"actors\": [{\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"new_level\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 30}, {\"bind\": null, \"column\": null, \"name\": \"user_id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 3}, {\"bind\": null, \"column\": null, \"name\": \"project_id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}, {\"bind\": null, \"column\": null, \"name\": \"old_level\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 20}], \"statement_id\": \"permissions.py:change_access#0\"}], \"function\": \"permissions.py:change_access\", \"name\": \"raise_level\"}, {\"calls\": [{\"bind_as\": null, \"params\": [{\"bind\": null, \"column\": null, \"name\": \"user_id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 4}, {\"bind\": null, \"column\": null, \"name\": \"project_id\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 1}, {\"bind\": null, \"column\": null, \"name\": \"access_level\", \"operand\": null, \"row\": 0, \"source\": \"literal\", \"transform\": \"none\", \"value\": 8}], \"statement_id\": \"permissions.py:grant_access#0\"}], \"function\": \"permissions.py:grant_access\", \"name\": \"grant_other\"}], \"invariants\": [{\"column\": \"access_level\", \"description\": \"rows become 10 and 30 so min stays 10\", \"expected\": [10], \"id\": \"change_min\", \"key_column\": \"user_id\", \"key_value\": 3, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"project_grants_compact\"}, {\"column\": \"access_level\", \"description\": \"disjoint grant creates its row\", \"expected\": [8], \"id\": \"other_row2\", \"key_column\": \"user_id\", \"key_value\": 4, \"kind\": \"column_equals\", \"other_column\": null, \"table\": \"project_grants_compact\"}], \"name\": \"change_overwrites_min\", \"rationale\": \"Levels 10,20 with compact 10; changing 20 to 30 should keep compact 10, but UPDATE trigger copies NEW level 30 over compact, losing min.\", \"seed\": [{\"table\": \"project_grants\", \"values\": [{\"column\": \"user_id\", \"value\": 3}, {\"column\": \"project_id\", \"value\": 1}, {\"column\": \"access_level\", \"value\": 10}]}, {\"table\": \"project_grants\", \"values\": [{\"column\": \"user_id\", \"value\": 3}, {\"column\": \"project_id\", \"value\": 1}, {\"column\": \"access_level\", \"value\": 20}]}, {\"table\": \"project_grants_compact\", \"values\": [{\"column\": \"user_id\", \"value\": 3}, {\"column\": \"project_id\", \"value\": 1}, {\"column\": \"access_level\", \"value\": 10}]}]}]}",
+          "status": "completed",
+          "latency_seconds": 69.332,
+          "input_tokens": 2610,
+          "output_tokens": 13160,
+          "reasoning_tokens": 10042,
+          "approx_cost_usd": 0.059193
+        },
+        "parse_error": null
+      }
+    ],
+    "output": {
+      "operations": [
+        {
+          "function": "backfill.py:backfill_batch",
+          "summary": "copies min(access_level) per (user,project) for user range into compact with ON CONFLICT DO NOTHING",
+          "tables_read": [
+            "project_grants"
+          ],
+          "tables_written": [
+            "project_grants_compact"
+          ]
+        },
+        {
+          "function": "permissions.py:grant_access",
+          "summary": "inserts one row into project_grants; trigger upserts compact row",
+          "tables_read": [],
+          "tables_written": [
+            "project_grants",
+            "project_grants_compact"
+          ]
+        },
+        {
+          "function": "permissions.py:revoke_access",
+          "summary": "deletes one row from project_grants; trigger deletes compact row",
+          "tables_read": [],
+          "tables_written": [
+            "project_grants",
+            "project_grants_compact"
+          ]
+        },
+        {
+          "function": "permissions.py:change_access",
+          "summary": "updates access_level of one row; trigger overwrites compact row",
+          "tables_read": [
+            "project_grants"
+          ],
+          "tables_written": [
+            "project_grants",
+            "project_grants_compact"
+          ]
+        }
+      ],
+      "conflicts": [
+        {
+          "functions": [
+            "permissions.py:grant_access",
+            "permissions.py:grant_access"
+          ],
+          "table": "project_grants_compact",
+          "column": "access_level",
+          "risk_explanation": "sync trigger does INSERT ... ON CONFLICT DO UPDATE SET access_level=EXCLUDED.access_level, copying NEW.access_level instead of min(access_level). Two concurrent grants for same (user,project) with different levels race last-writer-wins; loser min is lost."
+        },
+        {
+          "functions": [
+            "permissions.py:revoke_access",
+            "backfill.py:backfill_batch"
+          ],
+          "table": "project_grants_compact",
+          "column": "access_level",
+          "risk_explanation": "DELETE trigger blindly DELETEs compact row for OLD (user,project) even when other access_level rows for same pair remain. Backfill uses ON CONFLICT DO NOTHING so it never repairs a wrong or missing row if its SELECT snapshot missed the survivor or if row already exists with wrong value."
+        },
+        {
+          "functions": [
+            "permissions.py:change_access",
+            "permissions.py:grant_access"
+          ],
+          "table": "project_grants_compact",
+          "column": "access_level",
+          "risk_explanation": "UPDATE trigger uses same unconditional overwrite path as INSERT. Raising one of several levels for same (user,project) overwrites surviving min with NEW.access_level, losing the true min."
+        }
+      ],
+      "tests": [
+        {
+          "name": "concurrent_grants_lose_min",
+          "rationale": "Same (user,project) granted two different levels concurrently. Correct compact is min 10. Trigger overwrites with NEW level so final can be 20 if high grant commits last.",
+          "seed": [],
+          "actors": [
+            {
+              "name": "grant_low",
+              "function": "permissions.py:grant_access",
+              "calls": [
+                {
+                  "statement_id": "permissions.py:grant_access#0",
+                  "params": [
+                    {
+                      "name": "user_id",
+                      "source": "literal",
+                      "value": 1,
+                      "bind": null,
+                      "row": 0,
+                      "column": null,
+                      "transform": "none",
+                      "operand": null
+                    },
+                    {
+                      "name": "project_id",
+                      "source": "literal",
+                      "value": 1,
+                      "bind": null,
+                      "row": 0,
+                      "column": null,
+                      "transform": "none",
+                      "operand": null
+                    },
+                    {
+                      "name": "access_level",
+                      "source": "literal",
+                      "value": 10,
+                      "bind": null,
+                      "row": 0,
+                      "column": null,
+                      "transform": "none",
+                      "operand": null
+                    }
+                  ],
+                  "bind_as": null
+                }
+              ]
+            },
+            {
+              "name": "grant_high",
+              "function": "permissions.py:grant_access",
+              "calls": [
+                {
+                  "statement_id": "permissions.py:grant_access#0",
+                  "params": [
+                    {
+                      "name": "user_id",
+                      "source": "literal",
+                      "value": 1,
+                      "bind": null,
+                      "row": 0,
+                      "column": null,
+                      "transform": "none",
+                      "operand": null
+                    },
+                    {
+                      "name": "project_id",
+                      "source": "literal",
+                      "value": 1,
+                      "bind": null,
+                      "row": 0,
+                      "column": null,
+                      "transform": "none",
+                      "operand": null
+                    },
+                    {
+                      "name": "access_level",
+                      "source": "literal",
+                      "value": 20,
+                      "bind": null,
+                      "row": 0,
+                      "column": null,
+                      "transform": "none",
+                      "operand": null
+                    }
+                  ],
+                  "bind_as": null
+                }
+              ]
+            }
+          ],
+          "invariants": [
+            {
+              "id": "compact_min",
+              "description": "compact for (1,1) must hold min 10 regardless of commit order",
+              "kind": "column_equals",
+              "table": "project_grants_compact",
+              "key_column": "user_id",
+              "key_value": 1,
+              "column": "access_level",
+              "expected": [
+                10
+              ],
+              "other_column": null
+            }
+          ]
+        },
+        {
+          "name": "revoke_deletes_surviving_levels",
+          "rationale": "Two levels 10,20 exist with correct compact 10. Revoking 10 should leave compact 20, but DELETE trigger deletes whole compact row. Disjoint grant satisfies 2-actor requirement without affecting invariant.",
+          "seed": [
+            {
+              "table": "project_grants",
+              "values": [
+                {
+                  "column": "user_id",
+                  "value": 1
+                },
+                {
+                  "column": "project_id",
+                  "value": 1
+                },
+                {
+                  "column": "access_level",
+                  "value": 10
+                }
+              ]
+            },
+            {
+              "table": "project_grants",
+              "values": [
+                {
+                  "column": "user_id",
+                  "value": 1
+                },
+                {
+                  "column": "project_id",
+                  "value": 1
+                },
+                {
+                  "column": "access_level",
+                  "value": 20
+                }
+              ]
+            },
+            {
+              "table": "project_grants_compact",
+              "values": [
+                {
+                  "column": "user_id",
+                  "value": 1
+                },
+                {
+                  "column": "project_id",
+                  "value": 1
+                },
+                {
+                  "column": "access_level",
+                  "value": 10
+                }
+              ]
+            }
+          ],
+          "actors": [
+            {
+              "name": "revoke_min",
+              "function": "permissions.py:revoke_access",
+              "calls": [
+                {
+                  "statement_id": "permissions.py:revoke_access#0",
+                  "params": [
+                    {
+                      "name": "user_id",
+                      "source": "literal",
+                      "value": 1,
+                      "bind": null,
+                      "row": 0,
+                      "column": null,
+                      "transform": "none",
+                      "operand": null
+                    },
+                    {
+                      "name": "project_id",
+                      "source": "literal",
+                      "value": 1,
+                      "bind": null,
+                      "row": 0,
+                      "column": null,
+                      "transform": "none",
+                      "operand": null
+                    },
+                    {
+                      "name": "access_level",
+                      "source": "literal",
+                      "value": 10,
+                      "bind": null,
+                      "row": 0,
+                      "column": null,
+                      "transform": "none",
+                      "operand": null
+                    }
+                  ],
+                  "bind_as": null
+                }
+              ]
+            },
+            {
+              "name": "grant_other",
+              "function": "permissions.py:grant_access",
+              "calls": [
+                {
+                  "statement_id": "permissions.py:grant_access#0",
+                  "params": [
+                    {
+                      "name": "user_id",
+                      "source": "literal",
+                      "value": 2,
+                      "bind": null,
+                      "row": 0,
+                      "column": null,
+                      "transform": "none",
+                      "operand": null
+                    },
+                    {
+                      "name": "project_id",
+                      "source": "literal",
+                      "value": 1,
+                      "bind": null,
+                      "row": 0,
+                      "column": null,
+                      "transform": "none",
+                      "operand": null
+                    },
+                    {
+                      "name": "access_level",
+                      "source": "literal",
+                      "value": 7,
+                      "bind": null,
+                      "row": 0,
+                      "column": null,
+                      "transform": "none",
+                      "operand": null
+                    }
+                  ],
+                  "bind_as": null
+                }
+              ]
+            }
+          ],
+          "invariants": [
+            {
+              "id": "survivor_min",
+              "description": "after removing 10, survivor 20 must remain as compact min",
+              "kind": "column_equals",
+              "table": "project_grants_compact",
+              "key_column": "user_id",
+              "key_value": 1,
+              "column": "access_level",
+              "expected": [
+                20
+              ],
+              "other_column": null
+            },
+            {
+              "id": "other_row",
+              "description": "disjoint grant must create compact row",
+              "kind": "column_equals",
+              "table": "project_grants_compact",
+              "key_column": "user_id",
+              "key_value": 2,
+              "column": "access_level",
+              "expected": [
+                7
+              ],
+              "other_column": null
+            }
+          ]
+        },
+        {
+          "name": "backfill_preserves_wrong_min",
+          "rationale": "Pre-backfill grants 10,20 with empty compact race with grant of higher level 30. Correct final min is 10. Buggy trigger overwrites compact to 30 and backfill DO NOTHING never corrects it, whether backfill sees 30 or not.",
+          "seed": [
+            {
+              "table": "project_grants",
+              "values": [
+                {
+                  "column": "user_id",
+                  "value": 1
+                },
+                {
+                  "column": "project_id",
+                  "value": 1
+                },
+                {
+                  "column": "access_level",
+                  "value": 10
+                }
+              ]
+            },
+            {
+              "table": "project_grants",
+              "values": [
+                {
+                  "column": "user_id",
+                  "value": 1
+                },
+                {
+                  "column": "project_id",
+                  "value": 1
+                },
+                {
+                  "column": "access_level",
+                  "value": 20
+                }
+              ]
+            }
+          ],
+          "actors": [
+            {
+              "name": "backfill",
+              "function": "backfill.py:backfill_batch",
+              "calls": [
+                {
+                  "statement_id": "backfill.py:backfill_batch#0",
+                  "params": [
+                    {
+                      "name": "first_user_id",
+                      "source": "literal",
+                      "value": 1,
+                      "bind": null,
+                      "row": 0,
+                      "column": null,
+                      "transform": "none",
+                      "operand": null
+                    },
+                    {
+                      "name": "last_user_id",
+                      "source": "literal",
+                      "value": 1,
+                      "bind": null,
+                      "row": 0,
+                      "column": null,
+                      "transform": "none",
+                      "operand": null
+                    }
+                  ],
+                  "bind_as": null
+                }
+              ]
+            },
+            {
+              "name": "grant_high",
+              "function": "permissions.py:grant_access",
+              "calls": [
+                {
+                  "statement_id": "permissions.py:grant_access#0",
+                  "params": [
+                    {
+                      "name": "user_id",
+                      "source": "literal",
+                      "value": 1,
+                      "bind": null,
+                      "row": 0,
+                      "column": null,
+                      "transform": "none",
+                      "operand": null
+                    },
+                    {
+                      "name": "project_id",
+                      "source": "literal",
+                      "value": 1,
+                      "bind": null,
+                      "row": 0,
+                      "column": null,
+                      "transform": "none",
+                      "operand": null
+                    },
+                    {
+                      "name": "access_level",
+                      "source": "literal",
+                      "value": 30,
+                      "bind": null,
+                      "row": 0,
+                      "column": null,
+                      "transform": "none",
+                      "operand": null
+                    }
+                  ],
+                  "bind_as": null
+                }
+              ]
+            }
+          ],
+          "invariants": [
+            {
+              "id": "backfill_min",
+              "description": "min of 10,20,30 is 10 regardless of backfill snapshot timing",
+              "kind": "column_equals",
+              "table": "project_grants_compact",
+              "key_column": "user_id",
+              "key_value": 1,
+              "column": "access_level",
+              "expected": [
+                10
+              ],
+              "other_column": null
+            }
+          ]
+        },
+        {
+          "name": "change_overwrites_min",
+          "rationale": "Levels 10,20 with compact 10; changing 20 to 30 should keep compact 10, but UPDATE trigger copies NEW level 30 over compact, losing min.",
+          "seed": [
+            {
+              "table": "project_grants",
+              "values": [
+                {
+                  "column": "user_id",
+                  "value": 3
+                },
+                {
+                  "column": "project_id",
+                  "value": 1
+                },
+                {
+                  "column": "access_level",
+                  "value": 10
+                }
+              ]
+            },
+            {
+              "table": "project_grants",
+              "values": [
+                {
+                  "column": "user_id",
+                  "value": 3
+                },
+                {
+                  "column": "project_id",
+                  "value": 1
+                },
+                {
+                  "column": "access_level",
+                  "value": 20
+                }
+              ]
+            },
+            {
+              "table": "project_grants_compact",
+              "values": [
+                {
+                  "column": "user_id",
+                  "value": 3
+                },
+                {
+                  "column": "project_id",
+                  "value": 1
+                },
+                {
+                  "column": "access_level",
+                  "value": 10
+                }
+              ]
+            }
+          ],
+          "actors": [
+            {
+              "name": "raise_level",
+              "function": "permissions.py:change_access",
+              "calls": [
+                {
+                  "statement_id": "permissions.py:change_access#0",
+                  "params": [
+                    {
+                      "name": "new_level",
+                      "source": "literal",
+                      "value": 30,
+                      "bind": null,
+                      "row": 0,
+                      "column": null,
+                      "transform": "none",
+                      "operand": null
+                    },
+                    {
+                      "name": "user_id",
+                      "source": "literal",
+                      "value": 3,
+                      "bind": null,
+                      "row": 0,
+                      "column": null,
+                      "transform": "none",
+                      "operand": null
+                    },
+                    {
+                      "name": "project_id",
+                      "source": "literal",
+                      "value": 1,
+                      "bind": null,
+                      "row": 0,
+                      "column": null,
+                      "transform": "none",
+                      "operand": null
+                    },
+                    {
+                      "name": "old_level",
+                      "source": "literal",
+                      "value": 20,
+                      "bind": null,
+                      "row": 0,
+                      "column": null,
+                      "transform": "none",
+                      "operand": null
+                    }
+                  ],
+                  "bind_as": null
+                }
+              ]
+            },
+            {
+              "name": "grant_other",
+              "function": "permissions.py:grant_access",
+              "calls": [
+                {
+                  "statement_id": "permissions.py:grant_access#0",
+                  "params": [
+                    {
+                      "name": "user_id",
+                      "source": "literal",
+                      "value": 4,
+                      "bind": null,
+                      "row": 0,
+                      "column": null,
+                      "transform": "none",
+                      "operand": null
+                    },
+                    {
+                      "name": "project_id",
+                      "source": "literal",
+                      "value": 1,
+                      "bind": null,
+                      "row": 0,
+                      "column": null,
+                      "transform": "none",
+                      "operand": null
+                    },
+                    {
+                      "name": "access_level",
+                      "source": "literal",
+                      "value": 8,
+                      "bind": null,
+                      "row": 0,
+                      "column": null,
+                      "transform": "none",
+                      "operand": null
+                    }
+                  ],
+                  "bind_as": null
+                }
+              ]
+            }
+          ],
+          "invariants": [
+            {
+              "id": "change_min",
+              "description": "rows become 10 and 30 so min stays 10",
+              "kind": "column_equals",
+              "table": "project_grants_compact",
+              "key_column": "user_id",
+              "key_value": 3,
+              "column": "access_level",
+              "expected": [
+                10
+              ],
+              "other_column": null
+            },
+            {
+              "id": "other_row2",
+              "description": "disjoint grant creates its row",
+              "kind": "column_equals",
+              "table": "project_grants_compact",
+              "key_column": "user_id",
+              "key_value": 4,
+              "column": "access_level",
+              "expected": [
+                8
+              ],
+              "other_column": null
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "first_attempt_valid": 2,
+  "first_attempt_proposed": 4,
+  "error": null,
+  "notes": []
+}

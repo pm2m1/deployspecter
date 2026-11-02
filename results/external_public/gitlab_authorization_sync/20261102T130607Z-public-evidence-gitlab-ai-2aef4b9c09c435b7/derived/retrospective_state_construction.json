@@ -1,0 +1,725 @@
+{
+ "kind": "DERIVED, POST-HOC. Not part of the frozen experiment.",
+ "status": "Produced offline after the defect and these failures were known, by a tool developed afterwards and not in this release. The recorded 0 of 3 is unchanged. This is not a blind or independent evaluation, and not a Muse Spark discovery.",
+ "tests": [
+  {
+   "trial": "buggy/r1",
+   "test": "revoke_min_leaves_stale_or_missing",
+   "classification": "CONSTRUCTED_EQUIVALENT",
+   "requested_rows": [
+    {
+     "row_index": 0,
+     "table": "project_grants",
+     "columns": {
+      "user_id": 3,
+      "project_id": 8,
+      "access_level": 10
+     }
+    },
+    {
+     "row_index": 1,
+     "table": "project_grants",
+     "columns": {
+      "user_id": 3,
+      "project_id": 8,
+      "access_level": 20
+     }
+    },
+    {
+     "row_index": 2,
+     "table": "project_grants_compact",
+     "columns": {
+      "user_id": 3,
+      "project_id": 8,
+      "access_level": 10
+     }
+    }
+   ],
+   "candidate_sequence": [
+    {
+     "row": 1,
+     "table": "project_grants",
+     "action": "insert"
+    },
+    {
+     "row": 0,
+     "table": "project_grants",
+     "action": "insert"
+    },
+    {
+     "row": 2,
+     "table": "project_grants_compact",
+     "action": "already_present"
+    }
+   ],
+   "state_after_each_step": [
+    {
+     "project_grants": [
+      {
+       "user_id": 3,
+       "project_id": 8,
+       "access_level": 20
+      }
+     ],
+     "project_grants_compact": [
+      {
+       "user_id": 3,
+       "project_id": 8,
+       "access_level": 20
+      }
+     ]
+    },
+    {
+     "project_grants": [
+      {
+       "user_id": 3,
+       "project_id": 8,
+       "access_level": 10
+      },
+      {
+       "user_id": 3,
+       "project_id": 8,
+       "access_level": 20
+      }
+     ],
+     "project_grants_compact": [
+      {
+       "user_id": 3,
+       "project_id": 8,
+       "access_level": 10
+      }
+     ]
+    },
+    {
+     "project_grants": [
+      {
+       "user_id": 3,
+       "project_id": 8,
+       "access_level": 10
+      },
+      {
+       "user_id": 3,
+       "project_id": 8,
+       "access_level": 20
+      }
+     ],
+     "project_grants_compact": [
+      {
+       "user_id": 3,
+       "project_id": 8,
+       "access_level": 10
+      }
+     ]
+    }
+   ],
+   "final_snapshot": {
+    "project_grants": [
+     {
+      "user_id": 3,
+      "project_id": 8,
+      "access_level": 10
+     },
+     {
+      "user_id": 3,
+      "project_id": 8,
+      "access_level": 20
+     }
+    ],
+    "project_grants_compact": [
+     {
+      "user_id": 3,
+      "project_id": 8,
+      "access_level": 10
+     }
+    ]
+   },
+   "evidence": [
+    "PostgreSQL reached every requested row after a clean rebuild of 2 insert(s).",
+    "2 valid plan(s) rebuilt, ending in 1 distinct state(s), sequences included.",
+    "The same plan gave the same state when repeated.",
+    "A separate plain-SQL check in its own schema found every requested row and the same snapshot."
+   ],
+   "independent_state_check": {
+    "verified": true,
+    "problems": [],
+    "snapshot_sha256": "42bb2dc5cab77f2245d991ab02fdb405279bd211d5297c702235b75857d9a49e",
+    "snapshot_matches_rebuild": true
+   },
+   "assumptions": [],
+   "valid_plans": 2,
+   "distinct_final_states": 1,
+   "rejected_alternatives": 5,
+   "source_operations_preserved": true,
+   "raw_proposal_sha256": "c0d68b28b83ea0adaf7bb426e99c981902279041689376182edf20f4e20be98a",
+   "effective_proposal_sha256": "7187ce4289cfa0c5ddc1a46246d44bd11928af539ba891359d386a83c0280022",
+   "engine_on_buggy": {
+    "schedules": 20,
+    "of": 20,
+    "classifications": {
+     "true_violation": 10,
+     "no_violation": 10
+    },
+    "violating": 10,
+    "first_violation_schedule": 1,
+    "serial": true,
+    "violated": [
+     "EXT-pair-retained"
+    ]
+   },
+   "replay_reproduced": true,
+   "minimized": {
+    "actors": 1,
+    "steps": 3,
+    "seed_rows": 2,
+    "preemptions": 0
+   },
+   "minimized_replay_reproduced": true,
+   "plain_sql_on_buggy": [
+    {
+     "order": [
+      "revoke_min",
+      "backfill"
+     ],
+     "destination_before": [
+      [
+       3,
+       8,
+       10
+      ]
+     ],
+     "source_after": [
+      [
+       3,
+       8,
+       20
+      ]
+     ],
+     "destination_after": [
+      [
+       3,
+       8,
+       20
+      ]
+     ],
+     "row_lost_while_source_remains": false,
+     "missing_pairs": []
+    },
+    {
+     "order": [
+      "backfill",
+      "revoke_min"
+     ],
+     "destination_before": [
+      [
+       3,
+       8,
+       10
+      ]
+     ],
+     "source_after": [
+      [
+       3,
+       8,
+       20
+      ]
+     ],
+     "destination_after": [],
+     "row_lost_while_source_remains": true,
+     "missing_pairs": [
+      [
+       3,
+       8
+      ]
+     ]
+    }
+   ],
+   "plain_sql_serial_failures_on_corrected": 0
+  },
+  {
+   "trial": "buggy/r2",
+   "test": "revoke_sibling_deletes_compact",
+   "classification": "CONSTRUCTED_EQUIVALENT",
+   "requested_rows": [
+    {
+     "row_index": 0,
+     "table": "project_grants",
+     "columns": {
+      "user_id": 8,
+      "project_id": 80,
+      "access_level": 10
+     }
+    },
+    {
+     "row_index": 1,
+     "table": "project_grants",
+     "columns": {
+      "user_id": 8,
+      "project_id": 80,
+      "access_level": 90
+     }
+    },
+    {
+     "row_index": 2,
+     "table": "project_grants_compact",
+     "columns": {
+      "user_id": 8,
+      "project_id": 80,
+      "access_level": 10
+     }
+    }
+   ],
+   "candidate_sequence": [
+    {
+     "row": 1,
+     "table": "project_grants",
+     "action": "insert"
+    },
+    {
+     "row": 0,
+     "table": "project_grants",
+     "action": "insert"
+    },
+    {
+     "row": 2,
+     "table": "project_grants_compact",
+     "action": "already_present"
+    }
+   ],
+   "state_after_each_step": [
+    {
+     "project_grants": [
+      {
+       "user_id": 8,
+       "project_id": 80,
+       "access_level": 90
+      }
+     ],
+     "project_grants_compact": [
+      {
+       "user_id": 8,
+       "project_id": 80,
+       "access_level": 90
+      }
+     ]
+    },
+    {
+     "project_grants": [
+      {
+       "user_id": 8,
+       "project_id": 80,
+       "access_level": 10
+      },
+      {
+       "user_id": 8,
+       "project_id": 80,
+       "access_level": 90
+      }
+     ],
+     "project_grants_compact": [
+      {
+       "user_id": 8,
+       "project_id": 80,
+       "access_level": 10
+      }
+     ]
+    },
+    {
+     "project_grants": [
+      {
+       "user_id": 8,
+       "project_id": 80,
+       "access_level": 10
+      },
+      {
+       "user_id": 8,
+       "project_id": 80,
+       "access_level": 90
+      }
+     ],
+     "project_grants_compact": [
+      {
+       "user_id": 8,
+       "project_id": 80,
+       "access_level": 10
+      }
+     ]
+    }
+   ],
+   "final_snapshot": {
+    "project_grants": [
+     {
+      "user_id": 8,
+      "project_id": 80,
+      "access_level": 10
+     },
+     {
+      "user_id": 8,
+      "project_id": 80,
+      "access_level": 90
+     }
+    ],
+    "project_grants_compact": [
+     {
+      "user_id": 8,
+      "project_id": 80,
+      "access_level": 10
+     }
+    ]
+   },
+   "evidence": [
+    "PostgreSQL reached every requested row after a clean rebuild of 2 insert(s).",
+    "2 valid plan(s) rebuilt, ending in 1 distinct state(s), sequences included.",
+    "The same plan gave the same state when repeated.",
+    "A separate plain-SQL check in its own schema found every requested row and the same snapshot."
+   ],
+   "independent_state_check": {
+    "verified": true,
+    "problems": [],
+    "snapshot_sha256": "f5c238bd9f7b492ea8196ed3dddbcba5d17de8b41391bed17e9f2ef135fc9961",
+    "snapshot_matches_rebuild": true
+   },
+   "assumptions": [],
+   "valid_plans": 2,
+   "distinct_final_states": 1,
+   "rejected_alternatives": 5,
+   "source_operations_preserved": true,
+   "raw_proposal_sha256": "cc382b835d5793c21d18d2461b3aa0689be7592e61122813382d717a39f7ad4f",
+   "effective_proposal_sha256": "318cee51c258967c5d5a974332276b4f9be3484017cb582a9ba438299389bde6",
+   "engine_on_buggy": {
+    "schedules": 20,
+    "of": 20,
+    "classifications": {
+     "true_violation": 10,
+     "no_violation": 10
+    },
+    "violating": 10,
+    "first_violation_schedule": 1,
+    "serial": true,
+    "violated": [
+     "EXT-pair-retained"
+    ]
+   },
+   "replay_reproduced": true,
+   "minimized": {
+    "actors": 1,
+    "steps": 3,
+    "seed_rows": 2,
+    "preemptions": 0
+   },
+   "minimized_replay_reproduced": true,
+   "plain_sql_on_buggy": [
+    {
+     "order": [
+      "revoke_min",
+      "backfill"
+     ],
+     "destination_before": [
+      [
+       8,
+       80,
+       10
+      ]
+     ],
+     "source_after": [
+      [
+       8,
+       80,
+       90
+      ]
+     ],
+     "destination_after": [
+      [
+       8,
+       80,
+       90
+      ]
+     ],
+     "row_lost_while_source_remains": false,
+     "missing_pairs": []
+    },
+    {
+     "order": [
+      "backfill",
+      "revoke_min"
+     ],
+     "destination_before": [
+      [
+       8,
+       80,
+       10
+      ]
+     ],
+     "source_after": [
+      [
+       8,
+       80,
+       90
+      ]
+     ],
+     "destination_after": [],
+     "row_lost_while_source_remains": true,
+     "missing_pairs": [
+      [
+       8,
+       80
+      ]
+     ]
+    }
+   ],
+   "plain_sql_serial_failures_on_corrected": 0
+  },
+  {
+   "trial": "buggy/r3",
+   "test": "revoke_deletes_surviving_levels",
+   "classification": "CONSTRUCTED_EQUIVALENT",
+   "requested_rows": [
+    {
+     "row_index": 0,
+     "table": "project_grants",
+     "columns": {
+      "user_id": 1,
+      "project_id": 1,
+      "access_level": 10
+     }
+    },
+    {
+     "row_index": 1,
+     "table": "project_grants",
+     "columns": {
+      "user_id": 1,
+      "project_id": 1,
+      "access_level": 20
+     }
+    },
+    {
+     "row_index": 2,
+     "table": "project_grants_compact",
+     "columns": {
+      "user_id": 1,
+      "project_id": 1,
+      "access_level": 10
+     }
+    }
+   ],
+   "candidate_sequence": [
+    {
+     "row": 1,
+     "table": "project_grants",
+     "action": "insert"
+    },
+    {
+     "row": 0,
+     "table": "project_grants",
+     "action": "insert"
+    },
+    {
+     "row": 2,
+     "table": "project_grants_compact",
+     "action": "already_present"
+    }
+   ],
+   "state_after_each_step": [
+    {
+     "project_grants": [
+      {
+       "user_id": 1,
+       "project_id": 1,
+       "access_level": 20
+      }
+     ],
+     "project_grants_compact": [
+      {
+       "user_id": 1,
+       "project_id": 1,
+       "access_level": 20
+      }
+     ]
+    },
+    {
+     "project_grants": [
+      {
+       "user_id": 1,
+       "project_id": 1,
+       "access_level": 10
+      },
+      {
+       "user_id": 1,
+       "project_id": 1,
+       "access_level": 20
+      }
+     ],
+     "project_grants_compact": [
+      {
+       "user_id": 1,
+       "project_id": 1,
+       "access_level": 10
+      }
+     ]
+    },
+    {
+     "project_grants": [
+      {
+       "user_id": 1,
+       "project_id": 1,
+       "access_level": 10
+      },
+      {
+       "user_id": 1,
+       "project_id": 1,
+       "access_level": 20
+      }
+     ],
+     "project_grants_compact": [
+      {
+       "user_id": 1,
+       "project_id": 1,
+       "access_level": 10
+      }
+     ]
+    }
+   ],
+   "final_snapshot": {
+    "project_grants": [
+     {
+      "user_id": 1,
+      "project_id": 1,
+      "access_level": 10
+     },
+     {
+      "user_id": 1,
+      "project_id": 1,
+      "access_level": 20
+     }
+    ],
+    "project_grants_compact": [
+     {
+      "user_id": 1,
+      "project_id": 1,
+      "access_level": 10
+     }
+    ]
+   },
+   "evidence": [
+    "PostgreSQL reached every requested row after a clean rebuild of 2 insert(s).",
+    "2 valid plan(s) rebuilt, ending in 1 distinct state(s), sequences included.",
+    "The same plan gave the same state when repeated.",
+    "A separate plain-SQL check in its own schema found every requested row and the same snapshot."
+   ],
+   "independent_state_check": {
+    "verified": true,
+    "problems": [],
+    "snapshot_sha256": "d83a6621385dc248ffc8210cdb409d1a8fff1e179a9d5903198844d20a12f58c",
+    "snapshot_matches_rebuild": true
+   },
+   "assumptions": [],
+   "valid_plans": 2,
+   "distinct_final_states": 1,
+   "rejected_alternatives": 5,
+   "source_operations_preserved": true,
+   "raw_proposal_sha256": "dc1862f5db300e921758d0d215b41195ac60a7761f955e6a2ccb92c56131166b",
+   "effective_proposal_sha256": "b20ebca19d6969690badda9e6ac646d8545fe981caa385b6763908260d8b5a14",
+   "engine_on_buggy": {
+    "schedules": 20,
+    "of": 20,
+    "classifications": {
+     "true_violation": 20
+    },
+    "violating": 20,
+    "first_violation_schedule": 1,
+    "serial": true,
+    "violated": [
+     "EXT-pair-retained"
+    ]
+   },
+   "replay_reproduced": true,
+   "minimized": {
+    "actors": 1,
+    "steps": 3,
+    "seed_rows": 2,
+    "preemptions": 0
+   },
+   "minimized_replay_reproduced": true,
+   "plain_sql_on_buggy": [
+    {
+     "order": [
+      "revoke_min",
+      "grant_other"
+     ],
+     "destination_before": [
+      [
+       1,
+       1,
+       10
+      ]
+     ],
+     "source_after": [
+      [
+       1,
+       1,
+       20
+      ],
+      [
+       2,
+       1,
+       7
+      ]
+     ],
+     "destination_after": [
+      [
+       2,
+       1,
+       7
+      ]
+     ],
+     "row_lost_while_source_remains": true,
+     "missing_pairs": [
+      [
+       1,
+       1
+      ]
+     ]
+    },
+    {
+     "order": [
+      "grant_other",
+      "revoke_min"
+     ],
+     "destination_before": [
+      [
+       1,
+       1,
+       10
+      ]
+     ],
+     "source_after": [
+      [
+       1,
+       1,
+       20
+      ],
+      [
+       2,
+       1,
+       7
+      ]
+     ],
+     "destination_after": [
+      [
+       2,
+       1,
+       7
+      ]
+     ],
+     "row_lost_while_source_remains": true,
+     "missing_pairs": [
+      [
+       1,
+       1
+      ]
+     ]
+    }
+   ],
+   "plain_sql_serial_failures_on_corrected": 0
+  }
+ ]
+}

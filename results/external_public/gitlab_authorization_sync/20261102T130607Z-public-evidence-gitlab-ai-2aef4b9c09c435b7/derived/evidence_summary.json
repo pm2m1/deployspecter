@@ -1,0 +1,219 @@
+{
+  "kind": "DERIVED SUMMARY, built from the original files. Not an original artifact.",
+  "experiment_id": "gitlab-ai-2aef4b9c09c435b7",
+  "started_at_utc": "20261102T130607Z",
+  "base_commit": "2dd347b77a490e3cb8032adb82d6cf315172c8d3",
+  "scope": "Targeted post-hoc experiment on an isolated, minimal PostgreSQL fixture derived from a defect GitLab published. Not blind, not independent, and not evidence about GitLab's production systems.",
+  "evidence_status": "Partial. Some original evidence is withheld, and all six trials can't be fully reproduced from the public files alone.",
+  "result": {
+    "verified_detection_on_buggy_fixture": "0 of 3",
+    "meaning": "A verified detection needs an oracle flag on a valid test, a reproduced replay, an independent PostgreSQL check of the flagged schedule, a failing serial order, and no failing serial order of that test on the corrected fixture."
+  },
+  "prompt": {
+    "version": "v2",
+    "instructions_sha256": "5d38e0f2d6f18d0da7e72769c25d826a338f210666a5521a39657f64b19294c7",
+    "response_schema_sha256": "7dfa99ba042414b428135d417a1e1290c4f19d1d95a4d294c860db9800f2e4ee",
+    "schema_name": "deployspecter_analysis",
+    "user_prompt_sha256": {
+      "buggy": "c36b17ffa1a9cdf8ee36a4f07bbefdb639cc31027475d058f7db1a027a8aa854",
+      "corrected": "a9251c4b70e28aff854f5145fe0d581cd07f44d8b1b851d85701a2910aa47500"
+    },
+    "prompt_identity": {
+      "buggy": "f2b8f708df908bc392b90b03635c5d1e98b34d74f07b8384c0e6eab84fc2f0af",
+      "corrected": "be5671c8e96ee881f65a9471ea49aafa2d1c10f0d2fbc4b90ed03ff3ab84551d"
+    }
+  },
+  "model_request": {
+    "model": "muse-spark-1.3",
+    "fields_sent": [
+      "input",
+      "instructions",
+      "max_output_tokens",
+      "model",
+      "text"
+    ],
+    "max_output_tokens": 24000,
+    "reasoning_effort_sent": null,
+    "store_sent": null,
+    "provider_reported_in_buggy_responses": {
+      "reasoning_effort": "high",
+      "store": true,
+      "temperature": 1.0,
+      "top_p": 1.0
+    }
+  },
+  "budget": {
+    "requests_planned": 6,
+    "sdk_retries": 0,
+    "repairs": 0,
+    "estimated_usd_cap": 1.0,
+    "worst_case_usd": 0.642008,
+    "execution_per_response": {
+      "schedules": 300,
+      "seconds": 60
+    }
+  },
+  "all_six_requests_aggregate": {
+    "sent": 6,
+    "returned": 6,
+    "failed": 0,
+    "input_tokens": 16020,
+    "output_tokens": 80363,
+    "estimated_cost_usd": 0.361568,
+    "latency_seconds": 438.319,
+    "pricing_note": "estimated at Meta's published standard rates, $1.25 input and $4.25 output per MTok; not billing data",
+    "note": "Only the three buggy-fixture requests can be recomputed from public files."
+  },
+  "all_six_responses_proposals_aggregate": {
+    "proposed": 24,
+    "valid": 11,
+    "rejected_duplicate_destination_seed": 12,
+    "rejected_missing_parameter": 1,
+    "note": "Only the buggy-fixture counts can be recomputed from public files."
+  },
+  "buggy_fixture_trials": [
+    {
+      "trial": "buggy/r1",
+      "response_id": "resp_6ae88b1939668d6480744d14",
+      "status": "completed",
+      "latency_seconds": 74.168,
+      "input_tokens": 2610,
+      "output_tokens": 14904,
+      "reasoning_tokens": 11721,
+      "estimated_cost_usd": 0.066605,
+      "tests_proposed": 4,
+      "tests_valid": 2,
+      "rejected_tests": [
+        {
+          "test": "revoke_min_leaves_stale_or_missing",
+          "reasons": [
+            "seed rejected by PostgreSQL: duplicate key value violates unique constraint \"project_grants_compact_pkey\"\nDETAIL:  Key (user_id, project_id)=(3, 8) already exists."
+          ]
+        },
+        {
+          "test": "update_and_insert_overwrite_min",
+          "reasons": [
+            "seed rejected by PostgreSQL: duplicate key value violates unique constraint \"project_grants_compact_pkey\"\nDETAIL:  Key (user_id, project_id)=(4, 9) already exists."
+          ]
+        }
+      ],
+      "outcome": "no_violation_observed",
+      "schedules_executed": 40,
+      "oracle_flagged": false,
+      "known_defect_detected": false,
+      "inconclusive_schedules": 0,
+      "valid_tests_deleting_a_seeded_row_with_a_seeded_sibling": 0
+    },
+    {
+      "trial": "buggy/r2",
+      "response_id": "resp_6ae88bb6c08c3102ea124c94",
+      "status": "completed",
+      "latency_seconds": 59.678,
+      "input_tokens": 2610,
+      "output_tokens": 12041,
+      "reasoning_tokens": 8908,
+      "estimated_cost_usd": 0.054437,
+      "tests_proposed": 4,
+      "tests_valid": 1,
+      "rejected_tests": [
+        {
+          "test": "revoke_sibling_deletes_compact",
+          "reasons": [
+            "seed rejected by PostgreSQL: duplicate key value violates unique constraint \"project_grants_compact_pkey\"\nDETAIL:  Key (user_id, project_id)=(8, 80) already exists."
+          ]
+        },
+        {
+          "test": "concurrent_grants_min_lost",
+          "reasons": [
+            "seed rejected by PostgreSQL: duplicate key value violates unique constraint \"project_grants_compact_pkey\"\nDETAIL:  Key (user_id, project_id)=(999, 999) already exists."
+          ]
+        },
+        {
+          "test": "update_sibling_overwrites_min",
+          "reasons": [
+            "seed rejected by PostgreSQL: duplicate key value violates unique constraint \"project_grants_compact_pkey\"\nDETAIL:  Key (user_id, project_id)=(9, 90) already exists."
+          ]
+        }
+      ],
+      "outcome": "no_violation_observed",
+      "schedules_executed": 20,
+      "oracle_flagged": false,
+      "known_defect_detected": false,
+      "inconclusive_schedules": 0,
+      "valid_tests_deleting_a_seeded_row_with_a_seeded_sibling": 0
+    },
+    {
+      "trial": "buggy/r3",
+      "response_id": "resp_6ae88c525b2faf22101d4a8e",
+      "status": "completed",
+      "latency_seconds": 69.327,
+      "input_tokens": 2610,
+      "output_tokens": 13160,
+      "reasoning_tokens": 10042,
+      "estimated_cost_usd": 0.059193,
+      "tests_proposed": 4,
+      "tests_valid": 2,
+      "rejected_tests": [
+        {
+          "test": "revoke_deletes_surviving_levels",
+          "reasons": [
+            "seed rejected by PostgreSQL: duplicate key value violates unique constraint \"project_grants_compact_pkey\"\nDETAIL:  Key (user_id, project_id)=(1, 1) already exists."
+          ]
+        },
+        {
+          "test": "change_overwrites_min",
+          "reasons": [
+            "seed rejected by PostgreSQL: duplicate key value violates unique constraint \"project_grants_compact_pkey\"\nDETAIL:  Key (user_id, project_id)=(3, 1) already exists."
+          ]
+        }
+      ],
+      "outcome": "no_violation_observed",
+      "schedules_executed": 40,
+      "oracle_flagged": false,
+      "known_defect_detected": false,
+      "inconclusive_schedules": 0,
+      "valid_tests_deleting_a_seeded_row_with_a_seeded_sibling": 0
+    }
+  ],
+  "comparisons_on_buggy_fixture_aggregate_only": {
+    "baseline_b": {
+      "tests_proposed": 12,
+      "tests_valid": 10,
+      "schedules_executed": 200,
+      "oracle_flagged": false,
+      "schedules_to_first_failure": null,
+      "serially_reachable_in_engine": null,
+      "replay_reproduced": null,
+      "minimized_replay_reproduced": null,
+      "inconclusive_schedules": 100,
+      "independent_check_confirmed_flagged_schedule": null,
+      "note": "The original non-LLM generator."
+    },
+    "baseline_c": {
+      "tests_proposed": 27,
+      "tests_valid": 27,
+      "schedules_executed": 300,
+      "oracle_flagged": true,
+      "schedules_to_first_failure": 56,
+      "serially_reachable_in_engine": true,
+      "replay_reproduced": true,
+      "minimized_replay_reproduced": true,
+      "inconclusive_schedules": 22,
+      "independent_check_confirmed_flagged_schedule": true,
+      "note": "Written with this defect known, so not blind. Its artifacts are withheld; its generator is public code."
+    },
+    "hand_written_reference": {
+      "tests_proposed": 1,
+      "tests_valid": 1,
+      "schedules_executed": 20,
+      "oracle_flagged": true,
+      "schedules_to_first_failure": 1,
+      "serially_reachable_in_engine": true,
+      "replay_reproduced": true,
+      "minimized_replay_reproduced": true,
+      "inconclusive_schedules": 0,
+      "independent_check_confirmed_flagged_schedule": true,
+      "note": "Hand-written after the defect was published, so not blind. Artifacts included."
+    }
+  }
+}

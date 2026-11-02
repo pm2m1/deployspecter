@@ -11,7 +11,7 @@
 | `ai_responses/v2/` | Raw model responses with token counts and validation errors |
 | `ai_responses/v1/` | Void responses: a bug in the response schema made them all fail parsing. Kept as a usage record |
 | `audits/` | Offline audit of the model's candidate invariants |
-| `external_public/` | The published GitLab defect run on its minimal fixture, separate from the benchmark above; no model requests |
+| `external_public/` | The published GitLab defect on its minimal fixture, separate from the benchmark above: a hand-written run with no model requests, and a partial evidence package from the targeted Muse Spark experiment |
 | `baseline_c/` | Baseline C on the original fixtures, not part of the published benchmark. The first run's 2 false flags came from generator input mistakes, fixed for the second run |
 
 Earlier `benchmark/dev_*` and `heldout_2026-11-01T102438Z.*` reports are superseded interim runs, kept unchanged. `dev_2026-11-01T095408Z.*` used the void responses.
