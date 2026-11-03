@@ -146,3 +146,24 @@ tests cover:
 5. Running OP-2, then pinning the snapshot and context, which needs a reviewer.
 6. Running OP-3 to OP-7.
 7. Committing any evidence.
+
+## Milestone 2 update
+
+These are now implemented offline, with recording fake connections only. **None has touched PostgreSQL:**
+
+- **`research/track_a/catalog_export.py`:**
+    - the parent-side export, with fixed queries pinned by hash;
+    - a strict assembler that rejects inconsistent or unknown catalog data;
+    - an `information_schema` re-read and comparator;
+    - `pin_from_evidence`, which needs two agreeing exports, an agreeing re-read, the right cluster, database and role,
+      exact statements, and a reviewer attestation;
+    - `pin_context`, which needs a MATCH.
+- **`research/track_a/evidence_binding.py`:**
+    - OP-6's independent check, with typed parameterised predicates;
+    - exact initial-state verification across runs;
+    - run records from traces;
+    - evidence binding.
+- **`research/track_a/acceptance.py`:** gates G0 to G9.
+
+OP-1 to OP-7 are specified exactly in `EXECUTION_MANIFEST_V1.md` and `execution_manifest_v1.json`. **Status:
+WAITING_FOR_EXECUTION_APPROVAL.**

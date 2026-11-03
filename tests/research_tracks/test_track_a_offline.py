@@ -184,19 +184,17 @@ class TestReplayPolicy:
 
 class TestAcceptance:
     def test_nothing_executed_is_not_run_not_pass(self, chain):
-        bundle = {"chain": {"stages": chain.stages, "rechecked": True}, "digests": chain.digests}
-        verdict, judgements = acc.judge(bundle)
-        status = {j.condition: j.status for j in judgements}
-        assert verdict == "FAIL"  # condition 8: source and setup hashes not yet recorded
-        assert status["1_validated"] == "pass"
-        assert all(status[k] == "not_run" for k in ("2_schema_matched", "3_state_checked", "4_supervised",
-                                                    "5_buggy_violates", "6_fixed_passes", "7_replay",
-                                                    "9_fail_closed"))
+        verdict, judgements = acc.judge({"chain": {"stages": chain.stages, "rechecked": True}})
+        status = {j.gate: j.status for j in judgements}
+        assert verdict == "NOT_RUN" and status.pop("G0_validated_proposal") == "pass"
+        assert set(status.values()) == {"not_run"}
 
-    def test_a_dry_run_snapshot_never_passes_condition_2(self):
+    def test_a_dry_run_snapshot_never_passes_the_catalog_gate(self):
         bundle = {"catalog_export": {"source_label": "hand_written_track_a_fixture", "verify_context": "MATCH"}}
-        assert dict((j.condition, j.status) for j in acc.judge(bundle)[1])["2_schema_matched"] == "fail"
+        status = {j.gate: j.status for j in acc.judge(bundle)[1]}
+        assert status["G1_catalog_identity_and_completeness"] == "fail"
 
-    def test_missing_fail_closed_evidence_fails(self):
-        bundle = {"traces": [{"supervised": True, "scoreable": True, "run_id": "r"}]}
-        assert dict((j.condition, j.status) for j in acc.judge(bundle)[1])["9_fail_closed"] == "fail"
+    def test_missing_refusal_evidence_fails(self):
+        bundle = {"runs": [{"supervised": True, "scoreable": True, "run_id": "r"}]}
+        status = {j.gate: j.status for j in acc.judge(bundle)[1]}
+        assert status["G8_unknown_effect_and_incomplete_evidence_refusal"] == "fail"
