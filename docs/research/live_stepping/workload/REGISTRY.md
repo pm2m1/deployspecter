@@ -1,4 +1,4 @@
-# Entrypoint registry (offline step 2, candidate)
+# Entrypoint registry (offline step 2, frozen with WorkloadSpec v2)
 
 `src/deployspecter/live/registry.py`. Research only, database-free and network-free. It never imports or runs an
 application.

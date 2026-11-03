@@ -1,6 +1,6 @@
-# Workload identity (offline step 4, candidate)
+# Workload identity (offline step 4, frozen with WorkloadSpec v2)
 
-`src/deployspecter/live/workload_identity.py`. Pure and offline. WorkloadSpec v2 remains a candidate.
+`src/deployspecter/live/workload_identity.py`. Pure and offline. Frozen with WorkloadSpec v2, identity version `vplan1`.
 
 ## Three identities
 

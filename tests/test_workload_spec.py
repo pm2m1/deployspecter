@@ -18,7 +18,7 @@ from deployspecter.live.workload import WorkloadProposal
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = json.loads((ROOT / "tests/live_app/workload_spec_fixtures.json").read_text())["fixtures"]
-SCHEMA_FILE = ROOT / "docs/research/live_stepping/workload/workload-spec-v2.candidate.schema.json"
+SCHEMA_FILE = ROOT / "docs/research/live_stepping/workload/workload-spec-v2.schema.json"
 HAND = ws.Provenance(origin="hand_written", author="fixture_author")
 
 
@@ -357,12 +357,14 @@ class TestIndependenceAndSchema:
     def test_state_goals_are_not_seed_rows_or_requirements(self):
         assert set(ws.StateGoal.model_fields) == {"entity", "label", "count", "constraints"}
 
-    def test_candidate_schema_file_matches_the_model(self):
+    def test_frozen_schema_file_matches_the_model(self):
         assert json.loads(SCHEMA_FILE.read_text()) == json.loads(json.dumps(ws.json_schema()))
 
     def test_schema_states_its_version_and_status(self):
         schema = ws.json_schema()
-        assert schema["$id"] == "urn:deployspecter:workload-spec:2" and "candidate" in schema["x-status"]
+        assert schema["$id"] == "urn:deployspecter:workload-spec:2" and schema["x-status"] == "frozen"
+        assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
+        assert not (SCHEMA_FILE.parent / "workload-spec-v2.candidate.schema.json").exists()
         assert schema["properties"]["schema_version"] == {"const": 2, "title": "Schema Version", "type": "integer"}
 
 

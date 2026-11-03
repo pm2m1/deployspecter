@@ -1,4 +1,4 @@
-"""Workload specification, schema version 2: a candidate, not yet frozen. Research only; the release doesn't use it.
+"""Workload specification, schema version 2: frozen. Research only; the release doesn't use it.
 
 A specification is declarative data. It names registered entrypoints by identifier, gives typed arguments, selects
 application versions and roles, and may state logical goals about the starting state. It has no field that can carry
@@ -482,12 +482,12 @@ def digest(spec: WorkloadSpec) -> str:
 
 
 def json_schema() -> dict[str, Any]:
-    """The candidate JSON Schema. Necessary, not sufficient: uniqueness and cross-field rules live in the validators."""
+    """The frozen JSON Schema. Necessary, not sufficient: uniqueness and cross-field rules live in the validators."""
     schema = WorkloadSpec.model_json_schema(mode="validation")
     return {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "$id": SCHEMA_ID,
-        "x-status": "candidate, not frozen",
+        "x-status": "frozen",
         "x-not-enforced-by-schema": [
             "unique actor names, argument names and state-goal labels",
             "is_null and not_null take no value; other operators need one",

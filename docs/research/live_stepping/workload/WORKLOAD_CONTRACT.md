@@ -1,7 +1,7 @@
-# Workload contract: version 1 as committed, version 2 as a candidate
+# Workload contract: version 1 as committed, version 2 frozen
 
 Offline research, step 1 of `OFFLINE_WORKLOAD_PLAN.md`. Nothing here calls a model, and no fixture is model output.
-The version 2 schema is a **candidate**, not frozen.
+The version 2 contract is **frozen** (see *Freeze and compatibility* at the end, and `V2_FROZEN_MANIFEST.json`).
 
 ## Version 1 (`src/deployspecter/live/workload.py`, unchanged)
 
@@ -16,7 +16,7 @@ The version 2 schema is a **candidate**, not frozen.
 | Deterministic baselines | The release engine's `models.TestProposal` (Baseline B, the frozen Muse prompt and hand-written specs) is a different, statement-level format: it calls extracted statements by id with seed rows. Version 1 workloads call whole functions, and no baseline emits them yet |
 | Versioning | `schema_version: Literal[1]`, defaulting to 1, so it may be omitted |
 
-## Version 2 candidate (`src/deployspecter/live/workload_spec.py`)
+## Version 2, frozen (`src/deployspecter/live/workload_spec.py`)
 
 ```
 WorkloadSpec
@@ -116,8 +116,8 @@ their explanation would share it. That digest isn't implemented, and must not be
 no authority to run anything. Evaluation-arm membership, and who actually produced a specification, are recorded by
 the harness that requested it and never taken from these fields.
 
-**JSON Schema.** `json_schema()` produces `workload/workload-spec-v2.candidate.schema.json` (draft 2020-12,
-`$id` `urn:deployspecter:workload-spec:2`, `x-status: candidate, not frozen`). The schema is necessary, not
+**JSON Schema.** `json_schema()` produces `workload/workload-spec-v2.schema.json` (draft 2020-12,
+`$id` `urn:deployspecter:workload-spec:2`, `x-status: frozen`). The schema is necessary, not
 sufficient: the rules it can't express are listed in its `x-not-enforced-by-schema` field and enforced by the Python
 validators. A test fails if the file drifts from the model.
 
@@ -147,3 +147,45 @@ arguments, goals, unknown and malformed entrypoints, malformed arguments, unexpe
 and code or SQL placed where it doesn't belong. Eighteen were added for the freeze blockers: unpaired surrogates in
 values, keys and nested goals; each class of control and directional character; international text that must be
 kept; and repeated state-goal labels that differ in everything else.
+
+## Freeze and compatibility
+
+WorkloadSpec v2 was frozen on 2026-11-03, after the readiness audit (`V2_FREEZE_READINESS.md`) and the resolution of
+blockers B1 to B4. The frozen files and their SHA-256 values are listed in `V2_FROZEN_MANIFEST.json`, together with
+the commit that froze them. The freeze changed no validation semantics: only the schema's file name and `x-status`.
+
+**Changing a frozen file.** A frozen file isn't edited. A change to the contract is a new schema version, or a new
+module alongside the frozen ones, with its own review and manifest. The integrity test refuses any edit to a file the
+manifest lists.
+
+**Compatibility:**
+
+- **Version 1 parsing is unchanged.** `live/workload.py` is frozen with Gate 2A and wasn't modified.
+- **Upgrading version 1 to version 2 is a validated conversion.** It happens only through `parse_workload` with
+  caller-stated provenance, and the result must be a valid version 2 specification.
+- **Some version 1 documents valid under version 1 are refused by the stricter version 2 contract.** For example:
+    - a dotted or hyphenated identifier;
+    - text the version 2 text policy refuses, such as a rationale with a line break;
+    - a document whose typed version 2 form exceeds 32 KiB.
+- **Nothing is repaired or renamed during upgrade.** A document that version 2 can't express faithfully is refused.
+- **Actors: 2 to 4,** in the live research contract only. The historical release engine keeps its own, separate limit
+  of 3, and wasn't changed.
+- **Two digests, two meanings.**
+    - The full-record digest (`workload_spec.digest`) identifies a document: every field, including provenance and
+      rationale.
+    - The validated-plan identity (`vplan1:`, `workload_identity`) identifies what a validated workload asks the
+      harness to do, bound to the trusted registry and contract digests. It excludes explanatory and self-reported
+      fields.
+    - Neither stands in for the other, and neither identifies an executed scenario.
+- **Floats are finite IEEE-754 binary64.** There's no NaN, infinity or negative zero, and floats must be written with
+  a fraction or exponent. The plan identity encodes them exactly, with `float.hex()`. The full-record digest uses
+  Python's shortest round-trip form, so it's defined by Python.
+- **Rationale is explanatory metadata.** It's limited to 800 characters of safe text. No stage reads it, and it
+  doesn't affect the plan identity.
+- **A `ValidatedWorkload` isn't execution authorization.** It carries `execution_authorized: False` and
+  `correctness_evaluated: False`. Execution authorization, stage 4, isn't part of this contract and doesn't exist yet.
+
+**What the freeze doesn't claim.** The stages check forged data objects and trusted-object integrity, not hostile
+code running in the same process. Such code could subclass `Registry` or `Contracts`, call `object.__setattr__` on a
+frozen model, or replace these functions. The text policy isn't display safety either: renderers must still escape
+untrusted text.

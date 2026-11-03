@@ -1,4 +1,4 @@
-# Argument validation (offline step 3, candidate)
+# Argument validation (offline step 3, frozen with WorkloadSpec v2)
 
 `src/deployspecter/live/argument_validation.py`. Pure and deterministic: no database, network, oracle, import of
 application code, or execution.
