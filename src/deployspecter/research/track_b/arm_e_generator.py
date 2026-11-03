@@ -19,7 +19,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Iterable
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -69,6 +69,23 @@ class ATranslation(_Strict):
     test_name: str
     document: dict[str, Any] | None = None
     reason: str | None = None
+
+
+@dataclass(frozen=True)
+class GeneratorOptions:
+    """Pure, default-off policy variants, for evaluation only. The defaults reproduce the 0-prototype exactly.
+
+    * ``repair_requires``: when a B variation sets an argument that a contract ``requires`` predicate ties to another,
+      add the other at its canonical value, instead of generating a unit stage 3 will reject. [comparator]
+    * ``single_instance_b``: ``pair_with_partner`` gives an entrypoint with ``max_instances = 1`` B units whose second
+      actor is the first other entrypoint's canonical call, instead of two identical actors it can't have. [comparator]
+    """
+
+    repair_requires: bool = False
+    single_instance_b: Literal["reject", "pair_with_partner"] = "reject"
+
+    def label(self) -> str | None:
+        return None if self == GeneratorOptions() else json.dumps(asdict(self), sort_keys=True)
 
 
 @dataclass(frozen=True)
@@ -205,14 +222,17 @@ def _document(application: str, name: str, actors: list[dict[str, Any]], goals: 
             "actors": actors, "state_goals": goals}
 
 
-def _unit_id(source: str, label: str, document: dict[str, Any]) -> str:
+def _unit_id(source: str, label: str, document: dict[str, Any], options: str | None = None) -> str:
     inputs = {"generator": GENERATOR_VERSION, "source": source, "label": label,
               "actors": document["actors"], "state_goals": document["state_goals"]}
+    if options is not None:
+        inputs["options"] = options
     return hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()
 
 
-def _validate(source: Source, label: str, document: dict[str, Any], registry, contracts) -> Unit:
-    unit_id = _unit_id(source, label, document)
+def _validate(source: Source, label: str, document: dict[str, Any], registry, contracts,
+              options: str | None = None) -> Unit:
+    unit_id = _unit_id(source, label, document, options)
     try:
         spec = ws.parse_workload(document)
     except ValueError as exc:
@@ -230,8 +250,21 @@ def _validate(source: Source, label: str, document: dict[str, Any], registry, co
                 plan_identity=identity.identity.value if identity.supported else None)
 
 
+def _repair(args: dict[str, tuple[str, Any]], contract: av.OperationContract | None, sig) -> dict:
+    if contract is None:
+        return args
+    canonical = {name: values[0] for name, _required, values in sig if values}
+    out = dict(args)
+    for predicate in contract.predicates:
+        if predicate.op == "requires" and out.get(predicate.if_present, ("null", None))[0] != "null" \
+                and predicate.then_present not in out and predicate.then_present in canonical:
+            out[predicate.then_present] = canonical[predicate.then_present]
+    return out
+
+
 def candidates(registry: rg.Registry, contracts: av.Contracts, version: str, policy: GoalPolicy,
-               a_translations: Iterable[ATranslation] = ()) -> tuple[list[tuple[Source, str, dict]], list]:
+               a_translations: Iterable[ATranslation] = (), options: GeneratorOptions | None = None,
+               ) -> tuple[list[tuple[Source, str, dict]], list]:
     """Every candidate document, in generation order, before validation. Pure and exhaustive."""
     if policy.registry_digest != registry.digest or policy.application != registry.application:
         raise ValueError("the goal policy is pinned to a different registry")
@@ -244,8 +277,10 @@ def candidates(registry: rg.Registry, contracts: av.Contracts, version: str, pol
             out.append(("A", f"a:{test.test_name}", json.loads(json.dumps(test.document))))
     entries = [registry.lookup(i) for i in registry.ids() if version in registry.lookup(i).versions]
     sigs = {e.id: _signature(e, contracts.lookup(e.id, version)) for e in entries}
+    options = options or GeneratorOptions()
     for entry in entries:
         sig = sigs[entry.id]
+        partner = next((e for e in entries if e.id != entry.id), None)
         base = _canonical(sig)
         tuples = [("canonical", base)]
         for name, required, values in sig:
@@ -254,7 +289,12 @@ def candidates(registry: rg.Registry, contracts: av.Contracts, version: str, pol
                     continue
                 tuples.append((f"{name}={value[0]}:{json.dumps(value[1])}", {**base, name: value}))
         for label, args in tuples:
-            actors = [_actor("a", entry, version, args), _actor("b", entry, version, args)]
+            if options.repair_requires:
+                args = _repair(args, contracts.lookup(entry.id, version), sig)
+            second = _actor("b", entry, version, args)
+            if entry.max_instances < 2 and options.single_instance_b == "pair_with_partner" and partner is not None:
+                second = _actor("b", partner, version, _canonical(sigs[partner.id]))
+            actors = [_actor("a", entry, version, args), second]
             out.append(("B", f"b:{entry.id}:{label}", _document(registry.application, "arm_e_b", actors,
                                                                 _goals(actors, policy))))
     for i, first in enumerate(entries):
@@ -275,13 +315,16 @@ def candidates(registry: rg.Registry, contracts: av.Contracts, version: str, pol
 
 
 def generate(registry: rg.Registry, contracts: av.Contracts, version: str, policy: GoalPolicy,
-             a_translations: Iterable[ATranslation] = (), max_units: int = MAX_UNITS) -> GenerationResult:
-    found, blocked = candidates(registry, contracts, version, policy, a_translations)
+             a_translations: Iterable[ATranslation] = (), max_units: int = MAX_UNITS,
+             options: GeneratorOptions | None = None) -> GenerationResult:
+    options = options or GeneratorOptions()
+    found, blocked = candidates(registry, contracts, version, policy, a_translations, options)
     result = GenerationResult(blocked_a_tests=blocked, candidates_counted=len(found))
     if len(found) > max_units:
         result.ceiling_reached = True  # E and R blocked for this application; no unit is kept, none truncated
         return result
-    result.units = [_validate(source, label, doc, registry, contracts) for source, label, doc in found]
+    result.units = [_validate(source, label, doc, registry, contracts, options.label())
+                    for source, label, doc in found]
     return result
 
 
