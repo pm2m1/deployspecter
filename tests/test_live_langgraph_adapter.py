@@ -311,9 +311,22 @@ class TestNothingFrozenChanged:
         assert hashlib.sha256(data).hexdigest() == digest
 
     def test_tracked_gate_2a_files_are_unchanged(self):
-        paths = ["src", "tests", "tools", "pyproject.toml", "uv.lock", "results", "scenarios"]
-        done = subprocess.run(["git", "diff", "--quiet", "HEAD", "--", *paths], cwd=ROOT)
-        assert done.returncode == 0
+        """The frozen release engine, the Gate 2A supervision code, its tests and tools, and historical results.
+
+        Not the whole of src: later offline research steps legitimately change their own contract modules.
+        """
+        live = ROOT / "src/deployspecter/live"
+        gate_2a = [str(live / f"{name}.py") for name in (
+            "driver", "runner", "trace", "explore", "supervisor", "worker", "serverlog", "workload")]
+        release = [str(p) for p in (ROOT / "src/deployspecter").glob("*.py")]
+        paths = [*release, *gate_2a, "tests/test_live_stepping.py", "tests/test_live_supervised.py",
+                 "tests/conftest.py", "tools", "pyproject.toml", "uv.lock", "results", "scenarios",
+                 "scenarios_external"]
+        changed = subprocess.run(["git", "diff", "--quiet", "HEAD", "--", *paths], cwd=ROOT)
+        assert changed.returncode == 0, "a tracked frozen file differs from HEAD"
+        untracked = subprocess.run(["git", "status", "--porcelain", "--untracked-files=all", "--", *paths],
+                                   cwd=ROOT, capture_output=True, text=True, check=True)
+        assert untracked.stdout == "", f"new or changed files in frozen paths: {untracked.stdout[:300]}"
 
     def test_engine_and_supervisor_never_import_langgraph(self):
         code = ("import sys, deployspecter.live.supervisor, deployspecter.live.worker, deployspecter.live.runner;"

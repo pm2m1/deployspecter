@@ -22,7 +22,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
-from typing import Annotated, Any, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Literal
 
 from pydantic import (
     BaseModel,
@@ -36,7 +36,8 @@ from pydantic import (
     model_validator,
 )
 
-from .workload import WorkloadProposal
+if TYPE_CHECKING:  # the version 1 module imports the live engine, so it's loaded only when upgrading
+    from .workload import WorkloadProposal
 
 SCHEMA_VERSION = 2
 SCHEMA_ID = "urn:deployspecter:workload-spec:2"
@@ -269,6 +270,8 @@ def parse_workload(document: Any, *, v1_provenance: Provenance | None = None) ->
         if version == 1:
             if v1_provenance is None:
                 raise SpecRejected(["a version 1 document needs its provenance stated by the caller"])
+            from .workload import WorkloadProposal
+
             return upgrade_v1(WorkloadProposal.model_validate(document), v1_provenance)
         return WorkloadSpec.model_validate(document)
     except SpecRejected:
