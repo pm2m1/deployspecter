@@ -1,0 +1,456 @@
+{
+  "$defs": {
+    "ActorSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "application_version": {
+          "pattern": "^[a-z0-9][a-z0-9._-]{0,31}$",
+          "title": "Application Version",
+          "type": "string"
+        },
+        "arguments": {
+          "items": {
+            "$ref": "#/$defs/Argument"
+          },
+          "maxItems": 16,
+          "title": "Arguments",
+          "type": "array"
+        },
+        "entrypoint": {
+          "pattern": "^[a-z][a-z0-9_]{0,47}$",
+          "title": "Entrypoint",
+          "type": "string"
+        },
+        "name": {
+          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,30}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "request",
+            "background_job"
+          ],
+          "title": "Role",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "entrypoint",
+        "application_version",
+        "role"
+      ],
+      "title": "ActorSpec",
+      "type": "object"
+    },
+    "Argument": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "pattern": "^[a-z][a-z0-9_]{0,47}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "value": {
+          "discriminator": {
+            "mapping": {
+              "bool": "#/$defs/BoolValue",
+              "float": "#/$defs/FloatValue",
+              "int": "#/$defs/IntValue",
+              "null": "#/$defs/NullValue",
+              "str": "#/$defs/StrValue"
+            },
+            "propertyName": "type"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/IntValue"
+            },
+            {
+              "$ref": "#/$defs/FloatValue"
+            },
+            {
+              "$ref": "#/$defs/BoolValue"
+            },
+            {
+              "$ref": "#/$defs/StrValue"
+            },
+            {
+              "$ref": "#/$defs/NullValue"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "name",
+        "value"
+      ],
+      "title": "Argument",
+      "type": "object"
+    },
+    "BoolValue": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "bool",
+          "title": "Type",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "type",
+        "value"
+      ],
+      "title": "BoolValue",
+      "type": "object"
+    },
+    "FloatValue": {
+      "additionalProperties": false,
+      "description": "A finite IEEE-754 double. Written with a fraction or exponent, so an integer can never pass as a float.\n\nNegative zero is refused, because it equals zero but serializes differently. Different decimal texts that round to\nthe same double (``0.1`` and ``0.10000000000000001``) are the same value, and canonicalize to the shortest form.",
+      "properties": {
+        "type": {
+          "const": "float",
+          "title": "Type",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "type",
+        "value"
+      ],
+      "title": "FloatValue",
+      "type": "object"
+    },
+    "GoalConstraint": {
+      "additionalProperties": false,
+      "properties": {
+        "field": {
+          "pattern": "^[a-z][a-z0-9_]{0,47}$",
+          "title": "Field",
+          "type": "string"
+        },
+        "op": {
+          "enum": [
+            "eq",
+            "ne",
+            "lt",
+            "le",
+            "gt",
+            "ge",
+            "is_null",
+            "not_null"
+          ],
+          "title": "Op",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "discriminator": {
+                "mapping": {
+                  "bool": "#/$defs/BoolValue",
+                  "float": "#/$defs/FloatValue",
+                  "int": "#/$defs/IntValue",
+                  "null": "#/$defs/NullValue",
+                  "str": "#/$defs/StrValue"
+                },
+                "propertyName": "type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/IntValue"
+                },
+                {
+                  "$ref": "#/$defs/FloatValue"
+                },
+                {
+                  "$ref": "#/$defs/BoolValue"
+                },
+                {
+                  "$ref": "#/$defs/StrValue"
+                },
+                {
+                  "$ref": "#/$defs/NullValue"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "required": [
+        "field",
+        "op"
+      ],
+      "title": "GoalConstraint",
+      "type": "object"
+    },
+    "IntValue": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "int",
+          "title": "Type",
+          "type": "string"
+        },
+        "value": {
+          "exclusiveMaximum": 9223372036854775808,
+          "minimum": -9223372036854775808,
+          "title": "Value",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "type",
+        "value"
+      ],
+      "title": "IntValue",
+      "type": "object"
+    },
+    "NullValue": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "null",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "NullValue",
+      "type": "object"
+    },
+    "Provenance": {
+      "additionalProperties": false,
+      "description": "What the document says about where it came from. Self-reported, so never authoritative.\n\nIt grants no trust and no authority to run anything, and it doesn't decide an evaluation arm. Arm membership and who\nproduced a specification are recorded by the harness that requested it, never taken from this field.",
+      "properties": {
+        "author": {
+          "pattern": "^[a-z][a-z0-9_]{0,47}$",
+          "title": "Author",
+          "type": "string"
+        },
+        "generator_version": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,31}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generator Version"
+        },
+        "note": {
+          "default": "",
+          "maxLength": 400,
+          "pattern": "^[^\\x00-\\x1f\\x7f]*$",
+          "title": "Note",
+          "type": "string"
+        },
+        "origin": {
+          "enum": [
+            "hand_written",
+            "synthetic",
+            "deterministic_baseline",
+            "model_proposal"
+          ],
+          "title": "Origin",
+          "type": "string"
+        }
+      },
+      "required": [
+        "origin",
+        "author"
+      ],
+      "title": "Provenance",
+      "type": "object"
+    },
+    "SourceRef": {
+      "additionalProperties": false,
+      "description": "Lines in a registered source file the proposal points to, with an inert explanation.",
+      "properties": {
+        "claim": {
+          "maxLength": 400,
+          "pattern": "^[^\\x00-\\x1f\\x7f]*$",
+          "title": "Claim",
+          "type": "string"
+        },
+        "end_line": {
+          "minimum": 1,
+          "title": "End Line",
+          "type": "integer"
+        },
+        "path": {
+          "maxLength": 200,
+          "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*(?:/[A-Za-z0-9_][A-Za-z0-9_.-]*)*$",
+          "title": "Path",
+          "type": "string"
+        },
+        "start_line": {
+          "minimum": 1,
+          "title": "Start Line",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path",
+        "start_line",
+        "end_line",
+        "claim"
+      ],
+      "title": "SourceRef",
+      "type": "object"
+    },
+    "StateGoal": {
+      "additionalProperties": false,
+      "description": "A logical statement about the starting state. Never seed rows, and never a requirement or oracle.",
+      "properties": {
+        "constraints": {
+          "items": {
+            "$ref": "#/$defs/GoalConstraint"
+          },
+          "maxItems": 16,
+          "title": "Constraints",
+          "type": "array"
+        },
+        "count": {
+          "default": 1,
+          "maximum": 20,
+          "minimum": 0,
+          "title": "Count",
+          "type": "integer"
+        },
+        "entity": {
+          "pattern": "^[a-z][a-z0-9_]{0,47}$",
+          "title": "Entity",
+          "type": "string"
+        },
+        "label": {
+          "pattern": "^[a-z][a-z0-9_]{0,47}$",
+          "title": "Label",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity",
+        "label"
+      ],
+      "title": "StateGoal",
+      "type": "object"
+    },
+    "StrValue": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "str",
+          "title": "Type",
+          "type": "string"
+        },
+        "value": {
+          "maxLength": 128,
+          "pattern": "^[^\\x00-\\x1f\\x7f]*$",
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "value"
+      ],
+      "title": "StrValue",
+      "type": "object"
+    }
+  },
+  "$id": "urn:deployspecter:workload-spec:2",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "actors": {
+      "items": {
+        "$ref": "#/$defs/ActorSpec"
+      },
+      "maxItems": 4,
+      "minItems": 2,
+      "title": "Actors",
+      "type": "array"
+    },
+    "application": {
+      "pattern": "^[a-z][a-z0-9_]{0,47}$",
+      "title": "Application",
+      "type": "string"
+    },
+    "name": {
+      "pattern": "^[a-z][a-z0-9_]{0,47}$",
+      "title": "Name",
+      "type": "string"
+    },
+    "provenance": {
+      "$ref": "#/$defs/Provenance"
+    },
+    "rationale": {
+      "default": "",
+      "maxLength": 800,
+      "title": "Rationale",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "source_refs": {
+      "items": {
+        "$ref": "#/$defs/SourceRef"
+      },
+      "maxItems": 24,
+      "title": "Source Refs",
+      "type": "array"
+    },
+    "state_goals": {
+      "items": {
+        "$ref": "#/$defs/StateGoal"
+      },
+      "maxItems": 12,
+      "title": "State Goals",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "name",
+    "application",
+    "provenance",
+    "actors"
+  ],
+  "title": "WorkloadSpec",
+  "type": "object",
+  "x-not-enforced-by-schema": [
+    "unique actor names, argument names and state-goal labels",
+    "is_null and not_null take no value; other operators need one",
+    "end_line is not before start_line",
+    "float values are written with a fraction or exponent, and aren't negative zero",
+    "state goals total at most 64 rows",
+    "the whole document is at most 32768 bytes as compact UTF-8 JSON",
+    "no repeated keys in the JSON text",
+    "no NaN or Infinity anywhere"
+  ],
+  "x-status": "candidate, not frozen"
+}
