@@ -13,6 +13,11 @@ application code, or execution.
 | 4. Execution authorization | not implemented | — | correctness |
 | 5. Independent correctness evaluation | oracles, separately | — | stages 1 to 4, which it never sees |
 
+**No stage trusts an object for its class.** Each re-derives its input from content: `authorize` re-parses the
+specification, `validate_arguments` checks the workload is genuine `authorize` output, and the plan identity checks the
+validated workload is genuine `validate_arguments` output. A forged object can't advance to a later status. These are
+checks against mistakes and forged data objects, not against hostile code in the same process.
+
 `ValidatedWorkload` embeds the unchanged `AuthorizedWorkload` and the contract set's digest. It carries
 `execution_authorized: False` and `correctness_evaluated: False`, and neither can be constructed as `True`.
 
@@ -38,7 +43,7 @@ Trusted configuration, separate from the registry, so the registry commit stays 
 |---|---|
 | `int` | `minimum`, `maximum` (inclusive, 64-bit), `allowed` (≤ 32 distinct integers) |
 | `float` | `minimum`, `maximum` (inclusive, finite). No allowed-value list, because float equality is fragile |
-| `str` | `min_length`, `max_length` (≤ 128), `charset`, `allowed` (≤ 32 distinct strings, each satisfying the constraint's own length and charset) |
+| `str` | `min_length`, `max_length` (≤ 128), `charset`, `allowed` (≤ 32 distinct strings, each satisfying the constraint's own length and charset and the text policy) |
 | `bool` | `allowed` (one or both values) |
 | `null` | permitted only where the registry lists `null` for the argument |
 
@@ -65,17 +70,29 @@ the contract set is built. There is no expression evaluator.
 
 ## Validation
 
-`validate_arguments(workload: AuthorizedWorkload, contracts: Contracts) -> ValidationResult` takes nothing else.
+`validate_arguments(workload, *, registry, contracts) -> ValidationResult` takes an `AuthorizedWorkload` plus the
+trusted `Registry` and `Contracts`, by keyword. **This changed for the freeze blockers:** the registry is now required,
+because without it stage 3 couldn't tell genuine authorization from a forged object. Before any value is looked at:
+
+1. `verify_contracts` rebuilds the contract set (and through it the registry) from its own configuration and trust
+   object, and requires an exact match. A difference, or contracts bound to another registry, raises `ContractError`.
+2. A workload from another registry is rejected as `registry_mismatch`.
+3. `check_authorized` must find the workload genuine. Otherwise every reason is reported as `not_authorized`.
+
+`check_validated(validated, *, registry, contracts) -> str | None` is the same check for a `ValidatedWorkload`. It
+re-runs every earlier stage on its content and requires an exact match, and returns a reason or `None`.
 
 - **No coercion.** A value whose Python type disagrees with its tag is refused: a `bool` tagged `int`, `2.0` tagged
-  `int`, `"2"` tagged `int`. So are non-finite floats.
+  `int`, `"2"` tagged `int`. So are non-finite floats. Such values can only arrive in a forged object, which now stops
+  at step 3 above as `not_authorized`. The value rules stay as defence in depth and are tested directly.
 - **No repair.** Nothing is defaulted, clipped, trimmed or reordered. The authorized workload is left unchanged.
 - **Every problem is listed.** Actors are taken in name order, arguments in name order, then predicates in contract
   order.
 - **Structured rejections.** Each has `code`, `actor`, `entrypoint`, `argument`, `predicate`, and a human-readable
   `detail`.
 - **The codes:**
-    - `registry_mismatch`, `no_contract`, `role_not_covered`, `type_not_covered`, `null_not_allowed`
+    - `registry_mismatch`, `not_authorized`, `no_contract`, `role_not_covered`, `type_not_covered`,
+      `null_not_allowed`
     - `wrong_python_type`, `non_finite`
     - `below_minimum`, `above_maximum`, `too_short`, `too_long`, `character_not_permitted`, `not_in_allowed_values`
     - `cross_field_violated`

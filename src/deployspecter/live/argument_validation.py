@@ -14,6 +14,10 @@ digest, and checked for complete coverage of that registry. The vocabulary is cl
 else is refused when the contract set is built. There is no expression language, no regular expression supplied by
 configuration, and no coercion or repair of values. Nothing is imported, executed, read from a database or network,
 or compared with an oracle.
+
+Objects aren't trusted for their class. ``validate_arguments`` rebuilds the registry and contract set from their own
+configuration and checks the workload is genuine ``authorize`` output before looking at a value. These checks are
+against mistakes and forged data objects, not against hostile code in the same process.
 """
 
 from __future__ import annotations
@@ -27,7 +31,7 @@ from typing import Annotated, Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictFloat, StrictInt, StrictStr, model_validator
 
 from . import workload_spec as ws
-from .registry import AuthorizedWorkload, Registry
+from .registry import AuthorizedWorkload, Registry, RegistryError, check_authorized, revalidate_model, verify_registry
 
 CONTRACTS_VERSION = 1
 MAX_ALLOWED_VALUES = 32
@@ -95,7 +99,8 @@ class StrConstraint(_Strict):
     min_length: StrictInt = Field(default=0, ge=0, le=ws.MAX_STRING_VALUE)
     max_length: StrictInt = Field(default=ws.MAX_STRING_VALUE, ge=0, le=ws.MAX_STRING_VALUE)
     charset: Charset | None = None
-    allowed: list[StrictStr] | None = Field(default=None, min_length=1, max_length=MAX_ALLOWED_VALUES)
+    allowed: list[Annotated[StrictStr, Field(pattern=ws.SAFE_TEXT)]] | None = Field(
+        default=None, min_length=1, max_length=MAX_ALLOWED_VALUES)
 
     @model_validator(mode="after")
     def _sound(self) -> StrConstraint:
@@ -105,7 +110,8 @@ class StrConstraint(_Strict):
             _unique(self.allowed, "allowed value")
             for value in self.allowed:
                 if _string_problem(value, self) is not None:
-                    raise ValueError(f"allowed value {value!r} breaks the constraint's own length or charset")
+                    raise ValueError(f"allowed value {ws.safe_repr(value)} breaks the constraint's own length or "
+                                     "charset")
         return self
 
 
@@ -261,13 +267,21 @@ def contracts_digest(config: ContractSet) -> str:
 
 def build_contracts(config: Any, *, registry: Registry, trusted: TrustedContracts) -> Contracts:
     """Validate a contract set against its registry. Incomplete or inconsistent coverage fails closed."""
-    if not isinstance(trusted, TrustedContracts):
+    try:
+        trusted = revalidate_model(TrustedContracts, trusted) if isinstance(trusted, TrustedContracts) else None
+    except ValueError:
+        trusted = None
+    if trusted is None:
         raise ContractError(["a TrustedContracts built by harness code is required"])
     if not isinstance(registry, Registry):
         raise ContractError(["contracts are checked against a built Registry"])
     try:
-        parsed = config if isinstance(config, ContractSet) else ContractSet.model_validate(config)
-    except ValueError as exc:
+        verify_registry(registry)
+    except RegistryError as exc:
+        raise ContractError(["the Registry doesn't verify", *exc.reasons]) from exc
+    try:
+        parsed = revalidate_model(ContractSet, config)
+    except Exception as exc:  # text policy, validation, or a forged instance that can't be serialized
         raise ContractError(_errors(exc)) from exc
     problems: list[str] = []
     if contracts_digest(parsed) != trusted.pinned_digest:
@@ -280,6 +294,21 @@ def build_contracts(config: Any, *, registry: Registry, trusted: TrustedContract
     if problems:
         raise ContractError(problems)
     return Contracts(parsed, registry, trusted)
+
+
+def verify_contracts(contracts: Contracts, registry: Registry) -> None:
+    """Check a ``Contracts`` object is what ``build_contracts`` makes from its own configuration, for this registry.
+
+    Raises ``ContractError`` on any difference, including a contract set bound to another registry.
+    """
+    if not isinstance(contracts, Contracts):
+        raise ContractError(["not a Contracts object"])
+    rebuilt = build_contracts(contracts.config, registry=registry, trusted=contracts.trusted)
+    built = (rebuilt.config, rebuilt.registry_digest, rebuilt.digest, rebuilt._index, rebuilt.registered_types)
+    given = (contracts.config, contracts.registry_digest, contracts.digest, contracts._index,
+             contracts.registered_types)
+    if built != given:
+        raise ContractError(["the Contracts object differs from what its configuration builds"])
 
 
 def _coverage_problems(config: ContractSet, registry: Registry) -> list[str]:
@@ -340,7 +369,7 @@ def _errors(exc: Exception) -> list[str]:
 
 
 ArgumentRejectionCode = Literal[
-    "registry_mismatch", "no_contract", "role_not_covered", "type_not_covered", "null_not_allowed",
+    "registry_mismatch", "not_authorized", "no_contract", "role_not_covered", "type_not_covered", "null_not_allowed",
     "wrong_python_type", "non_finite", "below_minimum", "above_maximum", "too_short", "too_long",
     "character_not_permitted", "not_in_allowed_values", "cross_field_violated",
 ]
@@ -410,17 +439,29 @@ def _value_problems(kind: str, value: Any, rule: Any) -> list[tuple[str, str]]:
     return found
 
 
-def validate_arguments(workload: AuthorizedWorkload, contracts: Contracts) -> ValidationResult:
-    """Check every argument of an authorized workload. Deterministic; lists every problem; changes nothing."""
+def validate_arguments(workload: AuthorizedWorkload, *, registry: Registry, contracts: Contracts) -> ValidationResult:
+    """Check every argument of an authorized workload. Deterministic; lists every problem; changes nothing.
+
+    Before any value is looked at, the trusted registry and contract set are rebuilt and compared (``RegistryError``
+    or ``ContractError`` if they differ, or if the contracts are bound to another registry), and the workload must be
+    genuine ``authorize`` output for this registry, or it's rejected as ``registry_mismatch`` or ``not_authorized``.
+    """
     if not isinstance(workload, AuthorizedWorkload):
         raise TypeError("validate_arguments takes a registry-authorized workload")
+    if not isinstance(registry, Registry):
+        raise TypeError("validate_arguments takes the Registry the workload was authorized against")
     if not isinstance(contracts, Contracts):
         raise TypeError("validate_arguments takes contracts built against the registry")
+    verify_contracts(contracts, registry)
     rejections: list[ArgumentRejection] = []
-    if workload.registry_digest != contracts.registry_digest:
+    if getattr(workload, "registry_digest", None) != registry.digest:
         rejections.append(ArgumentRejection(code="registry_mismatch",
                                             detail="the workload was authorized by a different registry"))
         return ValidationResult(accepted=False, rejections=tuple(rejections))
+    not_genuine = check_authorized(workload, registry)
+    if not_genuine:
+        return ValidationResult(accepted=False, rejections=tuple(
+            ArgumentRejection(code="not_authorized", detail=f"{r.code}: {r.detail}") for r in not_genuine))
     for actor in workload.actors:
         contract = contracts.lookup(actor.entrypoint, actor.application_version)
 
@@ -461,6 +502,42 @@ def validate_arguments(workload: AuthorizedWorkload, contracts: Contracts) -> Va
         return ValidationResult(accepted=False, rejections=tuple(rejections))
     return ValidationResult(accepted=True, workload=ValidatedWorkload(authorized=workload,
                                                                       contracts_digest=contracts.digest))
+
+
+def check_validated(validated: ValidatedWorkload, *, registry: Registry, contracts: Contracts) -> str | None:
+    """Why a ``ValidatedWorkload`` isn't genuine ``validate_arguments`` output for these trusted objects, or None.
+
+    Every earlier stage runs again on its content, and the result must equal the object exactly. That refuses forged
+    or altered objects, stale ones from another registry or contract set, and any object claiming a later status.
+    """
+    if not isinstance(validated, ValidatedWorkload):
+        raise TypeError("check_validated takes a ValidatedWorkload")
+    if not isinstance(registry, Registry):
+        raise TypeError("check_validated takes the trusted Registry it was authorized against")
+    if not isinstance(contracts, Contracts):
+        raise TypeError("check_validated takes the trusted Contracts it was validated against")
+    if contracts.registry_digest != registry.digest:
+        return "the contract set is bound to a different registry"
+    try:
+        verify_contracts(contracts, registry)
+    except (RegistryError, ContractError) as exc:
+        return f"the trusted registry or contract objects don't verify: {exc}"
+    if getattr(validated, "contracts_digest", None) != contracts.digest:
+        return "validated against a different contract set"
+    authorized = getattr(validated, "authorized", None)
+    if not isinstance(authorized, AuthorizedWorkload):
+        return "it doesn't hold an authorized workload"
+    if getattr(authorized, "registry_digest", None) != registry.digest:
+        return "authorized by a different registry"
+    not_genuine = check_authorized(authorized, registry)
+    if not_genuine:
+        return "it isn't genuine registry authorization: " + ", ".join(r.code for r in not_genuine)
+    again = validate_arguments(authorized, registry=registry, contracts=contracts)
+    if not again.accepted:
+        return "its argument values don't validate against these contracts"
+    if again.workload != validated:
+        return "it isn't what validation produces for its content"
+    return None
 
 
 def contracts_registered_types(contracts: Contracts, entrypoint: str, argument: str) -> set[str]:

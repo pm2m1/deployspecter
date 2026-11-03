@@ -14,12 +14,17 @@ Boundaries:
   later, separate step, never driven by proposal text.
 * **Proposal text can't register anything.** Only registry configuration defines entrypoints; a specification can only
   name them.
-* **Structure and authorization stay separate.** Structural validation is ``workload_spec``'s job and already done.
-  This module checks names, versions, roles, argument names, declared argument types and counts. Argument values
+* **Structure and authorization stay separate.** Structural validation is ``workload_spec``'s job. ``authorize`` still
+  re-validates the specification it's given, because a pydantic object can be built without validation
+  (``model_construct``, ``model_copy``), so its class proves nothing. This module checks names, versions, roles,
+  argument names, declared argument types and counts. Argument values
   (ranges, patterns, choices) are the operation-specific validator's job, a later step, and are reported as unchecked.
 * **Who registered an entrypoint** comes from the registry configuration's ``registered_by``. A specification's own
   ``provenance`` is carried through, labelled self-reported, and decides nothing.
 * No oracle, requirement, schedule, database or network is used.
+
+These checks are against mistakes and forged data objects, not against hostile code in the same process: such code
+could replace these functions themselves.
 """
 
 from __future__ import annotations
@@ -74,7 +79,7 @@ class EntrypointRegistration(_Strict):
     roles: list[Role] = Field(min_length=1, max_length=2)
     arguments: list[ArgumentContract] = Field(default_factory=list, max_length=ws.MAX_ARGUMENTS)
     max_instances: StrictInt = Field(ge=1, le=ws.MAX_ACTORS)
-    description: str = Field(default="", max_length=200, pattern=ws.SINGLE_LINE)
+    description: str = Field(default="", max_length=200, pattern=ws.SAFE_TEXT)
 
     @model_validator(mode="after")
     def _unique_parts(self) -> EntrypointRegistration:
@@ -189,13 +194,26 @@ def _errors(exc: Exception) -> list[str]:
     return [str(exc)]
 
 
+def revalidate_model(model_type: type[BaseModel], value: Any) -> Any:
+    """A fresh, fully validated copy. An instance of the right class is dumped and validated again, never trusted."""
+    document = value.model_dump(mode="json", warnings="error") if isinstance(value, BaseModel) else value
+    problems = ws.text_problems(document)
+    if problems:
+        raise ValueError("; ".join(problems))
+    return model_type.model_validate(document)
+
+
 def build_registry(config: Any, *, trusted: TrustedRegistration) -> Registry:
     """Validate configuration against what the harness trusts. Any disagreement fails closed."""
-    if not isinstance(trusted, TrustedRegistration):
+    try:
+        trusted = revalidate_model(TrustedRegistration, trusted) if isinstance(trusted, TrustedRegistration) else None
+    except ValueError:
+        trusted = None
+    if trusted is None:
         raise RegistryError(["a TrustedRegistration built by harness code is required"])
     try:
-        parsed = config if isinstance(config, RegistryConfig) else RegistryConfig.model_validate(config)
-    except ValueError as exc:
+        parsed = revalidate_model(RegistryConfig, config)
+    except Exception as exc:  # a forged instance may fail to serialize in any of several ways
         raise RegistryError(_errors(exc)) from exc
     digest = registry_digest(parsed)
     problems = []
@@ -209,9 +227,26 @@ def build_registry(config: Any, *, trusted: TrustedRegistration) -> Registry:
     return Registry(parsed, trusted)
 
 
+def verify_registry(registry: Registry) -> None:
+    """Check a ``Registry`` object is what ``build_registry`` makes from its own configuration and trust object.
+
+    ``Registry`` is a plain class whose attributes can be reassigned, so stages that rely on it rebuild it and compare.
+    Raises ``RegistryError`` on any difference.
+    """
+    if not isinstance(registry, Registry):
+        raise RegistryError(["not a Registry"])
+    rebuilt = build_registry(registry.config, trusted=registry.trusted)
+    if (rebuilt.config, rebuilt.digest, rebuilt._by_id) != (registry.config, registry.digest, registry._by_id):
+        raise RegistryError(["the Registry object differs from what its configuration builds"])
+
+
 def load_registry_json(text: str, *, trusted: TrustedRegistration) -> Registry:
+    if not isinstance(text, str):
+        raise RegistryError(["registry configuration must be given as text"])
     try:
         document = json.loads(text, object_pairs_hook=ws._refuse_duplicate_keys, parse_constant=ws._refuse_constant)
+    except RecursionError as exc:
+        raise RegistryError(["registry JSON is nested too deeply to decode"]) from exc
     except ValueError as exc:
         raise RegistryError([f"not valid registry JSON: {exc}"]) from exc
     return build_registry(document, trusted=trusted)
@@ -221,7 +256,8 @@ def load_registry_json(text: str, *, trusted: TrustedRegistration) -> Registry:
 
 
 RejectionCode = Literal[
-    "application_mismatch", "too_few_actors", "too_many_actors", "unknown_entrypoint", "version_not_registered",
+    "structure_invalid", "not_genuine_authorization", "application_mismatch", "too_few_actors", "too_many_actors",
+    "unknown_entrypoint", "version_not_registered",
     "role_not_registered", "unknown_argument", "missing_argument", "argument_type_not_registered",
     "instance_limit_exceeded",
 ]
@@ -255,8 +291,8 @@ class AuthorizedActor(_Strict):
 
 
 class AuthorizedWorkload(_Strict):
-    spec_digest: str
-    registry_digest: str
+    spec_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
+    registry_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
     application: str
     registered_by: RegisteredBy
     actors: tuple[AuthorizedActor, ...]
@@ -273,12 +309,45 @@ class AuthorizationResult(_Strict):
     rejections: tuple[Rejection, ...] = ()
 
 
+def _structure_problems(spec: ws.WorkloadSpec) -> tuple[ws.WorkloadSpec | None, list[str]]:
+    """Validate a specification object again from its own content, with the real parser.
+
+    Returns the freshly parsed specification, or the reasons it isn't one. The object must equal its re-parsed self,
+    so content that validation would have changed or refused can't pass as already validated.
+    """
+    try:
+        # Without defaults, so the re-parsed document is never larger than the one first parsed, and the size limit
+        # can't refuse here what it accepted there.
+        document = spec.model_dump(mode="json", warnings="error", exclude_defaults=True)
+    except Exception as exc:  # a forged object may fail to serialize in any of several ways
+        return None, [f"the specification object can't be read back as data ({type(exc).__name__})"]
+    try:
+        again = ws.parse_workload(document)
+    except ws.SpecRejected as exc:
+        return None, exc.reasons
+    except ws.UnsupportedSchemaVersion as exc:
+        return None, [str(exc)]
+    if again != spec:
+        return None, ["the specification object differs from its own validated content"]
+    return again, []
+
+
 def authorize(spec: ws.WorkloadSpec, registry: Registry) -> AuthorizationResult:
-    """Check a structurally valid specification against the registry. Deterministic, and lists every reason."""
+    """Check a specification against the registry. Deterministic, and lists every reason.
+
+    The specification is validated again first: an object of the right class proves nothing. The registry is rebuilt
+    from its configuration and trust object and must match, or ``RegistryError`` is raised.
+    """
     if not isinstance(spec, ws.WorkloadSpec):
         raise TypeError("authorize takes a parsed WorkloadSpec; parse and validate its structure first")
     if not isinstance(registry, Registry):
         raise TypeError("authorize takes a Registry built from trusted configuration")
+    verify_registry(registry)
+    checked, problems = _structure_problems(spec)
+    if checked is None:
+        return AuthorizationResult(accepted=False, rejections=tuple(
+            Rejection(code="structure_invalid", detail=reason) for reason in problems))
+    spec = checked
     config = registry.config
     rejections: list[Rejection] = []
     if spec.application != registry.application:
@@ -345,3 +414,56 @@ def _actor_problems(actor: ws.ActorSpec, entry: EntrypointRegistration) -> list[
         if kind not in contracts[name].types:
             reject("argument_type_not_registered", f"{name!r} may be {contracts[name].types}, not {kind!r}", name)
     return found
+
+
+def _document_value(kind: str, value: Any) -> dict[str, Any]:
+    return {"type": "null"} if kind == "null" else {"type": kind, "value": value}
+
+
+def check_authorized(workload: AuthorizedWorkload, registry: Registry) -> tuple[Rejection, ...]:
+    """Whether an ``AuthorizedWorkload`` object is genuine ``authorize`` output for this registry. Empty if it is.
+
+    The object holds no copy of its specification, so a document is rebuilt from what it does hold, parsed, and
+    authorized again. Unless the result equals the object exactly, it wasn't produced by ``authorize``: a forged
+    operation reference, entrypoint, version, role, actor name, argument, state goal, application or registration,
+    or reordered content, all fail. The full-record digest can't be re-derived without the original document, so only
+    its form is checked; nothing downstream uses it.
+    """
+    if not isinstance(workload, AuthorizedWorkload):
+        raise TypeError("check_authorized takes an AuthorizedWorkload")
+    verify_registry(registry)
+
+    def refuse(code: RejectionCode, detail: str) -> tuple[Rejection, ...]:
+        return (Rejection(code=code, detail=detail),)
+
+    try:
+        # The shortest valid name, no explanatory fields and no defaults, so this document is never larger than the
+        # specification that was authorized, and the size limit can't refuse it here.
+        document = {
+            "schema_version": 2, "name": "r", "application": workload.application,
+            "provenance": workload.self_reported_provenance.model_dump(mode="json", warnings="error",
+                                                                       exclude_defaults=True),
+            "actors": [{
+                "name": actor.actor, "entrypoint": actor.entrypoint,
+                "application_version": actor.application_version, "role": actor.role,
+                "arguments": [{"name": a.name, "value": _document_value(a.type, a.value)} for a in actor.arguments],
+            } for actor in workload.actors],
+            "state_goals": [goal.model_dump(mode="json", warnings="error", exclude_defaults=True)
+                            for goal in workload.state_goals],
+        }
+        spec_digest = workload.spec_digest
+    except Exception as exc:  # a forged object may lack fields or hold the wrong kinds of value
+        return refuse("not_genuine_authorization", f"the workload object can't be read back ({type(exc).__name__})")
+    if type(spec_digest) is not str or len(spec_digest) != 64 or set(spec_digest) - set("0123456789abcdef"):
+        return refuse("not_genuine_authorization", "the full-record digest isn't 64 lower-case hex digits")
+    try:
+        spec = ws.parse_workload(document)
+    except (ws.SpecRejected, ws.UnsupportedSchemaVersion) as exc:
+        return tuple(Rejection(code="structure_invalid", detail=reason)
+                     for reason in getattr(exc, "reasons", [str(exc)]))
+    result = authorize(spec, registry)
+    if not result.accepted:
+        return result.rejections
+    if result.workload.model_copy(update={"spec_digest": spec_digest}) != workload:
+        return refuse("not_genuine_authorization", "the workload isn't what the registry authorizes for its content")
+    return ()

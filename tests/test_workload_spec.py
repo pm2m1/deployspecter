@@ -369,6 +369,11 @@ class TestIndependenceAndSchema:
 # ------------------------------------------------------------------ JSON Schema and Python parser agree
 
 
+def _ecma_pattern(pattern):
+    """JSON Schema patterns are ECMA-262, where "$" matches only at the end; Python's also matches before a newline."""
+    return pattern[:-1] + r"\Z" if pattern.endswith("$") and not pattern.endswith("\\$") else pattern
+
+
 def _schema_valid(instance, node, root):
     """A small validator for the JSON Schema keywords pydantic emits here. Unknown keywords fail loudly."""
     if "$ref" in node:
@@ -398,7 +403,7 @@ def _schema_valid(instance, node, root):
     if isinstance(instance, str):
         import re
 
-        if "pattern" in node and not re.search(node["pattern"], instance):
+        if "pattern" in node and not re.search(_ecma_pattern(node["pattern"]), instance):
             return False
         if len(instance) < node.get("minLength", 0) or len(instance) > node.get("maxLength", 10**9):
             return False
@@ -450,3 +455,200 @@ class TestSchemaParserAgreement:
         for phrase in ("unique actor names", "is_null", "end_line", "64 rows", "fraction or exponent",
                        "negative zero", "repeated keys", "bytes"):
             assert phrase in declared, phrase
+
+
+# ------------------------------------------------------------------ the text policy (B1, B3)
+
+
+def _text_doc(text_value="a", **top):
+    document = copy_of(by_id("valid_simple"))
+    document["actors"][0]["arguments"][0]["value"]["value"] = text_value
+    document.update(top)
+    return document
+
+
+def copy_of(value):
+    return json.loads(json.dumps(value))
+
+
+UNSAFE = ["\x00", "\x09", "\x0a", "\x0d", "\x1b", "\x7f", "\x80", "\x85", "\x9b", "\x9f", "\u061c", "\u200e",
+          "\u200f", "\u2028", "\u2029", "\u202a", "\u202b", "\u202c", "\u202d", "\u202e", "\u2066", "\u2067",
+          "\u2068", "\u2069", "\ud800", "\udbff", "\udc00", "\udfff"]
+SAFE = ["日本語", "مرحبا", "עברית", "हिन्दी", "e\u0301", "क्\u200dष", "می\u200cخواهم", "😀", "\U0001F468\u200d\U0001F469",
+        "\U00020000", "\U0010fffd", "\u00a0", "\ufeff", "a b"]
+
+
+class TestTextPolicy:
+    @pytest.mark.parametrize("char", UNSAFE, ids=lambda c: f"U+{ord(c):04X}")
+    @pytest.mark.parametrize("where", ["argument", "rationale", "note", "claim"])
+    def test_unsafe_code_points_are_refused_everywhere(self, char, where):
+        document = _text_doc()
+        text = f"x{char}y"
+        if where == "argument":
+            document["actors"][0]["arguments"][0]["value"]["value"] = text
+        elif where == "rationale":
+            document["rationale"] = text
+        elif where == "note":
+            document["provenance"]["note"] = text
+        else:
+            document["source_refs"] = [{"path": "app/x.py", "start_line": 1, "end_line": 1, "claim": text}]
+        with pytest.raises(ws.SpecRejected) as caught:
+            ws.parse_workload(document)
+        assert f"U+{ord(char):04X}" in " ".join(caught.value.reasons)
+
+    @pytest.mark.parametrize("char", UNSAFE, ids=lambda c: f"U+{ord(c):04X}")
+    def test_schema_refuses_all_but_surrogates(self, char):
+        schema = ws.json_schema()
+        accepted = _schema_valid(_text_doc(f"x{char}y"), schema, schema)
+        assert accepted == (0xD800 <= ord(char) <= 0xDFFF), "only surrogates are left to Python"
+
+    @pytest.mark.parametrize("text", SAFE)
+    def test_international_text_is_kept_by_parser_and_schema(self, text):
+        document = _text_doc(text[:128], rationale=text)
+        spec = ws.parse_workload(document)
+        assert spec.actors[0].arguments[0].value.value == text[:128] and spec.rationale == text
+        schema = ws.json_schema()
+        assert _schema_valid(document, schema, schema)
+
+    @pytest.mark.parametrize("escape", ["\\ud800", "\\udbff", "\\udc00", "\\udfff", "\\ude00\\ud83d"])
+    def test_surrogate_escapes_in_json_text(self, escape):
+        text = json.dumps(_text_doc("PLACEHOLDER")).replace("PLACEHOLDER", f"a{escape}b")
+        with pytest.raises(ws.SpecRejected) as caught:
+            ws.parse_workload_json(text)
+        assert "refused code points" in " ".join(caught.value.reasons)
+
+    def test_a_valid_surrogate_pair_escape_is_one_character(self):
+        text = json.dumps(_text_doc("PLACEHOLDER")).replace("PLACEHOLDER", "a\\ud83d\\ude00b")
+        assert ws.parse_workload_json(text).actors[0].arguments[0].value.value == "a😀b"
+
+    def test_a_raw_lone_surrogate_in_the_text(self):
+        text = json.dumps(_text_doc("PLACEHOLDER"), ensure_ascii=False).replace("PLACEHOLDER", "a\ud800b")
+        with pytest.raises(ws.SpecRejected):
+            ws.parse_workload_json(text)
+
+    @pytest.mark.parametrize("key", ["k\ud800", "k\udc00", "k\x1b", "k\u202e"])
+    def test_keys_follow_the_policy_at_any_depth(self, key):
+        for document in (_text_doc() | {key: 1}, _text_doc()):
+            document["actors"][1]["arguments"][0][key] = "x"
+            with pytest.raises(ws.SpecRejected) as caught:
+                ws.parse_workload(document)
+            assert any("key contains refused" in r for r in caught.value.reasons)
+        text = json.dumps(_text_doc()).replace('"holder"', json.dumps(key), 1)
+        with pytest.raises(ws.SpecRejected):
+            ws.parse_workload_json(text)
+
+    @pytest.mark.parametrize("char", UNSAFE, ids=lambda c: f"U+{ord(c):04X}")
+    def test_messages_never_contain_refused_characters(self, char):
+        for document in (_text_doc(f"x{char}"), _text_doc() | {f"k{char}": 1}):
+            with pytest.raises(ws.SpecRejected) as caught:
+                ws.parse_workload(document)
+            message = " ".join(caught.value.reasons) + str(caught.value)
+            assert not any(ws.forbidden_code_point(c) for c in message), message
+
+    def test_repeated_key_message_is_escaped(self):
+        text = '{"schema_version": 2, "k\\u202e": 1, "k\\u202e": 2}'
+        with pytest.raises(ws.SpecRejected) as caught:
+            ws.parse_workload_json(text)
+        assert not any(ws.forbidden_code_point(c) for c in str(caught.value))
+
+    @pytest.mark.parametrize("key", [1, None, ("t",)])
+    def test_non_string_keys_are_refused_not_raised(self, key):
+        for document in (_text_doc() | {key: 1}, {"schema_version": 2, "provenance": {key: "x"}}):
+            with pytest.raises(ws.SpecRejected, match="key isn't a string"):
+                ws.parse_workload(document)
+
+    @pytest.mark.parametrize("value", [b"{}", None, 7])
+    def test_json_entry_point_takes_only_text(self, value):
+        with pytest.raises(ws.SpecRejected, match="as text"):
+            ws.parse_workload_json(value)
+
+    def test_nothing_is_repaired(self):
+        with pytest.raises(ws.SpecRejected):
+            ws.parse_workload(_text_doc("x\u202ey"))
+        spec = ws.parse_workload(_text_doc("x\u200dy"))
+        assert spec.actors[0].arguments[0].value.value == "x\u200dy"
+
+    def test_version_1_documents_meet_the_version_2_text_policy(self):
+        from test_live_workload import proposal
+
+        document = proposal() | {"schema_version": 1, "rationale": "two\nlines"}
+        with pytest.raises(ws.SpecRejected):
+            ws.parse_workload(document, v1_provenance=HAND)
+        assert ws.parse_workload(proposal() | {"schema_version": 1}, v1_provenance=HAND).schema_version == 2
+
+    def test_policy_table_matches_the_pattern(self):
+        """The Python ranges and the schema pattern describe the same code points, apart from surrogates."""
+        import re
+
+        pattern = re.compile(_ecma_pattern(ws.SAFE_TEXT))
+        for code in list(range(0x0, 0x3000)) + [0xFEFF, 0x1F600, 0x10FFFF]:
+            char = chr(code)
+            if 0xD800 <= code <= 0xDFFF:
+                continue
+            assert bool(pattern.search(char)) != ws.forbidden_code_point(char), f"U+{code:04X}"
+
+
+class TestUpgradeSizeLimit:
+    """A version 1 document must fit version 2's limit once upgraded, or later stages would refuse it."""
+
+    def v1(self, length):
+        from test_live_workload import proposal
+
+        document = proposal() | {"schema_version": 1}
+        document["actors"] = [{"name": n, "entrypoint": "reserve", "application_version": "v1",
+                               "arguments": [{"name": f"a{i}", "value": "x" * length} for i in range(16)]}
+                              for n in "abcd"]
+        document["seed_goals"] = [{"entity": "e", "label": f"g{i}", "fields": [
+            {"field": f"f{j}", "op": "eq", "value": "y" * length} for j in range(16)]} for i in range(12)]
+        return document
+
+    def test_too_large_once_typed_is_refused_at_upgrade(self):
+        for length in range(64, 101):
+            document = self.v1(length)
+            if ws.document_size(document) <= ws.MAX_DOCUMENT_BYTES:
+                try:
+                    spec = ws.parse_workload(document, v1_provenance=HAND)
+                except ws.SpecRejected as exc:
+                    assert "upgraded to version 2" in " ".join(exc.reasons)
+                    return
+                size = ws.document_size(spec.model_dump(mode="json", exclude_defaults=True))
+                assert size <= ws.MAX_DOCUMENT_BYTES
+        pytest.fail("no version 1 document in range fits version 1 but not version 2")
+
+
+class TestDeepNesting:
+    """Nesting depth can't turn a rejection into a crash, at either entry point."""
+
+    @pytest.mark.parametrize("depth", [100, 5_000, 50_000])
+    def test_deep_json_text_is_refused_not_raised(self, depth):
+        text = '{"schema_version": 2, "x": ' + "[" * depth + "]" * depth + "}"
+        with pytest.raises(ws.SpecRejected):
+            ws.parse_workload_json(text)
+
+    @pytest.mark.parametrize("depth", [5_000, 100_000])
+    def test_deep_decoded_document_is_refused_not_raised(self, depth):
+        nested: list = []
+        for _ in range(depth):
+            nested = [nested]
+        with pytest.raises(ws.SpecRejected):
+            ws.parse_workload(_text_doc() | {"x": nested})
+        if depth > 50_000:
+            with pytest.raises(ws.SpecRejected, match="nested too deeply"):
+                ws.document_size(nested)
+
+    def test_deep_registry_json_is_refused_not_raised(self):
+        from deployspecter.live import registry as rg
+
+        trusted = rg.TrustedRegistration(registrar="harness_owner", config_label="x", pinned_digest="0" * 64)
+        with pytest.raises(rg.RegistryError, match="nested too deeply"):
+            rg.load_registry_json("[" * 100_000 + "]" * 100_000, trusted=trusted)
+
+    def test_deep_unsafe_text_is_still_found(self):
+        nested: list = ["x\u202e"]
+        for _ in range(5_000):
+            nested = [nested]
+        assert any("U+202E" in r for r in ws.text_problems({"x": nested}))
+
+    def test_findings_are_in_document_order(self):
+        found = ws.text_problems({"a": "\x1b", "b": ["\x1b", {"c": "\x1b"}], "d": "\x1b"})
+        assert [f.split(":")[0] for f in found] == ["$.'a'", "$.'b'[0]", "$.'b'[1].'c'", "$.'d'"]

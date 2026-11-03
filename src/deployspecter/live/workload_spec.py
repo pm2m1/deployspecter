@@ -61,9 +61,66 @@ VERSION_LABEL = r"^[a-z0-9][a-z0-9._-]{0,31}$"
 # Relative, "/"-separated segments that each start with a letter, digit or underscore: no leading "/", no empty, "."
 # or ".." segment, no trailing "/", no backslash.
 SOURCE_PATH = r"^[A-Za-z0-9_][A-Za-z0-9_.-]*(?:/[A-Za-z0-9_][A-Za-z0-9_.-]*)*$"
-# One line of printable text: no control characters, so no embedded newlines, NULs or terminal escapes.
-SINGLE_LINE = r"^[^\x00-\x1f\x7f]*$"
+# The text policy, one rule for every string in the version 2 contract: rationale, notes, claims, string arguments,
+# names, labels, registry descriptions and contract values. Refused code points:
+#   U+0000-U+001F (C0, so newline and tab too), U+007F (DEL), U+0080-U+009F (C1, including CSI U+009B);
+#   U+061C, U+200E, U+200F (directional marks); U+202A-U+202E (embeddings and overrides);
+#   U+2066-U+2069 (isolates); U+2028, U+2029 (line and paragraph separators, which renderers treat as line breaks);
+#   U+D800-U+DFFF (unpaired surrogates: not text at all, and impossible to encode as UTF-8).
+# Everything else is kept, including every script, combining marks, emoji and other supplementary characters, and the
+# joiners U+200C and U+200D that several scripts need. The pattern expresses all of it except surrogates, which a
+# JSON Schema pattern can't state exactly; ``text_problems`` checks those, in Python, before anything else runs.
+# Renderers must still escape untrusted text: this rule removes control characters, not every misleading string.
+SAFE_TEXT = r"^[^\x00-\x1f\x7f-\x9f\u061c\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]*$"
+_FORBIDDEN_RANGES = (
+    (0x0000, 0x001F), (0x007F, 0x009F), (0x061C, 0x061C), (0x200E, 0x200F), (0x2028, 0x2029), (0x202A, 0x202E),
+    (0x2066, 0x2069), (0xD800, 0xDFFF),
+)
 INT64 = 2**63
+
+
+def forbidden_code_point(char: str) -> bool:
+    code = ord(char)
+    return any(low <= code <= high for low, high in _FORBIDDEN_RANGES)
+
+
+def safe_repr(text: str, limit: int = 60) -> str:
+    """Untrusted text made safe to put in a message: refused and unprintable code points become escapes."""
+    shown = "".join(f"\\u{ord(c):04x}" if forbidden_code_point(c) or not c.isprintable() else c for c in text[:limit])
+    return f"'{shown}'" + ("..." if len(text) > limit else "")
+
+
+def text_problems(value: Any, limit: int = 20) -> list[str]:
+    """Every key and string anywhere in a decoded JSON value that breaks the text policy, by path, in document order.
+
+    It runs before measuring, encoding or validating, so a lone surrogate is reported, never raised as an encoding
+    error. It walks with an explicit stack, so no nesting depth can make it raise. Nothing is replaced, removed or
+    escaped into a different value: offending text is refused.
+    """
+    found: list[str] = []
+    stack: list[tuple[Any, str]] = [(value, "$")]
+    while stack and len(found) < limit:
+        item, path = stack.pop()
+        if isinstance(item, str):
+            bad = sorted({ord(c) for c in item if forbidden_code_point(c)})
+            if bad:
+                shown = ", ".join(f"U+{code:04X}" for code in bad[:4])
+                found.append(f"{path}: text contains refused code points ({shown})")
+        elif isinstance(item, dict):
+            children = []
+            for key, child in item.items():
+                if not isinstance(key, str):
+                    found.append(f"{path}: an object key isn't a string")
+                    continue
+                key_path = f"{path}.{safe_repr(key, 40)}"
+                if any(forbidden_code_point(c) for c in key):
+                    found.append(f"{key_path}: key contains refused code points")
+                children.append((child, key_path))
+            stack.extend(reversed(children))
+        elif isinstance(item, (list, tuple)):
+            stack.extend(reversed([(child, f"{path}[{index}]") for index, child in enumerate(item)]))
+    return found[:limit]
+
 
 Identifier = Annotated[str, Field(pattern=IDENTIFIER)]
 
@@ -108,7 +165,7 @@ class BoolValue(_Strict):
 
 class StrValue(_Strict):
     type: Literal["str"]
-    value: StrictStr = Field(max_length=MAX_STRING_VALUE, pattern=SINGLE_LINE)
+    value: StrictStr = Field(max_length=MAX_STRING_VALUE, pattern=SAFE_TEXT)
 
 
 class NullValue(_Strict):
@@ -136,7 +193,7 @@ class Provenance(_Strict):
     origin: Literal["hand_written", "synthetic", "deterministic_baseline", "model_proposal"]
     author: Identifier
     generator_version: str | None = Field(default=None, pattern=VERSION_LABEL)
-    note: str = Field(default="", max_length=400, pattern=SINGLE_LINE)
+    note: str = Field(default="", max_length=400, pattern=SAFE_TEXT)
 
 
 class Argument(_Strict):
@@ -188,7 +245,7 @@ class SourceRef(_Strict):
     path: str = Field(max_length=200, pattern=SOURCE_PATH)
     start_line: StrictInt = Field(ge=1)
     end_line: StrictInt = Field(ge=1)
-    claim: str = Field(max_length=400, pattern=SINGLE_LINE)
+    claim: str = Field(max_length=400, pattern=SAFE_TEXT)
 
     @model_validator(mode="after")
     def _ordered(self) -> SourceRef:
@@ -207,7 +264,7 @@ class WorkloadSpec(_Strict):
     actors: list[ActorSpec] = Field(min_length=MIN_ACTORS, max_length=MAX_ACTORS)
     state_goals: list[StateGoal] = Field(default_factory=list, max_length=MAX_STATE_GOALS)
     source_refs: list[SourceRef] = Field(default_factory=list, max_length=MAX_SOURCE_REFS)
-    rationale: str = Field(default="", max_length=800)
+    rationale: str = Field(default="", max_length=800, pattern=SAFE_TEXT)  # one paragraph, no line breaks
 
     @model_validator(mode="after")
     def _whole_document(self) -> WorkloadSpec:
@@ -219,8 +276,6 @@ class WorkloadSpec(_Strict):
             raise ValueError("repeated state-goal label")
         if sum(g.count for g in self.state_goals) > MAX_TOTAL_GOAL_ROWS:
             raise ValueError(f"state goals ask for more than {MAX_TOTAL_GOAL_ROWS} rows in total")
-        if "\x00" in self.rationale:
-            raise ValueError("rationale contains a NUL character")
         return self
 
 
@@ -261,7 +316,11 @@ def parse_workload(document: Any, *, v1_provenance: Provenance | None = None) ->
     """Validate a decoded JSON document of either version and return version 2.
 
     A version 1 document carries no provenance, so the caller must say where it came from. Nothing is guessed.
+    The text policy is checked first, over every key and string, so malformed text is a ``SpecRejected``.
     """
+    problems = text_problems(document)
+    if problems:
+        raise SpecRejected(problems)
     version = _version_of(document)
     size = document_size(document)
     if size > MAX_DOCUMENT_BYTES:
@@ -284,6 +343,8 @@ def document_size(document: Any) -> int:
     """Bytes of the document as compact UTF-8 JSON: the same measure however the original text was written."""
     try:
         text = json.dumps(document, ensure_ascii=False, separators=(",", ":"), allow_nan=False, default=_no_default)
+    except RecursionError as exc:
+        raise SpecRejected(["the document is nested too deeply to measure"]) from exc
     except (TypeError, ValueError) as exc:
         raise SpecRejected([f"the document can't be measured as JSON: {exc}"]) from exc
     return len(text.encode("utf-8"))
@@ -294,11 +355,16 @@ def _no_default(value: Any) -> Any:
 
 
 def parse_workload_json(text: str, **kwargs: Any) -> WorkloadSpec:
+    if not isinstance(text, str):
+        raise SpecRejected(["the document must be given as text"])
     # A coarse bound before decoding, so a huge text is never parsed. The exact limit applies to the decoded document.
-    if len(text.encode("utf-8")) > 6 * MAX_DOCUMENT_BYTES:
+    # "surrogatepass" only measures: a lone surrogate in the text is refused after decoding, by the text policy.
+    if len(text.encode("utf-8", "surrogatepass")) > 6 * MAX_DOCUMENT_BYTES:
         raise SpecRejected([f"document text is far larger than {MAX_DOCUMENT_BYTES} bytes"])
     try:
         document = json.loads(text, parse_constant=_refuse_constant, object_pairs_hook=_refuse_duplicate_keys)
+    except RecursionError as exc:
+        raise SpecRejected(["the JSON text is nested too deeply to decode"]) from exc
     except ValueError as exc:
         raise SpecRejected([f"not valid JSON: {exc}"]) from exc
     return parse_workload(document, **kwargs)
@@ -313,7 +379,7 @@ def _refuse_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     keys = [key for key, _ in pairs]
     repeated = sorted({key for key in keys if keys.count(key) > 1})
     if repeated:
-        raise ValueError(f"repeated key {repeated[0]!r}")
+        raise ValueError(f"repeated key {safe_repr(repeated[0], 40)}")
     return dict(pairs)
 
 
@@ -367,9 +433,15 @@ def upgrade_v1(proposal: WorkloadProposal, provenance: Provenance) -> WorkloadSp
         ],
     }
     try:
-        return WorkloadSpec.model_validate(document)
+        spec = WorkloadSpec.model_validate(document)
     except ValueError as exc:
         raise SpecRejected(["can't be upgraded to version 2 without changing its meaning", *_reasons(exc)]) from exc
+    # Typed values make the version 2 form larger. It must fit version 2's own limit, or later stages, which
+    # re-validate the version 2 form, would refuse what this accepted.
+    size = document_size(spec.model_dump(mode="json", exclude_defaults=True))
+    if size > MAX_DOCUMENT_BYTES:
+        raise SpecRejected([f"upgraded to version 2 it would be {size} bytes, more than {MAX_DOCUMENT_BYTES}"])
+    return spec
 
 
 def canonical(spec: WorkloadSpec) -> dict[str, Any]:
@@ -425,6 +497,9 @@ def json_schema() -> dict[str, Any]:
             f"the whole document is at most {MAX_DOCUMENT_BYTES} bytes as compact UTF-8 JSON",
             "no repeated keys in the JSON text",
             "no NaN or Infinity anywhere",
+            "no unpaired surrogate code points (U+D800 to U+DFFF) in any key or string; the text pattern covers the"
+            " rest of the text policy but can't state this exactly",
+            "object keys follow the same text policy as string values",
         ],
         **schema,
     }

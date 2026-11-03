@@ -29,7 +29,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from . import registry as rg
 from . import workload_spec as ws
-from .argument_validation import Contracts, ValidatedWorkload, validate_arguments
+from .argument_validation import Contracts, ValidatedWorkload, check_validated
 
 PLAN_IDENTITY_VERSION = 1
 DOMAIN = b"deployspecter:validated-plan-identity:v1\x00"
@@ -115,41 +115,6 @@ def canonical_plan_json(validated: ValidatedWorkload) -> str:
     return json.dumps(plan_fields(validated), sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
 
-def _document_value(kind: str, value: Any) -> dict[str, Any]:
-    return {"type": "null"} if kind == "null" else {"type": kind, "value": value}
-
-
-def _reauthorization_problem(workload: rg.AuthorizedWorkload, registry: rg.Registry) -> str | None:
-    """Re-run stages 1 and 2 on the workload's own content, with the real parser and registry.
-
-    The authorized workload holds no copy of the specification, so a document is rebuilt from what it does hold and
-    authorized again. Unless the result is exactly the workload given, it isn't a genuine stage 2 output: a forged
-    operation reference, a dropped required argument, an unregistered role or version, reordered actors, or a
-    different registration all fail here. The full-record digest it carries can't be re-derived without the original
-    document, so it's carried over unchecked; the plan identity never uses it.
-    """
-    document = {
-        "schema_version": 2, "name": "reauthorization", "application": workload.application,
-        "provenance": workload.self_reported_provenance.model_dump(mode="json"),
-        "actors": [{
-            "name": actor.actor, "entrypoint": actor.entrypoint, "application_version": actor.application_version,
-            "role": actor.role,
-            "arguments": [{"name": a.name, "value": _document_value(a.type, a.value)} for a in actor.arguments],
-        } for actor in workload.actors],
-        "state_goals": [goal.model_dump(mode="json") for goal in workload.state_goals],
-    }
-    try:
-        spec = ws.parse_workload(document)
-    except ws.SpecRejected:
-        return "its content isn't a structurally valid specification"
-    result = rg.authorize(spec, registry)
-    if not result.accepted:
-        return "the registry doesn't authorize its content: " + ", ".join(r.code for r in result.rejections)
-    if result.workload.model_copy(update={"spec_digest": workload.spec_digest}) != workload:
-        return "it isn't what the registry authorizes for its content"
-    return None
-
-
 def validated_plan_identity(validated: ValidatedWorkload, *, registry: rg.Registry,
                             contracts: Contracts) -> IdentityResult:
     """The plan identity, or an explicit reason none can be given.
@@ -163,18 +128,9 @@ def validated_plan_identity(validated: ValidatedWorkload, *, registry: rg.Regist
         raise TypeError("plan identity takes the trusted Registry it was authorized against")
     if not isinstance(contracts, Contracts):
         raise TypeError("plan identity takes the trusted Contracts it was validated against")
-    if contracts.registry_digest != registry.digest:
-        return IdentityResult(supported=False, reason="the contract set is bound to a different registry")
-    if validated.contracts_digest != contracts.digest:
-        return IdentityResult(supported=False, reason="validated against a different contract set")
-    if validated.authorized.registry_digest != registry.digest:
-        return IdentityResult(supported=False, reason="authorized by a different registry")
-    problem = _reauthorization_problem(validated.authorized, registry)
+    problem = check_validated(validated, registry=registry, contracts=contracts)
     if problem:
         return IdentityResult(supported=False, reason=problem)
-    again = validate_arguments(validated.authorized, contracts)
-    if not again.accepted or again.workload != validated:
-        return IdentityResult(supported=False, reason="doesn't validate against these contracts as given")
     try:
         text = canonical_plan_json(validated)
     except _Unsupported as exc:

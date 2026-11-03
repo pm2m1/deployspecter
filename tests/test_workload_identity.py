@@ -45,7 +45,7 @@ def validated(*actors, origin="hand_written", author="fixture_author", rationale
     })
     authorized = rg.authorize(spec, registry)
     assert authorized.accepted, authorized.rejections
-    result = av.validate_arguments(authorized.workload, contracts)
+    result = av.validate_arguments(authorized.workload, registry=registry, contracts=contracts)
     assert result.accepted, result.rejections
     return result.workload
 
@@ -65,6 +65,10 @@ def unsupported(workload, contracts=None, registry=None):
     result = wi.validated_plan_identity(workload, **trust(registry, contracts))
     assert not result.supported and result.identity is None
     return result.reason
+
+
+def codes_of(result):
+    return sorted({r.code for r in result.rejections})
 
 
 def with_rules(registry_mutate=None, rules=None):
@@ -124,9 +128,10 @@ class TestExcludedMetadata:
         """No real stage 2 output is ever out of order, so one that is was built by hand and gets no identity."""
         workload = validated(book("a"), book("b"))
         authorized = workload.authorized.model_copy(update={"actors": tuple(reversed(workload.authorized.actors))})
-        revalidated = av.validate_arguments(authorized, make_contracts())
-        assert revalidated.accepted
-        assert "isn't what the registry authorizes" in unsupported(revalidated.workload)
+        revalidated = av.validate_arguments(authorized, registry=make_registry(), contracts=make_contracts())
+        assert codes_of(revalidated) == ["not_authorized"], "stage 3 now refuses it too"
+        forged_validated = workload.model_copy(update={"authorized": authorized})
+        assert "isn't genuine registry authorization" in unsupported(forged_validated)
 
     def test_state_goal_and_constraint_order(self):
         reordered = copy(GOAL)
@@ -311,7 +316,8 @@ class TestInputs:
         actors[0] = actors[0].model_copy(update={
             "arguments": tuple(a for a in actors[0].arguments if a.name != "qty")})
         tampered = forged(workload, authorized=workload.authorized.model_copy(update={"actors": tuple(actors)}))
-        assert av.validate_arguments(tampered.authorized, make_contracts()).accepted, "stage 3 alone misses this"
+        stage3 = av.validate_arguments(tampered.authorized, registry=make_registry(), contracts=make_contracts())
+        assert codes_of(stage3) == ["not_authorized"] and "missing_argument" in stage3.rejections[0].detail
         assert "missing_argument" in unsupported(tampered)
 
     def test_unregistered_argument(self):
@@ -354,7 +360,7 @@ class TestInputs:
                           for a in actors[0].arguments)
         actors[0] = actors[0].model_copy(update={"arguments": arguments})
         tampered = forged(workload, authorized=workload.authorized.model_copy(update={"actors": tuple(actors)}))
-        assert unsupported(tampered)
+        assert "argument values don't validate" in unsupported(tampered)
 
     def test_model_provided_digest_is_ignored(self):
         workload = validated()
@@ -480,6 +486,41 @@ class TestStability:
 PINNED = "vplan1:b3d9e455885ca25da58a972cd98cb7e65ec702377964f6ffc1c9ebd0a78304ae"
 
 
+class TestForgedValidatedWorkloads:
+    """B2 and B4 at the last stage: no forged or altered object gets an identity."""
+
+    def test_repeated_goal_labels(self):
+        workload = validated()
+        goals = (ws.StateGoal(entity="event", label="same"), ws.StateGoal(entity="ticket", label="same", count=2))
+        forged_goals = forged(workload, authorized=workload.authorized.model_copy(update={"state_goals": goals}))
+        assert "structure_invalid" in unsupported(forged_goals)
+
+    @pytest.mark.parametrize("claim", [{"execution_authorized": True}, {"correctness_evaluated": True},
+                                       {"argument_values_validated": False}])
+    def test_claimed_status_is_refused(self, claim):
+        workload = av.ValidatedWorkload.model_construct(**{**dict(validated()), **claim})
+        assert "isn't what validation produces" in unsupported(workload)
+
+    def test_post_validation_mutation_of_a_value(self):
+        workload = validated(book("a", price=2.5), book("b"))
+        actors = list(workload.authorized.actors)
+        actors[0] = actors[0].model_copy(update={"arguments": tuple(
+            a.model_copy(update={"value": 3.5}) if a.name == "price" else a for a in actors[0].arguments)})
+        mutated = forged(workload, authorized=workload.authorized.model_copy(update={"actors": tuple(actors)}))
+        # The mutated content is itself valid, so it's what validation would produce for that content: it gets the
+        # identity of the plan it now describes, never the identity of the original.
+        assert identity(mutated) == identity(validated(book("a", price=3.5), book("b"))) != identity(workload)
+
+    def test_tampered_trusted_objects(self):
+        registry, contracts = make_registry(), make_contracts()
+        contracts.digest = "f" * 64
+        reason = wi.validated_plan_identity(validated(), registry=registry, contracts=contracts).reason
+        assert "differs from what its configuration builds" in reason or "different contract set" in reason
+        registry = make_registry()
+        registry._by_id.pop("sweep")
+        assert "don't verify" in unsupported(validated(), make_contracts(), registry)
+
+
 class TestExcludedMetadataIsInert:
     """Excluded fields can't steer dispatch, validation, state construction or scheduling under the current contract."""
 
@@ -532,3 +573,90 @@ class TestIsolation:
         monkeypatch.setattr(socket, "create_connection", refuse)
         assert wi.validated_plan_identity(validated(), **trust()).supported
         json.dumps(wi.plan_fields(validated()))
+
+
+class TestChainAtTheSizeLimit:
+    """A document exactly at the size limit, omitting every default, passes every stage that re-validates it."""
+
+    ARGS = [f"a{i}" for i in range(16)]
+
+    def trusted(self):
+        config = {"registry_version": 1, "application": "big", "min_actors": 2, "max_actors": 4,
+                  "registered_by": {"registrar": "harness_owner", "source": "harness_config", "config_label": "big_v1"},
+                  "entrypoints": [{"id": "op", "operation": "never_imported.big:op", "versions": ["v1"],
+                                   "roles": ["request"], "max_instances": 4,
+                                   "arguments": [{"name": a, "types": ["str"]} for a in self.ARGS]}]}
+        registry = rg.build_registry(config, trusted=rg.TrustedRegistration(
+            registrar="harness_owner", config_label="big_v1",
+            pinned_digest=rg.registry_digest(rg.RegistryConfig.model_validate(config))))
+        contract_set = {"contracts_version": 1, "application": "big", "registry_digest": registry.digest,
+                        "contracts": [{"entrypoint": "op", "versions": ["v1"], "roles": ["request"],
+                                       "arguments": [{"name": a, "constraints": [{"kind": "str"}]}
+                                                     for a in self.ARGS]}]}
+        contracts = av.build_contracts(contract_set, registry=registry, trusted=av.TrustedContracts(
+            reviewer="contract_reviewer", pinned_digest=av.contracts_digest(av.ContractSet.model_validate(
+                contract_set))))
+        return registry, contracts
+
+    def document(self):
+        actors = [{"name": n, "entrypoint": "op", "application_version": "v1", "role": "request",
+                   "arguments": [{"name": a, "value": {"type": "str", "value": "x" * 128}} for a in self.ARGS]}
+                  for n in "abcd"]
+        goals = [{"entity": "e", "label": f"g{i}", "constraints": [{"field": f"f{j}", "op": "is_null"}
+                                                                   for j in range(16)]} for i in range(12)]
+        document = {"schema_version": 2, "name": "a", "application": "big",
+                    "provenance": {"origin": "hand_written", "author": "x"}, "actors": actors, "state_goals": goals}
+        for g, j in ((g, j) for g in range(12) for j in range(16)):
+            trial = json.loads(json.dumps(document))
+            trial["state_goals"][g]["constraints"][j] = {"field": f"f{j}", "op": "eq",
+                                                         "value": {"type": "str", "value": "y" * 128}}
+            if ws.document_size(trial) > ws.MAX_DOCUMENT_BYTES:
+                break
+            document = trial
+        room = ws.MAX_DOCUMENT_BYTES - ws.document_size(document) - len(',"rationale":""')
+        if room > 0:
+            document["rationale"] = "r" * min(800, room)
+        return document
+
+    def test_every_stage_accepts_it(self):
+        document = self.document()
+        assert ws.MAX_DOCUMENT_BYTES - 16 <= ws.document_size(document) <= ws.MAX_DOCUMENT_BYTES
+        registry, contracts = self.trusted()
+        authorized = rg.authorize(ws.parse_workload(document), registry)
+        assert authorized.accepted, authorized.rejections
+        assert rg.check_authorized(authorized.workload, registry) == ()
+        result = av.validate_arguments(authorized.workload, registry=registry, contracts=contracts)
+        assert result.accepted, result.rejections
+        assert wi.validated_plan_identity(result.workload, registry=registry, contracts=contracts).supported
+
+
+class TestChainConsistency:
+    """parse → authorize → validate_arguments → validated_plan_identity: no stage refuses what an earlier stage made."""
+
+    def accepted_specs(self):
+        fixtures = json.loads((ROOT / "tests/live_app/workload_spec_fixtures.json").read_text())["fixtures"]
+        specs = [ws.parse_workload(f["document"]) for f in fixtures if f["expect"] in ("valid", "structurally_valid")]
+        from test_live_workload import proposal
+
+        hand = ws.Provenance(origin="hand_written", author="v1_fixture")
+        specs.append(ws.parse_workload(proposal() | {"schema_version": 1}, v1_provenance=hand))
+        return specs
+
+    def test_structural_revalidation_accepts_every_parser_output(self):
+        specs = self.accepted_specs()
+        assert len(specs) >= 9
+        for spec in specs:
+            checked, problems = rg._structure_problems(spec)
+            assert problems == [] and checked == spec
+
+    @pytest.mark.parametrize("actors", [
+        [book("a"), book("b")],
+        [book("a", "v2", price=5e-324, coupon="ABCD1234"), book("b", min_qty=0, max_qty=1)],
+        [book("d"), book("c"), book("b"), book("a", coupon=None)],
+    ], ids=["plain", "edge_values", "four_actors"])
+    def test_genuine_outputs_pass_every_later_check(self, actors):
+        registry, contracts = make_registry(), make_contracts()
+        workload = validated(*actors, goals=[GOAL], rationale="日本語 😀")
+        assert rg.check_authorized(workload.authorized, registry) == ()
+        assert av.check_validated(workload, registry=registry, contracts=contracts) is None
+        assert wi.validated_plan_identity(workload, registry=registry, contracts=contracts).supported

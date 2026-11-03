@@ -997,7 +997,7 @@
    "id": "argument_string_with_newline",
    "label": "hand-written synthetic fixture",
    "expect": "invalid",
-   "reason_contains": "pattern",
+   "reason_contains": "refused code points",
    "note": "",
    "document": {
     "schema_version": 2,
@@ -1046,7 +1046,7 @@
    "id": "argument_string_with_terminal_escape",
    "label": "hand-written synthetic fixture",
    "expect": "invalid",
-   "reason_contains": "pattern",
+   "reason_contains": "refused code points",
    "note": "",
    "document": {
     "schema_version": 2,
@@ -3788,6 +3788,935 @@
     ]
    },
    "schema_enforces": true
+  },
+  {
+   "id": "text_high_surrogate_in_argument",
+   "label": "hand-written synthetic fixture",
+   "expect": "invalid",
+   "reason_contains": "U+D800",
+   "note": "unpaired high surrogate; Python-only rule",
+   "document": {
+    "schema_version": 2,
+    "name": "fixture",
+    "application": "reservations",
+    "provenance": {
+     "origin": "hand_written",
+     "author": "fixture_author"
+    },
+    "actors": [
+     {
+      "name": "a",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "a\ud800"
+        }
+       }
+      ]
+     },
+     {
+      "name": "b",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "b"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "schema_enforces": false
+  },
+  {
+   "id": "text_low_surrogate_in_rationale",
+   "label": "hand-written synthetic fixture",
+   "expect": "invalid",
+   "reason_contains": "U+DC00",
+   "note": "unpaired low surrogate; Python-only rule",
+   "document": {
+    "schema_version": 2,
+    "name": "fixture",
+    "application": "reservations",
+    "provenance": {
+     "origin": "hand_written",
+     "author": "fixture_author"
+    },
+    "actors": [
+     {
+      "name": "a",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "a"
+        }
+       }
+      ]
+     },
+     {
+      "name": "b",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "b"
+        }
+       }
+      ]
+     }
+    ],
+    "rationale": "why \udc00"
+   },
+   "schema_enforces": false
+  },
+  {
+   "id": "text_reversed_surrogate_pair",
+   "label": "hand-written synthetic fixture",
+   "expect": "invalid",
+   "reason_contains": "U+D83D",
+   "note": "low then high is not a pair; Python-only rule",
+   "document": {
+    "schema_version": 2,
+    "name": "fixture",
+    "application": "reservations",
+    "provenance": {
+     "origin": "hand_written",
+     "author": "fixture_author"
+    },
+    "actors": [
+     {
+      "name": "a",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "\ude00\ud83d"
+        }
+       }
+      ]
+     },
+     {
+      "name": "b",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "b"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "schema_enforces": false
+  },
+  {
+   "id": "text_surrogate_in_nested_goal_value",
+   "label": "hand-written synthetic fixture",
+   "expect": "invalid",
+   "reason_contains": "U+D800",
+   "note": "nested string; Python-only rule",
+   "document": {
+    "schema_version": 2,
+    "name": "fixture",
+    "application": "reservations",
+    "provenance": {
+     "origin": "hand_written",
+     "author": "fixture_author"
+    },
+    "actors": [
+     {
+      "name": "a",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "a"
+        }
+       }
+      ]
+     },
+     {
+      "name": "b",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "b"
+        }
+       }
+      ]
+     }
+    ],
+    "state_goals": [
+     {
+      "entity": "event",
+      "label": "g",
+      "count": 1,
+      "constraints": [
+       {
+        "field": "title",
+        "op": "eq",
+        "value": {
+         "type": "str",
+         "value": "t\ud800"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "schema_enforces": false
+  },
+  {
+   "id": "text_surrogate_in_key",
+   "label": "hand-written synthetic fixture",
+   "expect": "invalid",
+   "reason_contains": "key contains refused",
+   "note": "the schema refuses the unknown key; the parser refuses its text first",
+   "document": {
+    "schema_version": 2,
+    "name": "fixture",
+    "application": "reservations",
+    "provenance": {
+     "origin": "hand_written",
+     "author": "fixture_author",
+     "n\ud800": "x"
+    },
+    "actors": [
+     {
+      "name": "a",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "a"
+        }
+       }
+      ]
+     },
+     {
+      "name": "b",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "b"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "schema_enforces": true
+  },
+  {
+   "id": "text_rationale_with_terminal_escape",
+   "label": "hand-written synthetic fixture",
+   "expect": "invalid",
+   "reason_contains": "U+001B",
+   "note": "",
+   "document": {
+    "schema_version": 2,
+    "name": "fixture",
+    "application": "reservations",
+    "provenance": {
+     "origin": "hand_written",
+     "author": "fixture_author"
+    },
+    "actors": [
+     {
+      "name": "a",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "a"
+        }
+       }
+      ]
+     },
+     {
+      "name": "b",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "b"
+        }
+       }
+      ]
+     }
+    ],
+    "rationale": "ok\u001b[2J"
+   },
+   "schema_enforces": true
+  },
+  {
+   "id": "text_rationale_with_newline",
+   "label": "hand-written synthetic fixture",
+   "expect": "invalid",
+   "reason_contains": "U+000A",
+   "note": "",
+   "document": {
+    "schema_version": 2,
+    "name": "fixture",
+    "application": "reservations",
+    "provenance": {
+     "origin": "hand_written",
+     "author": "fixture_author"
+    },
+    "actors": [
+     {
+      "name": "a",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "a"
+        }
+       }
+      ]
+     },
+     {
+      "name": "b",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "b"
+        }
+       }
+      ]
+     }
+    ],
+    "rationale": "one\ntwo"
+   },
+   "schema_enforces": true
+  },
+  {
+   "id": "text_rationale_with_tab",
+   "label": "hand-written synthetic fixture",
+   "expect": "invalid",
+   "reason_contains": "U+0009",
+   "note": "",
+   "document": {
+    "schema_version": 2,
+    "name": "fixture",
+    "application": "reservations",
+    "provenance": {
+     "origin": "hand_written",
+     "author": "fixture_author"
+    },
+    "actors": [
+     {
+      "name": "a",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "a"
+        }
+       }
+      ]
+     },
+     {
+      "name": "b",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "b"
+        }
+       }
+      ]
+     }
+    ],
+    "rationale": "one\ttwo"
+   },
+   "schema_enforces": true
+  },
+  {
+   "id": "text_argument_with_c1_csi",
+   "label": "hand-written synthetic fixture",
+   "expect": "invalid",
+   "reason_contains": "U+009B",
+   "note": "",
+   "document": {
+    "schema_version": 2,
+    "name": "fixture",
+    "application": "reservations",
+    "provenance": {
+     "origin": "hand_written",
+     "author": "fixture_author"
+    },
+    "actors": [
+     {
+      "name": "a",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "a\u009b2J"
+        }
+       }
+      ]
+     },
+     {
+      "name": "b",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "b"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "schema_enforces": true
+  },
+  {
+   "id": "text_argument_with_del",
+   "label": "hand-written synthetic fixture",
+   "expect": "invalid",
+   "reason_contains": "U+007F",
+   "note": "",
+   "document": {
+    "schema_version": 2,
+    "name": "fixture",
+    "application": "reservations",
+    "provenance": {
+     "origin": "hand_written",
+     "author": "fixture_author"
+    },
+    "actors": [
+     {
+      "name": "a",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "a\u007f"
+        }
+       }
+      ]
+     },
+     {
+      "name": "b",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "b"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "schema_enforces": true
+  },
+  {
+   "id": "text_argument_with_right_to_left_override",
+   "label": "hand-written synthetic fixture",
+   "expect": "invalid",
+   "reason_contains": "U+202E",
+   "note": "",
+   "document": {
+    "schema_version": 2,
+    "name": "fixture",
+    "application": "reservations",
+    "provenance": {
+     "origin": "hand_written",
+     "author": "fixture_author"
+    },
+    "actors": [
+     {
+      "name": "a",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "a\u202eb"
+        }
+       }
+      ]
+     },
+     {
+      "name": "b",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "b"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "schema_enforces": true
+  },
+  {
+   "id": "text_note_with_directional_isolate",
+   "label": "hand-written synthetic fixture",
+   "expect": "invalid",
+   "reason_contains": "U+2067",
+   "note": "",
+   "document": {
+    "schema_version": 2,
+    "name": "fixture",
+    "application": "reservations",
+    "provenance": {
+     "origin": "hand_written",
+     "author": "fixture_author",
+     "note": "n\u2067x\u2069"
+    },
+    "actors": [
+     {
+      "name": "a",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "a"
+        }
+       }
+      ]
+     },
+     {
+      "name": "b",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "b"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "schema_enforces": true
+  },
+  {
+   "id": "text_argument_with_left_to_right_mark",
+   "label": "hand-written synthetic fixture",
+   "expect": "invalid",
+   "reason_contains": "U+200E",
+   "note": "",
+   "document": {
+    "schema_version": 2,
+    "name": "fixture",
+    "application": "reservations",
+    "provenance": {
+     "origin": "hand_written",
+     "author": "fixture_author"
+    },
+    "actors": [
+     {
+      "name": "a",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "a\u200eb"
+        }
+       }
+      ]
+     },
+     {
+      "name": "b",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "b"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "schema_enforces": true
+  },
+  {
+   "id": "text_argument_with_arabic_letter_mark",
+   "label": "hand-written synthetic fixture",
+   "expect": "invalid",
+   "reason_contains": "U+061C",
+   "note": "",
+   "document": {
+    "schema_version": 2,
+    "name": "fixture",
+    "application": "reservations",
+    "provenance": {
+     "origin": "hand_written",
+     "author": "fixture_author"
+    },
+    "actors": [
+     {
+      "name": "a",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "a\u061cb"
+        }
+       }
+      ]
+     },
+     {
+      "name": "b",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "b"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "schema_enforces": true
+  },
+  {
+   "id": "text_rationale_with_line_separator",
+   "label": "hand-written synthetic fixture",
+   "expect": "invalid",
+   "reason_contains": "U+2028",
+   "note": "",
+   "document": {
+    "schema_version": 2,
+    "name": "fixture",
+    "application": "reservations",
+    "provenance": {
+     "origin": "hand_written",
+     "author": "fixture_author"
+    },
+    "actors": [
+     {
+      "name": "a",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "a"
+        }
+       }
+      ]
+     },
+     {
+      "name": "b",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "b"
+        }
+       }
+      ]
+     }
+    ],
+    "rationale": "a\u2028b"
+   },
+   "schema_enforces": true
+  },
+  {
+   "id": "text_claim_with_embedding",
+   "label": "hand-written synthetic fixture",
+   "expect": "invalid",
+   "reason_contains": "U+202B",
+   "note": "",
+   "document": {
+    "schema_version": 2,
+    "name": "fixture",
+    "application": "reservations",
+    "provenance": {
+     "origin": "hand_written",
+     "author": "fixture_author"
+    },
+    "actors": [
+     {
+      "name": "a",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "a"
+        }
+       }
+      ]
+     },
+     {
+      "name": "b",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "b"
+        }
+       }
+      ]
+     }
+    ],
+    "source_refs": [
+     {
+      "path": "app/models.py",
+      "start_line": 1,
+      "end_line": 2,
+      "claim": "c\u202bx"
+     }
+    ]
+   },
+   "schema_enforces": true
+  },
+  {
+   "id": "text_international_and_joiners",
+   "label": "hand-written synthetic fixture",
+   "expect": "valid",
+   "reason_contains": "",
+   "note": "scripts, combining marks, ZWJ, ZWNJ and supplementary characters are kept",
+   "document": {
+    "schema_version": 2,
+    "name": "fixture",
+    "application": "reservations",
+    "provenance": {
+     "origin": "hand_written",
+     "author": "fixture_author"
+    },
+    "actors": [
+     {
+      "name": "a",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "Zo\u00eb \ud83d\ude00 \ud840\udc00"
+        }
+       }
+      ]
+     },
+     {
+      "name": "b",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "b"
+        }
+       }
+      ]
+     }
+    ],
+    "rationale": "\u65e5\u672c\u8a9e \u0395\u03bb\u03bb\u03b7\u03bd\u03b9\u03ba\u03ac \u0645\u0631\u062d\u0628\u0627 \u05e2\u05d1\u05e8\u05d9\u05ea \u0939\u093f\u0928\u094d\u0926\u0940 e\u0301 \u0915\u094d\u200d\u0937 \u0645\u06cc\u200c\u062e\u0648\u0627\u0647\u0645 \ud83d\ude00 \ud83d\udc68\u200d\ud83d\udc69 \ud840\udc00"
+   },
+   "schema_enforces": true
+  },
+  {
+   "id": "repeated_goal_label",
+   "label": "hand-written synthetic fixture",
+   "expect": "invalid",
+   "reason_contains": "repeated state-goal label",
+   "note": "",
+   "document": {
+    "schema_version": 2,
+    "name": "fixture",
+    "application": "reservations",
+    "provenance": {
+     "origin": "hand_written",
+     "author": "fixture_author"
+    },
+    "actors": [
+     {
+      "name": "a",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "a"
+        }
+       }
+      ]
+     },
+     {
+      "name": "b",
+      "entrypoint": "reserve_seats",
+      "application_version": "v1",
+      "role": "request",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "b"
+        }
+       }
+      ]
+     }
+    ],
+    "state_goals": [
+     {
+      "entity": "event",
+      "label": "same",
+      "count": 1,
+      "constraints": []
+     },
+     {
+      "entity": "ticket",
+      "label": "same",
+      "count": 2,
+      "constraints": []
+     }
+    ]
+   },
+   "schema_enforces": false
   }
  ]
 }

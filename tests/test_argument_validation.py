@@ -126,7 +126,12 @@ def authorized(*actors, registry=None):
 
 
 def validate(*actors, contracts=None):
-    return av.validate_arguments(authorized(*actors), contracts or make_contracts())
+    return av.validate_arguments(authorized(*actors), registry=make_registry(), contracts=contracts or make_contracts())
+
+
+def check(workload, contracts=None, registry=None):
+    registry = registry or make_registry()
+    return av.validate_arguments(workload, registry=registry, contracts=contracts or make_contracts(registry))
 
 
 def codes(result):
@@ -282,9 +287,9 @@ class TestComparisonTypes:
         big = 2**53
         # As floats these two are equal; as integers they differ by one, and the rule must see the difference.
         assert float(big + 1) == float(big)
-        rejected = av.validate_arguments(authorized(book("a", min_qty=big + 1, max_qty=big), book("b")), contracts)
+        rejected = check(authorized(book("a", min_qty=big + 1, max_qty=big), book("b")), contracts, registry)
         assert [r.predicate for r in rejected.rejections] == ["less_or_equal"]
-        assert av.validate_arguments(authorized(book("a", min_qty=big, max_qty=big + 1), book("b")), contracts).accepted
+        assert check(authorized(book("a", min_qty=big, max_qty=big + 1), book("b")), contracts, registry).accepted
 
 
 class TestPresenceIsNotTruthiness:
@@ -309,7 +314,7 @@ class TestPresenceIsNotTruthiness:
 class TestDigestsSurvive:
     def test_registry_and_contract_digests_are_carried_unchanged(self):
         registry, contracts = make_registry(), make_contracts()
-        validated = av.validate_arguments(authorized(book("a"), book("b"), registry=registry), contracts).workload
+        validated = check(authorized(book("a"), book("b"), registry=registry), contracts, registry).workload
         assert validated.authorized.registry_digest == registry.digest == contracts.registry_digest
         assert validated.contracts_digest == contracts.digest
 
@@ -330,8 +335,14 @@ class TestRolesAndVersions:
         other["entrypoints"][1]["max_instances"] = 2
         other_registry = make_registry(other)
         contracts = make_contracts(other_registry)
-        result = av.validate_arguments(authorized(book("a"), book("b")), contracts)
+        result = check(authorized(book("a"), book("b")), contracts, other_registry)
         assert codes(result) == ["registry_mismatch"]
+
+    def test_contract_set_and_registry_must_belong_together(self):
+        other = copy(REGISTRY)
+        other["entrypoints"][1]["max_instances"] = 2
+        with pytest.raises(av.ContractError, match="different registry"):
+            check(authorized(book("a"), book("b")), make_contracts(make_registry(other)), make_registry())
 
 
 # ------------------------------------------------------------------ the contract set itself
@@ -414,33 +425,39 @@ def forged(workload, actor_index, argument, kind, value):
 
 
 class TestNoCoercion:
-    @pytest.mark.parametrize("argument,kind,value,code", [
-        ("qty", "int", True, "wrong_python_type"),
-        ("qty", "int", 2.0, "wrong_python_type"),
-        ("qty", "int", "2", "wrong_python_type"),
-        ("holder", "str", 5, "wrong_python_type"),
-        ("event_id", "int", None, "wrong_python_type"),
-    ])
-    def test_values_are_never_converted(self, argument, kind, value, code):
-        result = av.validate_arguments(forged(authorized(book("a"), book("b")), 0, argument, kind, value),
-                                       make_contracts())
-        assert only(result) == [("a", argument, code)]
+    """A forged value now stops at the trust boundary, as not_authorized, before any value rule runs.
+
+    The value rules below stay as defence in depth, and are tested directly so they can't silently decay.
+    """
+
+    FORGERIES = [
+        ("qty", "int", True), ("qty", "int", 2.0), ("qty", "int", "2"), ("holder", "str", 5),
+        ("event_id", "int", None), ("price", "float", math.inf), ("price", "float", -math.inf),
+        ("price", "float", math.nan), ("qty", "null", None),
+    ]
+
+    @pytest.mark.parametrize("argument,kind,value", FORGERIES)
+    def test_forged_values_are_refused_before_validation(self, argument, kind, value):
+        workload = authorized(book("a", price=1.0), book("b"))
+        result = check(forged(workload, 0, argument, kind, value))
+        assert not result.accepted and set(codes(result)) == {"not_authorized"}
+
+    @pytest.mark.parametrize("kind,value", [("int", True), ("int", 2.0), ("int", "2"), ("str", 5), ("int", None),
+                                            ("float", 2), ("bool", 1)])
+    def test_value_rules_never_convert(self, kind, value):
+        rule = {"int": av.IntConstraint(kind="int"), "float": av.FloatConstraint(kind="float"),
+                "str": av.StrConstraint(kind="str"), "bool": av.BoolConstraint(kind="bool")}[kind]
+        assert [code for code, _ in av._value_problems(kind, value, rule)] == ["wrong_python_type"]
 
     @pytest.mark.parametrize("value", [math.inf, -math.inf, math.nan])
-    def test_non_finite_floats(self, value):
-        workload = authorized(book("a", price=1.0), book("b"))
-        result = av.validate_arguments(forged(workload, 0, "price", "float", value), make_contracts())
-        assert only(result) == [("a", "price", "non_finite")]
-
-    def test_null_where_the_registry_doesnt_allow_it(self):
-        result = av.validate_arguments(forged(authorized(book("a"), book("b")), 0, "qty", "null", None),
-                                       make_contracts())
-        assert only(result) == [("a", "qty", "null_not_allowed")]
+    def test_value_rules_refuse_non_finite_floats(self, value):
+        problems = av._value_problems("float", value, av.FloatConstraint(kind="float"))
+        assert [code for code, _ in problems] == ["non_finite"]
 
     def test_the_authorized_workload_is_left_unchanged(self):
         workload = authorized(book("a", qty=99), book("b"))
         before = workload.model_dump_json()
-        av.validate_arguments(workload, make_contracts())
+        check(workload)
         assert workload.model_dump_json() == before
 
 
@@ -451,9 +468,13 @@ class TestStateSeparation:
                                   "actors": [book("a"), book("b")]})
         for wrong in (spec, spec.model_dump(), rg.authorize(spec, make_registry())):
             with pytest.raises(TypeError, match="registry-authorized"):
-                av.validate_arguments(wrong, make_contracts())
+                check(wrong)
         with pytest.raises(TypeError, match="contracts"):
-            av.validate_arguments(authorized(book("a"), book("b")), CONTRACTS)
+            av.validate_arguments(authorized(book("a"), book("b")), registry=make_registry(), contracts=CONTRACTS)
+        with pytest.raises(TypeError, match="Registry"):
+            av.validate_arguments(authorized(book("a"), book("b")), registry=REGISTRY, contracts=make_contracts())
+        with pytest.raises(TypeError):
+            av.validate_arguments(authorized(book("a"), book("b")), make_contracts())  # the registry is required
 
     def test_stages_are_marked_and_cannot_be_claimed(self):
         validated = validate(book("a"), book("b")).workload
@@ -476,8 +497,8 @@ class TestStateSeparation:
 class TestDeterminism:
     def test_rejections_are_ordered_and_structured_the_same_way_every_time(self):
         bad = [book("z", qty=0, holder="BAD"), book("a", event_id=0, min_qty=5, max_qty=1)]
-        first = av.validate_arguments(authorized(*bad), make_contracts())
-        second = av.validate_arguments(authorized(*reversed(bad)), make_contracts())
+        first = check(authorized(*bad))
+        second = check(authorized(*reversed(bad)))
         assert first == second
         assert [(r.actor, r.argument, r.predicate, r.code) for r in first.rejections] == [
             ("a", "event_id", None, "below_minimum"),
@@ -485,7 +506,7 @@ class TestDeterminism:
             ("z", "holder", None, "character_not_permitted"),
             ("z", "qty", None, "below_minimum"),
         ]
-        assert len({av.validate_arguments(authorized(*bad), make_contracts()).model_dump_json()
+        assert len({check(authorized(*bad)).model_dump_json()
                     for _ in range(10)}) == 1
 
 
@@ -524,3 +545,123 @@ class TestIsolation:
         monkeypatch.setattr(socket.socket, "connect", refuse)
         monkeypatch.setattr(socket, "create_connection", refuse)
         assert validate(book("a"), book("b")).accepted
+
+
+# ------------------------------------------------------------------ text policy in contracts (B1, B3)
+
+
+ZERO = av.TrustedContracts(reviewer="contract_reviewer", pinned_digest="0" * 64)
+
+
+class TestContractText:
+    @pytest.mark.parametrize("text", ["x\ud800", "x\udfff", "x\x1b", "x\x9b", "x‮", "x⁩"])
+    def test_allowed_values_follow_the_policy(self, text):
+        registry = make_registry()
+        config = contract_config(registry, lambda c: c["contracts"][2]["arguments"][1]["constraints"][0].update(
+            allowed=["full", text]))
+        with pytest.raises(av.ContractError) as caught:
+            av.build_contracts(config, registry=registry, trusted=ZERO)
+        message = " ".join(caught.value.reasons)
+        assert "refused code points" in message
+        assert not any(ws.forbidden_code_point(c) for c in message)
+
+    @pytest.mark.parametrize("text", ["x\x1b", "x\x9b", "x\u202e", "x\u2066"])
+    def test_the_constraint_model_itself_refuses_unsafe_allowed_values(self, text):
+        """The model's own rule, independent of the configuration walker in build_contracts."""
+        with pytest.raises(ValueError, match="pattern"):
+            av.StrConstraint(kind="str", allowed=["full", text])
+
+    def test_keys_follow_the_policy(self):
+        registry = make_registry()
+        config = contract_config(registry, lambda c: c["contracts"][0].update({"k\ud800": 1}))
+        with pytest.raises(av.ContractError, match="key contains refused"):
+            av.build_contracts(config, registry=registry, trusted=ZERO)
+
+    def test_international_allowed_values_are_kept(self):
+        registry = make_registry()
+        contracts = make_contracts(registry, lambda c: c["contracts"][2]["arguments"][1]["constraints"][0].update(
+            allowed=["full", "incremental", "完全"]))
+        assert "完全" in contracts.lookup("sweep", "v2").arguments[1].constraints[0].allowed
+
+
+# ------------------------------------------------------------------ objects aren't trusted for their class (B2)
+
+
+class TestContractObjectIntegrity:
+    def test_genuine_contracts_verify(self):
+        av.verify_contracts(make_contracts(), make_registry())
+
+    @pytest.mark.parametrize("tamper", [
+        lambda c: setattr(c, "digest", "f" * 64),
+        lambda c: setattr(c, "registry_digest", "f" * 64),
+        lambda c: c._index.pop(next(iter(c._index))),
+        lambda c: setattr(c, "config", make_contracts(mutate=lambda x: x["contracts"][2]["arguments"][0][
+            "constraints"][0].update(maximum=99)).config),
+        lambda c: c.registered_types.__setitem__(("book", "qty"), ("int", "null")),
+        lambda c: setattr(c, "trusted", av.TrustedContracts.model_construct(reviewer="x", pinned_digest="bad")),
+    ], ids=["digest", "registry_digest", "index", "config", "registered_types", "malformed_trust"])
+    def test_tampered_contracts_are_refused(self, tamper):
+        contracts = make_contracts()
+        tamper(contracts)
+        with pytest.raises(av.ContractError):
+            av.verify_contracts(contracts, make_registry())
+        with pytest.raises(av.ContractError):
+            av.validate_arguments(authorized(book("a"), book("b")), registry=make_registry(), contracts=contracts)
+
+    def test_build_refuses_an_unvalidated_trust_object(self):
+        registry = make_registry()
+        config = contract_config(registry)
+        forged = av.TrustedContracts.model_construct(reviewer="Not An Identifier!",
+                                                     pinned_digest=trusted_contracts(config).pinned_digest)
+        with pytest.raises(av.ContractError, match="TrustedContracts"):
+            av.build_contracts(config, registry=registry, trusted=forged)
+
+    def test_tampered_registry_is_refused(self):
+        registry = make_registry()
+        registry._by_id.pop("sweep")
+        with pytest.raises(av.ContractError, match="Registry doesn't verify"):
+            av.validate_arguments(authorized(book("a"), book("b")), registry=registry, contracts=make_contracts())
+
+
+def edit_actor(workload, index=0, **change):
+    actors = list(workload.actors)
+    actors[index] = actors[index].model_copy(update=change)
+    return workload.model_copy(update={"actors": tuple(actors)})
+
+
+class TestForgedAuthorizedWorkloads:
+    """validate_arguments checks the workload is genuine authorize output before looking at any value."""
+
+    @pytest.mark.parametrize("make", [
+        lambda w: edit_actor(w, role="background_job"),
+        lambda w: edit_actor(w, application_version="v9"),
+        lambda w: edit_actor(w, entrypoint="sweep"),
+        lambda w: edit_actor(w, operation="elsewhere.module:function"),
+        lambda w: edit_actor(w, arguments=tuple(a for a in w.actors[0].arguments if a.name != "qty")),
+        lambda w: edit_actor(w, arguments=(*w.actors[0].arguments, rg.AuthorizedArgument(name="seat", type="int",
+                                                                                         value=1))),
+        lambda w: w.model_copy(update={"actors": tuple(reversed(w.actors))}),
+        lambda w: w.model_copy(update={"state_goals": (ws.StateGoal(entity="event", label="same"),
+                                                       ws.StateGoal(entity="ticket", label="same", count=2))}),
+        lambda w: w.model_copy(update={"state_goals": (ws.StateGoal.model_construct(
+            entity="event", label="g", count=999, constraints=[]),)}),
+        lambda w: rg.AuthorizedWorkload.model_construct(**{**dict(w), "execution_ready": True}),
+        lambda w: w.model_copy(update={"registered_by": rg.RegisteredBy(
+            registrar="someone_else", source="harness_config", config_label="synthetic_v1")}),
+    ], ids=["role", "version", "entrypoint", "operation", "missing_argument", "extra_argument", "reordered",
+            "repeated_goal_label", "invalid_goal", "claims_execution_ready", "registration"])
+    def test_forgeries_never_become_validated(self, make):
+        result = check(make(authorized(book("a"), book("b"))))
+        assert not result.accepted and result.workload is None
+        assert set(codes(result)) == {"not_authorized"}
+
+    def test_repeated_goal_labels_are_refused_by_the_label_rule(self):
+        workload = authorized(book("a"), book("b")).model_copy(update={"state_goals": (
+            ws.StateGoal(entity="event", label="same"), ws.StateGoal(entity="ticket", label="same", count=2))})
+        assert "repeated state-goal label" in " ".join(r.detail for r in check(workload).rejections)
+
+    def test_stale_registry_pin(self):
+        other = copy(REGISTRY)
+        other["entrypoints"][1]["max_instances"] = 2
+        newer = make_registry(other)
+        assert codes(check(authorized(book("a"), book("b")), make_contracts(newer), newer)) == ["registry_mismatch"]

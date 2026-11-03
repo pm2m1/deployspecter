@@ -18,6 +18,17 @@ with the trusted object, and the registry reports provenance from the trusted ob
 This is a code boundary, not cryptography: anything in the same process can construct a `TrustedRegistration`. Proposal
 text can't, because nothing ever parses one from a proposal.
 
+**Objects aren't trusted for their class.** A pydantic object can be built without validation (`model_construct`,
+`model_copy(update=...)`), and `Registry` is a plain class whose attributes can be reassigned. So:
+
+- `build_registry` re-validates a `TrustedRegistration` or `RegistryConfig` instance from its own content, and applies
+  the text policy to the whole configuration;
+- `verify_registry` rebuilds a `Registry` from its configuration and trust object and requires an exact match;
+- `authorize` runs `verify_registry`, then re-validates the specification itself with the real parser.
+
+These checks are against mistakes and forged data objects. They aren't protection against hostile code running in the
+same process, which could replace the functions themselves.
+
 ## What a registry is
 
 ```
@@ -33,7 +44,7 @@ RegistryConfig
     roles           request and/or background_job
     arguments       ≤ 16 unique contracts {name, types (subset of int, float, bool, str, null), required}
     max_instances   1 to 4
-    description     one line
+    description     safe text, ≤ 200 (the text policy in WORKLOAD_CONTRACT.md)
 ```
 
 Unknown fields, repeated JSON keys and malformed values are refused. The digest is order-insensitive.
@@ -48,12 +59,24 @@ Unknown fields, repeated JSON keys and malformed values are refused. The digest 
 | `registry_digest(config) -> str` | The order-insensitive SHA-256 a trusted pin is computed from |
 | `Registry.lookup(id)` | Exact match, or `None` |
 | `Registry.ids()`, `.digest`, `.application`, `.registered_by`, `.trusted` | Read-only facts |
-| `authorize(spec, registry) -> AuthorizationResult` | Takes only a parsed `WorkloadSpec` and a built `Registry` |
+| `verify_registry(registry)` | Raises `RegistryError` unless the object is exactly what its configuration builds |
+| `authorize(spec, registry) -> AuthorizationResult` | Takes a `WorkloadSpec` and a `Registry`; re-validates both first |
+| `check_authorized(workload, registry) -> tuple[Rejection, ...]` | Empty only for genuine `authorize` output for this registry |
+
+`authorize` re-parses a dump of the specification without defaults, so the re-parsed document is never larger than the
+original and the size limit can't refuse a document it accepted. The re-parsed specification must equal the object:
+content validation would change or refuse, or a lookalike subclass, is refused as `structure_invalid`.
+
+`check_authorized` rebuilds a minimal document from the authorized workload, with the one-character name `r`, no
+explanatory fields and no defaults, parses it, authorizes it again and requires the result to equal the object exactly.
+The full-record digest can't be re-derived without the original document, so only its form is checked.
 
 `AuthorizationResult` is either accepted, with an `AuthorizedWorkload`, or rejected with every `Rejection` listed in a
 fixed order. Each rejection has structured fields (`code`, `actor`, `entrypoint`, `argument`) and a human-readable
 `detail` derived from them. The codes are:
 
+- `structure_invalid` (the specification object isn't a valid specification) and `not_genuine_authorization` (from
+  `check_authorized`)
 - `application_mismatch`, `too_few_actors`, `too_many_actors`
 - `unknown_entrypoint`, `version_not_registered`, `role_not_registered`
 - `unknown_argument`, `missing_argument`, `argument_type_not_registered`

@@ -261,7 +261,7 @@
         "note": {
           "default": "",
           "maxLength": 400,
-          "pattern": "^[^\\x00-\\x1f\\x7f]*$",
+          "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u061c\\u200e\\u200f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
           "title": "Note",
           "type": "string"
         },
@@ -289,7 +289,7 @@
       "properties": {
         "claim": {
           "maxLength": 400,
-          "pattern": "^[^\\x00-\\x1f\\x7f]*$",
+          "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u061c\\u200e\\u200f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
           "title": "Claim",
           "type": "string"
         },
@@ -366,7 +366,7 @@
         },
         "value": {
           "maxLength": 128,
-          "pattern": "^[^\\x00-\\x1f\\x7f]*$",
+          "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u061c\\u200e\\u200f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
           "title": "Value",
           "type": "string"
         }
@@ -408,6 +408,7 @@
     "rationale": {
       "default": "",
       "maxLength": 800,
+      "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u061c\\u200e\\u200f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
       "title": "Rationale",
       "type": "string"
     },
@@ -450,7 +451,9 @@
     "state goals total at most 64 rows",
     "the whole document is at most 32768 bytes as compact UTF-8 JSON",
     "no repeated keys in the JSON text",
-    "no NaN or Infinity anywhere"
+    "no NaN or Infinity anywhere",
+    "no unpaired surrogate code points (U+D800 to U+DFFF) in any key or string; the text pattern covers the rest of the text policy but can't state this exactly",
+    "object keys follow the same text policy as string values"
   ],
   "x-status": "candidate, not frozen"
 }

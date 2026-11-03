@@ -20,7 +20,8 @@ trusted `Registry` and `Contracts`, both by keyword. It returns either a `PlanId
 reason.
 
 **Nothing about the input is trusted as given.** A `ValidatedWorkload` is an ordinary immutable object, so code can
-build or copy one by hand. The identity therefore re-runs every earlier stage on the workload's own content:
+build or copy one by hand. The identity calls `argument_validation.check_validated`, which verifies the trusted
+registry and contract objects and re-runs every earlier stage on the workload's own content:
 
 1. **Stage 1:** it rebuilds a version 2 document from the authorized workload, and parses it with the real parser.
 2. **Stage 2:** it authorizes that document against the trusted registry. The result must equal the given authorized

@@ -379,3 +379,175 @@ class TestIsolation:
         built = registry()
         results = {rg.authorize(spec(actor("b"), actor("a")), built).model_dump_json() for _ in range(20)}
         assert len(results) == 1
+
+
+# ------------------------------------------------------------------ text policy in configuration (B1, B3)
+
+
+ZERO_PIN = rg.TrustedRegistration(registrar="harness_owner", config_label="synthetic_v1", pinned_digest="0" * 64)
+
+
+class TestConfigurationText:
+    @pytest.mark.parametrize("text", ["x\ud800", "x\udc00", "x\x1b[2J", "x\x9b", "x‮", "x⁦"])
+    def test_refused_in_values_with_a_registry_error(self, text):
+        config = copy(CONFIG)
+        config["entrypoints"][0]["description"] = text
+        with pytest.raises(rg.RegistryError) as caught:
+            rg.build_registry(config, trusted=ZERO_PIN)
+        assert "refused code points" in " ".join(caught.value.reasons)
+
+    @pytest.mark.parametrize("key", ["k\ud800", "k\x1b", "k‮"])
+    def test_refused_in_keys(self, key):
+        config = copy(CONFIG)
+        config["entrypoints"][0][key] = 1
+        with pytest.raises(rg.RegistryError, match="key contains refused"):
+            rg.build_registry(config, trusted=ZERO_PIN)
+
+    @pytest.mark.parametrize("escape", ["\\ud800", "\\udfff"])
+    def test_surrogate_escapes_in_registry_json(self, escape):
+        config = copy(CONFIG)
+        config["entrypoints"][0]["description"] = "PLACEHOLDER"
+        text = json.dumps(config).replace("PLACEHOLDER", f"x{escape}")
+        with pytest.raises(rg.RegistryError, match="refused code points"):
+            rg.load_registry_json(text, trusted=ZERO_PIN)
+
+    def test_registry_json_must_be_text(self):
+        with pytest.raises(rg.RegistryError, match="as text"):
+            rg.load_registry_json(json.dumps(CONFIG).encode(), trusted=trusted_for(CONFIG))
+
+    def test_international_description_is_kept(self):
+        config = copy(CONFIG)
+        config["entrypoints"][0]["description"] = "予約 réservation 😀"
+        assert build(config).lookup("reserve_seats").description == "予約 réservation 😀"
+
+
+# ------------------------------------------------------------------ objects aren't trusted for their class (B2)
+
+
+class TestRegistryObjectIntegrity:
+    def test_a_genuine_registry_verifies(self):
+        rg.verify_registry(registry())
+
+    @pytest.mark.parametrize("tamper", [
+        lambda r: setattr(r, "digest", "f" * 64),
+        lambda r: setattr(r, "config", build(dict(copy(CONFIG), max_actors=2)).config),
+        lambda r: r._by_id.pop("release_seats"),
+        lambda r: r._by_id.__setitem__("reserve_seats", r._by_id["release_seats"]),
+        lambda r: setattr(r, "trusted", rg.TrustedRegistration.model_construct(
+            registrar="harness_owner", config_label="synthetic_v1", pinned_digest="not a digest")),
+        lambda r: setattr(r, "trusted", rg.TrustedRegistration(
+            registrar="someone_else", config_label="synthetic_v1", pinned_digest=r.digest)),
+        lambda r: setattr(r, "config", rg.RegistryConfig.model_construct(**{**dict(r.config), "max_actors": 99})),
+    ], ids=["digest", "config", "dropped_entry", "swapped_entry", "malformed_trust", "other_registrar",
+            "unvalidated_config"])
+    def test_a_tampered_registry_is_refused_everywhere(self, tamper):
+        reg = registry()
+        tamper(reg)
+        with pytest.raises(rg.RegistryError):
+            rg.verify_registry(reg)
+        with pytest.raises(rg.RegistryError):
+            rg.authorize(spec(), reg)
+
+    def test_build_refuses_an_unvalidated_trust_object(self):
+        forged = rg.TrustedRegistration.model_construct(registrar="Not An Identifier!", config_label="synthetic_v1",
+                                                        pinned_digest=trusted_for(CONFIG).pinned_digest)
+        with pytest.raises(rg.RegistryError, match="TrustedRegistration"):
+            rg.build_registry(copy(CONFIG), trusted=forged)
+
+
+def constructed(base, **changes):
+    """A WorkloadSpec built without validation, as model_construct allows."""
+    return ws.WorkloadSpec.model_construct(**{**dict(base), **changes})
+
+
+class TestForgedSpecifications:
+    """authorize re-validates the specification itself; an object of the right class proves nothing."""
+
+    def genuine(self):
+        return spec(actor("a"), actor("b"))
+
+    def test_genuine_specification_is_still_authorized(self):
+        assert rg.authorize(self.genuine(), registry()).accepted
+
+    @pytest.mark.parametrize("make", [
+        lambda s: constructed(s, actors=[ws.ActorSpec.model_construct(**{**dict(s.actors[0]), "name": "bad name!"}),
+                                         s.actors[1]]),
+        lambda s: constructed(s, actors=[ws.ActorSpec.model_construct(**{**dict(s.actors[0]), "role": "admin"}),
+                                         s.actors[1]]),
+        lambda s: constructed(s, actors=[dict(s.actors[0]), s.actors[1]]),
+        lambda s: constructed(s, state_goals=[ws.StateGoal(entity="event", label="same"),
+                                              ws.StateGoal(entity="ticket", label="same", count=2)]),
+        lambda s: constructed(s, state_goals=[ws.StateGoal.model_construct(entity="event", label="g", count=999,
+                                                                           constraints=[])]),
+        lambda s: constructed(s, rationale="x\x1b[2J"),
+        lambda s: constructed(s, rationale="x\ud800"),
+        lambda s: constructed(s, schema_version=3),
+        lambda s: constructed(s, actors=[s.actors[0]]),
+        lambda s: s.model_copy(update={"name": "Not An Identifier"}),
+        lambda s: s.model_copy(update={"actors": [s.actors[0], s.actors[0]]}),
+    ], ids=["invalid_actor_name", "unknown_role", "raw_dict_actor", "repeated_goal_label", "goal_count_too_large",
+            "terminal_escape", "lone_surrogate", "unsupported_version", "too_few_actors", "invalid_name_by_copy",
+            "repeated_actor_by_copy"])
+    def test_forged_specification_is_refused_as_structure_invalid(self, make):
+        result = rg.authorize(make(self.genuine()), registry())
+        assert not result.accepted and set(codes(result)) == {"structure_invalid"}
+
+    def test_a_subclass_instance_isnt_a_parser_output(self):
+        """Same content, different class: it reaches the comparison with its re-parsed self, and fails it."""
+        subclass = type("LookalikeSpec", (ws.WorkloadSpec,), {})
+        result = rg.authorize(subclass(**self.genuine().model_dump()), registry())
+        assert [r.detail for r in result.rejections] == ["the specification object differs from its own validated "
+                                                         "content"]
+
+    def test_repeated_goal_labels_are_refused_by_the_label_rule(self):
+        forged = constructed(self.genuine(), state_goals=[ws.StateGoal(entity="event", label="same"),
+                                                          ws.StateGoal(entity="ticket", label="same", count=2)])
+        result = rg.authorize(forged, registry())
+        assert any("repeated state-goal label" in r.detail for r in result.rejections)
+
+
+class TestCheckAuthorized:
+    def genuine(self):
+        return rg.authorize(spec(actor("a"), actor("b")), registry()).workload
+
+    def test_genuine_output_passes(self):
+        assert rg.check_authorized(self.genuine(), registry()) == ()
+
+    def edit_actor(self, workload, **change):
+        actors = list(workload.actors)
+        actors[0] = actors[0].model_copy(update=change)
+        return workload.model_copy(update={"actors": tuple(actors)})
+
+    @pytest.mark.parametrize("change", [
+        {"role": "background_job"}, {"application_version": "v9"}, {"entrypoint": "release_seats"},
+        {"operation": "elsewhere.module:function"}, {"actor": "renamed"},
+    ])
+    def test_altered_actor_fields(self, change):
+        assert rg.check_authorized(self.edit_actor(self.genuine(), **change), registry())
+
+    def test_missing_argument(self):
+        workload = self.genuine()
+        trimmed = tuple(a for a in workload.actors[0].arguments if a.name != "qty")
+        found = rg.check_authorized(self.edit_actor(workload, arguments=trimmed), registry())
+        assert "missing_argument" in [r.code for r in found]
+
+    @pytest.mark.parametrize("goals", [
+        (ws.StateGoal(entity="event", label="same"), ws.StateGoal(entity="ticket", label="same", count=2)),
+        (ws.StateGoal.model_construct(entity="event", label="g", count=999, constraints=[]),),
+        ({"entity": "event", "label": "g", "count": 1, "constraints": []},),
+    ], ids=["repeated_label", "count_too_large", "raw_dict"])
+    def test_invalid_state_goals(self, goals):
+        workload = self.genuine().model_copy(update={"state_goals": goals})
+        assert rg.check_authorized(workload, registry())
+
+    @pytest.mark.parametrize("change", [
+        {"spec_digest": "not hex"}, {"spec_digest": 5}, {"execution_ready": True}, {"application": "other"},
+        {"registry_digest": "f" * 64},
+    ])
+    def test_altered_workload_fields(self, change):
+        workload = rg.AuthorizedWorkload.model_construct(**{**dict(self.genuine()), **change})
+        assert rg.check_authorized(workload, registry())
+
+    def test_stale_registry(self):
+        newer = build(dict(copy(CONFIG), max_actors=2))
+        assert rg.check_authorized(self.genuine(), newer)
