@@ -1,0 +1,240 @@
+{
+  "corpus": "deployspecter-o6-offline-calibration",
+  "corpus_version": 1,
+  "status": "development-only synthetic calibration input; not an evaluation arm; no application, held-out or confidential content",
+  "author": "hand-written for Step 6C",
+  "notes": [
+    "Entities and values are invented. The application name 'ticketing' is required only because the synthetic test registry in tests/test_argument_validation.py is bound to it.",
+    "registry_digest is filled at run time from that synthetic registry; schema_digest is a fixed synthetic placeholder.",
+    "Constraint triples are [field, op, value]; is_null and not_null take no value. JSON null is the typed null value."
+  ],
+  "context": {
+    "context_version": 1,
+    "application": "ticketing",
+    "registry_digest": "FILLED_AT_RUN_TIME",
+    "schema_digest": "6666666666666666666666666666666666666666666666666666666666666666",
+    "encoding": "UTF8",
+    "entities": [
+      {"entity": "board", "table": "boards", "primary_key": ["id"], "key_assignment": "ascending_int",
+       "unique": [{"fields": ["code"], "nulls": "distinct"}],
+       "columns": [
+         {"field": "id", "column": "id", "pg_type": "integer", "nullable": false},
+         {"field": "name", "column": "name", "pg_type": "text", "nullable": false, "collation": "deterministic", "filler": {"type": "str", "value": "board"}},
+         {"field": "code", "column": "code", "pg_type": "varchar", "max_length": 12, "nullable": true, "collation": "deterministic"},
+         {"field": "rank", "column": "rank", "pg_type": "integer", "nullable": true},
+         {"field": "weight", "column": "weight", "pg_type": "double precision", "nullable": true},
+         {"field": "archived", "column": "archived", "pg_type": "boolean", "nullable": false, "filler": {"type": "bool", "value": false}},
+         {"field": "created_note", "column": "created_note", "pg_type": "text", "nullable": false, "has_default": true, "collation": "deterministic"},
+         {"field": "slug", "column": "slug", "pg_type": "text", "nullable": true, "generated": true, "collation": "deterministic"}
+       ]},
+      {"entity": "card", "table": "cards", "primary_key": ["id"], "key_assignment": "ascending_int", "has_insert_triggers": true,
+       "foreign_keys": [{"field": "board_id", "references_entity": "board", "references_field": "id"}],
+       "columns": [
+         {"field": "id", "column": "id", "pg_type": "bigint", "nullable": false},
+         {"field": "board_id", "column": "board_id", "pg_type": "integer", "nullable": false},
+         {"field": "title", "column": "title", "pg_type": "text", "nullable": false, "collation": "deterministic", "filler": {"type": "str", "value": "card"}},
+         {"field": "position", "column": "position", "pg_type": "integer", "nullable": true},
+         {"field": "score", "column": "score", "pg_type": "double precision", "nullable": true},
+         {"field": "tag", "column": "tag", "pg_type": "text", "nullable": true, "collation": "deterministic"}
+       ]},
+      {"entity": "card_note", "table": "card_notes", "primary_key": ["id"], "key_assignment": "ascending_int",
+       "foreign_keys": [{"field": "card_id", "references_entity": "card", "references_field": "id"}],
+       "columns": [
+         {"field": "id", "column": "id", "pg_type": "integer", "nullable": false},
+         {"field": "card_id", "column": "card_id", "pg_type": "bigint", "nullable": false},
+         {"field": "body", "column": "body", "pg_type": "text", "nullable": false, "collation": "deterministic", "filler": {"type": "str", "value": "note"}}
+       ]},
+      {"entity": "wide", "table": "wides", "primary_key": ["id"], "key_assignment": "ascending_int",
+       "unique": [
+         {"fields": ["u1"], "nulls": "distinct"}, {"fields": ["u2"], "nulls": "distinct"}, {"fields": ["u3"], "nulls": "distinct"},
+         {"fields": ["u4"], "nulls": "distinct"}, {"fields": ["u5"], "nulls": "distinct"}, {"fields": ["u6"], "nulls": "distinct"},
+         {"fields": ["u7"], "nulls": "distinct"}, {"fields": ["u8"], "nulls": "distinct"}, {"fields": ["u9"], "nulls": "distinct"},
+         {"fields": ["u10"], "nulls": "distinct"}, {"fields": ["u11"], "nulls": "distinct"}, {"fields": ["u12"], "nulls": "distinct"},
+         {"fields": ["f1"], "nulls": "distinct"}, {"fields": ["f2"], "nulls": "distinct"}, {"fields": ["f3"], "nulls": "distinct"},
+         {"fields": ["f4"], "nulls": "distinct"}],
+       "columns": [
+         {"field": "id", "column": "id", "pg_type": "integer", "nullable": false},
+         {"field": "u1", "column": "u1", "pg_type": "integer", "nullable": true},
+         {"field": "u2", "column": "u2", "pg_type": "integer", "nullable": true},
+         {"field": "u3", "column": "u3", "pg_type": "integer", "nullable": true},
+         {"field": "u4", "column": "u4", "pg_type": "integer", "nullable": true},
+         {"field": "u5", "column": "u5", "pg_type": "integer", "nullable": true},
+         {"field": "u6", "column": "u6", "pg_type": "integer", "nullable": true},
+         {"field": "u7", "column": "u7", "pg_type": "integer", "nullable": true},
+         {"field": "u8", "column": "u8", "pg_type": "integer", "nullable": true},
+         {"field": "u9", "column": "u9", "pg_type": "integer", "nullable": true},
+         {"field": "u10", "column": "u10", "pg_type": "integer", "nullable": true},
+         {"field": "u11", "column": "u11", "pg_type": "integer", "nullable": true},
+         {"field": "u12", "column": "u12", "pg_type": "integer", "nullable": true},
+         {"field": "f1", "column": "f1", "pg_type": "double precision", "nullable": true},
+         {"field": "f2", "column": "f2", "pg_type": "double precision", "nullable": true},
+         {"field": "f3", "column": "f3", "pg_type": "double precision", "nullable": true},
+         {"field": "f4", "column": "f4", "pg_type": "double precision", "nullable": true}
+       ]},
+      {"entity": "multi_ref", "table": "multi_refs", "primary_key": ["id"], "key_assignment": "ascending_int",
+       "foreign_keys": [
+         {"field": "r1", "references_entity": "board", "references_field": "id"}, {"field": "r2", "references_entity": "board", "references_field": "id"},
+         {"field": "r3", "references_entity": "board", "references_field": "id"}, {"field": "r4", "references_entity": "board", "references_field": "id"},
+         {"field": "r5", "references_entity": "board", "references_field": "id"}, {"field": "r6", "references_entity": "board", "references_field": "id"},
+         {"field": "r7", "references_entity": "board", "references_field": "id"}, {"field": "r8", "references_entity": "board", "references_field": "id"},
+         {"field": "r9", "references_entity": "board", "references_field": "id"}, {"field": "r10", "references_entity": "board", "references_field": "id"},
+         {"field": "r11", "references_entity": "board", "references_field": "id"}, {"field": "r12", "references_entity": "board", "references_field": "id"},
+         {"field": "r13", "references_entity": "board", "references_field": "id"}, {"field": "r14", "references_entity": "board", "references_field": "id"},
+         {"field": "r15", "references_entity": "board", "references_field": "id"}, {"field": "r16", "references_entity": "board", "references_field": "id"}],
+       "columns": [
+         {"field": "id", "column": "id", "pg_type": "integer", "nullable": false},
+         {"field": "r1", "column": "r1", "pg_type": "integer", "nullable": true}, {"field": "r2", "column": "r2", "pg_type": "integer", "nullable": true},
+         {"field": "r3", "column": "r3", "pg_type": "integer", "nullable": true}, {"field": "r4", "column": "r4", "pg_type": "integer", "nullable": true},
+         {"field": "r5", "column": "r5", "pg_type": "integer", "nullable": true}, {"field": "r6", "column": "r6", "pg_type": "integer", "nullable": true},
+         {"field": "r7", "column": "r7", "pg_type": "integer", "nullable": true}, {"field": "r8", "column": "r8", "pg_type": "integer", "nullable": true},
+         {"field": "r9", "column": "r9", "pg_type": "integer", "nullable": true}, {"field": "r10", "column": "r10", "pg_type": "integer", "nullable": true},
+         {"field": "r11", "column": "r11", "pg_type": "integer", "nullable": true}, {"field": "r12", "column": "r12", "pg_type": "integer", "nullable": true},
+         {"field": "r13", "column": "r13", "pg_type": "integer", "nullable": true}, {"field": "r14", "column": "r14", "pg_type": "integer", "nullable": true},
+         {"field": "r15", "column": "r15", "pg_type": "integer", "nullable": true}, {"field": "r16", "column": "r16", "pg_type": "integer", "nullable": true}
+       ]},
+      {"entity": "pairing", "table": "pairings", "primary_key": ["id"], "key_assignment": "ascending_int",
+       "unique": [{"fields": ["grp", "tag"], "nulls": "not_distinct"}],
+       "columns": [
+         {"field": "id", "column": "id", "pg_type": "integer", "nullable": false},
+         {"field": "grp", "column": "grp", "pg_type": "integer", "nullable": true},
+         {"field": "tag", "column": "tag", "pg_type": "text", "nullable": true, "collation": "deterministic"}
+       ]},
+      {"entity": "ledger", "table": "ledgers", "primary_key": ["id"], "key_assignment": "ascending_int",
+       "columns": [
+         {"field": "id", "column": "id", "pg_type": "integer", "nullable": false},
+         {"field": "amount", "column": "amount", "pg_type": "numeric", "nullable": true},
+         {"field": "blob", "column": "blob", "pg_type": "opaque", "nullable": true}
+       ]},
+      {"entity": "event_log", "table": "event_logs", "primary_key": ["id"], "key_assignment": "ascending_int", "trigger_written": true,
+       "columns": [
+         {"field": "id", "column": "id", "pg_type": "integer", "nullable": false},
+         {"field": "msg", "column": "msg", "pg_type": "text", "nullable": true, "collation": "deterministic"}
+       ]},
+      {"entity": "strict_row", "table": "strict_rows", "primary_key": ["id"], "key_assignment": "ascending_int",
+       "columns": [
+         {"field": "id", "column": "id", "pg_type": "integer", "nullable": false},
+         {"field": "must", "column": "must", "pg_type": "text", "nullable": false, "collation": "deterministic"}
+       ]}
+    ]
+  },
+  "cases": [
+    {"id": "simple_r1", "category": "simple", "goals": [{"entity": "board", "label": "g1", "count": 1, "c": [["rank", "ge", 0]]}]},
+    {"id": "simple_r2", "category": "simple", "goals": [{"entity": "board", "label": "g1", "count": 2, "c": [["rank", "ge", 0]]}]},
+    {"id": "simple_r4", "category": "simple", "goals": [{"entity": "board", "label": "g1", "count": 4, "c": [["rank", "ge", 0]]}]},
+    {"id": "simple_r8", "category": "simple", "goals": [{"entity": "board", "label": "g1", "count": 8, "c": [["rank", "ge", 0]]}]},
+    {"id": "simple_r10", "category": "simple", "goals": [{"entity": "board", "label": "g1", "count": 10, "c": [["rank", "ge", 0]]}]},
+    {"id": "simple_r11", "category": "simple", "goals": [{"entity": "board", "label": "g1", "count": 11, "c": [["rank", "ge", 0]]}]},
+    {"id": "simple_r16", "category": "simple", "goals": [{"entity": "board", "label": "g1", "count": 16, "c": [["rank", "ge", 0]]}]},
+    {"id": "simple_r32", "category": "simple", "goals": [
+      {"entity": "board", "label": "g1", "count": 16, "c": [["rank", "ge", 0]]},
+      {"entity": "board", "label": "g2", "count": 16, "c": [["weight", "gt", 0.5]]}]},
+    {"id": "simple_r64", "category": "simple", "goals": [
+      {"entity": "board", "label": "g1", "count": 16, "c": [["rank", "ge", 0]]},
+      {"entity": "board", "label": "g2", "count": 16, "c": [["weight", "gt", 0.5]]},
+      {"entity": "event_log", "label": "g3", "count": 16, "c": [["msg", "eq", "hello"]]},
+      {"entity": "board", "label": "g4", "count": 16, "c": [["archived", "eq", true]]}]},
+
+    {"id": "conflict_contradictory_r1", "category": "conflicting", "goals": [{"entity": "board", "label": "g1", "count": 1, "c": [["rank", "eq", 1], ["rank", "eq", 2]]}]},
+    {"id": "conflict_null_not_null_r1", "category": "conflicting", "goals": [{"entity": "board", "label": "g1", "count": 1, "c": [["name", "is_null"]]}]},
+    {"id": "conflict_bounds_r1", "category": "conflicting", "goals": [{"entity": "board", "label": "g1", "count": 1, "c": [["rank", "eq", 5], ["rank", "lt", 3]]}]},
+    {"id": "conflict_empty_int_r1", "category": "conflicting", "goals": [{"entity": "board", "label": "g1", "count": 1, "c": [["rank", "gt", 3], ["rank", "lt", 4]]}]},
+    {"id": "conflict_too_long_r1", "category": "conflicting", "goals": [{"entity": "board", "label": "g1", "count": 1, "c": [["code", "eq", "abcdefghijklm"]]}]},
+    {"id": "conflict_outside_range_r1", "category": "conflicting", "goals": [{"entity": "board", "label": "g1", "count": 1, "c": [["rank", "eq", 3000000000]]}]},
+    {"id": "conflict_null_with_comparison_r1", "category": "conflicting", "goals": [{"entity": "board", "label": "g1", "count": 1, "c": [["rank", "is_null"], ["rank", "gt", 1]]}]},
+    {"id": "conflict_duplicate_key_r2", "category": "conflicting", "goals": [{"entity": "board", "label": "g1", "count": 2, "c": [["code", "eq", "aa"]]}]},
+    {"id": "conflict_insufficient_r4", "category": "conflicting", "goals": [{"entity": "wide", "label": "g1", "count": 4, "c": [["u1", "ge", 0], ["u1", "le", 2]]}]},
+    {"id": "conflict_duplicate_key_r8", "category": "conflicting", "goals": [{"entity": "board", "label": "g1", "count": 8, "c": [["code", "eq", "aa"]]}]},
+    {"id": "conflict_duplicate_key_r16", "category": "conflicting", "goals": [{"entity": "board", "label": "g1", "count": 16, "c": [["code", "eq", "aa"]]}]},
+    {"id": "conflict_duplicate_key_r64", "category": "conflicting", "goals": [
+      {"entity": "board", "label": "g1", "count": 16, "c": [["code", "eq", "a1"]]},
+      {"entity": "board", "label": "g2", "count": 16, "c": [["code", "eq", "a2"]]},
+      {"entity": "board", "label": "g3", "count": 16, "c": [["code", "eq", "a3"]]},
+      {"entity": "board", "label": "g4", "count": 16, "c": [["code", "eq", "a4"]]}]},
+
+    {"id": "fk_r2", "category": "foreign_key", "goals": [
+      {"entity": "board", "label": "b1", "count": 1, "c": [["id", "eq", 1]]},
+      {"entity": "card", "label": "c1", "count": 1, "c": [["board_id", "eq", 1]]}]},
+    {"id": "fk_r4", "category": "foreign_key", "goals": [
+      {"entity": "board", "label": "b1", "count": 1, "c": [["id", "eq", 1]]},
+      {"entity": "card", "label": "c1", "count": 3, "c": [["board_id", "eq", 1]]}]},
+    {"id": "fk_chain_r4", "category": "foreign_key", "goals": [
+      {"entity": "board", "label": "b1", "count": 1, "c": [["id", "eq", 1]]},
+      {"entity": "card", "label": "c1", "count": 1, "c": [["id", "eq", 7], ["board_id", "eq", 1]]},
+      {"entity": "card_note", "label": "n1", "count": 2, "c": [["card_id", "eq", 7]]}]},
+    {"id": "fk_r10", "category": "foreign_key", "goals": [
+      {"entity": "board", "label": "b1", "count": 1, "c": [["id", "eq", 1]]},
+      {"entity": "board", "label": "b2", "count": 1, "c": [["id", "eq", 2]]},
+      {"entity": "card", "label": "c1", "count": 4, "c": [["board_id", "eq", 1]]},
+      {"entity": "card", "label": "c2", "count": 4, "c": [["board_id", "eq", 2]]}]},
+    {"id": "fk_chain_r11", "category": "foreign_key", "goals": [
+      {"entity": "board", "label": "b1", "count": 1, "c": [["id", "eq", 1]]},
+      {"entity": "card", "label": "c1", "count": 1, "c": [["id", "eq", 10], ["board_id", "eq", 1]]},
+      {"entity": "card", "label": "c2", "count": 4, "c": [["board_id", "eq", 1]]},
+      {"entity": "card_note", "label": "n1", "count": 5, "c": [["card_id", "eq", 10]]}]},
+    {"id": "fk_r32", "category": "foreign_key", "goals": [
+      {"entity": "board", "label": "b1", "count": 1, "c": [["id", "eq", 1]]},
+      {"entity": "board", "label": "b2", "count": 1, "c": [["id", "eq", 2]]},
+      {"entity": "card", "label": "c1", "count": 20, "c": [["board_id", "eq", 1]]},
+      {"entity": "card", "label": "c2", "count": 10, "c": [["board_id", "eq", 2]]}]},
+    {"id": "fk_r64", "category": "foreign_key", "goals": [
+      {"entity": "board", "label": "b1", "count": 1, "c": [["id", "eq", 1]]},
+      {"entity": "board", "label": "b2", "count": 1, "c": [["id", "eq", 2]]},
+      {"entity": "card", "label": "c1", "count": 20, "c": [["board_id", "eq", 1]]},
+      {"entity": "card", "label": "c2", "count": 20, "c": [["board_id", "eq", 2]]},
+      {"entity": "card", "label": "c3", "count": 20, "c": [["board_id", "eq", 1]]},
+      {"entity": "card", "label": "c4", "count": 2, "c": [["board_id", "eq", 2]]}]},
+    {"id": "fk_unresolved_r1", "category": "foreign_key", "goals": [{"entity": "card", "label": "c1", "count": 1, "c": [["board_id", "eq", 99]]}]},
+    {"id": "fk_value_chosen_r1", "category": "foreign_key", "goals": [{"entity": "card", "label": "c1", "count": 1, "c": [["board_id", "gt", 0]]}]},
+
+    {"id": "unsupported_unknown_field_r1", "category": "unsupported", "goals": [{"entity": "board", "label": "g1", "count": 1, "c": [["nosuch", "eq", 1]]}]},
+    {"id": "unsupported_unknown_field_r16", "category": "unsupported", "goals": [{"entity": "board", "label": "g1", "count": 16, "c": [["nosuch", "eq", 1]]}]},
+    {"id": "unsupported_generated_r1", "category": "unsupported", "goals": [{"entity": "board", "label": "g1", "count": 1, "c": [["slug", "eq", "x"]]}]},
+    {"id": "unsupported_numeric_r1", "category": "unsupported", "goals": [{"entity": "ledger", "label": "g1", "count": 1, "c": [["amount", "eq", 1.5]]}]},
+    {"id": "unsupported_opaque_r1", "category": "unsupported", "goals": [{"entity": "ledger", "label": "g1", "count": 1, "c": [["blob", "eq", "x"]]}]},
+    {"id": "unsupported_string_order_r1", "category": "unsupported", "goals": [{"entity": "board", "label": "g1", "count": 1, "c": [["code", "lt", "m"]]}]},
+    {"id": "unsupported_boolean_order_r1", "category": "unsupported", "goals": [{"entity": "board", "label": "g1", "count": 1, "c": [["archived", "gt", false]]}]},
+    {"id": "unsupported_null_comparison_r1", "category": "unsupported", "goals": [{"entity": "board", "label": "g1", "count": 1, "c": [["rank", "eq", null]]}]},
+    {"id": "unsupported_absence_r0", "category": "unsupported", "goals": [{"entity": "board", "label": "g1", "count": 0, "c": []}]},
+    {"id": "unsupported_unknown_entity_r1", "category": "unsupported", "goals": [{"entity": "nothing", "label": "g1", "count": 1, "c": []}]},
+    {"id": "unsupported_no_filler_r1", "category": "unsupported", "goals": [{"entity": "strict_row", "label": "g1", "count": 1, "c": []}]},
+    {"id": "unsupported_unset_nulls_r2", "category": "unsupported", "goals": [{"entity": "pairing", "label": "g1", "count": 2, "c": [["grp", "eq", 1]]}]},
+    {"id": "unsupported_overlap_r2", "category": "unsupported", "goals": [
+      {"entity": "board", "label": "g1", "count": 1, "c": [["code", "eq", "same"]]},
+      {"entity": "board", "label": "g2", "count": 1, "c": [["code", "eq", "same"]]}]},
+    {"id": "unsupported_unset_nulls_r64", "category": "unsupported", "goals": [
+      {"entity": "pairing", "label": "g1", "count": 16, "c": [["grp", "eq", 1]]},
+      {"entity": "pairing", "label": "g2", "count": 16, "c": [["grp", "eq", 2]]},
+      {"entity": "pairing", "label": "g3", "count": 16, "c": [["grp", "eq", 3]]},
+      {"entity": "pairing", "label": "g4", "count": 16, "c": [["grp", "eq", 4]]}]},
+
+    {"id": "stress_wide_r10", "category": "stress", "goals": [
+      {"entity": "wide", "label": "g1", "count": 10, "c": [["u1","gt",0],["u2","gt",0],["u3","gt",0],["u4","gt",0],["u5","gt",0],["u6","gt",0],["u7","gt",0],["u8","gt",0],["u9","gt",0],["u10","gt",0],["u11","gt",0],["u12","gt",0],["f1","gt",0.0],["f2","gt",0.0],["f3","gt",0.0],["f4","gt",0.0]]}]},
+    {"id": "stress_wide_r32", "category": "stress", "goals": [
+      {"entity": "wide", "label": "g1", "count": 16, "c": [["u1","gt",0],["u2","gt",0],["u3","gt",0],["u4","gt",0],["u5","gt",0],["u6","gt",0],["u7","gt",0],["u8","gt",0],["u9","gt",0],["u10","gt",0],["u11","gt",0],["u12","gt",0],["f1","gt",0.0],["f2","gt",0.0],["f3","gt",0.0],["f4","gt",0.0]]},
+      {"entity": "wide", "label": "g2", "count": 16, "c": [["u1","gt",0],["u2","gt",0],["u3","gt",0],["u4","gt",0],["u5","gt",0],["u6","gt",0],["u7","gt",0],["u8","gt",0],["u9","gt",0],["u10","gt",0],["u11","gt",0],["u12","gt",0],["f1","gt",0.0],["f2","gt",0.0],["f3","gt",0.0],["f4","gt",0.0]]}]},
+    {"id": "stress_wide_r64", "category": "stress", "goals": [
+      {"entity": "wide", "label": "g1", "count": 16, "c": [["u1","gt",0],["u2","gt",0],["u3","gt",0],["u4","gt",0],["u5","gt",0],["u6","gt",0],["u7","gt",0],["u8","gt",0],["u9","gt",0],["u10","gt",0],["u11","gt",0],["u12","gt",0],["f1","gt",0.0],["f2","gt",0.0],["f3","gt",0.0],["f4","gt",0.0]]},
+      {"entity": "wide", "label": "g2", "count": 16, "c": [["u1","gt",0],["u2","gt",0],["u3","gt",0],["u4","gt",0],["u5","gt",0],["u6","gt",0],["u7","gt",0],["u8","gt",0],["u9","gt",0],["u10","gt",0],["u11","gt",0],["u12","gt",0],["f1","gt",0.0],["f2","gt",0.0],["f3","gt",0.0],["f4","gt",0.0]]},
+      {"entity": "wide", "label": "g3", "count": 16, "c": [["u1","gt",0],["u2","gt",0],["u3","gt",0],["u4","gt",0],["u5","gt",0],["u6","gt",0],["u7","gt",0],["u8","gt",0],["u9","gt",0],["u10","gt",0],["u11","gt",0],["u12","gt",0],["f1","gt",0.0],["f2","gt",0.0],["f3","gt",0.0],["f4","gt",0.0]]},
+      {"entity": "wide", "label": "g4", "count": 16, "c": [["u1","gt",0],["u2","gt",0],["u3","gt",0],["u4","gt",0],["u5","gt",0],["u6","gt",0],["u7","gt",0],["u8","gt",0],["u9","gt",0],["u10","gt",0],["u11","gt",0],["u12","gt",0],["f1","gt",0.0],["f2","gt",0.0],["f3","gt",0.0],["f4","gt",0.0]]}]},
+    {"id": "stress_wide_12goals_r64", "category": "stress", "goals": [
+      {"entity": "wide", "label": "g01", "count": 5, "c": [["u1","gt",0],["u2","gt",0],["u3","gt",0],["u4","gt",0],["u5","gt",0],["u6","gt",0],["u7","gt",0],["u8","gt",0],["u9","gt",0],["u10","gt",0],["u11","gt",0],["u12","gt",0],["f1","gt",0.0],["f2","gt",0.0],["f3","gt",0.0],["f4","gt",0.0]]},
+      {"entity": "wide", "label": "g02", "count": 5, "c": [["u1","gt",0],["u2","gt",0],["u3","gt",0],["u4","gt",0],["u5","gt",0],["u6","gt",0],["u7","gt",0],["u8","gt",0],["u9","gt",0],["u10","gt",0],["u11","gt",0],["u12","gt",0],["f1","gt",0.0],["f2","gt",0.0],["f3","gt",0.0],["f4","gt",0.0]]},
+      {"entity": "wide", "label": "g03", "count": 5, "c": [["u1","gt",0],["u2","gt",0],["u3","gt",0],["u4","gt",0],["u5","gt",0],["u6","gt",0],["u7","gt",0],["u8","gt",0],["u9","gt",0],["u10","gt",0],["u11","gt",0],["u12","gt",0],["f1","gt",0.0],["f2","gt",0.0],["f3","gt",0.0],["f4","gt",0.0]]},
+      {"entity": "wide", "label": "g04", "count": 5, "c": [["u1","gt",0],["u2","gt",0],["u3","gt",0],["u4","gt",0],["u5","gt",0],["u6","gt",0],["u7","gt",0],["u8","gt",0],["u9","gt",0],["u10","gt",0],["u11","gt",0],["u12","gt",0],["f1","gt",0.0],["f2","gt",0.0],["f3","gt",0.0],["f4","gt",0.0]]},
+      {"entity": "wide", "label": "g05", "count": 5, "c": [["u1","gt",0],["u2","gt",0],["u3","gt",0],["u4","gt",0],["u5","gt",0],["u6","gt",0],["u7","gt",0],["u8","gt",0],["u9","gt",0],["u10","gt",0],["u11","gt",0],["u12","gt",0],["f1","gt",0.0],["f2","gt",0.0],["f3","gt",0.0],["f4","gt",0.0]]},
+      {"entity": "wide", "label": "g06", "count": 5, "c": [["u1","gt",0],["u2","gt",0],["u3","gt",0],["u4","gt",0],["u5","gt",0],["u6","gt",0],["u7","gt",0],["u8","gt",0],["u9","gt",0],["u10","gt",0],["u11","gt",0],["u12","gt",0],["f1","gt",0.0],["f2","gt",0.0],["f3","gt",0.0],["f4","gt",0.0]]},
+      {"entity": "wide", "label": "g07", "count": 5, "c": [["u1","gt",0],["u2","gt",0],["u3","gt",0],["u4","gt",0],["u5","gt",0],["u6","gt",0],["u7","gt",0],["u8","gt",0],["u9","gt",0],["u10","gt",0],["u11","gt",0],["u12","gt",0],["f1","gt",0.0],["f2","gt",0.0],["f3","gt",0.0],["f4","gt",0.0]]},
+      {"entity": "wide", "label": "g08", "count": 5, "c": [["u1","gt",0],["u2","gt",0],["u3","gt",0],["u4","gt",0],["u5","gt",0],["u6","gt",0],["u7","gt",0],["u8","gt",0],["u9","gt",0],["u10","gt",0],["u11","gt",0],["u12","gt",0],["f1","gt",0.0],["f2","gt",0.0],["f3","gt",0.0],["f4","gt",0.0]]},
+      {"entity": "wide", "label": "g09", "count": 6, "c": [["u1","gt",0],["u2","gt",0],["u3","gt",0],["u4","gt",0],["u5","gt",0],["u6","gt",0],["u7","gt",0],["u8","gt",0],["u9","gt",0],["u10","gt",0],["u11","gt",0],["u12","gt",0],["f1","gt",0.0],["f2","gt",0.0],["f3","gt",0.0],["f4","gt",0.0]]},
+      {"entity": "wide", "label": "g10", "count": 6, "c": [["u1","gt",0],["u2","gt",0],["u3","gt",0],["u4","gt",0],["u5","gt",0],["u6","gt",0],["u7","gt",0],["u8","gt",0],["u9","gt",0],["u10","gt",0],["u11","gt",0],["u12","gt",0],["f1","gt",0.0],["f2","gt",0.0],["f3","gt",0.0],["f4","gt",0.0]]},
+      {"entity": "wide", "label": "g11", "count": 6, "c": [["u1","gt",0],["u2","gt",0],["u3","gt",0],["u4","gt",0],["u5","gt",0],["u6","gt",0],["u7","gt",0],["u8","gt",0],["u9","gt",0],["u10","gt",0],["u11","gt",0],["u12","gt",0],["f1","gt",0.0],["f2","gt",0.0],["f3","gt",0.0],["f4","gt",0.0]]},
+      {"entity": "wide", "label": "g12", "count": 6, "c": [["u1","gt",0],["u2","gt",0],["u3","gt",0],["u4","gt",0],["u5","gt",0],["u6","gt",0],["u7","gt",0],["u8","gt",0],["u9","gt",0],["u10","gt",0],["u11","gt",0],["u12","gt",0],["f1","gt",0.0],["f2","gt",0.0],["f3","gt",0.0],["f4","gt",0.0]]}]},
+    {"id": "stress_fk_scan_r64", "category": "stress", "goals": [
+      {"entity": "board", "label": "a1", "count": 20, "c": []},
+      {"entity": "board", "label": "a2", "count": 11, "c": []},
+      {"entity": "multi_ref", "label": "m1", "count": 16, "c": [["r1","eq",1000],["r2","eq",1000],["r3","eq",1000],["r4","eq",1000],["r5","eq",1000],["r6","eq",1000],["r7","eq",1000],["r8","eq",1000],["r9","eq",1000],["r10","eq",1000],["r11","eq",1000],["r12","eq",1000],["r13","eq",1000],["r14","eq",1000],["r15","eq",1000],["r16","eq",1000]]},
+      {"entity": "multi_ref", "label": "m2", "count": 16, "c": [["r1","eq",1000],["r2","eq",1000],["r3","eq",1000],["r4","eq",1000],["r5","eq",1000],["r6","eq",1000],["r7","eq",1000],["r8","eq",1000],["r9","eq",1000],["r10","eq",1000],["r11","eq",1000],["r12","eq",1000],["r13","eq",1000],["r14","eq",1000],["r15","eq",1000],["r16","eq",1000]]},
+      {"entity": "board", "label": "z_target", "count": 1, "c": [["id", "eq", 1000]]}]}
+  ]
+}
