@@ -1,0 +1,465 @@
+{
+  "deadlock": {
+    "outcomes": {
+      "deadlock": 40
+    },
+    "runs": 40,
+    "victims": {
+      "a": 33,
+      "b": 7
+    }
+  },
+  "model_requests": 0,
+  "overselling_interleaving": {
+    "final_state": {
+      "events": [
+        {
+          "capacity": 3,
+          "id": 1,
+          "reserved": 2
+        }
+      ],
+      "rejections": [],
+      "reservations": [
+        {
+          "event_id": 1,
+          "holder": "alice",
+          "id": 1,
+          "qty": 2
+        },
+        {
+          "event_id": 1,
+          "holder": "bob",
+          "id": 2,
+          "qty": 2
+        }
+      ]
+    },
+    "returned": {
+      "a": {
+        "available": 1,
+        "status": "reserved"
+      },
+      "b": {
+        "available": 1,
+        "status": "reserved"
+      }
+    },
+    "schedule": [
+      "a",
+      "b",
+      "a",
+      "b",
+      "a",
+      "a",
+      "a",
+      "b",
+      "b",
+      "b"
+    ]
+  },
+  "psql_control": {
+    "final_state": {
+      "events": [
+        {
+          "capacity": 3,
+          "id": 1,
+          "reserved": 2
+        }
+      ],
+      "rejections": [],
+      "reservations": [
+        {
+          "event_id": 1,
+          "holder": "alice",
+          "id": 1,
+          "qty": 2
+        },
+        {
+          "event_id": 1,
+          "holder": "bob",
+          "id": 2,
+          "qty": 2
+        }
+      ]
+    },
+    "initial_events": [
+      {
+        "capacity": 3,
+        "id": 1,
+        "reserved": 0
+      }
+    ],
+    "reads": {
+      "a": [
+        "3|0"
+      ],
+      "b": [
+        "3|0"
+      ]
+    },
+    "same_final_state": true
+  },
+  "scenarios": [
+    {
+      "distinct_behaviours": 92,
+      "distinct_final_states": 4,
+      "distinct_paths": 92,
+      "divergences": 0,
+      "example_violation": {
+        "events": [
+          {
+            "capacity": 3,
+            "id": 1,
+            "reserved": 2
+          }
+        ],
+        "reservations": [
+          {
+            "event_id": 1,
+            "holder": "alice",
+            "id": 1,
+            "qty": 2
+          },
+          {
+            "event_id": 1,
+            "holder": "bob",
+            "id": 2,
+            "qty": 2
+          }
+        ],
+        "returned": {
+          "a": {
+            "available": 1,
+            "status": "reserved"
+          },
+          "b": {
+            "available": 1,
+            "status": "reserved"
+          }
+        },
+        "schedule": [
+          "a",
+          "a",
+          "a",
+          "a",
+          "b",
+          "b",
+          "b",
+          "a",
+          "b",
+          "b"
+        ],
+        "violations": [
+          "R1 event 1: reserved=2 but reservations hold 4",
+          "R2 event 1: 4 seats reserved of capacity 3",
+          "R4 committed state matches no serial order of these calls"
+        ]
+      },
+      "first_violation_at_run": 2,
+      "interleavings_run": 92,
+      "outcomes": {
+        "completed": 92
+      },
+      "replays": 276,
+      "replays_matching_fingerprint": 276,
+      "runs_violating_a_requirement": 80,
+      "runs_with_a_lock_wait": 50,
+      "scenario": "reserve+reserve lock_row=False",
+      "serial_controls": [
+        {
+          "instrumented_steps": 9,
+          "order": [
+            "a",
+            "b"
+          ],
+          "requirements_hold": true,
+          "returned": {
+            "a": {
+              "available": 1,
+              "status": "reserved"
+            },
+            "b": {
+              "available": 1,
+              "status": "rejected"
+            }
+          },
+          "same_final_state": true,
+          "same_returned_values": true
+        },
+        {
+          "instrumented_steps": 9,
+          "order": [
+            "b",
+            "a"
+          ],
+          "requirements_hold": true,
+          "returned": {
+            "a": {
+              "available": 1,
+              "status": "rejected"
+            },
+            "b": {
+              "available": 1,
+              "status": "reserved"
+            }
+          },
+          "same_final_state": true,
+          "same_returned_values": true
+        }
+      ],
+      "statement_counts_seen": [
+        9,
+        10
+      ],
+      "tree_exhausted": true
+    },
+    {
+      "distinct_behaviours": 36,
+      "distinct_final_states": 2,
+      "distinct_paths": 36,
+      "divergences": 0,
+      "example_violation": null,
+      "first_violation_at_run": null,
+      "interleavings_run": 36,
+      "outcomes": {
+        "completed": 36
+      },
+      "replays": 108,
+      "replays_matching_fingerprint": 108,
+      "runs_violating_a_requirement": 0,
+      "runs_with_a_lock_wait": 24,
+      "scenario": "reserve+reserve lock_row=True",
+      "serial_controls": [
+        {
+          "instrumented_steps": 9,
+          "order": [
+            "a",
+            "b"
+          ],
+          "requirements_hold": true,
+          "returned": {
+            "a": {
+              "available": 1,
+              "status": "reserved"
+            },
+            "b": {
+              "available": 1,
+              "status": "rejected"
+            }
+          },
+          "same_final_state": true,
+          "same_returned_values": true
+        },
+        {
+          "instrumented_steps": 9,
+          "order": [
+            "b",
+            "a"
+          ],
+          "requirements_hold": true,
+          "returned": {
+            "a": {
+              "available": 1,
+              "status": "rejected"
+            },
+            "b": {
+              "available": 1,
+              "status": "reserved"
+            }
+          },
+          "same_final_state": true,
+          "same_returned_values": true
+        }
+      ],
+      "statement_counts_seen": [
+        9
+      ],
+      "tree_exhausted": true
+    },
+    {
+      "distinct_behaviours": 92,
+      "distinct_final_states": 3,
+      "distinct_paths": 92,
+      "divergences": 0,
+      "example_violation": {
+        "events": [
+          {
+            "capacity": 5,
+            "id": 1,
+            "reserved": 0
+          }
+        ],
+        "reservations": [
+          {
+            "event_id": 1,
+            "holder": "alice",
+            "id": 2,
+            "qty": 2
+          }
+        ],
+        "returned": {
+          "a": {
+            "available": 1,
+            "status": "reserved"
+          },
+          "b": {
+            "released": 2,
+            "status": "released"
+          }
+        },
+        "schedule": [
+          "a",
+          "a",
+          "a",
+          "a",
+          "b",
+          "b",
+          "b",
+          "a",
+          "b",
+          "b"
+        ],
+        "violations": [
+          "R1 event 1: reserved=0 but reservations hold 2",
+          "R4 committed state matches no serial order of these calls"
+        ]
+      },
+      "first_violation_at_run": 2,
+      "interleavings_run": 92,
+      "outcomes": {
+        "completed": 92
+      },
+      "replays": 276,
+      "replays_matching_fingerprint": 276,
+      "runs_violating_a_requirement": 80,
+      "runs_with_a_lock_wait": 50,
+      "scenario": "reserve+release lock_row=False",
+      "serial_controls": [
+        {
+          "instrumented_steps": 10,
+          "order": [
+            "a",
+            "b"
+          ],
+          "requirements_hold": true,
+          "returned": {
+            "a": {
+              "available": 1,
+              "status": "reserved"
+            },
+            "b": {
+              "released": 2,
+              "status": "released"
+            }
+          },
+          "same_final_state": true,
+          "same_returned_values": true
+        },
+        {
+          "instrumented_steps": 10,
+          "order": [
+            "b",
+            "a"
+          ],
+          "requirements_hold": true,
+          "returned": {
+            "a": {
+              "available": 3,
+              "status": "reserved"
+            },
+            "b": {
+              "released": 2,
+              "status": "released"
+            }
+          },
+          "same_final_state": true,
+          "same_returned_values": true
+        }
+      ],
+      "statement_counts_seen": [
+        10
+      ],
+      "tree_exhausted": true
+    },
+    {
+      "distinct_behaviours": 36,
+      "distinct_final_states": 1,
+      "distinct_paths": 36,
+      "divergences": 0,
+      "example_violation": null,
+      "first_violation_at_run": null,
+      "interleavings_run": 36,
+      "outcomes": {
+        "completed": 36
+      },
+      "replays": 108,
+      "replays_matching_fingerprint": 108,
+      "runs_violating_a_requirement": 0,
+      "runs_with_a_lock_wait": 24,
+      "scenario": "reserve+release lock_row=True",
+      "serial_controls": [
+        {
+          "instrumented_steps": 10,
+          "order": [
+            "a",
+            "b"
+          ],
+          "requirements_hold": true,
+          "returned": {
+            "a": {
+              "available": 1,
+              "status": "reserved"
+            },
+            "b": {
+              "released": 2,
+              "status": "released"
+            }
+          },
+          "same_final_state": true,
+          "same_returned_values": true
+        },
+        {
+          "instrumented_steps": 10,
+          "order": [
+            "b",
+            "a"
+          ],
+          "requirements_hold": true,
+          "returned": {
+            "a": {
+              "available": 3,
+              "status": "reserved"
+            },
+            "b": {
+              "released": 2,
+              "status": "released"
+            }
+          },
+          "same_final_state": true,
+          "same_returned_values": true
+        }
+      ],
+      "statement_counts_seen": [
+        10
+      ],
+      "tree_exhausted": true
+    }
+  ],
+  "three_actor_chain": {
+    "matching": 99,
+    "outcome": "completed",
+    "replays": 100,
+    "schedule": [
+      "a",
+      "a",
+      "b",
+      "b",
+      "c",
+      "c",
+      "a",
+      "b",
+      "c"
+    ]
+  }
+}
