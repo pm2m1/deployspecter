@@ -115,3 +115,50 @@
 | 6 | Approve E's comparator choices and goal-policy format, then review the generator for freezing | B | Owner decisions |
 | 7 | A worst-case planner bound (Option A), as an alternative to milestone 5 | B | Analysis only |
 | 8 | Audit N4 (Phase 9B's held-out exposure) through someone with access | B | Owner action |
+
+---
+
+## Parallel milestone 2 (2026-11-04)
+
+**Committed first:** `0700701` (Track A), `7dbd96e` (Track B and O6 v1 evidence), `3398c34` (shared).
+
+**Corrected while committing:**
+
+- **The two O6 tools had been placed in `tools/`,** which Gate 2A's frozen-files guard forbids. The guard had been
+  failing since Step 6C without being reported.
+- **They were moved byte for byte to `research_tools/`.** The recorded results reproduce from the new location, apart
+  from wall time.
+
+**Track A:**
+
+- **Implemented offline, with fake connections only:**
+    - the parent-side catalog export, with fixed hashed queries and a strict assembler;
+    - the `information_schema` re-read;
+    - pins from verified evidence only;
+    - the independent typed state check;
+    - exact initial-state verification;
+    - evidence binding;
+    - gates G0 to G9.
+- **The first-run manifest** (`track_a/EXECUTION_MANIFEST_V1.md` and `.json`) is checked against the code by a test.
+- **Status:** WAITING_FOR_EXECUTION_APPROVAL.
+- **Blockers:**
+    - a parent-session log reconciliation (new supervision authority);
+    - the driver `research_tools/track_a_run.py`;
+    - first contact of OP-2 and OP-6 SQL with PostgreSQL 16;
+    - replay-signature review.
+
+**Track B:**
+
+- **Coverage audit:** default-policy exclusions come from `requires` predicates and single-instance entrypoints. Two
+  default-off options remove them, and are [comparator] choices.
+- **O6 corpus v2:** NOT CONFIRMED (one case needs 33,344 checks against a candidate of 32,768). The values stay
+  unresolved.
+- **Amendment 003:** revision 7, still DRAFT — NOT ADOPTED.
+
+**Shared:** the evidence record is now `0.2-proposed`:
+
+- `track` must agree with `context`;
+- execution requires a verified catalog, bridge and state;
+- every attempt is listed.
+
+Neither track depends on it yet.

@@ -21,7 +21,7 @@ def identities(source="dry_run_fixture"):
 
 def record(context="synthetic_demonstration", attribution=None, source="dry_run_fixture", **kw):
     fields = {"method": "deterministic_planner", "stages": (), "independent_verification": "NOT_RUN",
-              "oracle": "not_run", "hashes": {"src/x.py": H}, **kw}
+              "oracle": "not_run", "hashes": {"src/x.py": H}, "track": er.TRACK_FOR[context], **kw}
     return er.EvidenceRecord(context=context, identities=identities(source),
                              attribution=attribution or er.Attribution(), **fields)
 
@@ -66,3 +66,35 @@ def test_neither_track_imports_the_proposal_yet():
         for path in (ROOT / "src/deployspecter/research" / track).glob("*.py"):
             text = ast.dump(ast.parse(path.read_text()))
             assert "evidence_record" not in text and "research.shared" not in text, path
+
+
+def stage(name, outcome):
+    return er.StageOutcome(stage=name, outcome=outcome)
+
+
+def test_track_must_match_context():
+    with pytest.raises(ValidationError, match="belongs to track_a_demonstration"):
+        record(track="track_b_evaluation")
+
+
+def test_unverified_catalog_or_bridge_never_authorizes_execution():
+    verified = (stage("catalog_verification", "MATCH"), stage("bridge", "bridged"), stage("execution", "completed"))
+    record(source="supervised_export", stages=verified, independent_verification="VERIFIED")
+    for stages, source, verification in (
+            (verified, "dry_run_fixture", "VERIFIED"),
+            ((stage("catalog_verification", "INCOMPLETE"), *verified[1:]), "supervised_export", "VERIFIED"),
+            ((verified[0], stage("bridge", "refused"), verified[2]), "supervised_export", "VERIFIED"),
+            (verified, "supervised_export", "NOT_RUN")):
+        with pytest.raises(ValidationError, match="can't authorize execution"):
+            record(source=source, stages=stages, independent_verification=verification)
+
+
+def test_construction_attempts_are_listed_and_only_one_admitted():
+    with pytest.raises(ValidationError, match="attempts listed"):
+        record(stages=(stage("construction", "failed"),))
+    attempt = lambda n, ok: er.ConstructionAttempt(attempt=n, method="strict_insertion", outcome="x",  # noqa: E731
+                                                   admitted=ok)
+    record(stages=(stage("construction", "failed"),), construction_attempts=(attempt(1, False),),
+           candidate_failures=(stage("planning", "unsupported"),))
+    with pytest.raises(ValidationError, match="at most one"):
+        record(stages=(stage("construction", "ok"),), construction_attempts=(attempt(1, True), attempt(2, True)))

@@ -36,3 +36,34 @@
 - **The field set.**
 - **Whether wall time is recorded at all,** or kept outside the record.
 - **Whether `development_calibration` records need their own corpus digest field.**
+
+## Revision 0.2 (parallel milestone 2, PROPOSED, NOT ADOPTED)
+
+`evidence-record/0.2-proposed` adds:
+
+- **A `track` field,** which must agree with `context`:
+
+  | `context` | `track` |
+  |---|---|
+  | `synthetic_demonstration` | `track_a_demonstration` |
+  | `development_calibration` | `track_b_development` |
+  | `heldout_evaluation` | `track_b_evaluation` |
+
+  **The tracks share the format, never results.** `primary_analysis_records` still refuses every record that isn't
+  held-out evaluation.
+- **Execution authority.** A record may contain an `execution` stage only if it also has all of these:
+    - a `supervised_export` snapshot;
+    - a `catalog_verification` stage with `MATCH`;
+    - a `bridge` stage with `bridged`;
+    - `independent_verification = VERIFIED`.
+
+  An unverified catalog or bridge result can't authorize execution.
+- **Attempt accounting:**
+    - `construction_attempts` lists every attempt, with method, outcome, code and whether it was admitted, and at most
+      one is admitted;
+    - `candidate_failures` lists every rejected, unsupported or refused candidate;
+    - a construction stage without listed attempts is refused.
+- **Unchanged:** harness-only arm attribution, provenance as data only, no retries.
+
+**Neither track's code imports the record yet,** and a test enforces it. Wiring it in is the next shared review
+milestone.

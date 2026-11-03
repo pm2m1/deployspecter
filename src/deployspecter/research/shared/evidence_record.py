@@ -6,6 +6,11 @@ Two rules are enforced by the model itself:
   can never set ``arm``.
 * A record's ``context`` fixes what it may be used for. Only ``heldout_evaluation`` records can enter a primary
   analysis, and ``primary_analysis_records`` refuses any other.
+* ``track`` must agree with ``context``: the synthetic demonstration is Track A only, and a held-out record is Track B's
+  evaluation only. The two tracks share this format, never results.
+* No execution stage may appear unless a supervised catalog export, a MATCH, a bridged request and a verified starting
+  state all do. An unverified catalog or bridge result can't authorize execution.
+* Every construction attempt and candidate failure is listed, never only the successful one.
 """
 
 from __future__ import annotations
@@ -14,10 +19,13 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-RECORD_VERSION = "evidence-record/0-proposed"
+RECORD_VERSION = "evidence-record/0.2-proposed"
 HEX64 = r"^[0-9a-f]{64}$"
 Arm = Literal["A", "B", "C", "C_prime", "D", "E", "F", "G", "R"]
 Context = Literal["synthetic_demonstration", "development_calibration", "heldout_evaluation"]
+Track = Literal["track_a_demonstration", "track_b_development", "track_b_evaluation"]
+TRACK_FOR = {"synthetic_demonstration": "track_a_demonstration", "development_calibration": "track_b_development",
+             "heldout_evaluation": "track_b_evaluation"}
 
 
 class _Strict(BaseModel):
@@ -56,6 +64,14 @@ class StageOutcome(_Strict):
     wall_seconds: float | None = None  # descriptive, never decisive
 
 
+class ConstructionAttempt(_Strict):
+    attempt: int = Field(ge=1)
+    method: Literal["strict_insertion", "phase9b_constructor"]
+    outcome: str
+    code: str | None = None
+    admitted: bool
+
+
 class Safety(_Strict):
     timeout: str | None = None  # which safety ceiling, if any, was reached
     infrastructure_failure: str | None = None
@@ -63,12 +79,15 @@ class Safety(_Strict):
 
 
 class EvidenceRecord(_Strict):
-    record_version: Literal["evidence-record/0-proposed"] = RECORD_VERSION
+    record_version: Literal["evidence-record/0.2-proposed"] = RECORD_VERSION
     context: Context
+    track: Track
     identities: Identities
     attribution: Attribution
     method: Literal["deterministic_planner", "literal_translation", "none"]
     stages: tuple[StageOutcome, ...]
+    construction_attempts: tuple[ConstructionAttempt, ...] = ()
+    candidate_failures: tuple[StageOutcome, ...] = ()  # every rejected, unsupported or refused candidate
     independent_verification: Literal["VERIFIED", "FAILED", "NOT_RUN"]
     oracle: Literal["violation", "no_violation", "not_run"]  # kept apart from construction verification
     requirement_ids: tuple[str, ...] = ()
@@ -78,6 +97,18 @@ class EvidenceRecord(_Strict):
 
     @model_validator(mode="after")
     def _rules(self) -> EvidenceRecord:
+        if TRACK_FOR[self.context] != self.track:
+            raise ValueError(f"context {self.context} belongs to {TRACK_FOR[self.context]}, not {self.track}")
+        outcomes = {s.stage: s.outcome for s in self.stages}
+        if "execution" in outcomes:
+            if not (self.identities.snapshot_source == "supervised_export"
+                    and outcomes.get("catalog_verification") == "MATCH" and outcomes.get("bridge") == "bridged"
+                    and self.independent_verification == "VERIFIED"):
+                raise ValueError("an unverified catalog or bridge result can't authorize execution")
+        if "construction" in outcomes and not self.construction_attempts:
+            raise ValueError("a construction stage needs its attempts listed")
+        if sum(a.admitted for a in self.construction_attempts) > 1:
+            raise ValueError("at most one construction attempt can be admitted")
         if self.context == "heldout_evaluation":
             a = self.attribution
             if a.arm is None or a.replicate is None or a.attempt is None or a.defect_id is None:
