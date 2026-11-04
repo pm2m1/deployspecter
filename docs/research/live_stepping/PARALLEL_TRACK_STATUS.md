@@ -193,3 +193,35 @@ Neither track depends on it yet.
 - `O6_FIXED_BUDGET_PROPOSAL.md`: 65,536 and 65,536 as a policy, not a proven bound.
 
 **Shared:** Amendment 003 revision 8, still DRAFT — NOT ADOPTED and uncommitted.
+
+---
+
+## Parallel milestone 4 (uncommitted except `dd87cd4`)
+
+**Committed first:** `dd87cd4`, milestone 3's Track A (reconciliation, driver, manifest v2).
+
+**Track A:**
+
+- **Statement coverage:** `track_a/STATEMENT_COVERAGE_AND_PER_RUN_ASSURANCE.md`.
+    - A2's export, construction and execution operations are EXECUTION_BLOCKED: they rely on unreconciled `Sandbox`
+      statements.
+    - Per-run initial-state assurance is NOT ESTABLISHED, and the whole-batch log audit is proposed.
+- **Replay review:** `track_a/REPLAY_SIGNATURE_REVIEW.md`.
+    - An empty signature is correct for the buggy lost update.
+    - Contended wakeups now record their contenders, and `followed` is taken from the trace.
+    - `detection_status` stays `automated_characterization_only` without both 002 manual confirmations.
+- **Gate A1:** `track_a/GATE_A1_CHARACTERIZATION_APPROVAL.md`, `gate_a1_manifest.json`,
+  `research_tools/gate_a1_characterize.py` and `characterization.py`.
+    - Characterization only: no Sandbox, supervisor, child, application or command.
+    - **After the final review: READY_FOR_USER_AUTHORIZATION, which is not an authorization.** The manifest is
+      `04f1d751…`.
+    - The driver now fixes its target from the manifest before connecting, and keeps libpq parse errors out of records.
+    - Mutation testing in isolated copies, under a watchdog: A1 28 of 28 and A2 21 of 22 killed by test assertions; the
+      remaining A2 mutant is equivalent, with a stated reason; none was killed by the watchdog.
+    - A2's `RealEffects` has no target or model-key check. That is recorded as an A2 blocker.
+
+**Track B:**
+
+- `track_b/ARM_E_STRONG_POLICY.md`, with default-policy rejections disclosed under the strong policy;
+- the O6 values marked as retrospectively selected;
+- Amendment 003 revision 9, still DRAFT — NOT ADOPTED.

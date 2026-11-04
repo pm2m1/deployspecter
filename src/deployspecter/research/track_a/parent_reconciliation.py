@@ -25,8 +25,8 @@ from typing import Any
 from deployspecter.live import serverlog
 
 USER, DATABASE, PID, SESSION, SEVERITY, MESSAGE, DETAIL, APPLICATION, BACKEND = 1, 2, 3, 5, 11, 13, 14, 22, 23
-TAG = re.compile(r"^ds_parent_(op2a|op2b|op2c|op2d|op6i|op6f)_[0-9a-f]{12}$")
-MARKER = re.compile(r"^ds_parent_mark_(start|end)_[0-9a-f]{12}$")
+TAG = re.compile(r"^ds_parent_(op0p|op0r|op2a|op2b|op2c|op2d|op6i|op6f|op7b|op9c)_[0-9a-f]{12}$")
+MARKER = re.compile(r"^ds_parent_mark_(start|end|batch_start|batch_end)_[0-9a-f]{12}$")
 STATEMENT = re.compile(r"^(?:statement|execute [^:]*): (.*)$", re.S)
 PARAMETER = re.compile(r"\$(\d+) = (NULL|'(?:[^']|'')*')")
 # Non-client background processes whose ordinary LOG lines may appear in any window. Nothing else may.
@@ -35,6 +35,10 @@ BACKGROUND = {"checkpointer": re.compile(r"^checkpoint (starting|complete)")}
 
 class ParentLogError(RuntimeError):
     """The log can't support a conclusion about the parent session. Fail closed."""
+
+
+class EndMarkerMissing(ParentLogError):
+    """The end marker isn't in the log yet. The only condition a caller may wait on, and only for a bounded time."""
 
 
 @dataclass(frozen=True)
@@ -59,6 +63,10 @@ def literal(value: Any) -> str:
         return "NULL"
     if isinstance(value, bool):
         return "'t'" if value else "'f'"
+    if isinstance(value, float) and value != value:
+        return "'NaN'"
+    if isinstance(value, float) and value in (float("inf"), float("-inf")):
+        return "'Infinity'" if value > 0 else "'-Infinity'"
     return "'" + str(value).replace("'", "''") + "'"
 
 
@@ -86,7 +94,7 @@ def window(log_bytes: bytes, start: str, end: str) -> list[list[str]]:
     except serverlog.LogUnverified as exc:
         raise ParentLogError(str(exc)) from exc
     if rows is None:
-        raise ParentLogError("the end marker isn't in the log")
+        raise EndMarkerMissing("the end marker isn't in the log")
     return rows
 
 

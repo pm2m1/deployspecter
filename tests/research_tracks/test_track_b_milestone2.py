@@ -109,3 +109,13 @@ class TestOptionDisclosure:
             for actor in unit.document["actors"]:
                 counts[actor["entrypoint"]] = counts.get(actor["entrypoint"], 0) + 1
             assert all(n <= registry.lookup(e).max_instances for e, n in counts.items())
+
+
+class TestStrongPolicy:
+    def test_strong_policy_discloses_every_default_rejection_and_its_stand_in(self, setup):
+        for version, rejected in (("v1", 2), ("v2", 5)):
+            r = run(setup, version, BOTH)
+            assert len(r["default_policy_rejections"]) == rejected
+            assert all(x["option_unit"] for x in r["default_policy_rejections"])
+            assert r["rejected"] == 0 and len(r["option_generated_units"]) == rejected
+        assert run(setup, "v1").get("default_policy_rejections") is None

@@ -323,7 +323,8 @@ def run_phase(effects: Effects, manifest: dict[str, Any], evidence: EvidenceDir,
             return rp.Attempt(rp.server_choice_signature(trace), trace.fingerprint(), trace.outcome,
                               frozenset(v.split()[0] for v in oracle(trace.final_state)),
                               eb.canonical_digest(props.canonical(trace.final_state)),
-                              trace.inconclusive or not trace.scoreable)
+                              trace.inconclusive or not trace.scoreable,
+                              followed=trace.outcome != "schedule_divergence")
 
         confirmation = rp.confirm(base, next_attempt)
         replay = {"result": confirmation.result, "classes": confirmation.classes, "attempts": confirmation.attempts,

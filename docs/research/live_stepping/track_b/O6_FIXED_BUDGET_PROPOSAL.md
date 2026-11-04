@@ -1,13 +1,16 @@
 # Track B: O6 fixed bounded planning-budget proposal
 
-- **Status:** uncommitted, development-only. **PROPOSED, NOT ADOPTED**, and not part of protocol v1.2.
+- **Status:** nonnormative, development-only. **PROPOSED, NOT ADOPTED**, and not part of protocol v1.2.
 - **Unchanged:** the corpus v1 and v2 records, their declarations and their failed confirmations. No calibration was
   rerun. The numbers below are read from the existing result files.
 
 ## Proposed policy
 
-`max_expansions = 65,536` and `max_constraint_checks = 65,536`, with `max_rows = 64`. This is a policy, not a proven
-worst-case bound.
+`max_expansions = 65,536`, `max_constraint_checks = 65,536` and `max_rows = 64` (the frozen v2 limit).
+
+**These values were selected retrospectively from development-only data, corpora v1 and v2, after their results were
+seen. They are not proven worst-case bounds, and they weren't confirmed on an independent corpus.** Corpus v1's failed
+stability rule and corpus v2's failed confirmation stand as recorded. No further corpus search is proposed.
 
 ## Why these values
 

@@ -85,6 +85,16 @@ def audit(registry: rg.Registry, contracts: av.Contracts, version: str, policy: 
         "duplicate_units": sum(n - 1 for n in identities.values() if n > 1),
         "generation_seconds": round(seconds, 4),  # descriptive only
     }
+    if out["options"] is not None:
+        # Nothing is silently replaced: list what the default policy would have generated and rejected, and the
+        # option-generated unit, if any, that stands in its place.
+        default = g.generate(registry, contracts, version, policy, a_translations)
+        labels = {u.label for u in result.units}
+        out["default_policy_rejections"] = [
+            {"label": u.label, "stage": u.stage, "codes": list(u.codes),
+             "option_unit": next((x for x in sorted(labels) if x.startswith(u.label + "+")), None)}
+            for u in default.rejected]
+        out["option_generated_units"] = sorted(x for x in labels if "+companion:" in x or "+partner:" in x)
     if planning is not None:
         use = g.planning_use(valid, **planning)
         out["planning"] = {"outcomes": dict(Counter(f"{u['outcome']}:{u['code']}" for u in use)),

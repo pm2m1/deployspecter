@@ -426,3 +426,29 @@ class TestManifestV2:
         assert m["cluster"]["image"].startswith("postgres:16@sha256:1beaa308")
         assert set(m["operations"]) == {"OP-1", "OP-2", "OP-2b", "OP-2d", "OP-3", "OP-3a", "OP-4", "OP-5", "OP-6i",
                                         "OP-6f", "OP-7"}
+
+
+class TestDetectionClaims:
+    def test_a_passing_mocked_bundle_is_only_automated_characterization(self, tmp_path):
+        from deployspecter.research.track_a import acceptance as acc
+        bundle, _, _ = full_run(tmp_path)
+        assert acc.detection_status(bundle) == "automated_characterization_only"
+        manual = {"oracle_author_review": {"reviewer": "oracle_author", "confirmed": True},
+                  "uninstrumented_reproduction": {"attempts": 3, "reproduced": True}}
+        assert acc.detection_status({**bundle, "manual_confirmation": manual}) == \
+            "detection_confirmed_under_amendment_002"
+        manual["uninstrumented_reproduction"]["attempts"] = 126
+        assert acc.detection_status({**bundle, "manual_confirmation": manual}) == "automated_characterization_only"
+        for review, plain in (({"reviewer": "oracle_author", "confirmed": False}, {"attempts": 3, "reproduced": True}),
+                              ({"confirmed": True}, {"attempts": 3, "reproduced": True}),
+                              ({"reviewer": "oracle_author", "confirmed": True}, {"attempts": 3, "reproduced": False})):
+            claim = {"oracle_author_review": review, "uninstrumented_reproduction": plain}
+            assert acc.detection_status({**bundle, "manual_confirmation": claim}) == "automated_characterization_only"
+
+    def test_contended_wakeups_record_the_contenders(self):
+        from deployspecter.live.trace import Decision
+        from deployspecter.research.track_a import replay_policy as rp
+        t = LiveTrace(scenario="s", requested_schedule=[], decisions=[
+            Decision(index=0, enabled=[], blocked={"a": ["c"], "b": ["c"]}, chosen="c", source="schedule"),
+            Decision(index=1, enabled=["b"], blocked={"a": ["b"]}, chosen="b", source="schedule")])
+        assert rp.server_choice_signature(t)[3] == ((0, ("b",), ("a", "b")),)

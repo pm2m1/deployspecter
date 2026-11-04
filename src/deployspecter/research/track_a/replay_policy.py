@@ -95,6 +95,6 @@ def server_choice_signature(trace: Any) -> tuple[Any, ...]:
         waiting = set(before.blocked)
         if len(waiting) >= 2:
             woke = sorted(a for a in waiting if a in after.enabled and a not in after.blocked)
-            if woke:
-                wakeups.append((before.index, tuple(woke)))
+            if woke:  # which of the contending waiters PostgreSQL let through first, and against whom
+                wakeups.append((before.index, tuple(woke), tuple(sorted(waiting))))
     return ("failures", failures, "wakeups", tuple(wakeups))

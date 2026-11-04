@@ -130,6 +130,21 @@ GATES: tuple[Callable[[dict[str, Any]], Judgement], ...] = (
     g9_attribution)
 
 
+def detection_status(bundle: dict[str, Any]) -> str:
+    """Amendment 002 detection needs more than the automated gates: the oracle author's review that the requirement
+    was actually breached, and, because this path is plain psycopg, a reproduction on uninstrumented connections.
+    Without both, the most a passing bundle shows is automated characterization evidence."""
+    if judge(bundle)[0] != "PASS":
+        return "not_established"
+    manual = bundle.get("manual_confirmation") or {}
+    review = manual.get("oracle_author_review") or {}
+    plain = manual.get("uninstrumented_reproduction") or {}
+    if review.get("confirmed") is True and review.get("reviewer") and plain.get("reproduced") is True \
+            and 0 < plain.get("attempts", 0) <= 125:
+        return "detection_confirmed_under_amendment_002"
+    return "automated_characterization_only"
+
+
 def judge(bundle: dict[str, Any]) -> tuple[str, list[Judgement]]:
     judgements = [gate(bundle) for gate in GATES]
     statuses = {j.status for j in judgements}

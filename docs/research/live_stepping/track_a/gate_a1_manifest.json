@@ -1,0 +1,174 @@
+{
+ "package": "gate-a1-characterization",
+ "version": 1,
+ "status": "WAITING_FOR_SEPARATE_EXECUTION_APPROVAL",
+ "scope": "characterization_only",
+ "never_heldout_evidence": true,
+ "excludes": [
+  "Gate 2A supervised runs",
+  "application code",
+  "buggy/fixed exploration",
+  "replay",
+  "any evaluation arm",
+  "model requests"
+ ],
+ "cluster": {
+  "image": "postgres:16@sha256:1beaa3084eee2676f20a9cd9928f0bf2c5bf674f8e49f81017912183d377c61c",
+  "server_settings": {
+   "cluster_name": "ds_live_disposable",
+   "logging_collector": "on",
+   "log_destination": "csvlog",
+   "log_directory": "log",
+   "log_filename": "ds.log",
+   "log_rotation_age": "0",
+   "log_rotation_size": "0",
+   "log_connections": "on",
+   "log_disconnections": "on",
+   "log_statement": "all",
+   "log_parameter_max_length": "-1",
+   "autovacuum": "off",
+   "max_prepared_transactions": "5"
+  },
+  "admin_user": "deployspecter",
+  "database": "deployspecter_test",
+  "prerequisite": "the test database deployspecter_test exists and is empty of ds_run and ds_char; the operator creates it once (section 2 of the approval document)",
+  "required_extra_settings": {
+   "log_duration": "off",
+   "log_min_duration_statement": "-1",
+   "log_min_duration_sample": "-1",
+   "log_transaction_sample_rate": "0"
+  }
+ },
+ "schema": {
+  "setup_sql_sha256": "3bb29d210ef4f54a2d5f37d5c9c9b9726a00ddc0e194f55655b6fabe0f39e272"
+ },
+ "state_checks": {
+  "repeats": 2,
+  "column_types": {
+   "events.id": "integer",
+   "events.capacity": "integer",
+   "events.reserved": "integer"
+  }
+ },
+ "safety_ceilings": {
+  "batch_wall_clock_s": 600,
+  "session_options": {
+   "statement_timeout": 10000,
+   "lock_timeout": 3000,
+   "idle_in_transaction_session_timeout": 15000
+  },
+  "log_wait_s": 5,
+  "backend_exit_wait_s": 5
+ },
+ "statement_sets_sha256": {
+  "op0p_preflight": "4369b10b23e75e0f235d45bc2acf8b88ced390006bd58622e1221afa58bf935f",
+  "op0r_reset_empty": "c22d26c9707d171626f5bfc75a1f166c1b31298327d0e9f54ed145f90dcb9ab6",
+  "op0r_reset_seeded": "0e7941c3ccf4cb113c57a8fc7ea36217e9f84226c60de8994f3f06f172dc9d3d",
+  "op2a_op2b_export": "099ded10509cd3e0b1ce9650c93c9538ffafc692dac89154b417bb793be9cc5a",
+  "op2c_cross_check": "64c9191696f729e339e1c9d462b1e7bfa050d368ca09a4e491d13d233b7e7063",
+  "op6i_typed_check": "21c0adc4092aebedcb6a65986dd97c8504b6eb72df4d81b2da751d447d0caecd",
+  "op6f_typed_read": "f62920f83665594ca4990844783738779b42636a461538f243b6a151a0b21e60",
+  "op7b_bindings": "02c08384d763ec35b17d1f0fda9109ba7cc744c664868918e9151f3d87018383",
+  "op9c_cleanup": "a93015130513f01302bdeeacdbec77a6ac391cc132c91d55089880cd7bdc04da"
+ },
+ "statement_counts": {
+  "op0p_preflight": 3,
+  "op0r_reset_empty": 6,
+  "op0r_reset_seeded": 7,
+  "op2a_op2b_export": 12,
+  "op2c_cross_check": 7,
+  "op6i_typed_check": 9,
+  "op6f_typed_read": 5,
+  "op7b_bindings": 32,
+  "op9c_cleanup": 2
+ },
+ "steps": [
+  "batch start marker on the log reader",
+  "op0p preflight (3 statements)",
+  "op0r reset with SETUP_SQL, no seed",
+  "op2a export",
+  "op2b export",
+  "op2c information_schema re-read",
+  "verify_context against the export (not a pin)",
+  "op0r reset with the bridged seed, op6i typed check, op6f typed read (twice)",
+  "op7b binding and decoding (ds_char)",
+  "op9c cleanup (DROP SCHEMA ds_char, ds_run)",
+  "batch end marker; whole-batch session audit"
+ ],
+ "expected_effects": {
+  "writes": [
+   "ds_run created, filled with SETUP_SQL tables and at most the one bridged row, then dropped",
+   "ds_char created, filled with 27 binding rows, then dropped"
+  ],
+  "no_other_effects": [
+   "no role created or altered",
+   "no other database or schema touched",
+   "no command run",
+   "no file written outside the evidence directory"
+  ]
+ },
+ "artifacts_root": "docs/research/live_stepping/evidence/gate_a1",
+ "artifacts": [
+  "approval.json",
+  "preflight.json",
+  "catalog.json",
+  "states.json",
+  "bindings.json",
+  "parent_reconciliation.json",
+  "batch_audit.json",
+  "summary.json",
+  "failure.json (on any stop)"
+ ],
+ "source_sha256": {
+  "research_tools/gate_a1_characterize.py": "eb3110e5eada894cfba0166d1f27b005a702e015e85958e236d23c8270e82ef8",
+  "research_tools/track_a_run.py": "eb4c82bd77c3a1316d826c387d6732d124317b53021e32bd2ea84bb5b6d013ed",
+  "src/deployspecter/research/track_a/characterization.py": "28bf0d2f0c532180136a3b889518759996baa2a13acdc45a82c473cc68fbd732",
+  "src/deployspecter/research/track_a/parent_reconciliation.py": "0842a5b342a149c262398d85da074c44af71675a1043110f6092d7b237be7e82",
+  "src/deployspecter/research/track_a/catalog_export.py": "ab59af7ac920f45d022354559fd130bda5128dbde0229200065474739a66cb2e",
+  "src/deployspecter/research/track_a/evidence_binding.py": "770b77b7dc853c37e8b6cb169444a1538643bf2d03f465b0ab8bd546315dda16",
+  "src/deployspecter/research/track_a/pipeline.py": "1e3b07e50a3918ee29b894ecb26d95868b407a48e4419ed704737cdf0c5ec1af",
+  "src/deployspecter/research/track_a/scenario.py": "710d65e0f3fea9e7b5ce126b73e6ea70a0c693cf0e140cc29707e8a2080e2006",
+  "tests/live_app/reservations.py": "8d60890d642253f4bf2672d7d48d97e8341930840791e4bacd1b6a0eba8661c1",
+  "src/deployspecter/live/supervisor.py": "9d5119d083589172692cdd930300db3a6047b9f3250c90d09e75dba44e05b242",
+  "src/deployspecter/live/serverlog.py": "4b9dfadecda057c835111f8a1a12166bcbeba16bef798ce8a061aaa46c5c80fa",
+  "src/deployspecter/config.py": "88035f01d1ec15dee7f0ab74619f8794f45e946b747841b63d1ce57aea9fd686"
+ },
+ "draft_history": [
+  {
+   "sha256": "3b98c82e997069d554e65a550a0ccd70e65bdc35e9f167f24ddc1ef806c057b8",
+   "status": "superseded uncommitted draft (milestone 4); replaced after the Gate A1 final review"
+  },
+  {
+   "sha256": "c58d0d1014bd78946533949c383e132e1e9522d1c2632ae880bc0ccc0db7e534",
+   "status": "superseded uncommitted draft: the driver now fixes its connection target from the manifest before connecting; the never-flush test gained its own bound",
+   "sources_changed": [
+    "research_tools/gate_a1_characterize.py",
+    "src/deployspecter/research/track_a/characterization.py"
+   ]
+  },
+  {
+   "sha256": "1c8d1a55b6634ba79b34d06b7e35a8390f2b67ce80bacb96bcf0b14a7e4c49d3",
+   "status": "superseded uncommitted draft: libpq parse errors are no longer quoted into failure records",
+   "sources_changed": [
+    "research_tools/gate_a1_characterize.py"
+   ]
+  }
+ ],
+ "container": {
+  "name": "deployspecter-live-pg",
+  "publish": "127.0.0.1:55433:5432",
+  "host": "127.0.0.1",
+  "port": "55433",
+  "tmpfs": "/var/lib/postgresql/data:rw,size=512m",
+  "memory": "1g",
+  "cpus": "2",
+  "pids_limit": "256",
+  "initial_database": "deployspecter",
+  "password": "operator-generated, exported as DS_PG_PASSWORD in the shell and in DATABASE_URL in the git-ignored .env; never written to evidence",
+  "note": "memory, cpus, pids-limit and the tmpfs size are additions to Gate 2A's accepted command; they bound resources and need confirming at container start"
+ },
+ "env": {
+  "DATABASE_URL": "postgresql://deployspecter:<password>@127.0.0.1:55433/deployspecter in the git-ignored .env",
+  "MODEL_API_KEY": "must be absent from the shell and from .env; the driver refuses otherwise"
+ }
+}
