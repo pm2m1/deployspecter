@@ -89,3 +89,23 @@ class TestOptions:
         plain = {u.unit_id for u in g.generate(registry, contracts, "v1", policy).units}
         repaired = {u.unit_id for u in g.generate(registry, contracts, "v1", policy, options=BOTH).units}
         assert not plain & repaired
+
+
+class TestOptionDisclosure:
+    def test_option_generated_units_are_labelled_never_silent(self, setup):
+        registry, contracts, policy, _ = setup
+        repaired = g.generate(registry, contracts, "v1", policy, options=REPAIR).units
+        assert sorted(u.label for u in repaired if "+companion:" in u.label) == [
+            'b:book:coupon=str:"aaaa"+companion:price', 'b:book:coupon=str:"aaaaaaaaaaaa"+companion:price']
+        partnered = g.generate(registry, contracts, "v2", policy, options=PARTNER).units
+        assert sum("+partner:book" in u.label for u in partnered) == 5
+        plain = g.generate(registry, contracts, "v1", policy).units
+        assert not any("+companion" in u.label or "+partner" in u.label for u in plain)
+
+    def test_partner_pairing_respects_max_instances(self, setup):
+        registry, contracts, policy, _ = setup
+        for unit in g.generate(registry, contracts, "v2", policy, options=PARTNER).valid:
+            counts = {}
+            for actor in unit.document["actors"]:
+                counts[actor["entrypoint"]] = counts.get(actor["entrypoint"], 0) + 1
+            assert all(n <= registry.lookup(e).max_instances for e, n in counts.items())

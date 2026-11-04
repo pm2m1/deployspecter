@@ -290,10 +290,14 @@ def candidates(registry: rg.Registry, contracts: av.Contracts, version: str, pol
                 tuples.append((f"{name}={value[0]}:{json.dumps(value[1])}", {**base, name: value}))
         for label, args in tuples:
             if options.repair_requires:
-                args = _repair(args, contracts.lookup(entry.id, version), sig)
+                completed = _repair(args, contracts.lookup(entry.id, version), sig)
+                added = sorted(set(completed) - set(args))
+                if added:  # generated from the trusted contract before validation; never a rejected unit edited
+                    label, args = f"{label}+companion:{','.join(added)}", completed
             second = _actor("b", entry, version, args)
             if entry.max_instances < 2 and options.single_instance_b == "pair_with_partner" and partner is not None:
                 second = _actor("b", partner, version, _canonical(sigs[partner.id]))
+                label = f"{label}+partner:{partner.id}"
             actors = [_actor("a", entry, version, args), second]
             out.append(("B", f"b:{entry.id}:{label}", _document(registry.application, "arm_e_b", actors,
                                                                 _goals(actors, policy))))
