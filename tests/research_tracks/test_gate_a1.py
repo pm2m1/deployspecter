@@ -62,6 +62,22 @@ class Cursor:
         return self.rows[0]
 
 
+V3_LOG = ROOT / "tests/research_tracks/fixtures/gate_a1_v3_observed.csv"
+
+
+def observed_binding_details() -> list[str]:
+    """The parameter details PostgreSQL 16.15 actually logged for op7b's 32 statements in the third real run, in order.
+    The fake logs these, rather than the reconciler's own literal(), so the full simulated batch can't agree with itself
+    by construction."""
+    import csv
+    import io
+    raw = V3_LOG.read_bytes()
+    rows = list(csv.reader(io.StringIO(raw.decode()), strict=True))
+    tag = next(r[pr.APPLICATION] for r in rows if r[pr.APPLICATION].startswith("ds_parent_op7b"))
+    session = next(r[pr.SESSION] for r in rows if r[pr.APPLICATION] == tag)
+    return [r[pr.DETAIL] for r in rows if r[pr.SESSION] == session and pr.STATEMENT.match(r[pr.MESSAGE])]
+
+
 class PsycopgPreparation:
     """psycopg 3's automatic preparation, as the second real run logged it (evidence 20261104T132842Z-1c432509): a
     connection's first ``threshold`` executions of a query are logged unprepared ("statement:" without parameters,
@@ -101,9 +117,16 @@ class FakeEffects:
         logged = [(pr.ExpectedStatement(t).server_text(), p) for t, p in executed]
         if self.breakage == "extra_in_reset" and tag.startswith("ds_parent_op0r"):
             logged.append(("SELECT 1", ()))
+        if self.breakage == "cleanup_incomplete" and tag.startswith("ds_parent_op9c"):
+            logged.pop()
         prep = PsycopgPreparation(5 if self.breakage == "default_prepare_parent" else a1.PREPARE_THRESHOLD)
+        details = None
+        if tag.startswith("ds_parent_op7b") and len(logged) == len(ch.binding_statements()):
+            details = observed_binding_details()
+            if self.breakage == "negative_zero_as_python":
+                details = [d.replace("$2 = '-0'", "$2 = '-0.0'") for d in details]
         rows = session_rows(tag, logged, session=f"p{self.n}", pid=str(2000 + self.n),
-                            verbs=[prep.verb(t, p) for t, p in logged])
+                            verbs=[prep.verb(t, p) for t, p in logged], details=details)
         if self.breakage == "no_auth_row":
             rows = [r for r in rows if not r[pr.MESSAGE].startswith("connection authenticated:")]
             for n, r in enumerate(rows, 1):
@@ -184,6 +207,8 @@ class FakeEffects:
         self.reader("execute <unnamed>: SELECT size FROM pg_stat_file($1, true)", "parameters: $1 = 'log/ds.csv'")
         if self.breakage == "log_reader_writes":
             self.reader("statement: DELETE FROM ds_run.events")
+        if self.breakage == "reader_extra_between" and self.n == 3:
+            self.reader("statement: SELECT pg_ls_dir('log')")
 
     def log_mark(self, token):
         if self.breakage == "second_reader" and token.startswith("ds_parent_mark_batch_end"):
@@ -367,8 +392,9 @@ def test_statement_set_hashes_match_the_code():
 
 class TestFinalReview:
     def test_float_parameters_are_formatted_as_psycopg_sends_them(self):
+        # -0.0 logs as '-0' (observed in the third real run): float8 is sent in binary and logged with float8out.
         assert [pr.literal(v) for v in (math.nan, math.inf, -math.inf, -0.0, 0.1, True, None, "a'b")] == [
-            "'NaN'", "'Infinity'", "'-Infinity'", "'-0.0'", "'0.1'", "'t'", "NULL", "'a''b'"]
+            "'NaN'", "'Infinity'", "'-Infinity'", "'-0'", "'0.1'", "'t'", "NULL", "'a''b'"]
 
     def test_a_late_log_flush_is_waited_for_boundedly(self, tmp_path):
         assert run(tmp_path, "slow_flush")["outcome"] == "CHARACTERIZED"
@@ -668,3 +694,71 @@ class TestPreparationPolicy:
         out = ch.audit_batch([r], reconciled_tags=set(), user="deployspecter", databases={"deployspecter_test"},
                              reader=reader)
         assert not out.ok and "prepared statement execute _pg3_0" in out.problems[0]
+
+
+class TestNegativeZeroAndFinalOperations:
+    """Version 4: float8 parameters are logged with float8's text output, as the third real run showed. These run the
+    whole logical batch on the fake, whose op7b parameter text comes from that run's real log, through the final
+    operations that no real run has reached yet. Passing here is not a live observation of them."""
+
+    def test_the_full_simulated_batch_reaches_its_final_operations(self, tmp_path):
+        effects = FakeEffects()
+        p, _ = package()
+        evidence = a1.a2.EvidenceDir.create(tmp_path)
+        summary = a1.characterize(effects, p, evidence)
+        assert summary["outcome"] == "CHARACTERIZED"
+        names = {f.name for f in evidence.path.iterdir()}
+        assert {"preflight.json", "catalog.json", "states.json", "bindings.json", "parent_reconciliation.json",
+                "batch_audit.json", "summary.json"} <= names
+        records = json.loads((evidence.path / "parent_reconciliation.json").read_text())
+        assert [r["op"] for r in records][-2:] == ["op7b", "op9c"] and all(r["ok"] for r in records)
+        assert json.loads((evidence.path / "batch_audit.json").read_text())["ok"] is True
+        assert any("$2 = '-0'" in r[pr.DETAIL] for r in effects.log)  # the real form reached the reconciler
+
+    def test_the_version_3_expectation_for_negative_zero_is_refused(self, tmp_path):
+        with pytest.raises(a1.DriverRefused, match="op7b didn't reconcile.*statement 15 has unapproved parameters"):
+            run(tmp_path, "negative_zero_as_python")
+
+    def test_a_missing_cleanup_statement_is_refused(self, tmp_path):
+        with pytest.raises(a1.DriverRefused, match="op9c didn't reconcile.*1 statements logged, 2 approved"):
+            run(tmp_path, "cleanup_incomplete")
+
+    def test_an_extra_reader_statement_between_operations_is_a_batch_finding(self, tmp_path):
+        summary = run(tmp_path, "reader_extra_between")
+        assert summary["outcome"] == "CHARACTERIZED_WITH_FINDINGS"
+        assert summary["findings"]["every_session_attributed"] is False
+
+    def test_a_binding_case_without_an_established_log_form_stops_before_any_sql(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(ch, "CASES", (*ch.CASES, ("f8", 0.0)))
+        effects = FakeEffects()
+        p, _ = package()
+        with pytest.raises(a1.DriverRefused, match="binding case can't be reconciled.*positive zero"):
+            a1.characterize(effects, p, a1.a2.EvidenceDir.create(tmp_path))
+        assert effects.log == [] and effects.n == 0
+
+    @pytest.mark.parametrize("value", [None, 0, 2, "2"])
+    def test_the_manifest_must_pin_extra_float_digits(self, tmp_path, value):
+        data = json.loads(PACKAGE.read_text())
+        if value is None:
+            data["safety_ceilings"]["session_options"].pop("extra_float_digits")
+        else:
+            data["safety_ceilings"]["session_options"]["extra_float_digits"] = value
+        path = tmp_path / "m.json"
+        path.write_text(json.dumps(data))
+        with pytest.raises(a1.DriverRefused, match="extra_float_digits"):
+            a1.load_package(path, hashlib.sha256(path.read_bytes()).hexdigest())
+
+    def test_every_connection_starts_with_extra_float_digits_1(self, monkeypatch):
+        class Info:
+            host, port, dbname, user = "127.0.0.1", 55433, "deployspecter_test", "deployspecter"
+
+        class Conn:
+            info, prepare_threshold = Info(), None
+
+        calls = []
+        monkeypatch.setattr(psycopg, "connect", lambda *a, **k: calls.append(k) or Conn())
+        monkeypatch.delenv("MODEL_API_KEY", raising=False)
+        monkeypatch.setenv("DATABASE_URL", "postgresql://deployspecter:s3cret@127.0.0.1:55433/deployspecter")
+        p, _ = package()
+        a1.RealEffects(p)
+        assert f" {calls[0]['options']} ".count(" -c extra_float_digits=1 ") == 1

@@ -1,21 +1,20 @@
 # Gate A1: minimal PostgreSQL characterization, approval package
 
-**Status: READY_FOR_NEW_USER_AUTHORIZATION. This is not an authorization.** Version 3 hasn't run. It needs a new
-approval file and a **new signature** covering the digest below; the version 1 and version 2 approvals and signatures
-can't be reused.
+**Status: READY_FOR_NEW_USER_AUTHORIZATION. This is not an authorization.** Version 4 hasn't run. It needs a new
+approval file and a **new signature** covering the digest below; no earlier approval or signature can be reused.
 
-- **Manifest:** `gate_a1_manifest.json`, **version 3**, SHA-256
-  `768cce7e04de126a79c35a7040c79cd7d20edd25515429fabca128450872e044`.
-- **Versions 1** (`04f1d751…`) **and 2** (`d92ea590…`) each ran once and are superseded (section 0). Both are recorded
-  in the manifest's `supersedes`, and the driver refuses both.
+- **Manifest:** `gate_a1_manifest.json`, **version 4**, SHA-256
+  `1590d23ea9dec1e9e7ca903daf2b52b15c0404e3b496c4e5d7d714bcb2b02fb5`.
+- **Versions 1** (`04f1d751…`), **2** (`d92ea590…`) **and 3** (`768cce7e…`) each ran once and are superseded
+  (section 0). All three are recorded in the manifest's `supersedes`, and the driver refuses them.
 - **Superseded drafts,** never run and never approved, kept in the manifest's `draft_history`:
     - `3b98c82e…`, the milestone 4 draft;
     - `c58d0d10…`, after the final review's driver fixes;
     - `1c8d1a55…`, before parse errors were kept out of records.
 - **Driver:** `research_tools/gate_a1_characterize.py`.
 - **Pure logic:** `src/deployspecter/research/track_a/characterization.py`.
-- **Tests:** `tests/research_tracks/test_gate_a1.py`, and the real-log tests `test_gate_a1_observed_log.py` (run 1)
-  and `test_gate_a1_v2_observed_log.py` (run 2), all offline.
+- **Tests:** `tests/research_tracks/test_gate_a1.py`, and the real-log tests `test_gate_a1_observed_log.py` (run 1),
+  `test_gate_a1_v2_observed_log.py` (run 2) and `test_gate_a1_v3_observed_log.py` (run 3), all offline.
 
 ## 0. Run history
 
@@ -23,6 +22,7 @@ can't be reused.
 |---|---|---|---|
 | 1 | `04f1d7518685d0555a9925ccd5d4d7bd1260ac3431f34e2cb7e4c1a8d3f17520` | Once, on 2026-11-04, under the owner's signed approval; PostgreSQL 16.15 on the pinned image | **`refused_fail_closed` at op0p**. Evidence: `evidence/gate_a1/20261104T113256Z-d0b21a60/`, kept locally and uncommitted. No catalog, state or binding operation ran; the container was torn down |
 | 2 | `d92ea5900eb22c163da9faac2f00e67ec1c38395cc8cfe170bf856a85f1ba0c9` | Once, on 2026-11-04, under a new signed approval; PostgreSQL 16.15 on the pinned image | **`refused_fail_closed` at the seeded op0r reset** (the sixth operation). Evidence: `evidence/gate_a1/20261104T132842Z-1c432509/`, kept locally and uncommitted. Preflight passed; both exports agreed; the `information_schema` re-read agreed; `verify_context` reached MATCH. The state checks, bindings, cleanup and batch audit didn't run |
+| 3 | `768cce7e04de126a79c35a7040c79cd7d20edd25515429fabca128450872e044` | Once, on 2026-11-04, under a new signed approval, with automatic preparation off | **`refused_fail_closed` at op7b**. Evidence: `evidence/gate_a1/20261104T140952Z-58f6e18e/`, kept locally and uncommitted. op0p to op6f reconciled in full, and both typed state checks passed. The binding read-back was never judged; cleanup and the batch audit didn't run |
 
 **The two causes,** both confirmed from the observed rows:
 
@@ -48,7 +48,37 @@ be checked against the signature. Version 2 copies the file byte for byte and re
 - Version 2 required the exact `execute <unnamed>:` form for the poll, so it refused.
 - This is client-side behaviour, not a PostgreSQL defect.
 
-## 0.0 What version 3 changes
+**The version 3 cause, confirmed from all 32 op7b statements in the real log.**
+- Exactly one statement differed: statement 15, the binding case `(14, -0.0)`. PostgreSQL logged `$2 = '-0'`; the
+  reconciler expected `'-0.0'`.
+- psycopg 3.3.6 sends Python floats in binary, as float8 (`FloatBinaryDumper`, OID 701). PostgreSQL logs a binary
+  parameter with the type's text output, and float8 output writes negative zero as `-0`.
+- The other 31 statements matched in text, parameters, order and session. That includes NaN, ±Infinity, 5e-324,
+  ±max, 0.1 and −2.5, and the integer, boolean, NULL and string cases.
+- It is only a formatting difference. Nothing was prepared, and no session or statement was unexplained.
+
+## 0.00 What version 4 changes
+
+- **Float parameters are matched against float8's logged text, in established forms only:**
+    - NaN and ±Infinity, as before;
+    - `-0` for negative zero, as observed;
+    - Python's repr for non-integral finite values below 1e15 or in exponent form, which agrees with the observed
+      cases.
+- **Everything else is refused, not guessed.** That covers positive zero, integral-valued floats, values from 1e15 to
+  1e16, and any type other than None, booleans, integers, floats and strings.
+    - The driver checks every binding parameter before any SQL runs.
+    - The reconciler reports such a parameter as a problem.
+- **`extra_float_digits=1`** is pinned in the session options (`safety_ceilings.session_options`), and the driver
+  refuses a manifest without it.
+    - Both float8's logged text and the bit-exact float read-back depend on shortest-exact float output.
+    - A client startup option takes precedence over any role or database setting.
+    - It equals PostgreSQL's default, which the third run's `5e-324` shows was in effect.
+- **The values sent to PostgreSQL don't change.** Strings stay text, so the string `"-0.0"` is never read as a float.
+  Negative and positive zero stay distinct. The typed state encoding and its digests are untouched.
+- **Unchanged:** the SQL statement sets, the parameter order and count checks, session identity, the reader limits,
+  the disabled-preparation policy, the target, the image and the operator commands.
+
+## 0.0 What version 3 changed
 
 - **psycopg's automatic preparation is disabled on Gate A1's own connections.**
     - `prepare_threshold=None` is passed at both connection sites, the log reader and every tagged parent session, both
@@ -219,7 +249,7 @@ invocation. The signature step is the owner's own procedure. **The driver doesn'
 2. Write `approval.json` yourself, **outside** the evidence tree:
 
    ```json
-   {"manifest_sha256": "768cce7e04de126a79c35a7040c79cd7d20edd25515429fabca128450872e044", "phase": "gate_a1", "approver": "<you>", "approved_on": "<date>"}
+   {"manifest_sha256": "1590d23ea9dec1e9e7ca903daf2b52b15c0404e3b496c4e5d7d714bcb2b02fb5", "phase": "gate_a1", "approver": "<you>", "approved_on": "<date>"}
    ```
 3. Sign it, for example `ssh-keygen -Y sign -f ~/.ssh/id_ed25519 -n deployspecter-gate-a1 approval.json`.
 4. Verify the signature before running:
@@ -247,7 +277,7 @@ If the `CREATE DATABASE` fails, stop the container and start again.
 ```sh
 env -u MODEL_API_KEY uv run python research_tools/gate_a1_characterize.py characterize \
   --manifest docs/research/live_stepping/track_a/gate_a1_manifest.json \
-  --manifest-sha256 768cce7e04de126a79c35a7040c79cd7d20edd25515429fabca128450872e044 \
+  --manifest-sha256 1590d23ea9dec1e9e7ca903daf2b52b15c0404e3b496c4e5d7d714bcb2b02fb5 \
   --approval <path to your approval.json>
 ```
 
@@ -305,27 +335,28 @@ and the password from `.env`.
 - **Authorization is the owner's own decision and action:** reviewing, signing, verifying and running in person
   (section 5).
 
-## 7. Verification record (offline only, version 3)
+## 7. Verification record (offline only, version 4)
 
-- **Tests:**
-    - Gate A1 driver tests, including the preparation policy at both connection sites, the refusal of a connection
-      that could still prepare, the manifest policy check, a modelled default-prepared reader that stops at the
-      sixth operation as the real run did, and a modelled default-prepared parent session that is refused;
-    - real-log tests for run 1 (39) and run 2 (16);
-    - the full numbers are in the commit message.
-- **Run 2's log is a pinned fixture:**
-    - `tests/research_tracks/fixtures/gate_a1_v2_observed.csv` is the complete copied log, verbatim: 160 CSV rows on
-      196 lines.
-    - Under the version 3 rules:
-        - the first five operations reconcile completely against statement lists taken from the code;
-        - the seeded reset fails only on the prepared poll, and its seed parameters match the offline chain;
-        - the reader's prepared statements outside the windows also fail the batch audit;
-        - wrong text, wrong order, an extra statement, a wrong parameter, a prepared statement, a wrong poll or an
-          unknown reader session, each applied to the real rows, refuses.
-    - The fake's preparation model is checked against the real reader's 45 statements.
-    - One query, `pg_read_binary_file`, ran six times and was never prepared. That is consistent with psycopg keying
-      prepared queries by parameter types as well as text, which the model doesn't cover.
-    - **Synthetic post-fix logs stay in `test_gate_a1.py`. No real row was rewritten to resemble a successful run.**
+- **Real-log regression:** all three runs' logs are pinned, verbatim fixtures with provenance files. On the third
+  run's log, under the version 4 rules:
+    - the original failure reproduces, on statement 15 only;
+    - **all 12 operation windows reconcile, including all 32 op7b statements;**
+    - the reader's activity up to the stop passes the batch audit;
+    - nothing was prepared.
+- **Negative tests on the real binding rows refuse each of these:** a lost sign; the old `'-0.0'` form (both variants
+  are never accepted); a missing or extra parameter; swapped parameter order; changed SQL text; a prepared name;
+  swapped statements; a foreign or unknown session; an extra statement.
+- **Model tests:** negative zero is `'-0'`; positive zero, integral floats, the 1e15 to 1e16 range and unsupported
+  types are refused; the string `"-0.0"` stays text. A test checks offline that the installed psycopg sends ints,
+  booleans and floats in binary (float8, OID 701) and strings as text.
+- **Simulated full batch:**
+    - The fake effects log op7b's parameters with the text PostgreSQL actually logged in the third run, not with the
+      reconciler's own formatter.
+    - The batch runs through op7b, op9c, the batch end marker, the whole-batch audit and every evidence file, and
+      reaches `CHARACTERIZED`.
+    - Separately, the old `-0.0` expectation, a missing cleanup statement and an extra reader statement are each
+      caught.
+    - None of this is a live observation.
 - **Mutation testing** (scratchpad harness, run in isolated copies):
     - each mutant runs in a fresh copy of the tree;
     - the copy's manifests are re-pinned, so a digest check can't kill a mutant trivially;
@@ -334,20 +365,28 @@ and the password from `.env`.
 
   | Suite | Mutants | Killed by a test assertion | Killed by the watchdog | Equivalent | Survived | Errors |
   |---|---|---|---|---|---|---|
-  | Gate A1 (12 new for version 3: the connection policy, the unnamed-form checks and statement order) | 67 | 67 | 0 | 0 | 0 | 0 |
+  | Gate A1 (14 new for version 4: negative zero, the zero sign, unestablished forms, types, missing and reordered parameters, the pre-execution check, the `extra_float_digits` pin, cleanup, reader statements) | 81 | 81 | 0 | 0 | 0 | 0 |
   | Gate A2 (offline; Gate 2A code untouched) | 22 | 21 | 0 | 1 | 0 | 0 |
 
     - **The equivalent mutant** removes the "failed reconciliation is an unknown effect" term. It is unreachable,
       because `parent_operation` raises before returning a failed record.
-    - **The watchdog self-check still holds:** the bounded test kills the unbounded-wait mutant, and the watchdog
-      stops it against the old test.
+    - **The watchdog self-check still holds.**
 
 ## 8. Limits that remain
 
 - The parent is a superuser (section 4).
-- **Two partial real runs aren't a characterization.** Six operations have been observed on the real server, ending at
-  the seeded reset. op6i, op6f, op7b, op9c and the whole-batch audit haven't run, and nothing has run with
-  preparation disabled (sections 0 and 3).
+- **Three partial real runs aren't a characterization.** op0p to op6f have run and reconciled on the real server, as
+  have op7b's 32 statements in the version 4 replay. **Still not tested live:**
+    - the binding judgement: plain read-back, the `to_jsonb` decoding, and psycopg's decoding of `-0`, NaN and
+      Infinity;
+    - op9c cleanup;
+    - the batch end marker and final read;
+    - the whole-batch audit over a complete batch;
+    - the final evidence files.
+
+  The simulated batch, and the audit of the third run's real rows up to its stop, pass. Neither is a live observation.
+- **Predicted, not observed:** `to_jsonb` will turn negative zero into `0` and NaN and ±Infinity into strings. These
+  are recorded cases the bridge doesn't rely on, so they would be listed as findings, not count as failures.
 - **The tested client configuration is psycopg with automatic preparation off** (section 0.0).
 - Two bracketing log-reader reads can't audit themselves: the reader's connection and first position query before the
   batch start marker, and its final read after the batch end marker.
@@ -361,11 +400,11 @@ and the password from `.env`.
 
 ## 9. Readiness
 
-**READY_FOR_NEW_USER_AUTHORIZATION.** The version 3 package is complete, the statements and sources are pinned, and
+**READY_FOR_NEW_USER_AUTHORIZATION.** The version 4 package is complete, the statements and sources are pinned, and
 every effect and command is listed.
 
 **Not authorized:**
-- a new run needs a **new** approval file naming the version 3 digest, a **new** signature from the owner, and a fresh
+- a new run needs a **new** approval file naming the version 4 digest, a **new** signature from the owner, and a fresh
   container;
-- the version 1 and version 2 approvals and signatures are never valid for version 3;
+- the version 1, 2 and 3 approvals and signatures are never valid for version 4;
 - nothing is retried automatically.

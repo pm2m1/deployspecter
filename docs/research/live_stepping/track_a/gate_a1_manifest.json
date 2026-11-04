@@ -1,6 +1,6 @@
 {
  "package": "gate-a1-characterization",
- "version": 3,
+ "version": 4,
  "status": "WAITING_FOR_SEPARATE_EXECUTION_APPROVAL",
  "scope": "characterization_only",
  "never_heldout_evidence": true,
@@ -56,7 +56,8 @@
   "session_options": {
    "statement_timeout": 10000,
    "lock_timeout": 3000,
-   "idle_in_transaction_session_timeout": 15000
+   "idle_in_transaction_session_timeout": 15000,
+   "extra_float_digits": 1
   },
   "log_wait_s": 5,
   "backend_exit_wait_s": 5
@@ -122,10 +123,10 @@
   "failure.json (on any stop)"
  ],
  "source_sha256": {
-  "research_tools/gate_a1_characterize.py": "002895062a75e90a1b31c2064c190b2cf3d5bdafbf414d6123f1a3a170ee3968",
+  "research_tools/gate_a1_characterize.py": "128caa6d1d306ccd77411844e8c3b79b2bde1c13c0a9ed7ac65b94c8317e79bb",
   "research_tools/track_a_run.py": "eb4c82bd77c3a1316d826c387d6732d124317b53021e32bd2ea84bb5b6d013ed",
   "src/deployspecter/research/track_a/characterization.py": "fdb2aa3fc4e48f73a2a9e8d267a31a9e10f05728515cf844a31a5978a2045ad4",
-  "src/deployspecter/research/track_a/parent_reconciliation.py": "72c6e9dc9e73bc42dadfa9fc0a9c653f9448165b54bf0252fea4824cc491d6c8",
+  "src/deployspecter/research/track_a/parent_reconciliation.py": "ce2a14ef73a3b6251393efc73efc23f1f9812e84d296c28d693eef4e7ad64db6",
   "src/deployspecter/research/track_a/catalog_export.py": "ab59af7ac920f45d022354559fd130bda5128dbde0229200065474739a66cb2e",
   "src/deployspecter/research/track_a/evidence_binding.py": "770b77b7dc853c37e8b6cb169444a1538643bf2d03f465b0ab8bd546315dda16",
   "src/deployspecter/research/track_a/pipeline.py": "1e3b07e50a3918ee29b894ecb26d95868b407a48e4419ed704737cdf0c5ec1af",
@@ -185,6 +186,12 @@
    "sha256": "d92ea5900eb22c163da9faac2f00e67ec1c38395cc8cfe170bf856a85f1ba0c9",
    "commit": "576099ff62083351e6c598cb7c2060d370cffd65",
    "history": "executed once on 2026-11-04 under the owner's signed approval; refused_fail_closed at the seeded op0r reset, because psycopg's automatic preparation renamed the log reader's sixth poll (evidence/gate_a1/20261104T132842Z-1c432509, kept locally, uncommitted). Its approval and signature cover version 2 only and are never valid for this version."
+  },
+  {
+   "version": 3,
+   "sha256": "768cce7e04de126a79c35a7040c79cd7d20edd25515429fabca128450872e044",
+   "commit": "082038130a0c3bd2d8271f05d1eef48f858c20a7",
+   "history": "executed once on 2026-11-04 under the owner's signed approval; reconciled op0p to op6f (both repeats) and stopped refused_fail_closed at op7b, because float8 negative zero was logged as '-0' and the reconciler expected '-0.0' (evidence/gate_a1/20261104T140952Z-58f6e18e, kept locally, uncommitted). Its approval and signature cover version 3 only and are never valid for this version."
   }
  ],
  "session_accounting": {
@@ -203,5 +210,11 @@
   ],
   "enforced": "set at both connection sites, checked on each connection before use, and any statement logged under a prepared-statement name fails reconciliation and the batch audit",
   "limitation": "the evidence characterizes psycopg with automatic preparation disabled; it establishes nothing about default auto-prepared sessions, which the version 2 run observed"
+ },
+ "parameter_log_model": {
+  "strings": "sent as text; logged as given, single quotes doubled",
+  "integers_booleans_floats": "sent in binary by psycopg 3 (Int2/Int4/Int8, Bool, Float binary dumpers); logged with the type's text output",
+  "float8": "shortest exact decimal (extra_float_digits=1, pinned in session_options): NaN, Infinity, -Infinity, '-0' for negative zero (observed), Python repr for non-integral finite values below 1e15 or in exponent form. Positive zero, integral values and 1e15 <= |x| < 1e16 have no established form and are refused before any SQL runs",
+  "observed_basis": "the third real run's op7b statements, tests/research_tracks/fixtures/gate_a1_v3_observed.csv"
  }
 }

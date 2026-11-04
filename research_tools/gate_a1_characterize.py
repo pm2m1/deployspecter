@@ -30,7 +30,7 @@ import track_a_run as a2  # noqa: E402  (reuses only its manifest, approval and 
 
 ROOT = a2.ROOT
 PACKAGE = "gate-a1-characterization"
-VERSION = 3
+VERSION = 4
 # psycopg 3 prepares a query once a connection has run it prepare_threshold (default 5) times, and the server then logs
 # it as "execute _pg3_N:" (seen in the second real run). Gate A1's own connections disable that, so every statement is
 # logged as "statement:" or "execute <unnamed>:". The manifest must declare the same policy.
@@ -59,6 +59,8 @@ def load_package(path: Path, expected_sha256: str) -> dict[str, Any]:
     if not isinstance(policy, dict) or "psycopg_prepare_threshold" not in policy \
             or policy["psycopg_prepare_threshold"] is not PREPARE_THRESHOLD:
         raise DriverRefused("the manifest doesn't declare Gate A1's connection policy (automatic preparation off)")
+    if str(package["safety_ceilings"]["session_options"].get("extra_float_digits")) != "1":
+        raise DriverRefused("the manifest doesn't pin extra_float_digits=1, which the float8 log model relies on")
     return package
 
 
@@ -167,6 +169,12 @@ def characterize(effects: Effects, package: dict[str, Any], evidence: a2.Evidenc
     if hashlib.sha256(app.SETUP_SQL.encode()).hexdigest() != package["schema"]["setup_sql_sha256"]:
         raise DriverRefused("the setup SQL isn't the reviewed one")
     db, user = package["cluster"]["database"], package["cluster"]["admin_user"]
+    try:  # every binding value must have an established log form before any SQL runs
+        for _text, params in ch.binding_statements():
+            for value in params:
+                pr.literal(value)
+    except pr.ParentLogError as exc:
+        raise DriverRefused(f"a binding case can't be reconciled: {exc}") from None
     batch = Batch(effects, package)
     nonce = secrets.token_hex(6)
     batch_start, batch_end = f"ds_parent_mark_batch_start_{nonce}", f"ds_parent_mark_batch_end_{nonce}"

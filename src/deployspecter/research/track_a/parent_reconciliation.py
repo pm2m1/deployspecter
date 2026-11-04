@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import csv
 import io
+import math
 import re
 from collections import Counter
 from dataclasses import dataclass, field
@@ -74,17 +75,42 @@ class ExpectedStatement:
         return re.sub(r"%s", number, self.text)
 
 
+def float8_log_text(value: float) -> str:
+    """How PostgreSQL 16 logs a float8 parameter, in the forms that are established, and no others.
+
+    psycopg 3 sends a Python float in binary as float8 (FloatBinaryDumper), so the server logs it with float8's text
+    output, which with extra_float_digits >= 1 (the default; Gate A1 pins it to 1) is the shortest exact decimal. The
+    third real run logged negative zero as "-0", where Python writes "-0.0". For non-integral finite values PostgreSQL's
+    shortest digits are Python's repr, and the notation agrees as long as Python doesn't print a fixed-point number
+    PostgreSQL would write with an exponent (|x| >= 1e15). Positive zero, integral values and 1e15 <= |x| < 1e16 have
+    no established form here and are refused rather than guessed.
+    """
+    if math.isnan(value):
+        return "NaN"
+    if math.isinf(value):
+        return "Infinity" if value > 0 else "-Infinity"
+    if value == 0:
+        if math.copysign(1.0, value) < 0:
+            return "-0"
+        raise ParentLogError("positive zero has no established float8 log form")
+    text = repr(value)
+    if "e" in text or (abs(value) < 1e15 and not value.is_integer()):
+        return text
+    raise ParentLogError(f"{text} has no established float8 log form")
+
+
 def literal(value: Any) -> str:
-    """How PostgreSQL logs a bound text parameter."""
+    """How PostgreSQL logs a bound parameter. Strings are sent as text and logged as given; booleans, integers and
+    floats are sent in binary and logged with their type's text output."""
     if value is None:
         return "NULL"
     if isinstance(value, bool):
         return "'t'" if value else "'f'"
-    if isinstance(value, float) and value != value:
-        return "'NaN'"
-    if isinstance(value, float) and value in (float("inf"), float("-inf")):
-        return "'Infinity'" if value > 0 else "'-Infinity'"
-    return "'" + str(value).replace("'", "''") + "'"
+    if isinstance(value, float):
+        return f"'{float8_log_text(value)}'"
+    if isinstance(value, int) or isinstance(value, str):
+        return "'" + str(value).replace("'", "''") + "'"
+    raise ParentLogError(f"{type(value).__name__} parameters have no established log form")
 
 
 @dataclass
@@ -277,7 +303,11 @@ def reconcile_parent_session(rows: list[list[str]], *, tag: str, expected: tuple
             out.problems.append(f"statement {i} differs from the approved text")
             continue
         logged = dict((int(n), v) for n, v in PARAMETER.findall(detail or ""))
-        wanted = {n + 1: literal(v) for n, v in enumerate(want.params)}
+        try:
+            wanted = {n + 1: literal(v) for n, v in enumerate(want.params)}
+        except ParentLogError as exc:
+            out.problems.append(f"statement {i} has a parameter without an established log form: {exc}")
+            continue
         if logged != wanted:
             out.problems.append(f"statement {i} has unapproved parameters")
     out.ok = not out.problems

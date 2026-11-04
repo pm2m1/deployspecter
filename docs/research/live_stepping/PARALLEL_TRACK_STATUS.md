@@ -231,6 +231,12 @@ Neither track depends on it yet.
     - **Version 3, offline:** automatic preparation is off on Gate A1's own connections, and prepared forms fail. Run
       2's log is a pinned fixture. The evidence will characterize only that client configuration.
       READY_FOR_NEW_USER_AUTHORIZATION, which needs a new signature.
+    - **Third real run (version 3): `refused_fail_closed` at op7b.** op0p to op6f reconciled, and both typed state
+      checks passed. Cause: float8 negative zero is logged `-0`, and the reconciler expected `-0.0`.
+    - **Version 4, offline:** float parameters are matched against float8's logged text in established forms only,
+      and `extra_float_digits=1` is pinned. All 32 real op7b statements reconcile offline. The simulated batch
+      completes through cleanup and the whole-batch audit; that isn't a live observation.
+      READY_FOR_NEW_USER_AUTHORIZATION, which needs a new signature.
 
 **Track B:**
 
