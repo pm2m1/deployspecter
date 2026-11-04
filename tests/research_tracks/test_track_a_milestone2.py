@@ -405,9 +405,13 @@ class TestManifest:
         assert m["schema"]["setup_sql_sha256"] == sc.SETUP_SQL_SHA256
         assert m["operations"]["OP-2"]["export_query_set_sha256"] == ce.EXPORT_QUERY_SET_SHA256
         assert m["operations"]["OP-2"]["cross_check_query_set_sha256"] == ce.CROSS_CHECK_QUERY_SET_SHA256
+        # Version 1 is a superseded record: its module hashes are checked against the files as committed with it.
+        import subprocess
         for op, path in (("OP-2", "src/deployspecter/research/track_a/catalog_export.py"),
                          ("OP-6", "src/deployspecter/research/track_a/evidence_binding.py")):
-            assert m["operations"][op]["module_sha256"] == sha(path)
+            committed = subprocess.run(["git", "show", f"fb0b4fd:{path}"], cwd=ROOT, capture_output=True,
+                                       check=True).stdout
+            assert m["operations"][op]["module_sha256"] == hashlib.sha256(committed).hexdigest()
         assert m["application"]["module_sha256"] == sha("tests/live_app/reservations.py")
         assert m["oracle"]["module_sha256"] == sha("tests/live_app/properties.py")
         assert m["variants"]["buggy"] == {"lock_row": False} and m["variants"]["fixed"] == {"lock_row": True}

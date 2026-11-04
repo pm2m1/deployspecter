@@ -1,0 +1,338 @@
+{
+ "manifest": "track-a-execution-manifest",
+ "version": 2,
+ "status": "WAITING_FOR_EXECUTION_APPROVAL",
+ "supersedes": {
+  "version": 1,
+  "sha256": "ea6eea51a6728ab105c098058e40ab2b4cacb0d6f25d75da58271db5a9d0fe7b",
+  "reason": "v1 is EXECUTION_BLOCKED: its OP-6 timing and its catalog pin can't be enforced through Gate 2A's public interfaces (see EXECUTION_MANIFEST_REVIEW.md)"
+ },
+ "context": "synthetic_demonstration",
+ "never_heldout_evidence": true,
+ "cluster": {
+  "image": "postgres:16@sha256:1beaa3084eee2676f20a9cd9928f0bf2c5bf674f8e49f81017912183d377c61c",
+  "container_name": "deployspecter-live-pg",
+  "bind": "127.0.0.1:55433",
+  "data": "tmpfs:/var/lib/postgresql/data",
+  "server_settings": {
+   "cluster_name": "ds_live_disposable",
+   "logging_collector": "on",
+   "log_destination": "csvlog",
+   "log_directory": "log",
+   "log_filename": "ds.log",
+   "log_rotation_age": "0",
+   "log_rotation_size": "0",
+   "log_connections": "on",
+   "log_disconnections": "on",
+   "log_statement": "all",
+   "log_parameter_max_length": "-1",
+   "autovacuum": "off",
+   "max_prepared_transactions": "5"
+  },
+  "admin_credentials": "random password in the git-ignored .env only; never in evidence",
+  "model_api_key": "unset",
+  "admin_user": "deployspecter",
+  "database": "deployspecter_test",
+  "identity_note": "admin_user and database must equal the approved .env; the driver refuses any other"
+ },
+ "schema": {
+  "name": "ds_run",
+  "setup_sql_sha256": "3bb29d210ef4f54a2d5f37d5c9c9b9726a00ddc0e194f55655b6fabe0f39e272",
+  "setup_sql_source": "tests/live_app/reservations.py:SETUP_SQL",
+  "time_typed_columns": "none (enforced by evidence_binding.check_no_time_types on the pinned export)"
+ },
+ "application": {
+  "name": "reservations",
+  "module": "tests/live_app/reservations.py",
+  "operations": [
+   "live_app.reservations:reserve_seats",
+   "live_app.reservations:release_seats"
+  ],
+  "used_by_workload": [
+   "live_app.reservations:reserve_seats"
+  ]
+ },
+ "variants": {
+  "buggy": {
+   "lock_row": false
+  },
+  "fixed": {
+   "lock_row": true
+  }
+ },
+ "variant_control": "harness-owned keyword argument added after validation; never a registered or model-supplied argument",
+ "invariant_digests": {
+  "registry": "24250848b1bf84da73f88fff6ab4fe68f949fb51e01415443e9eb7b9f39a6806",
+  "contracts": "3d9e49c44d729a4845c877a970b28b9ba4ef99e1f61b9047f0676710e078ca54",
+  "spec": "af319631a3a7bccb901b3d8d032d7c13963b138ee70da790c54516fb106783af",
+  "plan_identity": "vplan1:048a3a0ce71e159b620720e02c23721049b601d7367ac2e9bce86c8746026689",
+  "legacy_seed": "aebb0d849fb7a5a6bf316171cbb4cf3f23526b797be6f1e380afe340dd38cc51"
+ },
+ "scenario_digests": {
+  "buggy": "6985443f36e74401890ca19a451e26025d4decac1bbdee97ee16dc2577a914de",
+  "fixed": "7ec485c2cc7abc583ed53e94280f1012ae8614fa1ef117bce66c7c679601e2c5"
+ },
+ "initial_rows": {
+  "events": [
+   {
+    "id": 1,
+    "capacity": 3,
+    "reserved": 0
+   }
+  ],
+  "reservations": [],
+  "rejections": []
+ },
+ "expected_final_states": {
+  "serial_a_then_b": {
+   "events": [
+    [
+     1,
+     3,
+     2
+    ]
+   ],
+   "reservations": [
+    [
+     1,
+     "alice",
+     2
+    ]
+   ],
+   "rejections": [
+    [
+     1,
+     "bob",
+     1
+    ]
+   ],
+   "violations": []
+  },
+  "serial_b_then_a": {
+   "events": [
+    [
+     1,
+     3,
+     2
+    ]
+   ],
+   "reservations": [
+    [
+     1,
+     "bob",
+     2
+    ]
+   ],
+   "rejections": [
+    [
+     1,
+     "alice",
+     1
+    ]
+   ],
+   "violations": []
+  },
+  "lost_update_buggy_only": {
+   "events": [
+    [
+     1,
+     3,
+     2
+    ]
+   ],
+   "reservations": [
+    [
+     1,
+     "alice",
+     2
+    ],
+    [
+     1,
+     "bob",
+     2
+    ]
+   ],
+   "rejections": [],
+   "violations": [
+    "R1",
+    "R2",
+    "R4"
+   ]
+  }
+ },
+ "oracle": {
+  "module": "tests/live_app/properties.py",
+  "checks": [
+   "check_invariants",
+   "check_results(holders={'a':'alice','b':'bob'}, seeded_holders=set())",
+   "check_serializable(serial states from OP-3a)"
+  ],
+  "target_requirements": [
+   "R1",
+   "R2"
+  ],
+  "reads": "parent final_state (Sandbox.snapshot) and the OP-6 independent read"
+ },
+ "operations": {
+  "OP-1": {
+   "action": "operator starts the disposable container",
+   "by": "operator",
+   "command": "the GATE2A_REPORT.md docker run, with the pinned image digest"
+  },
+  "OP-2": {
+   "action": "driver export phase: bounded reset with SETUP_SQL, two parent exports (op2a, op2b), cross-check (op2c), each on its own tagged session reconciled from the server log",
+   "by": "parent",
+   "export_query_set_sha256": "2fa2ca20ca63a73b23f7d2152d56886e9ef5a15c4970055a4773dc44637a9a0a",
+   "cross_check_query_set_sha256": "13fd9bf31b9f523905f2f1edcd2c22f2d4572c4cc703cfdb6b0286e4f2c98cb7",
+   "privilege": "parent admin superuser; READ ONLY transactions are not a privilege boundary"
+  },
+  "OP-2b": {
+   "action": "reviewer attests the export digest; driver run phase pins it (pin_from_evidence) and requires MATCH (pin_context)",
+   "by": "reviewer, then parent"
+  },
+  "OP-6i": {
+   "action": "construction verification: driver resets with the bridged seed, parent read, independent typed check on a tagged session",
+   "by": "parent",
+   "repeats": 2,
+   "column_types": {
+    "events.id": "integer",
+    "events.capacity": "integer",
+    "events.reserved": "integer"
+   },
+   "statement_templates_sha256": "70d8585a8ab2fee3365f6cf77bb5da9f81ccac8dd95698b9afa8e2c02e693ae3"
+  },
+  "OP-3a": {
+   "action": "serial reference runs for R4",
+   "by": "Gate 2A child",
+   "call": "SupervisedRunner.plain_serial(buggy, order) for ab and ba"
+  },
+  "OP-3": {
+   "action": "explore buggy; OP-6f after every run through explore_live's check callback",
+   "by": "Gate 2A child, parent check",
+   "budget": {
+    "max_runs": 200,
+    "max_seconds": 120.0,
+    "max_preemptions": null
+   }
+  },
+  "OP-4": {
+   "action": "explore fixed, same budget and checks",
+   "by": "Gate 2A child, parent check"
+  },
+  "OP-5": {
+   "action": "confirmation: strict replay of the candidate's schedule, one attempt at a time, replay_policy.confirm (3 comparable, at most 125); OP-6f on each",
+   "by": "Gate 2A child, parent check"
+  },
+  "OP-6f": {
+   "action": "independent final-state read on a tagged parent session after every run",
+   "by": "parent",
+   "statements_sha256": "aecc681f1ec4b22b1fa464668e96250bb570b8b56a7f9aa2cbd99d97280a62c2"
+  },
+  "OP-2d": {
+   "action": "batch-end parent export; its structural (OID-free) digest must equal the pinned export's",
+   "by": "parent"
+  },
+  "OP-7": {
+   "action": "Gate 2A teardown after every run; operator stops the container",
+   "by": "Gate 2A, operator"
+  }
+ },
+ "allowed_application_statements": {
+  "buggy": [
+   "BEGIN",
+   "SELECT capacity, reserved FROM events WHERE id = $1",
+   "UPDATE events SET reserved = $1 WHERE id = $2",
+   "INSERT INTO reservations (event_id, holder, qty) VALUES ($1, $2, $3)",
+   "INSERT INTO rejections (event_id, holder, seats_available) VALUES ($1, $2, $3)",
+   "COMMIT"
+  ],
+  "fixed": [
+   "BEGIN",
+   "SELECT capacity, reserved FROM events WHERE id = $1 FOR UPDATE",
+   "UPDATE events SET reserved = $1 WHERE id = $2",
+   "INSERT INTO reservations (event_id, holder, qty) VALUES ($1, $2, $3)",
+   "INSERT INTO rejections (event_id, holder, seats_available) VALUES ($1, $2, $3)",
+   "COMMIT"
+  ]
+ },
+ "allowed_process_actions": [
+  "operator: docker run (OP-1 exact)",
+  "operator: docker stop deployspecter-live-pg",
+  "env -u MODEL_API_KEY uv run python research_tools/track_a_run.py plan --manifest docs/research/live_stepping/track_a/execution_manifest_v2.json --manifest-sha256 <sha>",
+  "env -u MODEL_API_KEY uv run python research_tools/track_a_run.py export --manifest ... --manifest-sha256 <sha> --approval <export approval>",
+  "env -u MODEL_API_KEY uv run python research_tools/track_a_run.py run --manifest ... --manifest-sha256 <sha> --approval <run approval> --attestation <attestation> --run-dir <export run dir>"
+ ],
+ "safety_ceilings": {
+  "LiveLimits": {
+   "statement_ms": 5000,
+   "lock_ms": 3000,
+   "deadlock_ms": 50,
+   "idle_in_transaction_ms": 15000,
+   "python_step_s": 5.0,
+   "run_s": 30.0
+  },
+  "SupervisorLimits": {
+   "handshake_s": 20.0,
+   "escalation_grace_s": 1.0,
+   "kill_wait_s": 5.0,
+   "db_call_s": 15.0,
+   "reset_lock_ms": 2000,
+   "reset_statement_ms": 10000,
+   "quiescence_s": 5.0,
+   "log_wait_s": 5.0
+  },
+  "confirmation_attempts": 125,
+  "batch_wall_clock_s": 3600,
+  "exploration": {
+   "max_runs": 200,
+   "max_seconds": 120.0
+  }
+ },
+ "fail_closed": [
+  "preflight problem",
+  "any flagged or unscoreable run",
+  "any statement outside the allowed lists or Gate 2A's own",
+  "two exports differ",
+  "cross-check disagrees",
+  "context verification not MATCH",
+  "time-typed column present",
+  "initial state differs between runs or from expected",
+  "independent check disagrees",
+  "fixed exploration not exhausted or any inconclusive run",
+  "binding error",
+  "infrastructure failure (runner poisoned)",
+  "teardown leaves a role, session or process",
+  "any parent session not reconciling",
+  "the batch-end catalog differing structurally",
+  "independent and parent reads disagreeing",
+  "a source file differing from source_sha256"
+ ],
+ "on_fail": "stop the batch; nothing is scored; no automatic retry or replacement; a poisoned cluster is replaced by hand",
+ "artifacts_root": "docs/research/live_stepping/evidence/track_a",
+ "source_sha256": {
+  "research_tools/track_a_run.py": "7646b488bae66d40d9be331b5d72c50e15c5a894da3c90e377fb48b2e51c457a",
+  "src/deployspecter/research/track_a/scenario.py": "710d65e0f3fea9e7b5ce126b73e6ea70a0c693cf0e140cc29707e8a2080e2006",
+  "src/deployspecter/research/track_a/pipeline.py": "1e3b07e50a3918ee29b894ecb26d95868b407a48e4419ed704737cdf0c5ec1af",
+  "src/deployspecter/research/track_a/replay_policy.py": "83b3eac7b0d4e3601b0b484d3ee310fdc48363108b5204012ca570ea92683e9c",
+  "src/deployspecter/research/track_a/acceptance.py": "e68c4f59d22f46a1fd6d75b998013eaf36557614ffd7487c64996f27802a7f02",
+  "src/deployspecter/research/track_a/catalog_export.py": "ab59af7ac920f45d022354559fd130bda5128dbde0229200065474739a66cb2e",
+  "src/deployspecter/research/track_a/evidence_binding.py": "770b77b7dc853c37e8b6cb169444a1538643bf2d03f465b0ab8bd546315dda16",
+  "src/deployspecter/research/track_a/parent_reconciliation.py": "4b31e9598b16156736de66f84c816a084902a22b9991ace50642e15210b77af0",
+  "tests/live_app/reservations.py": "8d60890d642253f4bf2672d7d48d97e8341930840791e4bacd1b6a0eba8661c1",
+  "tests/live_app/properties.py": "fa67687c3a58a7d9c873f1710dfc114ac26d3cbd96e3b579484c58a44e803f5b",
+  "src/deployspecter/database.py": "a9f1b849bbc3e458be6d4d63a1271edd8fb5873ca237de513512272a31096b3d",
+  "src/deployspecter/live/supervisor.py": "9d5119d083589172692cdd930300db3a6047b9f3250c90d09e75dba44e05b242",
+  "src/deployspecter/live/worker.py": "70be127f660f411f256e380eb746421cfcdf4b2e170445fb2284a9de6605f8e5",
+  "src/deployspecter/live/serverlog.py": "4b9dfadecda057c835111f8a1a12166bcbeba16bef798ce8a061aaa46c5c80fa",
+  "src/deployspecter/live/runner.py": "73f0df69f78ed38abcd167259094831675f1a4feaba0d97688802aa367504501",
+  "src/deployspecter/live/explore.py": "823f40ecc6bccfd4a19bd6606b64393cb5228dacaea35467de1d4c7c619800d4",
+  "src/deployspecter/live/trace.py": "f49021cd2a959c18a24eb2fef8e2bc455c4aa5848dfcc304f35652db54694819",
+  "src/deployspecter/live/driver.py": "605771d15555084cf2c339d274cb49ec3d294d797e691c922d22a0f7a678f97a"
+ },
+ "residuals": [
+  "driver-initiated resets (Sandbox.reset, Gate 2A code) are not themselves reconciled",
+  "the catalog is verified at batch start and end, not between Gate 2A's per-run reset and each run (no public hook)",
+  "Gate 2A's parent read masks timestamps; enforced absent by check_no_time_types",
+  "the parent is a superuser: reconciliation detects, it does not prevent"
+ ]
+}

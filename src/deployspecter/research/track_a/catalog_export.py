@@ -231,6 +231,47 @@ def export_snapshot(conn: Any) -> ExportResult:
     return ExportResult(snapshot, digest, identity, statements)
 
 
+def structural_digest(snapshot: dict[str, Any]) -> str:
+    """The snapshot with every OID replaced by a name, so two resets of the same setup compare equal.
+
+    Gate 2A's bounded reset drops and recreates ``ds_run`` before every run, which gives new OIDs, so the pinned
+    snapshot digest can't be re-matched later. This form can: the batch-end export must have the same structural
+    digest as the pinned one.
+    """
+    rels = {r["oid"]: r["relname"] for r in snapshot["relations"]}
+    names = {**{t["oid"]: f"type:{t['nspname']}.{t['typname']}" for t in snapshot["types"]},
+             **{c["oid"]: f"collation:{c['nspname']}.{c['collname']}" for c in snapshot["collations"]},
+             **{n["oid"]: f"namespace:{n['nspname']}" for n in snapshot["namespaces"]},
+             **{oid: f"relation:{name}" for oid, name in rels.items()}}
+    cons = {k["oid"]: k["conname"] for k in snapshot["constraints"]}
+    trig = {t["oid"]: t["tgname"] for t in snapshot["triggers"]}
+
+    def name(oid: int) -> str:
+        return names.get(oid, "none" if oid == 0 else f"external:{oid}")
+
+    form = {
+        "database": snapshot["database"], "postgres_major": snapshot["postgres_major"],
+        "schema_name": snapshot["schema_name"], "coverage": snapshot["coverage"],
+        "relations": sorted([{**r, "oid": name(r["oid"])} for r in snapshot["relations"]], key=str),
+        "attributes": sorted([{**a, "attrelid": name(a["attrelid"]), "atttypid": name(a["atttypid"]),
+                               "attcollation": name(a["attcollation"])} for a in snapshot["attributes"]], key=str),
+        "constraints": sorted([{**k, "oid": cons[k["oid"]], "conrelid": name(k["conrelid"]),
+                                "confrelid": name(k["confrelid"]), "conindid": name(k["conindid"])}
+                               for k in snapshot["constraints"]], key=str),
+        "indexes": sorted([{**i, "indexrelid": name(i["indexrelid"]), "indrelid": name(i["indrelid"])}
+                           for i in snapshot["indexes"]], key=str),
+        "triggers": sorted([{**t, "oid": trig[t["oid"]], "tgrelid": name(t["tgrelid"]),
+                             "tgname": re.sub(r"_\d+$", "_N", t["tgname"]) if t["tgisinternal"] else t["tgname"]}
+                            for t in snapshot["triggers"]], key=str),
+        "types": sorted(names[t["oid"]] for t in snapshot["types"]),
+        "collations": sorted(names[c["oid"]] for c in snapshot["collations"]),
+    }
+    for t in form["triggers"]:
+        if t["tgisinternal"]:
+            t["oid"] = re.sub(r"_\d+$", "_N", t["oid"])
+    return hashlib.sha256(json.dumps(form, sort_keys=True, default=str).encode()).hexdigest()
+
+
 @dataclass
 class CrossCheck:
     agrees: bool

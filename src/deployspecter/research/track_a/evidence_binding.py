@@ -114,6 +114,33 @@ def judge_independent(check: IndependentCheck, expected: dict[str, list[dict[str
     return problems
 
 
+# ------------------------------------------------------------------ independent final-state read (OP-6f)
+
+
+def final_read_statements(tables: list[str]) -> list[str]:
+    for table in tables:
+        if not NAME.match(table):
+            raise BindingError(f"table name {table!r} isn't a plain name")
+    return ["BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY",
+            *[f'SELECT row_to_json(t)::text FROM {SCHEMA}."{table}" t ORDER BY 1' for table in sorted(tables)],
+            "COMMIT"]
+
+
+def independent_final_read(conn: Any, tables: list[str]) -> dict[str, list[dict[str, Any]]]:
+    """A second read of the committed state, on a separate parent connection, for the oracle."""
+    state: dict[str, list[dict[str, Any]]] = {}
+    for text in final_read_statements(tables):
+        cursor = conn.execute(text)
+        if text.startswith("SELECT"):
+            state[text.split('"')[1]] = [json.loads(r[0]) for r in cursor.fetchall()]
+    return state
+
+
+def state_digest(state: dict[str, list[dict[str, Any]]]) -> str:
+    """Order-insensitive within each table, so two reads that order rows differently compare equal."""
+    return canonical_digest({t: sorted(json.dumps(r, sort_keys=True) for r in rows) for t, rows in state.items()})
+
+
 # ------------------------------------------------------------------ exact initial states across runs
 
 

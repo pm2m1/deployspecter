@@ -162,3 +162,34 @@
 - every attempt is listed.
 
 Neither track depends on it yet.
+
+---
+
+## Parallel milestone 3
+
+**Committed first:** `fb0b4fd`, `66017f3`, `e44f863`, `b2b123b`, covering milestone 2's offline work.
+
+**Track A:**
+
+- **New modules:**
+    - `parent_reconciliation.py`: parent sessions reconciled from the server log only;
+    - `research_tools/track_a_run.py`: the bounded driver, with no commands, public Gate 2A interfaces only, approvals
+      per phase, a reviewer attestation, a batch ceiling, and new evidence directories;
+    - a structural catalog digest;
+    - independent final-state reads.
+- **Manifests:** v1 is EXECUTION_BLOCKED, and v2 replaces it. Status: WAITING_FOR_EXECUTION_APPROVAL.
+- **Tests:** 37 driver and reconciliation tests, plus a mutation pass. See `track_a/EXECUTION_MANIFEST_REVIEW.md`.
+- **Blockers:**
+    - parent SQL and log format uncharacterized on PostgreSQL 16;
+    - the parent is a superuser;
+    - amendment 002's manual steps (oracle-author review, uninstrumented reproduction) are absent, so no "detection"
+      claim is possible;
+    - the replay signature is unreviewed.
+
+**Track B:**
+
+- option-generated units are labelled `+companion` or `+partner`;
+- `ARM_E_FAIRNESS.md`;
+- `O6_FIXED_BUDGET_PROPOSAL.md`: 65,536 and 65,536 as a policy, not a proven bound.
+
+**Shared:** Amendment 003 revision 8, still DRAFT — NOT ADOPTED and uncommitted.
