@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import secrets
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -63,11 +64,26 @@ class RunResult:
     final_state: dict[str, list[dict[str, Any]]]
     violations: list[str]
     seconds: float
+    corroboration: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {"run_id": self.run_id, "variant": self.variant, "workload": self.workload,
                 "initial_digest": self.initial_digest, "trace": self.trace.to_dict(),
-                "final_state": self.final_state, "violations": self.violations, "seconds": self.seconds}
+                "final_state": self.final_state, "violations": self.violations, "seconds": self.seconds,
+                "corroboration": self.corroboration}
+
+    def bundle(self) -> dict[str, Any]:
+        """The machine-readable evidence: what ran, the digests that bind it, the verdicts."""
+        trace = self.trace.to_dict()
+        return {"kind": "EXPERIMENTAL run evidence (not certified Gate A2 evidence)", "run_id": self.run_id,
+                "variant": self.variant, "workload": self.workload, "schedule": self.trace.schedule,
+                "chosen": self.trace.chosen, "outcome": self.trace.outcome,
+                "trace_sha256": hashlib.sha256(json.dumps(trace, sort_keys=True, default=str).encode()).hexdigest(),
+                "trace_fingerprint": self.trace.fingerprint(), "initial_state_digest": self.initial_digest,
+                "final_state_digest": oracle.digest(self.final_state), "oracle_violations": self.violations,
+                "corroboration": self.corroboration, "handlers": {n: a["handler"] for n, a in
+                                                                  self.trace.actors.items()},
+                "versions": {"psycopg": psycopg.__version__}}
 
 
 def workload_digest(w: Workload) -> str:
@@ -75,8 +91,47 @@ def workload_digest(w: Workload) -> str:
                                      sort_keys=True).encode()).hexdigest()[:16]
 
 
+def _wait_gone(admin: Any, pids: list[int], seconds: float = 5.0) -> bool:
+    until = time.monotonic() + seconds
+    while time.monotonic() < until:
+        if admin.execute("SELECT count(*) FROM pg_stat_activity WHERE pid = ANY(%s)", (pids,)).fetchone()[0] == 0:
+            return True
+        time.sleep(0.02)
+    return False
+
+
+def corroborated(admin: Any, run: Any, *, user: str) -> tuple[Trace, dict[str, Any]]:
+    """Run between two markers on the admin session, then reconcile the driver trace with the server's log."""
+    from deployspecter.live.serverlog import ServerLog
+
+    from .corroborate import corroborate
+    log = ServerLog(lambda q, prm=None: admin.execute(q, prm).fetchone())
+    log.position()
+    nonce = secrets.token_hex(6)
+    start, end = f"ds_mvp_mark_start_{nonce}", f"ds_mvp_mark_end_{nonce}"
+    admin.execute(f"SELECT '{start}'")
+    trace = run.execute()
+    gone = _wait_gone(admin, [a["backend_pid"] for a in trace.actors.values()])
+    admin.execute(f"SELECT '{end}'")
+    until = time.monotonic() + 5.0
+    while True:
+        data = log.read()
+        if f"SELECT '{end}'".encode() in data and data.endswith(b"\n"):
+            break
+        if time.monotonic() > until:
+            return trace, {"ok": False, "problems": ["the end marker never reached the log"]}
+        time.sleep(0.02)
+    result = corroborate(data, start=start, end=end, trace=trace, admin_pid=admin.info.backend_pid, user=user,
+                         database=DATABASE).to_dict()
+    if not gone:
+        result["ok"] = False
+        result["problems"].append("an actor backend outlived the run")
+    return trace, result
+
+
 def run_once(target: Target, w: Workload, *, variant: str, schedule: list[str], strict: bool = False,
-             limits: Limits | None = None, expected_digest: str | None = None) -> RunResult:
+             limits: Limits | None = None, expected_digest: str | None = None,
+             corroborate: bool = False) -> RunResult:
     limits = limits or Limits()
     handlers = app.registry(variant)
     started = time.monotonic()
@@ -96,15 +151,21 @@ def run_once(target: Target, w: Workload, *, variant: str, schedule: list[str], 
                 raise Refused(f"unknown handler {inv['app_version']}.{inv['handler']}")
             actors.append(Actor(inv["actor"], h, dict(inv["args"])))
         connect = actor_connection_factory(target.conninfo(), limits, search_path=app.SCHEMA)
-        trace = Run(actors, connect, admin, schedule=schedule, strict=strict, limits=limits, run_id=run_id,
-                    migration_phase=w.phase).execute()
+        run = Run(actors, connect, admin, schedule=schedule, strict=strict, limits=limits, run_id=run_id,
+                  migration_phase=w.phase)
+        corroboration = None
+        if corroborate:
+            trace, corroboration = corroborated(admin, run, user=target.user)
+        else:
+            trace = run.execute()
         final = oracle.read_state(admin)
         done = any(a["handler"] == "job.backfill_v2" and isinstance(trace.raw_results.get(n), dict)
                    and trace.raw_results[n].get("status") == "done" for n, a in trace.actors.items())
         violations = oracle.check(final, backfill_done=done)
     finally:
         admin.close()
-    return RunResult(run_id, variant, w.label, got, trace, final, violations, round(time.monotonic() - started, 3))
+    return RunResult(run_id, variant, w.label, got, trace, final, violations, round(time.monotonic() - started, 3),
+                     corroboration)
 
 
 def explore_workload(target: Target, w: Workload, *, variant: str, max_runs: int,

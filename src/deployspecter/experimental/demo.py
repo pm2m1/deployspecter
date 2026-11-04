@@ -34,7 +34,7 @@ def main() -> int:
     a.out.mkdir(parents=True, exist_ok=False)
     verdict = {}
     for variant in ("buggy", "fixed"):
-        r = hz.run_once(target, w, variant=variant, schedule=RACE)
+        r = hz.run_once(target, w, variant=variant, schedule=RACE, corroborate=True)
         handlers = app.registry(variant)
         print(f"\n=== {variant} build: run {r.run_id}, schedule {''.join(RACE)}, outcome {r.trace.outcome}")
         for inv in w.invocations:
@@ -49,10 +49,18 @@ def main() -> int:
                   f"rows={op.rows} [{how}] {op.provenance['call_site'].rsplit('/', 1)[-1]}")
         print(f"  final state {r.final_state['events']}")
         print(f"  oracle: {r.violations or 'all invariants hold'}")
+        c = r.corroboration
+        print(f"  server log: {'corroborates' if c['ok'] else 'REFUTES'} the trace ({c['matched']} statements, "
+              f"{c['params_compared']} values compared, sessions {c['sessions']}) {c['problems'] or ''}")
         (a.out / f"{variant}_{r.run_id}.json").write_text(json.dumps(r.to_dict(), indent=1, default=str))
-        verdict[variant] = r.violations
-    ok = bool(verdict["buggy"]) and not verdict["fixed"]
-    print(f"\nbuggy build violates: {bool(verdict['buggy'])}; fixed build holds: {not verdict['fixed']}")
+        (a.out / f"{variant}_{r.run_id}.bundle.json").write_text(json.dumps(r.bundle(), indent=1, default=str))
+        verdict[variant] = (r.violations, c["ok"], r.initial_digest)
+    same_start = verdict["buggy"][2] == verdict["fixed"][2]
+    print(f"\nsame verified initial state for both builds: {same_start}")
+    ok = bool(verdict["buggy"][0]) and not verdict["fixed"][0] and verdict["buggy"][1] and verdict["fixed"][1] \
+        and same_start
+    print(f"buggy build violates: {bool(verdict['buggy'][0])}; fixed build holds: {not verdict['fixed'][0]}; "
+          f"both corroborated: {verdict['buggy'][1] and verdict['fixed'][1]}")
     return 0 if ok else 1
 
 

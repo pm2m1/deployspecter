@@ -216,3 +216,111 @@ class TestAdversarial:
                          ("transaction_exit", "COMMIT")]
         assert t.records[2].params == [[1, {"str": 1, "sha256": "2d711642b726"}, 1],
                                        [1, {"str": 1, "sha256": "a1fce4363854"}, 1]]
+
+
+# ------------------------------------------------------------------ P0: the server log corroborates the driver trace
+
+
+def corroborated_handlers(target, *specs, schedule=()):
+    admin = target.admin()
+    try:
+        app.reset(admin, {"events": [{"id": 1, "capacity": 5, "reserved": 0}, {"id": 2, "capacity": 5,
+                                                                              "reserved": 0}]})
+        lim = st.Limits()
+        actors = [st.Actor(name, st.Handler("test", fn.__name__, fn, frozenset(st.normal_sql(s) for s in sqls), {}),
+                           {}) for name, fn, sqls in specs]
+        connect = st.actor_connection_factory(target.conninfo(), lim, search_path=app.SCHEMA)
+        run = st.Run(actors, connect, admin, schedule=list(schedule), limits=lim, run_id="corr")
+        return hz.corroborated(admin, run, user=target.user)
+    finally:
+        admin.close()
+
+
+class TestServerLogCorroboration:
+    def test_buggy_and_fixed_traces_match_the_server_log(self, target):
+        for variant in ("buggy", "fixed"):
+            r = hz.run_once(target, backfill_and_reserve(), variant=variant, schedule=RACE, corroborate=True)
+            c = r.corroboration
+            assert c["ok"], c["problems"]
+            assert c["matched"] == 9 and c["params_compared"] == 9 and c["params_unchecked"] == 0
+            assert sorted(c["sessions"].values()) == ["a", "j"]
+
+    def test_the_evidence_bundle_binds_digests_and_verdicts(self, target):
+        r = hz.run_once(target, backfill_and_reserve(), variant="buggy", schedule=RACE, corroborate=True)
+        b = r.bundle()
+        assert b["initial_state_digest"] == r.initial_digest and len(b["trace_sha256"]) == 64
+        assert b["oracle_violations"] == r.violations and b["corroboration"]["ok"] is True
+        assert b["final_state_digest"] != b["initial_state_digest"]
+
+    def test_a_raw_pgconn_bypass_is_caught_by_the_server_log(self, target):
+        def bypass(conn):
+            conn.execute("SELECT 1")
+            conn.pgconn.exec_(b"UPDATE events SET reserved = 9 WHERE id = 2")  # invisible to the driver hook
+        _trace, c = corroborated_handlers(target, ("a", bypass, ["SELECT 1"]))
+        assert not c["ok"] and any("a statement the trace doesn't record" in p for p in c["problems"])
+
+    def test_a_connection_the_handler_opens_itself_is_unexplained(self, target):
+        def sneaky(conn):
+            import psycopg
+            with psycopg.connect(**target.conninfo(), autocommit=True) as other:
+                other.execute("SELECT 2")
+            conn.execute("SELECT 1")
+        _trace, c = corroborated_handlers(target, ("a", sneaky, ["SELECT 1"]))
+        assert not c["ok"] and any("unexplained session" in p for p in c["problems"])
+
+    def test_a_tampered_trace_value_is_refuted(self, target):
+        from deployspecter.experimental.corroborate import corroborate
+        admin = target.admin()
+        try:
+            app.reset(admin, {"events": [{"id": 1, "capacity": 5, "reserved": 0}]})
+            from deployspecter.live.serverlog import ServerLog
+            log = ServerLog(lambda q, prm=None: admin.execute(q, prm).fetchone())
+            log.position()
+            admin.execute("SELECT 'ds_mvp_mark_start_aaaaaaaaaaaa'")
+            h = app.registry("buggy")[("v1", "reserve")]
+            run = st.Run([st.Actor("a", h, {"event_id": 1, "holder": "alice", "qty": 2})],
+                         st.actor_connection_factory(target.conninfo(), st.Limits(), search_path=app.SCHEMA),
+                         admin, run_id="tamper")
+            trace = run.execute()
+            hz._wait_gone(admin, [trace.actors["a"]["backend_pid"]])
+            admin.execute("SELECT 'ds_mvp_mark_end_aaaaaaaaaaaa'")
+            time.sleep(0.2)
+            data = log.read()
+        finally:
+            admin.close()
+        ok = corroborate(data, start="ds_mvp_mark_start_aaaaaaaaaaaa", end="ds_mvp_mark_end_aaaaaaaaaaaa",
+                         trace=trace, admin_pid=-1, user=target.user, database="ds_mvp")
+        assert not ok.ok  # the admin pid is wrong on purpose: its markers' session is then unexplained
+        update = next(r for r in trace.records if r.sql.startswith("UPDATE"))
+        update.params = [7, 1]  # claim the handler wrote 7, not 2
+        bad = corroborate(data, start="ds_mvp_mark_start_aaaaaaaaaaaa", end="ds_mvp_mark_end_aaaaaaaaaaaa",
+                          trace=trace, admin_pid=0, user=target.user, database="ds_mvp")
+        assert any("isn't the value the trace records" in p for p in bad.problems)
+
+    def test_deadlock_errors_savepoints_and_executemany_corroborate(self, target):
+        def ab(conn):
+            with conn.transaction():
+                conn.execute(LOCK1)
+                conn.execute(LOCK2)
+
+        def ba(conn):
+            with conn.transaction():
+                conn.execute(LOCK2)
+                conn.execute(LOCK1)
+        _t, c = corroborated_handlers(target, ("a", ab, [LOCK1, LOCK2]), ("b", ba, [LOCK1, LOCK2]),
+                                      schedule=["a", "b", "a", "b"])
+        assert c["ok"], c["problems"]
+        INS = "INSERT INTO reservations (event_id, holder, qty) VALUES (%s, %s, %s)"
+
+        def nested(conn):
+            with conn.transaction():
+                with conn.transaction():
+                    conn.cursor().executemany(INS, [(1, "x", 1), (1, "y", 1)])
+                try:
+                    with conn.transaction():
+                        conn.execute("SELECT 1")
+                        raise ValueError("roll back the savepoint")
+                except ValueError:
+                    pass
+        _t, c = corroborated_handlers(target, ("a", nested, [INS, "SELECT 1"]))
+        assert c["ok"], c["problems"]
