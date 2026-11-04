@@ -17,6 +17,8 @@ The column layout is PostgreSQL 16's 26-column ``csvlog``, the same layout Gate 
 
 from __future__ import annotations
 
+import csv
+import io
 import re
 from collections import Counter
 from dataclasses import dataclass, field
@@ -31,6 +33,19 @@ STATEMENT = re.compile(r"^(?:statement|execute [^:]*): (.*)$", re.S)
 PARAMETER = re.compile(r"\$(\d+) = (NULL|'(?:[^']|'')*')")
 # Non-client background processes whose ordinary LOG lines may appear in any window. Nothing else may.
 BACKGROUND = {"checkpointer": re.compile(r"^checkpoint (starting|complete)")}
+LINE = 6  # session_line_num: 1 for a session's first row, consecutive after that
+
+# The connection-state records PostgreSQL 16 writes with log_connections and log_disconnections on, as observed on the
+# disposable cluster (evidence/gate_a1/20261104T113256Z-d0b21a60). Anything else that isn't a statement fails.
+RECEIVED = re.compile(r"^connection received: host=(\S+) port=(\d+)$")
+AUTHENTICATED = re.compile(r'^connection authenticated: identity="([^"]*)" method=([a-z0-9-]+) \((/[^():]+):(\d+)\)$')
+AUTHORIZED = re.compile(r"^connection authorized: user=(\S+) database=(\S+) application_name=(\S+)$")
+DISCONNECTED = re.compile(r"^disconnection: session time: \d+:\d{2}:\d{2}\.\d{3} "
+                          r"user=(\S+) database=(\S+) host=(\S+) port=(\d+)$")
+AUTH_METHODS = frozenset({"scram-sha-256"})
+
+LOG_READER_APP = "ds_parent_log_reader"
+READER_POLL = "SELECT count(*) FROM pg_stat_activity WHERE application_name = $1"
 
 
 class ParentLogError(RuntimeError):
@@ -98,8 +113,62 @@ def window(log_bytes: bytes, start: str, end: str) -> list[list[str]]:
     return rows
 
 
+@dataclass(frozen=True)
+class ReaderSession:
+    """The one log-reader session, identified by the rows that wrote an operation's (or the batch's) markers."""
+    session: str
+    pid: str
+    user: str
+    database: str
+    start_line: int
+    end_line: int
+
+
+def marker_rows(log_bytes: bytes, start: str, end: str) -> tuple[list[str], list[str]]:
+    """The two rows that wrote the markers, each exactly once, as the exact marker statement."""
+    if not (MARKER.match(start) and MARKER.match(end)):
+        raise ParentLogError("markers must be parent markers")
+    found: dict[str, list[list[str]]] = {start: [], end: []}
+    try:
+        for r in csv.reader(io.StringIO(log_bytes.decode("utf-8", errors="replace"), newline=""), strict=True):
+            for token in found:
+                if len(r) == serverlog.CSV_COLUMNS and r[MESSAGE] == f"statement: {marker_sql(token)}":
+                    found[token].append(r)
+    except csv.Error as exc:
+        raise ParentLogError(f"unparsable log: {exc}") from exc
+    if len(found[start]) != 1 or len(found[end]) != 1:
+        raise ParentLogError("each marker must be logged exactly once")
+    return found[start][0], found[end][0]
+
+
+def reader_session(start_row: list[str], end_row: list[str], *, user: str, database: str) -> ReaderSession:
+    """The log reader that wrote both markers: one session and process, the reader's name, the expected identity."""
+    for r in (start_row, end_row):
+        if (r[APPLICATION], r[BACKEND], r[SEVERITY], r[USER], r[DATABASE]) != (
+                LOG_READER_APP, "client backend", "LOG", user, database):
+            raise ParentLogError("a marker wasn't written by the log reader as the expected user and database")
+    if (start_row[SESSION], start_row[PID]) != (end_row[SESSION], end_row[PID]) or not start_row[SESSION]:
+        raise ParentLogError("the two markers came from different sessions")
+    try:
+        start_line, end_line = int(start_row[LINE]), int(end_row[LINE])
+    except ValueError:
+        raise ParentLogError("a marker row has no session line number") from None
+    if end_line <= start_line:
+        raise ParentLogError("the end marker precedes the start marker in its session")
+    return ReaderSession(start_row[SESSION], start_row[PID], user, database, start_line, end_line)
+
+
 def reconcile_parent_session(rows: list[list[str]], *, tag: str, expected: tuple[ExpectedStatement, ...],
-                             user: str, database: str) -> ParentReconciliation:
+                             user: str, database: str, authentication: str | None = None,
+                             reader: ReaderSession | None = None, reader_poll_limit: int = 0) -> ParentReconciliation:
+    """Reconcile one tagged parent session from the rows strictly between its markers.
+
+    ``authentication``: the one method the session must authenticate with. When None, an authentication record is
+    optional, but if present it must still be exactly one valid record in its place.
+    ``reader``: the established log-reader session. Only it may appear besides the tagged session and background
+    processes, and only issuing the exact end-of-session poll for this tag, after the session's work, at most
+    ``reader_poll_limit`` times, on consecutive session lines from the start marker to the end marker.
+    """
     out = ParentReconciliation(ok=False)
     if not TAG.match(tag):
         out.problems.append(f"tag {tag!r} isn't a parent operation tag")
@@ -110,41 +179,87 @@ def reconcile_parent_session(rows: list[list[str]], *, tag: str, expected: tuple
         return out
     session = next(iter(tagged))
     out.session_id = session
-    other_sessions = set()
-    for r in rows:
+    mine_at = [i for i, r in enumerate(rows) if r[SESSION] == session]
+    mine = [rows[i] for i in mine_at]
+
+    other_sessions, reader_rows = set(), []
+    for i, r in enumerate(rows):
         if r[SESSION] == session:
+            continue
+        if reader is not None and r[SESSION] == reader.session:
+            reader_rows.append((i, r))
             continue
         pattern = BACKGROUND.get(r[BACKEND])
         if pattern is None or r[SEVERITY] != "LOG" or not pattern.match(r[MESSAGE]):
             other_sessions.add(r[SESSION])
     if other_sessions:
         out.problems.append(f"{len(other_sessions)} unattributed session(s) in the window")
-    mine = [r for r in rows if r[SESSION] == session]
+
     if {r[PID] for r in mine} != {mine[0][PID]}:
         out.problems.append("the session's process id changed")
+    if [r[LINE] for r in mine] != [str(n) for n in range(1, len(mine) + 1)]:
+        out.problems.append("the session's log lines aren't complete and in order from its first")
     if any(r[SEVERITY] != "LOG" for r in mine):
         out.problems.append(f"severities other than LOG: {sorted({r[SEVERITY] for r in mine} - {'LOG'})}")
-    messages = [r[MESSAGE] for r in mine]
-    if not messages or not messages[0].startswith("connection received:"):
-        out.problems.append("the session's connection isn't in the window")
-    authorized = [r for r in mine if r[MESSAGE].startswith("connection authorized:")]
-    if len(authorized) != 1:
-        out.problems.append("the session wasn't authorized exactly once in the window")
-    else:
-        a = authorized[0]
-        if a[USER] != user or a[DATABASE] != database or f"application_name={tag}" not in a[MESSAGE]:
-            out.problems.append("connection identity differs from the expected user, database or tag")
-    if not messages or not messages[-1].startswith("disconnection:"):
-        out.problems.append("the session didn't disconnect inside the window")
     if any(r[USER] != user or r[DATABASE] != database for r in mine if r[USER] or r[DATABASE]):
         out.problems.append("a row of the session has another user or database")
-    statements = [(STATEMENT.match(r[MESSAGE]), r[DETAIL]) for r in mine]
+
+    # Connection state, in PostgreSQL's order: received, [authenticated], authorized ... disconnection.
+    messages = [r[MESSAGE] for r in mine]
+    received = RECEIVED.match(messages[0]) if messages else None
+    if received is None:
+        out.problems.append("the session's connection isn't in the window")
+    at = 1
+    authenticated = [m for m in messages if m.startswith("connection authenticated:")]
+    if len(authenticated) > 1:
+        out.problems.append("the session authenticated more than once")
+    elif authenticated:
+        match = AUTHENTICATED.match(messages[at]) if len(messages) > at else None
+        if match is None:
+            out.problems.append("the authentication record is malformed or out of order")
+        elif match.group(1) != user or match.group(2) not in AUTH_METHODS or (
+                authentication is not None and match.group(2) != authentication):
+            out.problems.append("the session authenticated as another identity or with another method")
+        at += 1
+    elif authentication is not None:
+        out.problems.append("the session's authentication isn't in the window")
+    if sum(m.startswith("connection authorized:") for m in messages) != 1:
+        out.problems.append("the session wasn't authorized exactly once in the window")
+    else:
+        match = AUTHORIZED.match(messages[at]) if len(messages) > at else None
+        if match is None:
+            out.problems.append("the authorization record is malformed or out of order")
+        elif match.groups() != (user, database, tag):
+            out.problems.append("connection identity differs from the expected user, database or tag")
+        at += 1
+    ended = DISCONNECTED.match(messages[-1]) if messages else None
+    if ended is None or sum(m.startswith("disconnection:") for m in messages) != 1:
+        out.problems.append("the session didn't disconnect inside the window")
+    elif ended.group(1, 2) != (user, database) or (
+            received is not None and ended.group(3, 4) != received.group(1, 2)):
+        out.problems.append("the disconnection doesn't match the session's connection")
+
+    body = mine[at:-1] if len(mine) > at else []
+    statements = [(STATEMENT.match(r[MESSAGE]), r[DETAIL]) for r in body]
     seen = [(m.group(1), detail) for m, detail in statements if m]
-    unexplained = [r[MESSAGE][:60] for r, (m, _d) in zip(mine, statements, strict=True)
-                   if not m and not r[MESSAGE].startswith(("connection received:", "connection authorized:",
-                                                           "disconnection:"))]
+    unexplained = [r[MESSAGE][:60] for r, (m, _d) in zip(body, statements, strict=True) if not m]
     if unexplained:
         out.problems.append(f"unexplained session rows: {unexplained[:3]}")
+
+    if reader is not None:
+        last_work = mine_at[-2] if len(mine_at) >= 2 else len(rows)  # the session's last row before disconnecting
+        poll = (reader.pid, reader.user, reader.database, LOG_READER_APP, "client backend", "LOG",
+                f"execute <unnamed>: {READER_POLL}", f"parameters: $1 = {literal(tag)}")
+        if any((r[PID], r[USER], r[DATABASE], r[APPLICATION], r[BACKEND], r[SEVERITY], r[MESSAGE], r[DETAIL]) != poll
+               for _i, r in reader_rows):
+            out.problems.append("the log reader did something in the window other than this session's poll")
+        if [r[LINE] for _i, r in reader_rows] != [str(n) for n in range(reader.start_line + 1, reader.end_line)]:
+            out.problems.append("the log reader's rows in the window are incomplete or out of sequence")
+        if not 1 <= len(reader_rows) <= reader_poll_limit:
+            out.problems.append(f"{len(reader_rows)} log-reader polls in the window, allowed 1 to {reader_poll_limit}")
+        if any(i < last_work for i, _r in reader_rows):
+            out.problems.append("the log reader polled before the session's work was logged")
+
     out.statements_seen = len(seen)
     out.counts = dict(Counter(text for text, _ in seen))
     if len(seen) != len(expected):

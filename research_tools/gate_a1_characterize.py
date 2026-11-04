@@ -1,4 +1,4 @@
-"""Gate A1: minimal PostgreSQL characterization driver. Research-only. NOT YET AUTHORIZED TO RUN.
+"""Gate A1: minimal PostgreSQL characterization driver. Research-only. Runs only with a signed owner approval.
 
     plan          print the package's steps; touches nothing
     characterize  run Gate A1 once; needs the Gate A1 manifest digest and an approval file naming it
@@ -30,7 +30,8 @@ import track_a_run as a2  # noqa: E402  (reuses only its manifest, approval and 
 
 ROOT = a2.ROOT
 PACKAGE = "gate-a1-characterization"
-VERSION = 1
+VERSION = 2
+POLL_INTERVAL_S = 0.05  # wait_gone's poll interval; with backend_exit_wait_s it bounds the polls per window
 DriverRefused = a2.DriverRefused
 
 
@@ -47,10 +48,15 @@ def load_package(path: Path, expected_sha256: str) -> dict[str, Any]:
         raise DriverRefused("the Gate A1 manifest's digest isn't the one given")
     package = json.loads(path.read_text())
     if package.get("package") != PACKAGE or package.get("version") != VERSION:
-        raise DriverRefused("not a version 1 Gate A1 manifest")
+        raise DriverRefused(f"not a version {VERSION} Gate A1 manifest")
     if package.get("scope") != "characterization_only" or package.get("never_heldout_evidence") is not True:
         raise DriverRefused("Gate A1 is characterization only")
     return package
+
+
+def reader_poll_limit(package: dict[str, Any]) -> int:
+    """At most this many end-of-session polls can fall inside one operation window."""
+    return int(float(package["safety_ceilings"]["backend_exit_wait_s"]) / POLL_INTERVAL_S) + 2
 
 
 def _modules():
@@ -71,6 +77,7 @@ class Batch:
         self.effects, self.package = effects, package
         self.records: list[dict[str, Any]] = []
         self.tags: set[str] = set()
+        self.reader: Any = None  # the one log-reader session, established from the first operation's markers
         self.end = time.monotonic() + float(package["safety_ceilings"]["batch_wall_clock_s"])
 
     def op(self, name: str, database: str, statements: list[tuple[str, tuple]], action: Callable[[Any], Any]) -> Any:
@@ -86,10 +93,13 @@ class Batch:
         if not self.effects.wait_gone(tag):  # its disconnection must be logged before the end marker
             raise DriverRefused(f"parent session {name} didn't end")
         self.effects.log_mark(end)
-        rows = self.read_window(start, end)
+        raw, rows = self.read_window(start, end)
+        reader = self.established_reader(raw, start, end, database)
         expected = tuple(pr.ExpectedStatement(t, p) for t, p in statements)
         rec = pr.reconcile_parent_session(rows, tag=tag, expected=expected, user=self.package["cluster"]["admin_user"],
-                                          database=database)
+                                          database=database,
+                                          authentication=self.package["cluster"]["authentication_method"],
+                                          reader=reader, reader_poll_limit=reader_poll_limit(self.package))
         record = {"op": name, "tag": tag, "ok": rec.ok, "problems": rec.problems, "statements": rec.statements_seen}
         self.records.append(record)
         self.tags.add(tag)
@@ -97,14 +107,28 @@ class Batch:
             raise DriverRefused(f"parent session {name} didn't reconcile: {rec.problems}")
         return result
 
+    def established_reader(self, raw: bytes, start: str, end: str, database: str) -> Any:
+        """The session that wrote these markers. It must be the same log reader for the whole batch."""
+        _ce, _ch, _eb, pr, _p, _sc = _modules()
+        try:
+            reader = pr.reader_session(*pr.marker_rows(raw, start, end), user=self.package["cluster"]["admin_user"],
+                                       database=database)
+        except pr.ParentLogError as exc:
+            raise DriverRefused(f"the log reader can't be identified from the markers: {exc}") from None
+        if self.reader is None:
+            self.reader = reader
+        elif (reader.session, reader.pid) != (self.reader.session, self.reader.pid):
+            raise DriverRefused("the markers were written by a different log-reader session")
+        return reader
 
-    def read_window(self, start: str, end: str, key: str = "op") -> list[list[str]]:
+    def read_window(self, start: str, end: str, key: str = "op") -> tuple[bytes, list[list[str]]]:
         """Wait, boundedly, for the logging collector to write the end marker. Any other log problem fails at once."""
         _ce, _ch, _eb, pr, _p, _sc = _modules()
         until = time.monotonic() + float(self.package["safety_ceilings"]["log_wait_s"])
         while True:
+            raw = self.effects.log_read(key)
             try:
-                return pr.window(self.effects.log_read(key), start, end)
+                return raw, pr.window(raw, start, end)
             except pr.EndMarkerMissing:
                 if time.monotonic() >= until:
                     raise
@@ -191,8 +215,9 @@ def characterize(effects: Effects, package: dict[str, Any], evidence: a2.Evidenc
     cleanup = ch.cleanup_statements()
     batch.op("op9c", db, cleanup, _execute(cleanup))
     effects.log_mark(batch_end)
-    audit = ch.audit_batch(batch.read_window(batch_start, batch_end, "batch"), reconciled_tags=batch.tags,
-                           user=user, databases={db})
+    raw, rows = batch.read_window(batch_start, batch_end, "batch")
+    audit = ch.audit_batch(rows, reconciled_tags=batch.tags, user=user, databases={db},
+                           reader=batch.established_reader(raw, batch_start, batch_end, db))
     evidence.write("parent_reconciliation.json", batch.records)
     evidence.write("batch_audit.json", {"ok": audit.ok, "problems": audit.problems, "sessions": audit.sessions})
 
@@ -221,7 +246,7 @@ class RealEffects:  # pragma: no cover - never constructed in tests; needs an ap
         from deployspecter.live.serverlog import ServerLog
         from deployspecter.research.track_a import characterization as ch
 
-        self.psycopg, self.settings = psycopg, load_settings()
+        self.psycopg, self.settings, self.package = psycopg, load_settings(), package
         if self.settings.model_api_key:
             raise DriverRefused("MODEL_API_KEY is set (possibly from .env); Gate A1 refuses to run with it")
         try:  # libpq's parse errors can quote part of the URL, the password included, so none is kept
@@ -264,15 +289,32 @@ class RealEffects:  # pragma: no cover - never constructed in tests; needs an ap
 
     def wait_gone(self, tag):
         from deployspecter.research.track_a import characterization as ch
-        until = time.monotonic() + 5.0
+        until = time.monotonic() + float(self.package["safety_ceilings"]["backend_exit_wait_s"])
         while time.monotonic() < until:
             if self.log_conn.execute(ch.GONE_SQL, (tag,)).fetchone()[0] == 0:
                 return True
-            time.sleep(0.05)
+            time.sleep(POLL_INTERVAL_S)
         return False
 
     def close(self):
         self.log_conn.close()
+
+
+def record_approval(evidence: Any, path: Path, raw: bytes) -> None:
+    """Keep the approval byte for byte, so its signature can still be checked against the evidence copy."""
+    try:
+        with open(evidence.path / "approval.json", "xb") as out:  # exclusive create: evidence is never overwritten
+            out.write(raw)
+    except FileExistsError:
+        raise DriverRefused("approval.json already exists; evidence is never overwritten") from None
+    signature = Path(f"{path}.sig")
+    evidence.write("approval_provenance.json", {
+        "source_path": str(path.resolve()), "sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw),
+        "copied_byte_for_byte": True,
+        "signature_file": ({"path": str(signature.resolve()), "sha256": hashlib.sha256(signature.read_bytes())
+                            .hexdigest()} if signature.is_file() else None),
+        "signature_checked_by_driver": False,
+        "note": "the driver checks the manifest digest and phase only; the owner verifies the signature"})
 
 
 def main(argv: list[str], effects_factory: Callable[[dict[str, Any]], Effects] | None = None) -> int:
@@ -291,10 +333,13 @@ def main(argv: list[str], effects_factory: Callable[[dict[str, Any]], Effects] |
         for command in ch.operator_commands(package):
             print(f"  {command}")
         return 0
+    raw_approval = args.approval.read_bytes() if args.approval is not None else b""
     approval = a2.load_approval(args.approval, manifest_sha256=args.manifest_sha256, phase="gate_a1")
+    if args.approval.read_bytes() != raw_approval or json.loads(raw_approval) != approval:
+        raise DriverRefused("the approval file changed while it was being read")
     a2.verify_sources(package)
     evidence = a2.EvidenceDir.create(ROOT / package["artifacts_root"])
-    evidence.write("approval.json", approval)
+    record_approval(evidence, args.approval, raw_approval)
     effects = None
     try:
         effects = (effects_factory or RealEffects)(package)

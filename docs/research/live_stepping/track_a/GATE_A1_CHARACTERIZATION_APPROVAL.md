@@ -1,10 +1,11 @@
 # Gate A1: minimal PostgreSQL characterization, approval package
 
-**Status: READY_FOR_USER_AUTHORIZATION. This is not an authorization.** Nothing here has run. No Docker container or
-PostgreSQL server has been started for Gate A1.
+**Status: READY_FOR_NEW_USER_AUTHORIZATION. This is not an authorization.** Version 2 hasn't run. It needs a new
+approval file and a **new signature** covering the digest below; the version 1 approval and signature can't be reused.
 
-- **Manifest:** `gate_a1_manifest.json`, SHA-256
-  `04f1d7518685d0555a9925ccd5d4d7bd1260ac3431f34e2cb7e4c1a8d3f17520`.
+- **Manifest:** `gate_a1_manifest.json`, **version 2**, SHA-256
+  `d92ea5900eb22c163da9faac2f00e67ec1c38395cc8cfe170bf856a85f1ba0c9`.
+- **Version 1** (`04f1d751…`) ran once and is superseded (section 0). It is recorded in the manifest's `supersedes`.
 - **Superseded drafts,** never run and never approved, kept in the manifest's `draft_history`:
     - `3b98c82e…`, the milestone 4 draft;
     - `c58d0d10…`, after the final review's driver fixes;
@@ -12,6 +13,50 @@ PostgreSQL server has been started for Gate A1.
 - **Driver:** `research_tools/gate_a1_characterize.py`.
 - **Pure logic:** `src/deployspecter/research/track_a/characterization.py`.
 - **Tests:** `tests/research_tracks/test_gate_a1.py`, all offline.
+
+## 0. Run history
+
+| Version | Manifest | Run | Result |
+|---|---|---|---|
+| 1 | `04f1d7518685d0555a9925ccd5d4d7bd1260ac3431f34e2cb7e4c1a8d3f17520` | Once, on 2026-11-04, under the owner's signed approval; PostgreSQL 16.15 on the pinned image | **`refused_fail_closed` at op0p**. Evidence: `evidence/gate_a1/20261104T113256Z-d0b21a60/`, kept locally and uncommitted. No catalog, state or binding operation ran; the container was torn down |
+
+**The two causes,** both confirmed from the observed rows:
+
+1. **F1, a PostgreSQL 16 behaviour.** A TCP password login logs `connection authenticated: identity="deployspecter"
+   method=scram-sha-256 (/var/lib/postgresql/data/pg_hba.conf:128)` as session line 2, between "connection received"
+   and "connection authorized". The version 1 reconciler knew only received, authorized and disconnection rows.
+2. **F2, a driver defect.** The driver's `wait_gone` poll runs on the log-reader session after the parent session ends
+   and before the end marker, so it is logged inside the operation window. The version 1 per-operation reconciler
+   counted it as an unattributed session. The offline fake didn't log the poll, so no test could see this.
+
+**A third finding, from reviewing the evidence.** The driver wrote `approval.json` re-serialized with sorted keys
+(SHA-256 `445342d9…`), not the signed bytes (`ec9a4f86…`). The content was identical, but the evidence copy couldn't
+be checked against the signature. Version 2 copies the file byte for byte and records its provenance.
+
+## 0.1 What version 2 changes
+
+- **Parent-session records:**
+    - The record sequence is strict: received, then exactly one authenticated record (identity = admin user,
+      method = the manifest's `authentication_method`, `scram-sha-256`), then exactly one authorized record
+      (user, database, tag), then the approved statements, then exactly one disconnection.
+    - The disconnection must match the connection's user, database, host and port.
+    - Session lines must be consecutive from 1.
+    - Every record is matched exactly. Anything else, including an unknown connection-state record, a duplicate or an
+      out-of-order record, fails.
+- **The log reader:**
+    - It is identified from the rows that wrote each operation's markers, and must be the same session and process
+      for the whole batch.
+    - Inside an operation window it may issue only the exact poll for that operation's tag, after the session's last
+      statement, at most `backend_exit_wait_s / 0.05 + 2` (102) times.
+    - Its rows must be on consecutive session lines between the two markers, so none can be missing.
+    - In the batch audit, its rows must be consecutive between the batch markers, and a second session calling itself
+      the log reader fails.
+- **The approval** is copied byte for byte as `approval.json`. `approval_provenance.json` records the source path, the
+  SHA-256 and the signature file's SHA-256. The driver still doesn't verify the signature. A file that changes while
+  being read is refused.
+- **The readiness check** used during the version 1 run is now part of the code-built operator commands.
+- **The SQL statement sets are unchanged,** and so are their hashes. No new statement, permission, role or target was
+  added.
 
 ## 1. Scope
 
@@ -53,10 +98,12 @@ All on tagged sessions, in this order. Statement sets are pinned in the manifest
 
 **After each operation,** the driver:
 
-1. waits up to `backend_exit_wait_s` (5 s) for the tagged backend to leave `pg_stat_activity`;
+1. waits up to `backend_exit_wait_s` (5 s) for the tagged backend to leave `pg_stat_activity`, polling every 0.05 s on
+   the log-reader session;
 2. writes the end marker;
 3. waits up to `log_wait_s` (5 s) for the collector to flush it;
-4. reconciles.
+4. identifies the log reader from the marker rows;
+5. reconciles the tagged session and the reader's polls (section 0.1).
 
 Any failure stops the batch.
 
@@ -73,7 +120,7 @@ Any failure stops the batch.
 | `log_line_prefix` | **Not used.** csvlog has fixed columns. The reconciler reads user, database, pid, session id, severity, message, detail, application name and backend type | Yes, from the csvlog format |
 | Session identity | csvlog `session_id` plus `pid`. A tagged session must show one session id and one pid, its tag in `application_name`, and type `client backend` | Assumption; **needs the real server** |
 | Transaction boundaries | Reset statements are sent as separate statements: `BEGIN`, the setup SQL, the INSERTs, then `COMMIT`. Each must log once, in order | Assumption about psycopg; **needs the real server** |
-| Connection and disconnection | `log_connections` and `log_disconnections` on. The session must end with a `disconnection:` row | Message formats **need the real server** |
+| Connection and disconnection | `log_connections` and `log_disconnections` on. Received, authenticated, authorized and disconnection records, in that order | **Observed once** in the version 1 run (op0p and the reader). Other sessions are still unobserved |
 | Flush and completeness | The collector writes asynchronously, so the driver waits, within a bound, for the end marker. Polling `pg_stat_activity` first makes the disconnection row precede the marker | The ordering **needs the real server** |
 | Parameterised statements | Extended protocol logs as `execute <unnamed>: …` with a `parameters: $1 = '…'` detail line. Parameterless and multi-statement texts log as `statement: …`. Both forms are accepted only for the exact expected text and parameters | psycopg's literal formats for floats, booleans, NaN and ±Infinity are assumed; **needs the real server** |
 | Log reader | Only five statement forms are allowed. Two bracketing reads, the first position query and the final read, can't audit themselves | Known limit |
@@ -81,9 +128,10 @@ Any failure stops the batch.
 
 **Needs the real database:**
 
-- whether psycopg sends anything on connect;
-- the exact connection and disconnection message forms;
-- flush timing, and the order of the disconnection row and the end marker;
+- whether psycopg sends anything on connect (none was seen in the one observed session);
+- whether the connection and disconnection forms seen in op0p hold for every operation;
+- flush timing, and the order of the disconnection row and the end marker (one observation so far);
+- whether the reader ever needs more than one poll;
 - `indclass[s.k]` subscripting in the export;
 - `information_schema` details for serial columns;
 - whether the tmpfs size and memory limits suffice;
@@ -130,7 +178,7 @@ invocation. The signature step is the owner's own procedure. **The driver doesn'
 2. Write `approval.json` yourself, **outside** the evidence tree:
 
    ```json
-   {"manifest_sha256": "04f1d7518685d0555a9925ccd5d4d7bd1260ac3431f34e2cb7e4c1a8d3f17520", "phase": "gate_a1", "approver": "<you>", "approved_on": "<date>"}
+   {"manifest_sha256": "d92ea5900eb22c163da9faac2f00e67ec1c38395cc8cfe170bf856a85f1ba0c9", "phase": "gate_a1", "approver": "<you>", "approved_on": "<date>"}
    ```
 3. Sign it, for example `ssh-keygen -Y sign -f ~/.ssh/id_ed25519 -n deployspecter-gate-a1 approval.json`.
 4. Verify the signature before running:
@@ -145,15 +193,20 @@ docker run -d --rm --name deployspecter-live-pg -p 127.0.0.1:55433:5432 --tmpfs 
 docker exec deployspecter-live-pg psql -U deployspecter -d deployspecter -c 'CREATE DATABASE deployspecter_test'
 ```
 
-Wait until the server accepts connections before creating the database. If the `CREATE DATABASE` fails, stop the
-container and start again.
+Before creating the database, wait until this prints `accepting connections` (it runs no SQL):
+
+```sh
+docker exec deployspecter-live-pg pg_isready -h 127.0.0.1 -p 5432 -U deployspecter -d deployspecter
+```
+
+If the `CREATE DATABASE` fails, stop the container and start again.
 
 ### 5.4 Run (operator)
 
 ```sh
 env -u MODEL_API_KEY uv run python research_tools/gate_a1_characterize.py characterize \
   --manifest docs/research/live_stepping/track_a/gate_a1_manifest.json \
-  --manifest-sha256 04f1d7518685d0555a9925ccd5d4d7bd1260ac3431f34e2cb7e4c1a8d3f17520 \
+  --manifest-sha256 d92ea5900eb22c163da9faac2f00e67ec1c38395cc8cfe170bf856a85f1ba0c9 \
   --approval <path to your approval.json>
 ```
 
@@ -164,7 +217,8 @@ overwrites one.
 
 | Artifact | What it records |
 |---|---|
-| `approval.json` | The approval record used, as given |
+| `approval.json` | The signed approval file, byte for byte |
+| `approval_provenance.json` | The approval's source path, SHA-256 and signature-file SHA-256. The signature itself isn't checked by the driver |
 | `preflight.json` | The settings rows and any problem. A problem stops the batch |
 | `catalog.json` | Two export digests, the structural digest, cross-check problems, the `verify_context` outcome, time-typed columns, the snapshot |
 | `states.json` | For each repeat: independent-check problems, server digests, typed-read problems, read digest |
@@ -210,45 +264,52 @@ and the password from `.env`.
 - **Authorization is the owner's own decision and action:** reviewing, signing, verifying and running in person
   (section 5).
 
-## 7. Verification record (offline only)
+## 7. Verification record (offline only, version 2)
 
 - **Tests:**
-    - 35 Gate A1 tests;
-    - the root suite: 1,293 passed and 1 skipped (`langgraph` isn't installed there);
-    - the isolated suite: 1,341 passed;
+    - 44 Gate A1 driver tests, and 39 tests on the real op0p log (`test_gate_a1_observed_log.py`). The op0p sequence
+      observed on PostgreSQL 16.15 reconciles, and each kind of unexpected activity applied to those real rows refuses;
+    - the root suite: 1,344 passed and 1 skipped (`langgraph` isn't installed there);
+    - the isolated suite: 1,392 passed;
     - v1 compatibility: 37 tests in each environment;
     - the Gate 2A frozen guard: 5 tests, in the isolated environment;
     - Ruff is clean;
     - the frozen v2 contract and Gate 2A files are unchanged against `48df818` and `8a4a131`;
     - `-m live` collects 0 tests.
+- **The real-log fixture:**
+    - `tests/research_tracks/fixtures/gate_a1_op0p_observed.csv` holds 22 verbatim rows of the version 1 run's log:
+      the log reader's session and the op0p session. The server's own initialisation, the readiness probes and
+      `CREATE DATABASE` are omitted.
+    - Its SHA-256 is pinned by a test, and its provenance file names the source evidence file and its SHA-256.
+    - The original evidence is unchanged.
 - **Mutation testing** (scratchpad harness, run in isolated copies):
     - each mutant runs in a fresh copy of the tree;
     - the copy's manifests are re-pinned, so a digest check can't kill a mutant trivially;
-    - tests run in their own process group, under a fixed 30 s wall-clock watchdog;
+    - tests run in their own process group, under a fixed 30 s wall-clock watchdog and a batch budget;
     - the worktree is hashed before and after every mutant.
 
   | Suite | Mutants | Killed by a test assertion | Killed by the watchdog | Equivalent | Survived | Errors |
   |---|---|---|---|---|---|---|
-  | Gate A1 | 28 | 28 | 0 | 0 | 0 | 0 |
+  | Gate A1 (27 of them target the version 2 authentication, reader and approval paths) | 55 | 55 | 0 | 0 | 0 | 0 |
   | Gate A2 (offline; Gate 2A code untouched) | 22 | 21 | 0 | 1 | 0 | 0 |
 
+    - **Two survivors appeared during this work, and both were closed by new tests:**
+        - "authorization found anywhere": a test now moves only the authorized record;
+        - Gate A2's "per-row user and database unchecked": its suite now changes a statement row's user and database.
     - **The equivalent mutant** removes the "failed reconciliation is an unknown effect" term. It is unreachable,
       because `parent_operation` raises before returning a failed record.
-- **Harness incident:**
-    - An earlier in-place pass hung for about 3 hours on the mutant that removes the log-wait bound, and was stopped by
-      hand. The pass had no timeout, and the never-flush test relied on the driver's own bound.
-    - The test now has an independent read bound.
-    - That mutant is killed by a test assertion in about 7.5 s, in 5 of 5 runs. Against the old test, the watchdog
-      kills it at 20 s, in 5 of 5 runs.
-    - The earlier in-place counts are superseded. In them, `main()`'s source-digest check could also kill mutants
-      trivially.
+    - **The watchdog self-check still holds** for the mutant that removes the log-wait bound: the bounded test kills it,
+      and the watchdog stops it against the old, unbounded test.
 
 ## 8. Limits that remain
 
 - The parent is a superuser (section 4).
-- The SQL, the log formats and psycopg's connection behaviour are uncharacterized until A1 runs. Characterizing them is
-  the point of A1 (section 3).
-- Two bracketing log-reader reads can't audit themselves.
+- **One real observation isn't a characterization.** Only op0p's session and the reader's first window have been seen
+  on the real server. The other operations, the catalog, the state checks and the bindings haven't run (section 3).
+- Two bracketing log-reader reads can't audit themselves: the reader's connection and first position query before the
+  batch start marker, and its final read after the batch end marker.
+- The batch audit allows the reader's poll form anywhere in the batch. Its tag parameter is constrained only inside
+  operation windows, where every poll is issued.
 - A1 says nothing about Gate 2A's per-run reset. That is Gate A2's blocker
   (`STATEMENT_COVERAGE_AND_PER_RUN_ASSURANCE.md`).
 - Gate A2's own `RealEffects` (`track_a_run.py`) has neither a fixed-target check nor a `MODEL_API_KEY` refusal: it
@@ -257,7 +318,11 @@ and the password from `.env`.
 
 ## 9. Readiness
 
-**READY_FOR_USER_AUTHORIZATION.** The package is complete, the statements and sources are pinned, and every effect and
-command is listed.
+**READY_FOR_NEW_USER_AUTHORIZATION.** The version 2 package is complete, the statements and sources are pinned, and
+every effect and command is listed.
 
-**Not authorized:** that needs the owner's signed approval, and the owner running the operator steps in person.
+**Not authorized:**
+- a new run needs a **new** approval file naming the version 2 digest, a **new** signature from the owner, and a fresh
+  container;
+- the version 1 approval and signature are never valid for version 2;
+- nothing is retried automatically.

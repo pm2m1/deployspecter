@@ -219,6 +219,12 @@ Neither track depends on it yet.
     - Mutation testing in isolated copies, under a watchdog: A1 28 of 28 and A2 21 of 22 killed by test assertions; the
       remaining A2 mutant is equivalent, with a stated reason; none was killed by the watchdog.
     - A2's `RealEffects` has no target or model-key check. That is recorded as an A2 blocker.
+    - **First real run (version 1 manifest, 2026-11-04): `refused_fail_closed` at op0p.** It ran on PostgreSQL 16.15
+      under the owner's signed approval. Two causes: PostgreSQL 16's `connection authenticated` record, and the
+      driver's own end-of-session poll falling inside the window.
+    - **Version 2, offline:** strict connection-record and log-reader accounting, built from the real rows; a pinned
+      real-log fixture; the approval copied byte for byte. READY_FOR_NEW_USER_AUTHORIZATION, which needs a new
+      signature.
 
 **Track B:**
 

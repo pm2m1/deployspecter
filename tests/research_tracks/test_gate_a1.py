@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 import contextlib
 import copy
+import functools
 import hashlib
 import json
 import math
@@ -63,6 +64,7 @@ class Cursor:
 class FakeEffects:
     def __init__(self, breakage=None):
         self.breakage, self.log, self.n = breakage, [], 0
+        self.reader_session, self.reader_line = "lr", 3  # its connection rows precede the batch
         self.tables = {}
         self.bindings = {}
 
@@ -80,7 +82,12 @@ class FakeEffects:
         logged = [(pr.ExpectedStatement(t).server_text(), p) for t, p in executed]
         if self.breakage == "extra_in_reset" and tag.startswith("ds_parent_op0r"):
             logged.append(("SELECT 1", ()))
-        self.log.extend(session_rows(tag, logged, session=f"p{self.n}", pid=str(2000 + self.n)))
+        rows = session_rows(tag, logged, session=f"p{self.n}", pid=str(2000 + self.n))
+        if self.breakage == "no_auth_row":
+            rows = [r for r in rows if not r[pr.MESSAGE].startswith("connection authenticated:")]
+            for n, r in enumerate(rows, 1):
+                r[pr.LINE] = str(n)
+        self.log.extend(rows)
         if self.breakage == "intruder" and tag.startswith("ds_parent_op7b"):
             self.log.append(row("zz", "statement: DELETE FROM ds_run.events", app="psql"))
 
@@ -136,17 +143,28 @@ class FakeEffects:
             return [(len(self.tables[text.split('"')[1]]),)]
         return []
 
+    def reader(self, message, detail=""):
+        """One log-reader session, as the real one logs: one session and process, consecutive session lines."""
+        self.reader_line += 1
+        r = row(self.reader_session, message, app=ch.LOG_READER_APP, pid="91", detail=detail)
+        r[pr.LINE] = str(self.reader_line)
+        self.log.append(r)
+
     def log_position(self, key="op"):
         if self.breakage == "intruder_between" and any("op7b" in r[pr.APPLICATION] for r in self.log):
             self.log.append(row("zz", "statement: DELETE FROM ds_run.events", app="psql"))
             self.breakage = None
-        self.log.append(row("lr", "execute <unnamed>: SELECT size FROM pg_stat_file($1, true)", app=ch.LOG_READER_APP,
-                            detail="parameters: $1 = 'log/ds.csv'"))
+        if self.breakage == "reader_switches" and self.n:
+            self.reader_session = "lr2"
+        self.reader("statement: SELECT pg_current_logfile('csvlog')")
+        self.reader("execute <unnamed>: SELECT size FROM pg_stat_file($1, true)", "parameters: $1 = 'log/ds.csv'")
         if self.breakage == "log_reader_writes":
-            self.log.append(row("lr", "statement: DELETE FROM ds_run.events", app=ch.LOG_READER_APP))
+            self.reader("statement: DELETE FROM ds_run.events")
 
     def log_mark(self, token):
-        self.log.append(row("lr", f"statement: {pr.marker_sql(token)}", app=ch.LOG_READER_APP))
+        if self.breakage == "second_reader" and token.startswith("ds_parent_mark_batch_end"):
+            self.log.append(row("lr9", "statement: SELECT pg_current_logfile('csvlog')", app=ch.LOG_READER_APP))
+        self.reader(f"statement: {pr.marker_sql(token)}")
 
     def log_read(self, key="op"):
         self.reads = getattr(self, "reads", 0) + 1
@@ -159,6 +177,14 @@ class FakeEffects:
         return csv_bytes(self.log)
 
     def wait_gone(self, tag):
+        polls = 2 if self.breakage == "backend_lingers" else 1
+        if self.breakage == "many_polls":
+            polls = a1.reader_poll_limit(package()[0]) + 1
+        for _ in range(polls):
+            self.reader(f"execute <unnamed>: {pr.READER_POLL}", f"parameters: $1 = {pr.literal(tag)}")
+        if self.breakage == "reader_reads_in_window" and tag.startswith("ds_parent_op2a"):
+            self.reader("execute <unnamed>: SELECT pg_read_binary_file($1, $2, $3, true)",
+                        "parameters: $1 = 'log/ds.csv', $2 = '0', $3 = '10'")
         return self.breakage != "backend_lingers"
 
 
@@ -208,16 +234,30 @@ class TestPure:
             ch.reset_statements("x", [Row()])
 
     def test_batch_audit(self):
+        reader = pr.ReaderSession("lr", "91", "deployspecter", "deployspecter_test", start_line=4, end_line=6)
+
+        def reader_row(line, message):
+            r = row("lr", message, app=ch.LOG_READER_APP, pid="91")
+            r[pr.LINE] = str(line)
+            return r
+
         rows = [*session_rows("ds_parent_op0p_0123456789ab", [("SELECT 1", ())]),
-                row("lr", "execute <unnamed>: SELECT pg_read_binary_file($1, $2, $3, true)", app=ch.LOG_READER_APP),
+                reader_row(5, "execute <unnamed>: SELECT pg_read_binary_file($1, $2, $3, true)"),
                 row("bg", "checkpoint complete: wrote 3 buffers", user="", db="", backend="checkpointer")]
-        ok = ch.audit_batch(rows, reconciled_tags={"ds_parent_op0p_0123456789ab"}, user="deployspecter",
-                            databases={"deployspecter_test"})
+        audit = functools.partial(ch.audit_batch, reconciled_tags={"ds_parent_op0p_0123456789ab"},
+                                  user="deployspecter", databases={"deployspecter_test"}, reader=reader)
+        ok = audit(rows)
         assert ok.ok and set(ok.sessions.values()) == {"reconciled:ds_parent_op0p_0123456789ab", "log_reader",
                                                        "background"}
-        bad = ch.audit_batch([*rows, row("x", "statement: SELECT 1", app="psql")], reconciled_tags={
-            "ds_parent_op0p_0123456789ab"}, user="deployspecter", databases={"deployspecter_test"})
+        bad = audit([*rows, row("x", "statement: SELECT 1", app="psql")])
         assert not bad.ok and "unattributed" in bad.problems[0]
+        second = audit([*rows, row("lr9", "statement: SELECT pg_current_logfile('csvlog')", app=ch.LOG_READER_APP)])
+        assert not second.ok and "second session" in second.problems[0]
+        gap = audit([r for r in rows if r[pr.SESSION] != "lr"] + [reader_row(7, "statement: SELECT 'x'")])
+        assert not gap.ok and "session lines" in gap.problems[0]
+        other_pid = [*rows[:-2], reader_row(5, "statement: SELECT pg_current_logfile('csvlog')"), rows[-1]]
+        other_pid[-2][pr.PID] = "92"
+        assert not audit(other_pid).ok
 
 
 class TestDriver:
@@ -322,7 +362,9 @@ class TestFinalReview:
 
     def test_operator_commands_come_from_the_manifest_and_bind_locally(self):
         p, _ = package()
-        start, create, stop = ch.operator_commands(p)
+        start, ready, create, stop = ch.operator_commands(p)
+        assert ready == ("docker exec deployspecter-live-pg pg_isready -h 127.0.0.1 -p 5432 -U deployspecter "
+                         "-d deployspecter")
         assert p["cluster"]["image"] in start and "-p 127.0.0.1:55433:5432" in start and "0.0.0.0" not in start
         assert '"$DS_PG_PASSWORD"' in start and "--memory 1g" in start and "--pids-limit 256" in start
         assert all(f"-c {k}={v}" in start for k, v in p["cluster"]["server_settings"].items())
@@ -433,3 +475,78 @@ class TestFinalReview:
         with pytest.raises(a1.DriverRefused, match="isn't to the manifest's fixed local target"):
             a1.RealEffects(p)
         assert closed == [True]
+
+
+class TestRecoveryAfterTheFirstRun:
+    """The first real run stopped at op0p (evidence/gate_a1/20261104T113256Z-d0b21a60). These cover its two causes
+    and the approval-copy discrepancy, on the fake log, which now writes what the real server wrote."""
+
+    def test_a_clean_batch_with_real_connection_records_and_reader_polls_is_characterized(self, tmp_path):
+        effects = FakeEffects()
+        p, _ = package()
+        summary = a1.characterize(effects, p, a1.a2.EvidenceDir.create(tmp_path))
+        assert summary["outcome"] == "CHARACTERIZED"
+        assert any(r[pr.MESSAGE].startswith("connection authenticated:") for r in effects.log)
+        assert sum(r[pr.MESSAGE] == f"execute <unnamed>: {pr.READER_POLL}" for r in effects.log) == effects.n
+
+    def test_the_reader_may_not_change_session_during_the_batch(self, tmp_path):
+        with pytest.raises(a1.DriverRefused, match="different log-reader session"):
+            run(tmp_path, "reader_switches")
+
+    def test_the_reader_may_only_poll_inside_a_window(self, tmp_path):
+        with pytest.raises(a1.DriverRefused, match="op2a didn't reconcile.*other than this session's poll"):
+            run(tmp_path, "reader_reads_in_window")
+
+    def test_a_second_reader_session_is_a_batch_finding(self, tmp_path):
+        summary = run(tmp_path, "second_reader")
+        assert summary["outcome"] == "CHARACTERIZED_WITH_FINDINGS"
+        assert summary["findings"]["every_session_attributed"] is False
+
+    def test_the_driver_applies_the_poll_bound(self, tmp_path):
+        with pytest.raises(a1.DriverRefused, match="op0p didn't reconcile.*log-reader polls"):
+            run(tmp_path, "many_polls")
+
+    def test_the_driver_requires_the_manifests_authentication_record(self, tmp_path):
+        with pytest.raises(a1.DriverRefused, match="op0p didn't reconcile.*authentication isn't in the window"):
+            run(tmp_path, "no_auth_row")
+
+    def test_the_poll_bound_follows_the_manifest(self):
+        p, _ = package()
+        assert a1.reader_poll_limit(p) == int(p["safety_ceilings"]["backend_exit_wait_s"] / a1.POLL_INTERVAL_S) + 2
+
+    def _main(self, tmp_path, monkeypatch, approval_bytes, tamper=False):
+        p, sha = package()
+        monkeypatch.setitem(p, "artifacts_root", str(tmp_path))
+        monkeypatch.setattr(a1, "load_package", lambda *_a: p)
+        approval = tmp_path / "signed" / "approval.json"
+        approval.parent.mkdir()
+        approval.write_bytes(approval_bytes.replace(b"SHA", sha.encode()))
+        (tmp_path / "signed" / "approval.json.sig").write_bytes(b"-----BEGIN SSH SIGNATURE-----\n")
+        if tamper:
+            original = a1.a2.load_approval
+
+            def load_then_change(*a, **k):
+                out = original(*a, **k)
+                approval.write_bytes(approval.read_bytes().replace(b"owner", b"other"))
+                return out
+            monkeypatch.setattr(a1.a2, "load_approval", load_then_change)
+        argv = ["characterize", "--manifest", str(PACKAGE), "--manifest-sha256", sha, "--approval", str(approval)]
+        return a1.main(argv, effects_factory=lambda _p: FakeEffects()), approval
+
+    def test_the_approval_is_kept_byte_for_byte_with_its_provenance(self, tmp_path, monkeypatch):
+        signed = (b'{\n  "manifest_sha256": "SHA",\n  "phase": "gate_a1",\n  "approver": "owner",\n'
+                  b'  "approved_on": "2026-11-05"\n}\n')
+        code, approval = self._main(tmp_path, monkeypatch, signed)
+        (run_dir,) = [d for d in tmp_path.iterdir() if d.name != "signed"]
+        assert code == 0 and (run_dir / "approval.json").read_bytes() == approval.read_bytes()
+        provenance = json.loads((run_dir / "approval_provenance.json").read_text())
+        assert provenance["sha256"] == hashlib.sha256(approval.read_bytes()).hexdigest()
+        assert provenance["copied_byte_for_byte"] is True and provenance["signature_checked_by_driver"] is False
+        assert provenance["signature_file"]["sha256"] == hashlib.sha256(
+            (approval.parent / "approval.json.sig").read_bytes()).hexdigest()
+
+    def test_an_approval_that_changes_while_being_read_is_refused(self, tmp_path, monkeypatch):
+        signed = b'{"manifest_sha256": "SHA", "phase": "gate_a1", "approver": "owner", "approved_on": "2026-11-05"}'
+        with pytest.raises(a1.DriverRefused, match="changed while it was being read"):
+            self._main(tmp_path, monkeypatch, signed, tamper=True)
+        assert [d.name for d in tmp_path.iterdir()] == ["signed"]  # refused before any evidence or connection

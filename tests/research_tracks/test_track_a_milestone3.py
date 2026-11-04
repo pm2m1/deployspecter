@@ -64,13 +64,23 @@ def csv_bytes(rows):
 
 
 def session_rows(tag, statements, session="s1", pid="4242", **kw):
-    rows = [row(session, "connection received: host=127.0.0.1", pid=pid, user="", db=""),
-            row(session, f"connection authorized: user={USER} database={DB} application_name={tag}", app=tag, pid=pid)]
+    """A session as PostgreSQL 16 logs it (observed in the first Gate A1 run): received (no user, database or name
+    yet), authenticated and authorized (no application name yet), the statements, then the disconnection."""
+    port = str(50000 + int(pid) % 10000)
+    rows = [row(session, f"connection received: host=172.17.0.1 port={port}", pid=pid, user="", db="",
+                backend="not initialized"),
+            row(session, f'connection authenticated: identity="{USER}" method=scram-sha-256 '
+                         f"(/var/lib/postgresql/data/pg_hba.conf:128)", pid=pid),
+            row(session, f"connection authorized: user={USER} database={DB} application_name={tag}", pid=pid)]
     for text, params in statements:
         detail = ", ".join(f"${i} = {pr.literal(v)}" for i, v in enumerate(params, 1))
-        rows.append(row(session, f"execute <unnamed>: {text}", app=tag, pid=pid,
+        verb = "execute <unnamed>" if params else "statement"
+        rows.append(row(session, f"{verb}: {text}", app=tag, pid=pid,
                         detail=f"parameters: {detail}" if params else "", **kw))
-    rows.append(row(session, "disconnection: session time: 0:00:00.010", app=tag, pid=pid))
+    rows.append(row(session, f"disconnection: session time: 0:00:00.010 user={USER} database={DB} host=172.17.0.1 "
+                             f"port={port}", app=tag, pid=pid))
+    for n, r in enumerate(rows, 1):
+        r[pr.LINE] = str(n)
     return rows
 
 
@@ -99,23 +109,25 @@ class TestParentReconciliation:
         assert pr.reconcile_parent_session(logged(rows), tag=TAG, expected=EXPECTED, user=USER, database=DB).ok
 
     @pytest.mark.parametrize("breakage, fragment", [
-        (lambda r: r.pop(2), "statements logged"),
-        (lambda r: r.insert(3, row("s1", "execute <unnamed>: SELECT 2", app=TAG)), "statements logged"),
-        (lambda r: r.__setitem__(3, row("s1", "execute <unnamed>: SELECT $1", app=TAG, detail="parameters: $1 = '4'")),
+        (lambda r: r.pop(3), "statements logged"),
+        (lambda r: r.insert(4, row("s1", "execute <unnamed>: SELECT 2", app=TAG)), "statements logged"),
+        (lambda r: r.__setitem__(4, row("s1", "execute <unnamed>: SELECT $1", app=TAG, detail="parameters: $1 = '4'")),
          "unapproved parameters"),
-        (lambda r: r.__setitem__(2, row("s1", "execute <unnamed>: DELETE FROM x", app=TAG)), "differs"),
+        (lambda r: r.__setitem__(3, row("s1", "execute <unnamed>: DELETE FROM x", app=TAG)), "differs"),
         (lambda r: r.extend(session_rows(TAG, [], session="s2", pid="5")), "2 sessions"),
         (lambda r: r.append(row("s9", "statement: SELECT 1", app="other")), "unattributed"),
-        (lambda r: r.__setitem__(1, row("s1", f"connection authorized: user=intruder database={DB} "
-                                              f"application_name={TAG}", app=TAG, user="intruder")), "identity"),
-        (lambda r: r.__setitem__(1, row("s1", f"connection authorized: user={USER} database=prod "
-                                              f"application_name={TAG}", app=TAG, db="prod")), "identity"),
-        (lambda r: r.insert(3, row("s1", "relation does not exist", app=TAG, severity="ERROR")), "severities"),
+        (lambda r: r.__setitem__(2, row("s1", f"connection authorized: user=intruder database={DB} "
+                                              f"application_name={TAG}", user="intruder")), "identity"),
+        (lambda r: r.__setitem__(2, row("s1", f"connection authorized: user={USER} database=prod "
+                                              f"application_name={TAG}", db="prod")), "identity"),
+        (lambda r: r.insert(4, row("s1", "relation does not exist", app=TAG, severity="ERROR")), "severities"),
+        (lambda r: r[4].__setitem__(pr.USER, "postgres"), "another user or database"),
+        (lambda r: r[3].__setitem__(pr.DATABASE, "prod"), "another user or database"),
         (lambda r: r.pop(), "didn't disconnect"),
         (lambda r: r.pop(0), "connection isn't in the window"),
-        (lambda r: r.__setitem__(3, row("s1", "execute <unnamed>: SELECT $1", app=TAG, pid="9",
+        (lambda r: r.__setitem__(4, row("s1", "execute <unnamed>: SELECT $1", app=TAG, pid="9",
                                         detail="parameters: $1 = '3'")), "process id"),
-        (lambda r: r.insert(2, row("s1", "duration: 1 ms", app=TAG)), "unexplained"),
+        (lambda r: r.insert(3, row("s1", "duration: 1 ms", app=TAG)), "unexplained"),
     ])
     def test_every_deliberate_breakage_fails_closed(self, breakage, fragment):
         rows = good()

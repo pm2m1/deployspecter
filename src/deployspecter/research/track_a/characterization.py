@@ -25,7 +25,7 @@ from . import parent_reconciliation as pr
 
 SCHEMA, CHAR_SCHEMA = "ds_run", "ds_char"
 NAME = re.compile(r"^[a-z_][a-z0-9_]{0,62}$")
-LOG_READER_APP = "ds_parent_log_reader"
+LOG_READER_APP = pr.LOG_READER_APP
 
 # Beyond Gate 2A's own requirements: settings that would add log rows the reconciler doesn't expect.
 A1_SETTINGS = {"log_duration": "off", "log_min_duration_statement": "-1", "log_min_duration_sample": "-1",
@@ -169,6 +169,8 @@ LOG_READER_ALLOWED = (
     re.compile(r"^SELECT count\(\*\) FROM pg_stat_activity WHERE application_name = \$1$"),
 )
 GONE_SQL = "SELECT count(*) FROM pg_stat_activity WHERE application_name = %s"
+if GONE_SQL.replace("%s", "$1") != pr.READER_POLL:  # the poll the reconciler allows is the one the driver sends
+    raise RuntimeError("GONE_SQL and the reconciler's allowed reader poll differ")
 
 DSN_KEYS = frozenset({"host", "port", "dbname", "user", "password"})
 
@@ -201,9 +203,13 @@ def operator_commands(package: dict[str, Any]) -> list[str]:
            f"--cpus {c['cpus']} --pids-limit {c['pids_limit']} -e POSTGRES_USER={package['cluster']['admin_user']} "
            f"-e POSTGRES_DB={c['initial_database']} -e POSTGRES_PASSWORD=\"$DS_PG_PASSWORD\" "
            f"{package['cluster']['image']} {settings}")
+    # Over TCP inside the container: the image's temporary initialisation server listens only on its Unix socket, so
+    # this answers only once the final server is up. It runs no SQL.
+    ready = (f"docker exec {c['name']} pg_isready -h 127.0.0.1 -p {c['publish'].rsplit(':', 1)[1]} "
+             f"-U {package['cluster']['admin_user']} -d {c['initial_database']}")
     create = (f"docker exec {c['name']} psql -U {package['cluster']['admin_user']} -d {c['initial_database']} "
               f"-c 'CREATE DATABASE {package['cluster']['database']}'")
-    return [run, create, f"docker stop {c['name']}"]
+    return [run, ready, create, f"docker stop {c['name']}"]
 
 
 @dataclass
@@ -213,9 +219,11 @@ class BatchAudit:
     sessions: dict[str, str] = field(default_factory=dict)  # session id -> classification
 
 
-def audit_batch(rows: list[list[str]], *, reconciled_tags: set[str], user: str, databases: set[str]) -> BatchAudit:
-    """Every session in the batch window must be a reconciled tagged parent session, the log reader issuing only its
-    allowed statements, or an allowed background process. Anything else fails Gate A1."""
+def audit_batch(rows: list[list[str]], *, reconciled_tags: set[str], user: str, databases: set[str],
+                reader: pr.ReaderSession) -> BatchAudit:
+    """Every session in the batch window must be a reconciled tagged parent session, the one established log reader
+    issuing only its allowed statements on consecutive session lines, or an allowed background process. Anything
+    else, including a second session calling itself the log reader, fails Gate A1."""
     out = BatchAudit(ok=False)
     by_session: dict[str, list[list[str]]] = {}
     for r in rows:
@@ -228,8 +236,15 @@ def audit_batch(rows: list[list[str]], *, reconciled_tags: set[str], user: str, 
             out.sessions[session] = "background"
         elif len(apps) == 1 and next(iter(apps)) in reconciled_tags:
             out.sessions[session] = f"reconciled:{next(iter(apps))}"
+        elif apps == {LOG_READER_APP} and session != reader.session:
+            out.sessions[session] = "log_reader_violation"
+            out.problems.append(f"a second session {session} calls itself the log reader")
         elif apps == {LOG_READER_APP}:
             bad = []
+            if {r[pr.PID] for r in session_rows} != {reader.pid}:
+                bad.append("process id")
+            if [r[pr.LINE] for r in session_rows] != [str(n) for n in range(reader.start_line + 1, reader.end_line)]:
+                bad.append("session lines incomplete or out of sequence")
             for r in session_rows:
                 if r[pr.USER] and (r[pr.USER] != user or r[pr.DATABASE] not in databases):
                     bad.append("identity")
