@@ -1,0 +1,558 @@
+{
+ "run_id": "07b3f2a58fc3",
+ "variant": "buggy",
+ "workload": "muse1#0",
+ "initial_digest": "daa5fa6c8ee201a7e198ec96a57968dd009be6a4d78e32f4b571e9c1e966db3b",
+ "trace": {
+  "run_id": "07b3f2a58fc3",
+  "schedule": [
+   "alice",
+   "alice",
+   "alice",
+   "alice",
+   "backfiller",
+   "backfiller"
+  ],
+  "chosen": [
+   "alice",
+   "alice",
+   "alice",
+   "alice",
+   "backfiller",
+   "backfiller",
+   "alice",
+   "backfiller",
+   "backfiller"
+  ],
+  "decisions": [
+   {
+    "index": 0,
+    "enabled": [
+     "alice",
+     "backfiller"
+    ],
+    "blocked": {},
+    "finished": [],
+    "requested": "alice",
+    "chosen": "alice",
+    "source": "schedule"
+   },
+   {
+    "index": 1,
+    "enabled": [
+     "alice",
+     "backfiller"
+    ],
+    "blocked": {},
+    "finished": [],
+    "requested": "alice",
+    "chosen": "alice",
+    "source": "schedule"
+   },
+   {
+    "index": 2,
+    "enabled": [
+     "alice",
+     "backfiller"
+    ],
+    "blocked": {},
+    "finished": [],
+    "requested": "alice",
+    "chosen": "alice",
+    "source": "schedule"
+   },
+   {
+    "index": 3,
+    "enabled": [
+     "alice",
+     "backfiller"
+    ],
+    "blocked": {},
+    "finished": [],
+    "requested": "alice",
+    "chosen": "alice",
+    "source": "schedule"
+   },
+   {
+    "index": 4,
+    "enabled": [
+     "alice",
+     "backfiller"
+    ],
+    "blocked": {},
+    "finished": [],
+    "requested": "backfiller",
+    "chosen": "backfiller",
+    "source": "schedule"
+   },
+   {
+    "index": 5,
+    "enabled": [
+     "alice",
+     "backfiller"
+    ],
+    "blocked": {},
+    "finished": [],
+    "requested": "backfiller",
+    "chosen": "backfiller",
+    "source": "schedule"
+   },
+   {
+    "index": 6,
+    "enabled": [
+     "alice",
+     "backfiller"
+    ],
+    "blocked": {},
+    "finished": [],
+    "requested": null,
+    "chosen": "alice",
+    "source": "continuation"
+   },
+   {
+    "index": 7,
+    "enabled": [
+     "backfiller"
+    ],
+    "blocked": {},
+    "finished": [
+     "alice"
+    ],
+    "requested": null,
+    "chosen": "backfiller",
+    "source": "continuation"
+   },
+   {
+    "index": 8,
+    "enabled": [
+     "backfiller"
+    ],
+    "blocked": {},
+    "finished": [
+     "alice"
+    ],
+    "requested": null,
+    "chosen": "backfiller",
+    "source": "continuation"
+   }
+  ],
+  "records": [
+   {
+    "seq": 0,
+    "actor": "alice",
+    "kind": "transaction_enter",
+    "sql": "BEGIN",
+    "statement_id": "a8402858d4f1",
+    "params": null,
+    "provenance": {
+     "app_version": "v1",
+     "actor": "alice",
+     "handler": "reserve",
+     "invocation_id": "07b3f2a58fc3:alice",
+     "migration_phase": "expand",
+     "logical_op": 0,
+     "session": {
+      "backend_pid": 5218
+     },
+     "thread": "ds-actor-alice",
+     "call_site": "src/deployspecter/experimental/apps/reservations_mixed.py:60:reserve_v1",
+     "txn": "alice:1"
+    },
+    "grant": 0,
+    "decision": 0,
+    "outcome": "ok",
+    "error_class": null,
+    "sqlstate": null,
+    "rowcount": null,
+    "rows": null,
+    "txn_before": "IDLE",
+    "txn_after": "INTRANS",
+    "implicit_begin": false,
+    "blocked_by": [],
+    "requested_ms": 7.55,
+    "completed_ms": 7.96
+   },
+   {
+    "seq": 1,
+    "actor": "alice",
+    "kind": "execute",
+    "sql": "SELECT capacity, reserved FROM events WHERE id = %s FOR UPDATE",
+    "statement_id": "1611d48e3f65",
+    "params": [
+     1
+    ],
+    "provenance": {
+     "app_version": "v1",
+     "actor": "alice",
+     "handler": "reserve",
+     "invocation_id": "07b3f2a58fc3:alice",
+     "migration_phase": "expand",
+     "logical_op": 1,
+     "session": {
+      "backend_pid": 5218
+     },
+     "thread": "ds-actor-alice",
+     "call_site": "src/deployspecter/experimental/apps/reservations_mixed.py:61:reserve_v1",
+     "txn": "alice:1"
+    },
+    "grant": 1,
+    "decision": 1,
+    "outcome": "ok",
+    "error_class": null,
+    "sqlstate": null,
+    "rowcount": 1,
+    "rows": [
+     [
+      10,
+      0
+     ]
+    ],
+    "txn_before": "INTRANS",
+    "txn_after": "INTRANS",
+    "implicit_begin": false,
+    "blocked_by": [],
+    "requested_ms": 8.02,
+    "completed_ms": 8.67
+   },
+   {
+    "seq": 2,
+    "actor": "alice",
+    "kind": "execute",
+    "sql": "UPDATE events SET reserved = %s WHERE id = %s",
+    "statement_id": "bd7f741674bb",
+    "params": [
+     5,
+     1
+    ],
+    "provenance": {
+     "app_version": "v1",
+     "actor": "alice",
+     "handler": "reserve",
+     "invocation_id": "07b3f2a58fc3:alice",
+     "migration_phase": "expand",
+     "logical_op": 2,
+     "session": {
+      "backend_pid": 5218
+     },
+     "thread": "ds-actor-alice",
+     "call_site": "src/deployspecter/experimental/apps/reservations_mixed.py:67:reserve_v1",
+     "txn": "alice:1"
+    },
+    "grant": 2,
+    "decision": 2,
+    "outcome": "ok",
+    "error_class": null,
+    "sqlstate": null,
+    "rowcount": 1,
+    "rows": null,
+    "txn_before": "INTRANS",
+    "txn_after": "INTRANS",
+    "implicit_begin": false,
+    "blocked_by": [],
+    "requested_ms": 8.73,
+    "completed_ms": 9.46
+   },
+   {
+    "seq": 3,
+    "actor": "alice",
+    "kind": "execute",
+    "sql": "INSERT INTO reservations (event_id, holder, qty) VALUES (%s, %s, %s) RETURNING id",
+    "statement_id": "5d477f871bcc",
+    "params": [
+     1,
+     {
+      "str": 5,
+      "sha256": "2bd806c97f0e"
+     },
+     5
+    ],
+    "provenance": {
+     "app_version": "v1",
+     "actor": "alice",
+     "handler": "reserve",
+     "invocation_id": "07b3f2a58fc3:alice",
+     "migration_phase": "expand",
+     "logical_op": 3,
+     "session": {
+      "backend_pid": 5218
+     },
+     "thread": "ds-actor-alice",
+     "call_site": "src/deployspecter/experimental/apps/reservations_mixed.py:68:reserve_v1",
+     "txn": "alice:1"
+    },
+    "grant": 3,
+    "decision": 3,
+    "outcome": "ok",
+    "error_class": null,
+    "sqlstate": null,
+    "rowcount": 1,
+    "rows": [
+     [
+      1
+     ]
+    ],
+    "txn_before": "INTRANS",
+    "txn_after": "INTRANS",
+    "implicit_begin": false,
+    "blocked_by": [],
+    "requested_ms": 9.51,
+    "completed_ms": 10.09
+   },
+   {
+    "seq": 4,
+    "actor": "backfiller",
+    "kind": "transaction_enter",
+    "sql": "BEGIN",
+    "statement_id": "a8402858d4f1",
+    "params": null,
+    "provenance": {
+     "app_version": "job",
+     "actor": "backfiller",
+     "handler": "backfill_v2",
+     "invocation_id": "07b3f2a58fc3:backfiller",
+     "migration_phase": "expand",
+     "logical_op": 0,
+     "session": {
+      "backend_pid": 5219
+     },
+     "thread": "ds-actor-backfiller",
+     "call_site": "src/deployspecter/experimental/apps/reservations_mixed.py:122:_backfill",
+     "txn": "backfiller:1"
+    },
+    "grant": 4,
+    "decision": 4,
+    "outcome": "ok",
+    "error_class": null,
+    "sqlstate": null,
+    "rowcount": null,
+    "rows": null,
+    "txn_before": "IDLE",
+    "txn_after": "INTRANS",
+    "implicit_begin": false,
+    "blocked_by": [],
+    "requested_ms": 7.59,
+    "completed_ms": 10.46
+   },
+   {
+    "seq": 5,
+    "actor": "backfiller",
+    "kind": "execute",
+    "sql": "SELECT id, reserved FROM events WHERE reserved_v2 IS NULL ORDER BY id LIMIT %s",
+    "statement_id": "d61345d5342b",
+    "params": [
+     10
+    ],
+    "provenance": {
+     "app_version": "job",
+     "actor": "backfiller",
+     "handler": "backfill_v2",
+     "invocation_id": "07b3f2a58fc3:backfiller",
+     "migration_phase": "expand",
+     "logical_op": 1,
+     "session": {
+      "backend_pid": 5219
+     },
+     "thread": "ds-actor-backfiller",
+     "call_site": "src/deployspecter/experimental/apps/reservations_mixed.py:123:_backfill",
+     "txn": "backfiller:1"
+    },
+    "grant": 5,
+    "decision": 5,
+    "outcome": "ok",
+    "error_class": null,
+    "sqlstate": null,
+    "rowcount": 1,
+    "rows": [
+     [
+      1,
+      0
+     ]
+    ],
+    "txn_before": "INTRANS",
+    "txn_after": "INTRANS",
+    "implicit_begin": false,
+    "blocked_by": [],
+    "requested_ms": 10.51,
+    "completed_ms": 11.12
+   },
+   {
+    "seq": 6,
+    "actor": "alice",
+    "kind": "transaction_exit",
+    "sql": "COMMIT",
+    "statement_id": "79663c1d3b43",
+    "params": null,
+    "provenance": {
+     "app_version": "v1",
+     "actor": "alice",
+     "handler": "reserve",
+     "invocation_id": "07b3f2a58fc3:alice",
+     "migration_phase": "expand",
+     "logical_op": 4,
+     "session": {
+      "backend_pid": 5218
+     },
+     "thread": "ds-actor-alice",
+     "call_site": "src/deployspecter/experimental/apps/reservations_mixed.py:60:reserve_v1",
+     "txn": "alice:1"
+    },
+    "grant": 6,
+    "decision": 6,
+    "outcome": "ok",
+    "error_class": null,
+    "sqlstate": null,
+    "rowcount": null,
+    "rows": null,
+    "txn_before": "INTRANS",
+    "txn_after": "IDLE",
+    "implicit_begin": false,
+    "blocked_by": [],
+    "requested_ms": 10.14,
+    "completed_ms": 11.47
+   },
+   {
+    "seq": 7,
+    "actor": "backfiller",
+    "kind": "execute",
+    "sql": "UPDATE events SET reserved_v2 = %s WHERE id = %s AND reserved_v2 IS NULL",
+    "statement_id": "ede8a5fd116e",
+    "params": [
+     0,
+     1
+    ],
+    "provenance": {
+     "app_version": "job",
+     "actor": "backfiller",
+     "handler": "backfill_v2",
+     "invocation_id": "07b3f2a58fc3:backfiller",
+     "migration_phase": "expand",
+     "logical_op": 2,
+     "session": {
+      "backend_pid": 5219
+     },
+     "thread": "ds-actor-backfiller",
+     "call_site": "src/deployspecter/experimental/apps/reservations_mixed.py:125:_backfill",
+     "txn": "backfiller:1"
+    },
+    "grant": 7,
+    "decision": 7,
+    "outcome": "ok",
+    "error_class": null,
+    "sqlstate": null,
+    "rowcount": 1,
+    "rows": null,
+    "txn_before": "INTRANS",
+    "txn_after": "INTRANS",
+    "implicit_begin": false,
+    "blocked_by": [],
+    "requested_ms": 11.17,
+    "completed_ms": 11.92
+   },
+   {
+    "seq": 8,
+    "actor": "backfiller",
+    "kind": "transaction_exit",
+    "sql": "COMMIT",
+    "statement_id": "79663c1d3b43",
+    "params": null,
+    "provenance": {
+     "app_version": "job",
+     "actor": "backfiller",
+     "handler": "backfill_v2",
+     "invocation_id": "07b3f2a58fc3:backfiller",
+     "migration_phase": "expand",
+     "logical_op": 3,
+     "session": {
+      "backend_pid": 5219
+     },
+     "thread": "ds-actor-backfiller",
+     "call_site": "src/deployspecter/experimental/apps/reservations_mixed.py:122:_backfill",
+     "txn": "backfiller:1"
+    },
+    "grant": 8,
+    "decision": 8,
+    "outcome": "ok",
+    "error_class": null,
+    "sqlstate": null,
+    "rowcount": null,
+    "rows": null,
+    "txn_before": "INTRANS",
+    "txn_after": "IDLE",
+    "implicit_begin": false,
+    "blocked_by": [],
+    "requested_ms": 11.98,
+    "completed_ms": 12.27
+   }
+  ],
+  "actors": {
+   "alice": {
+    "handler": "v1.reserve",
+    "args": {
+     "event_id": 1,
+     "holder": {
+      "str": 5,
+      "sha256": "2bd806c97f0e"
+     },
+     "qty": 5
+    },
+    "state": "finished",
+    "result": {
+     "status": {
+      "str": 8,
+      "sha256": "c0d03c1239e0"
+     },
+     "reservation": 1,
+     "reserved_after": 5
+    },
+    "exception": null,
+    "exception_class": null,
+    "backend_pid": 5218,
+    "transactions": 1
+   },
+   "backfiller": {
+    "handler": "job.backfill_v2",
+    "args": {
+     "batch": 10
+    },
+    "state": "finished",
+    "result": {
+     "status": {
+      "str": 4,
+      "sha256": "a4c3ed04a95a"
+     },
+     "filled": 1
+    },
+    "exception": null,
+    "exception_class": null,
+    "backend_pid": 5219,
+    "transactions": 1
+   }
+  },
+  "outcome": "completed",
+  "diagnostics": [],
+  "migration_phase": "expand",
+  "fingerprint": "abce4a4e4d0dd95b34d8c40d18b5aed05f93a919981bce9cdc7d48c3defa4fdc"
+ },
+ "final_state": {
+  "events": [
+   {
+    "id": 1,
+    "capacity": 10,
+    "reserved": 5,
+    "reserved_v2": 0
+   }
+  ],
+  "reservations": [
+   {
+    "id": 1,
+    "event_id": 1,
+    "holder": "alice",
+    "qty": 5
+   }
+  ]
+ },
+ "violations": [
+  "I3 event 1: reserved_v2 0 differs from reserved 5"
+ ],
+ "seconds": 0.026
+}

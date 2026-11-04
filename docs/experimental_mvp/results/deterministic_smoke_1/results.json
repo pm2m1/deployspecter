@@ -1,0 +1,259 @@
+[
+ {
+  "source": "curated",
+  "proposals": 5,
+  "valid": 5,
+  "executed": 5,
+  "rejected": 0,
+  "rejections": [],
+  "distinct_handlers": [
+   "job.backfill_v2",
+   "v1.release",
+   "v1.reserve",
+   "v2.reserve"
+  ],
+  "migration_touching_statements": 5,
+  "migration_touching_possible": 4,
+  "unique_schedules": 80,
+  "workloads_with_verified_violation": 0,
+  "fixed_build_violations": 0,
+  "seconds": 5.24,
+  "workloads": [
+   {
+    "label": "v1 reserve alone",
+    "invocations": [
+     "a=v1.reserve"
+    ],
+    "buggy_runs": 1,
+    "buggy_exhausted": true,
+    "buggy_violating_runs": 0,
+    "first_violation": null,
+    "fixed_runs": 1,
+    "fixed_exhausted": true,
+    "fixed_violating_runs": 0,
+    "fixed_violations": []
+   },
+   {
+    "label": "v2 reserve alone",
+    "invocations": [
+     "a=v2.reserve"
+    ],
+    "buggy_runs": 1,
+    "buggy_exhausted": true,
+    "buggy_violating_runs": 0,
+    "first_violation": null,
+    "fixed_runs": 1,
+    "fixed_exhausted": true,
+    "fixed_violating_runs": 0,
+    "fixed_violations": []
+   },
+   {
+    "label": "backfill alone",
+    "invocations": [
+     "j=job.backfill_v2"
+    ],
+    "buggy_runs": 1,
+    "buggy_exhausted": true,
+    "buggy_violating_runs": 0,
+    "first_violation": null,
+    "fixed_runs": 1,
+    "fixed_exhausted": true,
+    "fixed_violating_runs": 0,
+    "fixed_violations": []
+   },
+   {
+    "label": "v1 and v2 reserve",
+    "invocations": [
+     "a=v1.reserve",
+     "b=v2.reserve"
+    ],
+    "buggy_runs": 36,
+    "buggy_exhausted": true,
+    "buggy_violating_runs": 0,
+    "first_violation": null,
+    "fixed_runs": 36,
+    "fixed_exhausted": true,
+    "fixed_violating_runs": 0,
+    "fixed_violations": []
+   },
+   {
+    "label": "v1 release alone",
+    "invocations": [
+     "a=v1.release"
+    ],
+    "buggy_runs": 1,
+    "buggy_exhausted": true,
+    "buggy_violating_runs": 0,
+    "first_violation": null,
+    "fixed_runs": 1,
+    "fixed_exhausted": true,
+    "fixed_violating_runs": 0,
+    "fixed_violations": []
+   }
+  ]
+ },
+ {
+  "source": "systematic",
+  "proposals": 10,
+  "valid": 10,
+  "executed": 5,
+  "rejected": 0,
+  "rejections": [],
+  "distinct_handlers": [
+   "job.backfill_v2",
+   "v1.release",
+   "v1.reserve",
+   "v2.release",
+   "v2.reserve"
+  ],
+  "migration_touching_statements": 5,
+  "migration_touching_possible": 4,
+  "unique_schedules": 526,
+  "workloads_with_verified_violation": 4,
+  "fixed_build_violations": 0,
+  "seconds": 37.02,
+  "workloads": [
+   {
+    "label": "job.backfill_v2 + v1.release",
+    "invocations": [
+     "a=job.backfill_v2",
+     "b=v1.release"
+    ],
+    "buggy_runs": 60,
+    "buggy_exhausted": false,
+    "buggy_violating_runs": 36,
+    "first_violation": {
+     "schedule": [
+      "a",
+      "a",
+      "b",
+      "b",
+      "b",
+      "a",
+      "b",
+      "b",
+      "b",
+      "a"
+     ],
+     "violations": [
+      "I3 event 1: reserved_v2 1 differs from reserved 0"
+     ],
+     "run_id": "abd20026ec01"
+    },
+    "fixed_runs": 53,
+    "fixed_exhausted": true,
+    "fixed_violating_runs": 0,
+    "fixed_violations": []
+   },
+   {
+    "label": "job.backfill_v2 + v1.reserve",
+    "invocations": [
+     "a=job.backfill_v2",
+     "b=v1.reserve"
+    ],
+    "buggy_runs": 60,
+    "buggy_exhausted": false,
+    "buggy_violating_runs": 46,
+    "first_violation": {
+     "schedule": [
+      "a",
+      "a",
+      "b",
+      "b",
+      "a",
+      "b",
+      "b",
+      "b",
+      "a"
+     ],
+     "violations": [
+      "I3 event 1: reserved_v2 1 differs from reserved 3"
+     ],
+     "run_id": "a27c8b7e154c"
+    },
+    "fixed_runs": 30,
+    "fixed_exhausted": true,
+    "fixed_violating_runs": 0,
+    "fixed_violations": []
+   },
+   {
+    "label": "job.backfill_v2 + v2.release",
+    "invocations": [
+     "a=job.backfill_v2",
+     "b=v2.release"
+    ],
+    "buggy_runs": 60,
+    "buggy_exhausted": false,
+    "buggy_violating_runs": 36,
+    "first_violation": {
+     "schedule": [
+      "a",
+      "a",
+      "b",
+      "b",
+      "b",
+      "a",
+      "b",
+      "b",
+      "b",
+      "a"
+     ],
+     "violations": [
+      "I3 event 1: reserved_v2 1 differs from reserved 0"
+     ],
+     "run_id": "3cc1586a648c"
+    },
+    "fixed_runs": 53,
+    "fixed_exhausted": true,
+    "fixed_violating_runs": 0,
+    "fixed_violations": []
+   },
+   {
+    "label": "job.backfill_v2 + v2.reserve",
+    "invocations": [
+     "a=job.backfill_v2",
+     "b=v2.reserve"
+    ],
+    "buggy_runs": 60,
+    "buggy_exhausted": false,
+    "buggy_violating_runs": 46,
+    "first_violation": {
+     "schedule": [
+      "a",
+      "a",
+      "b",
+      "b",
+      "a",
+      "b",
+      "b",
+      "b",
+      "a"
+     ],
+     "violations": [
+      "I3 event 1: reserved_v2 1 differs from reserved 3"
+     ],
+     "run_id": "87539e80b0a4"
+    },
+    "fixed_runs": 30,
+    "fixed_exhausted": true,
+    "fixed_violating_runs": 0,
+    "fixed_violations": []
+   },
+   {
+    "label": "v1.release + v1.reserve",
+    "invocations": [
+     "a=v1.release",
+     "b=v1.reserve"
+    ],
+    "buggy_runs": 60,
+    "buggy_exhausted": false,
+    "buggy_violating_runs": 0,
+    "first_violation": null,
+    "fixed_runs": 60,
+    "fixed_exhausted": false,
+    "fixed_violating_runs": 0,
+    "fixed_violations": []
+   }
+  ]
+ }
+]

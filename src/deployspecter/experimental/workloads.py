@@ -18,7 +18,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 from .apps import reservations_mixed as app
 
@@ -65,7 +65,7 @@ class Proposal(BaseModel):
     model_config = ConfigDict(extra="forbid")
     schema_version: str
     migration_phase: str
-    rationale: str = Field(max_length=2000)
+    rationale: str
     invocations: list[Invocation]
     seed_events: list[SeedEvent]
     seed_reservations: list[SeedReservation]
@@ -97,6 +97,8 @@ def validate(p: Proposal | dict[str, Any], *, source: str, label: str) -> Worklo
         except Exception as exc:  # pydantic's message names fields, never executes anything
             return Rejection(source, label, [f"schema: {str(exc)[:300]}"])
     reasons: list[str] = []
+    if len(p.rationale) > 2000 or any(len(h) > 500 for h in p.invariant_hypotheses):
+        reasons.append("rationale or hypotheses too long")
     if p.schema_version != SCHEMA_VERSION:
         reasons.append(f"schema_version must be {SCHEMA_VERSION}")
     if p.migration_phase not in app.PHASES:
