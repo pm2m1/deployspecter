@@ -64,13 +64,39 @@ The detached signature over `approval.json` is kept with the owner's approval fi
 | Version 2 | `20261104T132842Z-1c432509` | refused at the seeded op0r reset: psycopg auto-prepared the log reader's poll |
 | Version 3 | `20261104T140952Z-58f6e18e` | refused at op7b: float8 `-0` against an expected `-0.0` |
 
-On 2026-11-04 all their file digests still matched the operator reports.
+Their full digests, recorded here on 2026-11-04. Before that, only 16-digit prefixes (from the operator reports) were on record for most of these files. The three server logs were also checked against their full digests in the fixtures' provenance files, and two approvals against their `approval_provenance.json`.
+
+| File | SHA-256 |
+|---|---|
+| `d0b21a60/approval.json` | `445342d9bfb264d2949150bf664198314c219288d58e2c3a092d2516e333aec7` |
+| `d0b21a60/failure.json` | `3d58fe36e9788fc9f3cee0ffca8a4e5c63c75b198ba08467b3f0f926d5856c8c` |
+| `d0b21a60/operator_server_log_copy.csv` | `48a7704ea46132ee2233023662fb58b06dfdbd9ed6c38f5113b9a5066e7d12d4` |
+| `1c432509/approval.json` | `28c89e9a98b6c9525a8f6f79bea66606b1319f57a56d4e26c044e9b406ee3a0d` |
+| `1c432509/approval_provenance.json` | `97b35351eabf3937289094c13b4ae83f8b412b9673643dec2b7fc0a5a822fc0c` |
+| `1c432509/catalog.json` | `8399025d0d97c53b3dc9bb27c6b327abfff84d52b5938634b2474ad33d27ca00` |
+| `1c432509/failure.json` | `9bd19ce66f833dd4975c2011c126726afe9940ccd91494f2aee5add6ed2e46fd` |
+| `1c432509/operator_server_log_copy.csv` | `fc76fd6736bd7d033de45c593142a1ad2162e98af5297cfb362d4ed8ae11d2e2` |
+| `1c432509/preflight.json` | `18048dc943c13cdbe28cc4b8596745a4cc9b636e4f9def312bcbaab63b06f170` |
+| `58f6e18e/approval.json` | `c9ffbefb80d6a7a2c59688b7ba434dbda6c4d8a3b14d0883f92a76cfdfee62a0` |
+| `58f6e18e/approval_provenance.json` | `a7230c208f7ac9c43730ba63cb4a9e370b8f2444e9ebcd9ba77f01f8f8a7b7d5` |
+| `58f6e18e/catalog.json` | `8fed3dc78af523dc8ed13ffe244b4d2aafa14d4e6217dcf20c51d6d2eb5f545b` |
+| `58f6e18e/failure.json` | `0ea014dd441156a6c4533d127d445e6f9a7d83928d062402df512411ad3a395c` |
+| `58f6e18e/operator_server_log_copy.csv` | `c48ea596101cf972a91987bf7f2090057b9e635d7f846bf1f39d40c798218023` |
+| `58f6e18e/preflight.json` | `18048dc943c13cdbe28cc4b8596745a4cc9b636e4f9def312bcbaab63b06f170` |
+| `58f6e18e/states.json` | `6eddbe02a76290deba333238ca0847dc8ecc36c4fbe6a4d7cd4c98eae24b81fb` |
+
+The four runs hold **26** files: 3, 6, 7 and 10. (The Gate A2.1 report said 20, which was a miscount.)
 
 ## Handling
 
 - The evidence directory is untracked and **not ignored** by Git: `git check-ignore` matches nothing. A broad `git add` would stage the raw server logs and the personal approvals, so stage exact paths only.
-- After the run, every file in this directory was checked for the database password, and none contains it.
-- The evidence exists only in this worktree. The owner should keep an independently verified private backup (a copy checked against the SHA-256 values above), because nothing else preserves it.
+- After the run, every file in the version 4 directory was checked for the database password, and none contains it.
+- **Private backup, 2026-11-04.**
+  - All 26 files were copied, unchanged, to an owner-only directory outside the repository and outside every synced folder (directories `700`, files `600`), with a `SHA256SUMS` file.
+  - The copy passed `shasum -c` for all 26 files.
+  - No signature file or key was copied.
+  - Its location is kept out of Git.
+  - The originals were read only.
 
 ## What it supports
 

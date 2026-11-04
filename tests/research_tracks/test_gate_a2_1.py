@@ -2,7 +2,7 @@
 
 Simulated: the parent sessions and the server log come from Gate A1's offline fake, which logs what the driver actually
 sent and the parameter details PostgreSQL 16.15 logged in the third real Gate A1 run. Passing here is driver logic on
-mocked effects. It is not evidence that Gate A2 ran, and Gate A2 stays blocked (execution_manifest_v3.json).
+mocked effects. It is not evidence that Gate A2 ran, and Gate A2 stays blocked (execution_manifest_v4.json).
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ from deployspecter.research.track_a import gate_a2_controls as c  # noqa: E402
 from deployspecter.research.track_a import parent_reconciliation as pr  # noqa: E402
 from deployspecter.research.track_a import pipeline as p  # noqa: E402
 
-MANIFEST = ROOT / "docs/research/live_stepping/track_a/execution_manifest_v3.json"
+MANIFEST = ROOT / "docs/research/live_stepping/track_a/execution_manifest_v4.json"
 A1_MANIFEST = ROOT / "docs/research/live_stepping/track_a/gate_a1_manifest.json"
 DRIVER = ROOT / "research_tools/gate_a2_run.py"
 CONTROLS = ROOT / "src/deployspecter/research/track_a/gate_a2_controls.py"
@@ -421,7 +421,7 @@ class TestTargetAndCredentialRefusals:
         (lambda m: m["client_connection_policy"].update(psycopg_prepare_threshold=5), "connection policy"),
         (lambda m: m["client_connection_policy"].pop("psycopg_prepare_threshold"), "connection policy"),
         (lambda m: m["safety_ceilings"]["session_options"].update(extra_float_digits=3), "extra_float_digits"),
-        (lambda m: m.update(version=2), "version 3"),
+        (lambda m: m.update(version=3), "version 4"),
         (lambda m: m.update(context="heldout_evaluation"), "synthetic"),
         (lambda m: m["variants"]["fixed"].update(lock_row=False), "variants"),
         (lambda m: m.pop("execution_blockers"), "execution blockers"),
@@ -706,7 +706,7 @@ class TestTheTrustBoundary:
     def test_gate_a1s_pinned_sources_still_match_its_v4_manifest(self):
         a1.a2.verify_sources(json.loads(A1_MANIFEST.read_text()))
 
-    def test_the_v3_manifest_pins_the_sources_it_depends_on(self):
+    def test_the_current_manifest_pins_the_sources_it_depends_on(self):
         m, _ = manifest()
         a1.a2.verify_sources(m)
         assert {"research_tools/gate_a2_run.py", "src/deployspecter/research/track_a/gate_a2_controls.py",

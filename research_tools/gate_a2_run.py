@@ -1,4 +1,4 @@
-"""Gate A2 driver with the Gate A2.1 controls (manifest version 3). Research-only. NOT EXECUTABLE.
+"""Gate A2 driver with the Gate A2.1 and A2.2 controls (manifest version 4). Research-only. NOT EXECUTABLE.
 
     plan     print the steps and the execution blockers; touches nothing
     export   the reconciled export batch; refused while the manifest lists execution blockers
@@ -12,10 +12,13 @@ What it adds (``gate_a2_controls``): refusal of model credentials, model modules
 one reviewed credential source; the protected development database as a forbidden target; the server identity bound
 across batches; a refused partial reset; per-attempt state records for Gate 2A runs.
 
-Nothing the command line reaches constructs Gate 2A's supervisor, sandbox or child. Its per-run reset, initial read
-and role setup run on its own unreconciled admin session, and its supervisor terminates every client session it doesn't
-own, a Gate A2 log reader included (see GATE_A2_1_TRUST_BOUNDARY.md). The parent is a superuser on a disposable
-cluster: reconciliation detects deviation, it doesn't prevent it.
+Gate A2.2 adds ``SegmentedRun``: the log reader closes before each Gate 2A call and a new one opens after it returns,
+so no Gate A2 session exists inside the supervisor's protected window, and each gap is audited from the persisted log
+against the template in ``gate2a_audit``. It is tested only with fakes.
+
+Nothing the command line reaches constructs Gate 2A's supervisor, sandbox or child. The supervisor's per-run reset,
+snapshots and role setup stay its own and are audited, not replaced (see GATE_A2_2_SUPERVISOR_AUDIT.md). The parent
+is a superuser on a disposable cluster: reconciliation detects deviation, it doesn't prevent it.
 """
 
 from __future__ import annotations
@@ -37,7 +40,7 @@ import gate_a1_characterize as a1  # noqa: E402  (the verified Gate A1 batch, re
 ROOT = a1.ROOT
 v2 = a1.a2  # track_a_run: manifest digest, approval and evidence helpers, unchanged
 MANIFEST = "gate-a2-execution-manifest"
-VERSION = 3
+VERSION = 4
 APPLICATION = "reservations"
 LOCK_BY_VARIANT = {"buggy": False, "fixed": True}
 # The Gate 2A section (serial references, exploration, confirmation, batch-end export) isn't wired to the command line.
@@ -85,6 +88,9 @@ def load_manifest(path: Path, expected_sha256: str) -> dict[str, Any]:
         raise DriverRefused("the manifest's container and cluster don't name its target")
     if not isinstance(m.get("execution_blockers"), list):
         raise DriverRefused("the manifest doesn't list its execution blockers")
+    audit = m.get("gate2a_audit")
+    if not isinstance(audit, dict) or not audit.get("connectable_databases") or not audit.get("log_path"):
+        raise DriverRefused("the manifest doesn't fix the Gate 2A audit's databases and log path")
     return m
 
 
@@ -169,8 +175,9 @@ class ParentBatch:
         _ce, ch, *_ = a1._modules()
         self.effects.log_mark(self.end)
         raw, rows = self.batch.read_window(self.start, self.end, "batch")
+        self.reader = self.batch.established_reader(raw, self.start, self.end, self.db)
         audit = ch.audit_batch(rows, reconciled_tags=self.batch.tags, user=self.user, databases={self.db},
-                               reader=self.batch.established_reader(raw, self.start, self.end, self.db))
+                               reader=self.reader)
         self.evidence.write(f"parent_reconciliation_{self.name}.json", self.batch.records)
         record = {"ok": audit.ok, "problems": audit.problems, "sessions": audit.sessions}
         self.evidence.write(f"batch_audit_{self.name}.json", record)
@@ -307,6 +314,182 @@ def construction_batch(effects: Any, manifest: Mapping[str, Any], evidence: Any,
                         again.identity)
 
 
+# ------------------------------------------------------------------ B3: reader segments around Gate 2A calls
+
+
+def gate2a_context(trace: Any, *, mode: str, scenario: Any, manifest: Mapping[str, Any], harness_pids: set[int],
+                   first_run: bool) -> Any:
+    """The audit context for one Gate 2A call, from the reviewed manifest, the prepared scenario, the harness sessions'
+    connection info and the supervisor's in-process trace. Nothing comes from the log being audited."""
+    from deployspecter.research.track_a import gate2a_audit as ga
+
+    ceilings = manifest["safety_ceilings"]["gate2a"]
+    live, sup = ceilings["LiveLimits"], ceilings["SupervisorLimits"]
+    poll_s = float(sup.get("poll_s", 0.01))
+    window = (float(sup["handshake_s"]) + float(live["run_s"]) + float(live.get("abort_grace_s", 3.0)) + 1.0
+              + 3 * float(sup["escalation_grace_s"]) + float(sup["kill_wait_s"]))
+    return ga.RunContext(
+        run_id=trace.evidence.run_id, mode=mode, setup_sql=scenario.setup_sql, seed=ga.seed_tuples(scenario.seed),
+        tables=tuple(sorted(manifest["gate2a_audit"]["tables"])), database=manifest["target"]["database"],
+        harness_pids=frozenset(harness_pids), child_sessions=dict(trace.evidence.expected_sessions),
+        first_run=first_run, connectable_databases=frozenset(manifest["gate2a_audit"]["connectable_databases"]),
+        reset_lock_ms=int(sup["reset_lock_ms"]), reset_statement_ms=int(sup["reset_statement_ms"]),
+        role_settings={"search_path": ga.RUN_SCHEMA, "statement_timeout": int(live["statement_ms"]),
+                       "lock_timeout": int(live["lock_ms"]),
+                       "idle_in_transaction_session_timeout": int(live["idle_in_transaction_ms"]),
+                       "deadlock_timeout": int(live["deadlock_ms"])},
+        log_path=manifest["gate2a_audit"]["log_path"],
+        escalation=tuple(e["step"] for e in trace.evidence.escalation if not e.get("skipped_for_test")),
+        max_polls=int(window / poll_s) + 10, max_log_reads=int(float(sup["log_wait_s"]) / 0.002) + 2,
+        max_sweep_rounds=int(float(sup["quiescence_s"]) / 0.005) + 2,
+        flags=tuple(f.detail for f in trace.evidence.flags),
+        expected_rows=tuple((table, tuple(sorted(row.items()))) for table, rows in manifest["initial_rows"].items()
+                            for row in rows))
+
+
+class SegmentedRun:
+    """Gate A1 batches as reader segments, with each Gate 2A call in the gap between two of them.
+
+    * Before a call, the current segment closes (its end marker, Gate A1's audit of it) and its reader disconnects,
+      so no Gate A2 session can be present at the supervisor's outside-session sweep or during its run.
+    * After the call returns or raises, a new reader connects and starts a new segment. It reads the log from the
+      batch's first byte offset, carried forward explicitly, until its own start marker is there (bounded wait).
+    * The gap between the two segments is audited: the old reader's disconnection before Gate 2A's first statement,
+      the new reader's connection after its last, the admin session against the template, children inside their
+      run's window, and nothing unattributed. A call that raised, or a gap that doesn't verify, stops the batch.
+    """
+
+    def __init__(self, effects: Any, manifest: Mapping[str, Any], evidence: Any) -> None:
+        from deployspecter.research.track_a import gate2a_audit as ga
+
+        self.ga, self.effects, self.manifest, self.evidence = ga, effects, manifest, evidence
+        self.coverage = ga.Coverage()
+        self.segments: list[dict[str, Any]] = []
+        self.harness: Any = None
+        self.first_run = True
+        effects.log_position("whole")  # the batch's one offset; every later reader starts from it
+        self.current = self.new_segment(0)
+
+    def new_segment(self, k: int) -> ParentBatch:
+        return ParentBatch(self.effects, self.manifest, self.evidence, f"segment_{k:03d}")
+
+    def op(self, name: str, statements: list[tuple[str, tuple]], action: Callable[[Any], Any]) -> Any:
+        return self.current.op(name, statements, action)
+
+    def run(self, name: str, statements: list[tuple[str, tuple]]) -> Any:
+        return self.current.run(name, statements)
+
+    def close_segment(self) -> None:
+        self.current.close()
+        self.segments.append({"start": self.current.start, "end": self.current.end,
+                              "reader": self.current.reader.session})
+        self.effects.reader_close()
+
+    def reopen_and_read(self) -> list[Any]:
+        try:
+            self.effects.reader_open()
+        except Exception as exc:
+            raise DriverRefused(f"the next reader couldn't connect ({type(exc).__name__}); the gap isn't audited "
+                                "and the batch stops, nothing is retried") from None
+        self.current = self.new_segment(len(self.segments))
+        until = a1.time.monotonic() + float(self.manifest["safety_ceilings"]["log_wait_s"])
+        while True:  # a bounded wait for the logging collector, as Gate A1 waits for its end markers
+            try:
+                rows = self.ga.parse_log(self.effects.log_read("whole"))
+            except self.ga.AuditError:
+                rows = []  # a row still being written
+            if any(r.message == f"statement: SELECT '{self.current.start}'" for r in rows):
+                return rows
+            if a1.time.monotonic() >= until:
+                raise DriverRefused("the new segment's start marker never reached a complete log: an incomplete "
+                                    "flush")
+            a1.time.sleep(0.05)
+
+    def gap_rows(self, rows: list[Any]) -> tuple[list[Any], str]:
+        ga = self.ga
+        try:
+            after = ga.marker_row(rows, self.segments[-1]["end"])
+            before = ga.marker_row(rows, self.current.start)
+        except ga.AuditError as exc:
+            raise DriverRefused(f"a segment boundary isn't in the log exactly once: {exc}") from None
+        if not after.start < before.start:
+            raise DriverRefused("the segment boundaries are out of order in the log")
+        return [r for r in rows if after.start < r.start < before.start], before.session
+
+    def bootstrap(self, construct: Callable[[], Any]) -> Any:
+        """Construct Gate 2A's Sandbox (and runner) in a gap of its own, then audit what that logged (B6)."""
+        self.close_segment()
+        box = construct()
+        self.harness = self.ga.Harness(box.admin.info.backend_pid, box.monitor.info.backend_pid,
+                                       self.manifest["target"]["admin_user"], self.manifest["target"]["database"],
+                                       self.manifest["target"]["initial_database"])
+        rows = self.reopen_and_read()
+        gap, next_reader = self.gap_rows(rows)
+        cov = self.ga.Coverage()
+        self.ga.audit_bootstrap_gap(gap, index=len(self.segments), prev_reader=self.segments[-1]["reader"],
+                                    next_reader=next_reader, harness=self.harness, cov=cov)
+        self.conclude(cov, "the sandbox bootstrap")
+        return box
+
+    def gate2a(self, call: Callable[[], Any], *, mode: str, scenario: Any,
+               verified_initial_digest: str | None) -> Any:
+        """One Gate 2A call (``runner.run`` or ``runner.plain_serial``) in its own gap. Never retried."""
+        if self.harness is None:
+            raise DriverRefused("Gate 2A's sandbox wasn't constructed in an audited gap")
+        if mode != "stepped":
+            # plain_serial's public result has no run id and no registered sessions, so its gap could only be bound
+            # to a run id read from the log being audited. Refused, not weakened.
+            raise DriverRefused("a plain_serial call can't be bound to a supervisor-reported run id")
+        self.close_segment()
+        trace, error, raised = None, None, None
+        try:
+            result = trace = call()
+        except BaseException as exc:  # an interrupt too: the reader reopens only to keep the evidence, then it stops
+            result, error, raised = None, type(exc).__name__, exc
+        rows = self.reopen_and_read()
+        gap, next_reader = self.gap_rows(rows)
+        cov = self.ga.Coverage()
+        ctx = None if trace is None or not trace.evidence.run_id else gate2a_context(
+            trace, mode=mode, scenario=scenario, manifest=self.manifest,
+            harness_pids={self.harness.admin_pid, self.harness.monitor_pid}, first_run=self.first_run)
+        self.first_run = False
+        halted = trace is not None and (trace.inconclusive or any(a.outcome == "aborted" for a in trace.actors))
+        call_record = self.ga.Call(
+            ctx, error, reconciled=trace is not None and trace.evidence.reconciliation != {},
+            flag_kinds=() if trace is None else tuple(f.kind for f in trace.evidence.flags), halted=halted,
+            trace_initial=None if trace is None else trace.initial_state,
+            verified_initial_digest=verified_initial_digest)
+        self.ga.audit_run_gap(gap, index=len(self.segments), prev_reader=self.segments[-1]["reader"],
+                              next_reader=next_reader, harness=self.harness, call=call_record, cov=cov)
+        if raised is not None:
+            self.coverage.extend(cov)
+            if not isinstance(raised, Exception):
+                raise raised  # an operator's interrupt stays one, so the failure record says so
+            raise DriverRefused(f"the Gate 2A call raised {error}; the batch stops, nothing is retried") from None
+        self.conclude(cov, "a Gate 2A call")
+        return result
+
+    def conclude(self, cov: Any, what: str) -> None:
+        self.coverage.extend(cov)
+        if cov.fails_closed:
+            bad = [c for c in cov.claims if c.status in (self.ga.REFUTED, self.ga.INDETERMINATE)]
+            raise DriverRefused(f"{what} didn't verify: " + "; ".join(f"{c.claim}: {c.basis}" for c in bad[:3]))
+
+    def finish(self) -> dict[str, Any]:
+        """Close the last segment, then check every session's line numbers across the whole batch."""
+        self.current.close()
+        self.segments.append({"start": self.current.start, "end": self.current.end,
+                              "reader": self.current.reader.session})
+        rows = self.ga.parse_log(self.effects.log_read("whole"))
+        first = self.ga.marker_row(rows, self.segments[0]["start"])
+        last = self.ga.marker_row(rows, self.segments[-1]["end"])
+        self.ga.line_completeness([r for r in rows if first.start <= r.start <= last.start], self.coverage)
+        self.ga.standing_claims(self.coverage)
+        report = {"segments": self.segments, **self.coverage.report()}
+        self.evidence.write("gate2a_coverage.json", report)
+        return report
+
+
 # ------------------------------------------------------------------ the real effects (constructed only by main)
 
 
@@ -320,6 +503,33 @@ class RealEffects(a1.RealEffects):  # pragma: no cover - needs an approved, live
         preconditions(manifest, environ=dict(os.environ), dotenv=dotenv_values(ROOT / ".env"),
                       modules=list(sys.modules))
         super().__init__(manifest)
+
+
+class SegmentEffects(RealEffects):  # pragma: no cover - needs an approved, live disposable cluster
+    """Gate A1's connections, plus a reader that can disconnect and reconnect between segments. Gate A1's log queries
+    look ``self.log_conn`` up on every call, so a new reader carries the batch's one ``ServerLog`` offset forward."""
+
+    def __init__(self, manifest: dict[str, Any]) -> None:
+        from deployspecter.live.serverlog import ServerLog
+        super().__init__(manifest)
+        self.logs["whole"] = ServerLog(lambda q, prm=None: self.log_conn.execute(q, prm).fetchone())
+
+    def reader_close(self) -> None:
+        self.log_conn.close()
+
+    def reader_open(self) -> None:
+        conn = self.psycopg.connect(**self.target, autocommit=True, prepare_threshold=a1.PREPARE_THRESHOLD,
+                                    application_name="ds_parent_log_reader", options=self.options)
+        try:
+            a1.require_unprepared(conn)
+            info, want = conn.info, self.target
+            if (info.host, str(info.port), info.dbname, info.user) != (want["host"], want["port"], want["dbname"],
+                                                                       want["user"]):
+                raise DriverRefused("the new reader isn't connected to the manifest's fixed local target")
+        except BaseException:
+            conn.close()
+            raise
+        self.log_conn = conn
 
 
 # ------------------------------------------------------------------ command line
