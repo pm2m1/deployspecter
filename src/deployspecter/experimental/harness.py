@@ -168,6 +168,62 @@ def run_once(target: Target, w: Workload, *, variant: str, schedule: list[str], 
                      corroboration)
 
 
+def run_app(target: Target, app_module: Any, invocations: list[dict[str, Any]], seed: Any, *, variant: str,
+            schedule: list[str], label: str, strict: bool = False, limits: Limits | None = None,
+            corroborate: bool = False, autocommit: bool | None = None, registry_kw: dict[str, Any] | None = None,
+            expected_digest: str | None = None) -> RunResult:
+    """``run_once`` for any trusted fixture module with ``SCHEMA``, ``registry``, ``reset``, ``read_state``,
+    ``expected_initial`` and ``check``. The same steps: identity check, reset, verified initial digest, stepped run,
+    independent final read, oracle."""
+    limits = limits or Limits()
+    handlers = app_module.registry(variant, **(registry_kw or {}))
+    started = time.monotonic()
+    key = json.dumps({"inv": invocations, "seed": seed}, sort_keys=True, default=str)
+    run_id = hashlib.sha256(f"{key}|{variant}|{','.join(schedule)}".encode()).hexdigest()[:12]
+    admin = target.admin()
+    try:
+        app_module.reset(admin, seed)
+        got = oracle.digest(app_module.read_state(admin))
+        want = expected_digest or oracle.digest(app_module.expected_initial(seed))
+        if got != want:
+            raise Refused(f"the initial state isn't the verified one (digest {got[:12]}, expected {want[:12]})")
+        actors = []
+        for inv in invocations:
+            h = handlers.get((inv["app_version"], inv["handler"]))
+            if h is None:
+                raise Refused(f"unknown handler {inv['app_version']}.{inv['handler']}")
+            actors.append(Actor(inv["actor"], h, dict(inv["args"])))
+        if autocommit is None:
+            autocommit = getattr(app_module, "AUTOCOMMIT", True)  # the fixture says which DBAPI mode it expects
+        connect = actor_connection_factory(target.conninfo(), limits, search_path=app_module.SCHEMA,
+                                           autocommit=autocommit)
+        run = Run(actors, connect, admin, schedule=schedule, strict=strict, limits=limits, run_id=run_id)
+        corroboration = None
+        if corroborate:
+            trace, corroboration = corroborated(admin, run, user=target.user)
+        else:
+            trace = run.execute()
+        final = app_module.read_state(admin)
+        violations = app_module.check(final)
+    finally:
+        admin.close()
+    return RunResult(run_id, variant, label, got, trace, final, violations, round(time.monotonic() - started, 3),
+                     corroboration)
+
+
+def explore_app(target: Target, app_module: Any, invocations: list[dict[str, Any]], seed: Any, *, variant: str,
+                max_runs: int, label: str, **kw: Any) -> tuple[list[RunResult], bool]:
+    results: list[RunResult] = []
+
+    def run_with(prefix: list[str]) -> Trace:
+        r = run_app(target, app_module, invocations, seed, variant=variant, schedule=prefix, label=label, **kw)
+        results.append(r)
+        return r.trace
+
+    _traces, exhausted = explore(run_with, max_runs=max_runs)
+    return results, exhausted
+
+
 def explore_workload(target: Target, w: Workload, *, variant: str, max_runs: int,
                      limits: Limits | None = None) -> tuple[list[RunResult], bool]:
     results: list[RunResult] = []

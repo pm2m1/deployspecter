@@ -24,6 +24,8 @@ from typing import Any
 
 from deployspecter.research.track_a.gate2a_audit import parse_log, statement
 
+from .stepping import normal_sql
+
 PID, SESSION, LINE, SEVERITY, SQLSTATE, MESSAGE, DETAIL, APP, BACKEND, USER, DB = 3, 5, 6, 11, 12, 13, 14, 22, 23, 1, 2
 PARAM = re.compile(r"\$(\d+) = (NULL|'(?:[^']|'')*')")
 ADMIN_ALLOWED = (re.compile(r"^SELECT pg_blocking_pids\(\$1\)$"), re.compile(r"^SELECT pg_cancel_backend\(\$1\)$"),
@@ -31,13 +33,34 @@ ADMIN_ALLOWED = (re.compile(r"^SELECT pg_blocking_pids\(\$1\)$"), re.compile(r"^
 BACKGROUND = {"checkpointer": re.compile(r"^checkpoint (starting|complete)")}
 
 
-def server_text(sql: str) -> str:
-    n = [0]
+PLACEHOLDER = re.compile(r"%%|%\((\w+)\)s|%s")
 
-    def num(_m: re.Match[str]) -> str:
-        n[0] += 1
-        return f"${n[0]}"
-    return re.sub(r"%s", num, sql)
+
+def server_text(sql: str, params: Any = ()) -> str:
+    return bind(sql, list(params) if isinstance(params, tuple) else params)[0]
+
+
+def bind(sql: str, params: Any) -> tuple[str, list[Any]]:
+    """The text psycopg sends with server-side binding, and the values in ``$n`` order. Positional ``%s`` are
+    numbered in turn; a named ``%(x)s`` gets a number on its first occurrence and reuses it after, as psycopg does;
+    ``%%`` is a literal ``%``. With no parameters psycopg sends the text unchanged."""
+    if params is None:
+        return sql, []
+    names: dict[str, int] = {}
+    values: list[Any] = []
+    positional = iter(params) if isinstance(params, list) else iter(())
+
+    def num(m: re.Match[str]) -> str:
+        if m.group(0) == "%%":
+            return "%"
+        if m.group(1) is None:
+            values.append(next(positional, None))
+            return f"${len(values)}"
+        if m.group(1) not in names:
+            values.append(params.get(m.group(1)) if isinstance(params, dict) else None)
+            names[m.group(1)] = len(values)
+        return f"${names[m.group(1)]}"
+    return PLACEHOLDER.sub(num, sql), values
 
 
 @dataclass
@@ -60,9 +83,9 @@ def _expected(op: Any) -> list[tuple[str, list[Any] | None]]:
     if op.implicit_begin:
         out.append(("BEGIN", None))
     if op.kind == "execute":
-        out.append((server_text(op.sql), op.params if isinstance(op.params, list) else []))
+        out.append(bind(op.sql, op.params))
     elif op.kind == "executemany":
-        out += [(server_text(op.sql), p) for p in op.params]
+        out += [bind(op.sql, p) for p in op.params]
     elif op.kind == "transaction_enter":
         out.append(("BEGIN" if op.sql == "BEGIN" else "re:^SAVEPOINT ", None))
     elif op.kind == "transaction_exit":
@@ -141,6 +164,7 @@ def corroborate(log: bytes, *, start: str, end: str, trace: Any, admin_pid: int,
             out.problems.append(f"{actors[pid]}: a statement the trace doesn't record: {text[:60]}")
             continue
         want, values, grant, _op = expected[pid][cursor[pid]]
+        text = normal_sql(text)  # the trace keeps statement text whitespace-normalized; values are compared apart
         hit = re.match(want[3:], text) if want.startswith("re:") else text == want
         if not hit:
             out.problems.append(f"{actors[pid]}: logged {text[:50]!r}, the trace expects {want[:50]!r}")

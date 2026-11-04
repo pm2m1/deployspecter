@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import contextlib
 import hashlib
+import importlib.util
 import json
 import os
 import re
@@ -41,6 +42,15 @@ import psycopg
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PSYCOPG_DIR = os.path.dirname(os.path.abspath(psycopg.__file__))
+
+
+def _package_dir(name: str) -> str | None:
+    spec = importlib.util.find_spec(name)
+    return os.path.dirname(os.path.abspath(spec.origin)) if spec and spec.origin else None
+
+
+# Frameworks the call site looks through, to the application line that called them. Not imported here.
+FRAMEWORK_DIRS = {n: d for n in ("sqlalchemy",) if (d := _package_dir(n))}
 TX = psycopg.pq.TransactionStatus
 BUSY = ("running", "granted", "executing")  # states in which an actor will act without a new grant
 
@@ -80,16 +90,27 @@ def sanitize(value: Any) -> Any:
     return {"type": type(value).__name__}
 
 
-def call_site() -> str:
-    """The first frame outside this module and psycopg: the application line that asked for the operation."""
+def call_sites() -> tuple[str, str | None]:
+    """The application line that asked for the operation (the first frame outside this module, psycopg and any known
+    framework), and the framework entry point it called, if any (``sqlalchemy/orm/session.py:commit``, say)."""
     frame = sys._getframe(1)
+    entry: str | None = None
     while frame is not None:
         path = os.path.abspath(frame.f_code.co_filename)
-        if not (path.startswith(HERE + os.sep + "stepping") or path.startswith(PSYCOPG_DIR)
-                or path.endswith(os.sep + "contextlib.py")):
-            return f"{os.path.relpath(path)}:{frame.f_lineno}:{frame.f_code.co_name}"
+        framework = next((n for n, d in FRAMEWORK_DIRS.items() if path.startswith(d + os.sep)), None)
+        if framework is not None:
+            entry = f"{framework}/{os.path.relpath(path, FRAMEWORK_DIRS[framework])}:{frame.f_code.co_name}"
+        elif entry is not None and frame.f_code.co_filename.startswith("<"):
+            pass  # code a framework generated at import time (SQLAlchemy's decorators): still the framework
+        elif not (path.startswith(HERE + os.sep + "stepping") or path.startswith(PSYCOPG_DIR)
+                  or path.endswith(os.sep + "contextlib.py")):
+            return f"{os.path.relpath(path)}:{frame.f_lineno}:{frame.f_code.co_name}", entry
         frame = frame.f_back
-    return "<unknown>"
+    return "<unknown>", entry
+
+
+def call_site() -> str:
+    return call_sites()[0]
 
 
 SQLSTATE_CLASSES = {"40001": "serialization_failure", "40P01": "deadlock_detected", "55P03": "lock_not_available",
@@ -98,10 +119,16 @@ SQLSTATE_CLASSES = {"40001": "serialization_failure", "40P01": "deadlock_detecte
 
 
 def error_class(exc: BaseException) -> str:
-    if isinstance(exc, Refused):
-        return "refused"
-    if isinstance(exc, psycopg.Error):
-        return SQLSTATE_CLASSES.get(getattr(exc, "sqlstate", None) or "", "sql_error")
+    """Looks through wrappers (a framework re-raising a driver error or a refusal ``from`` it) to the cause."""
+    seen: set[int] = set()
+    cur: BaseException | None = exc
+    while cur is not None and id(cur) not in seen:
+        seen.add(id(cur))
+        if isinstance(cur, Refused):
+            return "refused"
+        if isinstance(cur, psycopg.Error):
+            return SQLSTATE_CLASSES.get(getattr(cur, "sqlstate", None) or "", "sql_error")
+        cur = cur.__cause__ or cur.__context__
     return "application_exception"
 
 
@@ -137,7 +164,7 @@ class Decision:
     finished: list[str]
     requested: str | None
     chosen: str
-    source: str  # schedule, deferred, continuation
+    source: str  # schedule, deferred, continuation, setup
 
 
 # ------------------------------------------------------------------ the stepped driver objects
@@ -227,9 +254,15 @@ class Handler:
     allowed_sql: frozenset[str]
     args: dict[str, type]
     touches_migration: frozenset[str] = frozenset()  # statement ids that read or write migration-added columns
+    # Framework setup statements (a dialect's first-connect queries): read-only, lock-free reads of session settings.
+    # Opting in also lets the controller grant, without a decision point, these statements, a COMMIT or ROLLBACK that
+    # sends nothing (no transaction open), and the end of a transaction that ran only setup statements. All of these
+    # commute with every other actor's operations, so interleaving them can't change the outcome. Still gated,
+    # recorded and corroborated.
+    setup_sql: frozenset[str] = frozenset()
 
     def allows(self, text: str) -> bool:
-        return normal_sql(text) in self.allowed_sql
+        return normal_sql(text) in self.allowed_sql or normal_sql(text) in self.setup_sql
 
 
 @dataclass
@@ -250,6 +283,7 @@ class Actor:
     txn: int = 0
     backend_pid: int | None = None
     invocation_id: str = ""
+    setup_only_txn: bool = False  # the open transaction has run only the handler's setup statements
 
 
 @dataclass
@@ -327,10 +361,11 @@ class Run:
             raise Refused(f"{actor.name}'s connection was used from another thread")
         if self.aborted and not aborting:
             raise RunAborted("the run was halted")
+        site, entry = call_sites()
         prov = {"app_version": actor.handler.app_version, "actor": actor.name, "handler": actor.handler.name,
                 "invocation_id": actor.invocation_id, "migration_phase": self.migration_phase,
                 "logical_op": actor.ops, "session": {"backend_pid": actor.backend_pid},
-                "thread": threading.current_thread().name, "call_site": call_site(),
+                "thread": threading.current_thread().name, "call_site": site, "framework_entry": entry,
                 "txn": None}
         op = OpRecord(seq=-1, actor=actor.name, kind=kind, sql=normal_sql(text), statement_id=statement_id(text),
                       params=sanitize(params), provenance=prov, requested_ms=self._ms())
@@ -375,6 +410,13 @@ class Run:
         finally:
             op.txn_after = conn.info.transaction_status.name if not conn.closed else "CLOSED"
             op.implicit_begin = op.txn_before == "IDLE" and op.txn_after == "INTRANS" and kind == "execute"
+            if op.txn_after != "INTRANS":
+                actor.setup_only_txn = False
+            elif kind == "execute" and op.outcome == "ok":
+                actor.setup_only_txn = op.sql in actor.handler.setup_sql and (
+                    op.txn_before == "IDLE" or actor.setup_only_txn)
+            else:
+                actor.setup_only_txn = False
             if op.txn_before != "IDLE" or op.txn_after != "IDLE":
                 prov["txn"] = f"{actor.name}:{actor.txn}"
             op.completed_ms = self._ms()
@@ -430,8 +472,22 @@ class Run:
                 self.monitor.execute("SELECT pg_cancel_backend(%s)", (a.backend_pid,))
         return outcome
 
+    def _commutes(self, actor: Actor) -> bool:
+        """A pending operation the controller may grant without a decision point (see ``Handler.setup_sql``)."""
+        req, h = actor.request, actor.handler
+        if req is None or not h.setup_sql:
+            return False
+        if req.kind == "execute":
+            return req.sql in h.setup_sql
+        if req.kind in ("commit", "rollback"):  # the actor is parked at its gate, so its connection is idle here
+            return actor.conn.info.transaction_status == TX.IDLE or actor.setup_only_txn
+        return False
+
     def _choose(self, enabled: list[str], blocked: dict[str, list[str]], pointer: list[int]) -> tuple[str | None, str,
                                                                                                     str | None]:
+        setup = [n for n in enabled if self._commutes(self.by_name[n])]
+        if setup:
+            return setup[0], "setup", None  # consumes no schedule entry
         while pointer[0] < len(self.schedule):
             want = self.schedule[pointer[0]]
             state = self.by_name[want].state
@@ -503,6 +559,8 @@ class Run:
             if chosen is None:
                 outcome = self._halt("schedule_divergence", f"schedule wants {wanted}, which is {states[wanted]}")
                 break
+            if source == "setup":
+                enabled = [chosen]  # nothing to explore: the operation commutes with every alternative
             self.decisions.append(Decision(len(self.decisions), enabled, blocked,
                                            [n for n, s in states.items() if s in ("finished", "errored")],
                                            wanted, chosen, source))
@@ -525,9 +583,11 @@ class Run:
                      raw_results={a.name: a.result for a in self.actors})
 
 
-def actor_connection_factory(conninfo: dict[str, Any], limits: Limits, *,
-                             search_path: str = "public") -> Callable[[], SteppedConnection]:
-    """Fresh SteppedConnections with explicit limits. Autocommit, so every transaction boundary is a gated call."""
+def actor_connection_factory(conninfo: dict[str, Any], limits: Limits, *, search_path: str = "public",
+                             autocommit: bool = True) -> Callable[[], SteppedConnection]:
+    """Fresh SteppedConnections with explicit limits. Autocommit by default, so every transaction boundary is a gated
+    call; ``autocommit=False`` is the DBAPI default a framework such as SQLAlchemy expects, and its implicit BEGIN is
+    part of the first gated execute of each transaction."""
     if not re.fullmatch(r"[a-z_][a-z0-9_]*", search_path):
         raise Refused("search_path must be a plain schema name")
     options = (f"-c statement_timeout={limits.statement_ms} -c lock_timeout={limits.lock_ms} "
@@ -535,7 +595,7 @@ def actor_connection_factory(conninfo: dict[str, Any], limits: Limits, *,
                f"-c idle_in_transaction_session_timeout={limits.idle_in_transaction_ms} -c search_path={search_path}")
 
     def connect() -> SteppedConnection:
-        conn = SteppedConnection.connect(**conninfo, autocommit=True, prepare_threshold=None,
+        conn = SteppedConnection.connect(**conninfo, autocommit=autocommit, prepare_threshold=None,
                                          cursor_factory=SteppedCursor, options=options,
                                          application_name="ds_mvp_actor")
         return conn
@@ -556,15 +616,18 @@ def explore(run_with: Callable[[list[str]], Trace], *, max_runs: int) -> tuple[l
     while frontier and len(traces) < max_runs:
         prefix = frontier.pop()
         trace = run_with(prefix)
-        key = tuple(trace.chosen)
+        # setup grants consume no schedule entry and have no alternative, so they are not schedule positions
+        points = [d for d in trace.decisions if d.source != "setup"]
+        chosen = [d.chosen for d in points]
+        key = tuple(chosen)
         if key in seen:
             continue
         seen.add(key)
         traces.append(trace)
-        for d in trace.decisions[len(prefix):]:
-            for alt in reversed(d.enabled):
-                if alt != d.chosen:
-                    frontier.append(list(trace.chosen[:d.index]) + [alt])
+        for i in range(len(prefix), len(points)):
+            for alt in reversed(points[i].enabled):
+                if alt != points[i].chosen:
+                    frontier.append(chosen[:i] + [alt])
     return traces, not frontier
 
 
