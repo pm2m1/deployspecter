@@ -1,0 +1,44 @@
+{
+ "manifest": "ds-real-app-corpus-shortlist",
+ "version": 1,
+ "status": "FROZEN_SELECTION_RULES_CANDIDATES_UNREVIEWED",
+ "frozen_on": "2026-11-05",
+ "purpose": "candidate open-source PostgreSQL applications for a future blind evaluation; no target-specific adapter exists yet",
+ "selection_rules": [
+  "open source under an OSI-approved licence, public repository not on GitLab",
+  "Python application or library whose own database path uses psycopg 3, shown by a declared dependency (not inferred from 'supports PostgreSQL')",
+  "has versioned schema migrations, so two application versions can face one schema",
+  "not one of the frozen protocol's held-out applications (saleor, healthchecks, netbox, authentik), whose sources stay unread",
+  "not one of its development applications (InvenTree, paperless-ngx, langgraph checkpoint-postgres, procrastinate), which are known to the developers",
+  "not GitLab-derived, and no confidential material",
+  "the historical version is the latest tagged release before 2026-11-05, chosen by that rule alone",
+  "the migration or backfill area is chosen from the migrations directory listing by a rule fixed before reading any of it; defect reports, fix commits and patches are never read before the blind evaluation"
+ ],
+ "evidence_method": "PyPI JSON metadata (requires_dist) or the repository's declared dependency file only; no source, migration, issue or commit was read",
+ "candidates": [
+  {"id": "chancy", "repository": "https://github.com/tktech/chancy", "pypi_version_checked": "0.26.0",
+   "licence": "not declared in PyPI metadata; to verify in the repository",
+   "driver_evidence": "requires_dist: psycopg[pool]>=3.2.1 (3.3.6 on Python 3.11)", "driver": "psycopg 3 (required)",
+   "framework": "none (job queue library)", "connection_management": "psycopg_pool (from the dependency); to verify",
+   "two_versions_feasible": "to verify", "migration_area": "TO_SELECT_BY_RULE", "status": "candidate"},
+  {"id": "pgqueuer", "repository": "https://github.com/janbjorge/pgqueuer/", "pypi_version_checked": "1.6.0",
+   "licence": "MIT", "driver_evidence": "requires_dist: psycopg>=3.2.0 and psycopg-pool>=3.2 under extra 'psycopg'; asyncpg under extra 'asyncpg'",
+   "driver": "psycopg 3 only when installed with the psycopg extra; the default path may be asyncpg",
+   "framework": "none (job queue library, async)", "connection_management": "to verify",
+   "two_versions_feasible": "to verify", "known_constraint": "async API: the prototype steps synchronous psycopg only",
+   "migration_area": "TO_SELECT_BY_RULE", "status": "candidate, async support needed"},
+  {"id": "plane", "repository": "https://github.com/makeplane/plane", "driver_evidence": "UNVERIFIED: the dependency files tried weren't at the expected paths",
+   "status": "unverified; may not enter until its driver is shown"}
+ ],
+ "excluded": [
+  {"id": "pretix", "reason": "declares psycopg2-binary (pyproject.toml, master), not psycopg 3"},
+  {"id": "zulip", "reason": "declares psycopg2 (pyproject.toml, main), not psycopg 3"},
+  {"id": "django-q2", "reason": "declares no PostgreSQL driver; the driver is the host project's choice"},
+  {"id": "dramatiq-pg", "reason": "hosted on GitLab; excluded by rule"},
+  {"id": "procrastinate", "reason": "a development application of the frozen protocol (requires psycopg[pool])"}
+ ],
+ "limitations": [
+  "three candidates is not a corpus; the shortlist must be extended under the same rules before any blind evaluation",
+  "the prototype supports synchronous psycopg 3 connections it constructs itself; framework and pool connection management is unsupported"
+ ]
+}
