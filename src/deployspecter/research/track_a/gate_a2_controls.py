@@ -125,20 +125,32 @@ def info_problems(name: str, info: Any, want: Mapping[str, str]) -> list[str]:
     return []
 
 
-def apply_harness_policy(box: Any, want: Mapping[str, str]) -> list[str]:
-    """Turn off automatic preparation on Gate 2A's admin and monitor sessions, before the supervisor uses them.
+def apply_harness_policy(box: Any, want: Mapping[str, str], *, reader_pid: int | None = None) -> list[str]:
+    """B5 option 1: turn off automatic preparation on Gate 2A's admin and monitor sessions, through psycopg's public
+    ``prepare_threshold`` property, after ``Sandbox`` returns and before the supervisor sends anything.
 
-    Sandbox opens them with psycopg's default (prepare after 5 executions), and the supervisor repeats statements
-    far more often than that, so a whole-batch audit would see "execute _pg3_N:" names. The attribute is psycopg's
-    public one; Gate 2A's code is unchanged. Proposed for review; nothing the command line reaches calls it yet.
+    Shown from the real code, not only fakes (tests/research_tracks/test_gate_a2_3.py): ``Sandbox.__init__`` assigns
+    the two public attributes once and sends three distinct statements on ``admin`` exactly once each, so psycopg's
+    default threshold (5) can't have prepared any; ``SupervisedRunner.__init__`` sends nothing and reads
+    ``self.box.admin`` at every call; and the property's setter is pure Python, so setting it sends nothing. Nothing
+    else is touched: no global psycopg setting, no replaced object, no patched method.
     """
-    problems = []
+    problems, pids = [], []
     for name in ("admin", "monitor"):
-        conn = getattr(box, name)
+        conn = getattr(box, name, None)
+        prop = getattr(type(conn), "prepare_threshold", None)
+        if conn is None or not isinstance(prop, property) or prop.fset is None:
+            problems.append(f"Gate 2A's {name} session has no supported prepare_threshold property")
+            continue
         conn.prepare_threshold = PREPARE_THRESHOLD
         if getattr(conn, "prepare_threshold", "unknown") is not PREPARE_THRESHOLD:
             problems.append(f"Gate 2A's {name} session would still prepare statements")
         problems += info_problems(f"Gate 2A's {name} session", conn.info, want)
+        pids.append(conn.info.backend_pid)
+    if len(pids) == 2 and pids[0] == pids[1]:
+        problems.append("Gate 2A's admin and monitor sessions are the same backend")
+    if reader_pid is not None and reader_pid in pids:
+        problems.append("a Gate 2A harness session is the Gate A2 reader's backend")
     return problems
 
 

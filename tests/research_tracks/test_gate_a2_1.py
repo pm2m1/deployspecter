@@ -38,7 +38,7 @@ from deployspecter.research.track_a import gate_a2_controls as c  # noqa: E402
 from deployspecter.research.track_a import parent_reconciliation as pr  # noqa: E402
 from deployspecter.research.track_a import pipeline as p  # noqa: E402
 
-MANIFEST = ROOT / "docs/research/live_stepping/track_a/execution_manifest_v4.json"
+MANIFEST = ROOT / "docs/research/live_stepping/track_a/execution_manifest_v5.json"
 A1_MANIFEST = ROOT / "docs/research/live_stepping/track_a/gate_a1_manifest.json"
 DRIVER = ROOT / "research_tools/gate_a2_run.py"
 CONTROLS = ROOT / "src/deployspecter/research/track_a/gate_a2_controls.py"
@@ -421,7 +421,7 @@ class TestTargetAndCredentialRefusals:
         (lambda m: m["client_connection_policy"].update(psycopg_prepare_threshold=5), "connection policy"),
         (lambda m: m["client_connection_policy"].pop("psycopg_prepare_threshold"), "connection policy"),
         (lambda m: m["safety_ceilings"]["session_options"].update(extra_float_digits=3), "extra_float_digits"),
-        (lambda m: m.update(version=3), "version 4"),
+        (lambda m: m.update(version=4), "version 5"),
         (lambda m: m.update(context="heldout_evaluation"), "synthetic"),
         (lambda m: m["variants"]["fixed"].update(lock_row=False), "variants"),
         (lambda m: m.pop("execution_blockers"), "execution blockers"),
@@ -463,11 +463,28 @@ class TestTargetAndCredentialRefusals:
 class TestPreparationPolicyRefusals:
     class Info:
         host, hostaddr, port, dbname, user = "127.0.0.1", "127.0.0.1", 55433, "deployspecter_test", "deployspecter"
+        backend_pid = 1
+
+    class Conn:
+        """Like psycopg's Connection: prepare_threshold is a property with a setter."""
+
+        def __init__(self, info):
+            self.info, self._threshold = info, 5
+
+        @property
+        def prepare_threshold(self):
+            return self._threshold
+
+        @prepare_threshold.setter
+        def prepare_threshold(self, value):
+            self._threshold = value
+
+    pids = iter(range(100, 10_000))
 
     def conn(self, **info):
-        holder = type("Info", (), {**{k: getattr(self.Info, k) for k in ("host", "hostaddr", "port", "dbname",
-                                                                          "user")}, **info})()
-        return type("Conn", (), {"prepare_threshold": 5, "info": holder})()
+        fields = {k: getattr(self.Info, k) for k in ("host", "hostaddr", "port", "dbname", "user")}
+        holder = type("Info", (), {**fields, "backend_pid": next(self.pids), **info})()
+        return self.Conn(holder)
 
     def test_the_harness_policy_turns_preparation_off_and_checks_the_target(self):
         box = type("Box", (), {})()

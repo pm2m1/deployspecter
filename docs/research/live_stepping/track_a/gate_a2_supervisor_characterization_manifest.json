@@ -1,0 +1,337 @@
+{
+ "package": "gate-a2-supervisor-characterization",
+ "version": 1,
+ "status": "WAITING_FOR_SEPARATE_EXECUTION_APPROVAL",
+ "scope": "supervisor_characterization_only",
+ "never_heldout_evidence": true,
+ "excludes": [
+  "Gate A2's buggy/fixed demonstration",
+  "exploration and replay",
+  "any oracle or score",
+  "any preregistered arm",
+  "plain_serial (no run id to bind)",
+  "model requests",
+  "real application repositories or confidential workloads",
+  "automatic retries"
+ ],
+ "purpose": "observe the existing frozen Gate 2A supervisor once, from PostgreSQL's log: whether the gate2a_audit template agrees with a real log, how integer-array parameters log, whether the reader boundary holds, and the role catalog around one supervised run",
+ "target": {
+  "host": "127.0.0.1",
+  "hostaddr": "127.0.0.1",
+  "port": "55433",
+  "database": "deployspecter_test",
+  "initial_database": "deployspecter",
+  "admin_user": "deployspecter",
+  "container_name": "deployspecter-live-pg",
+  "cluster_name": "ds_live_disposable",
+  "authentication_method": "scram-sha-256",
+  "server_version_major": 16,
+  "instance_binding": "the export's system_identifier and postmaster_start_time; the run batch must see the same values"
+ },
+ "forbidden_targets": [
+  {
+   "container": "deployspecter-pg",
+   "port": "55432",
+   "reason": "the protected development database: never connected to, never a fallback"
+  }
+ ],
+ "credential_source": {
+  "secret": "DATABASE_URL in the git-ignored .env, with only host, port, database, user and password",
+  "refused": [
+   "DATABASE_URL in the process environment",
+   "any other key in .env",
+   "any PG* libpq environment variable",
+   "a target other than the manifest's"
+  ]
+ },
+ "model_policy": {
+  "model_api_key": "absent from the environment and from .env; refused otherwise",
+  "refused_environment": "^(MODEL_\\w*|\\w*API_KEY\\w*|OPENAI_\\w*|ANTHROPIC_\\w*|META_AI_\\w*)$",
+  "refused_modules": [
+   "deployspecter.meta_client",
+   "deployspecter.guided",
+   "deployspecter.analyzer",
+   "deployspecter.api",
+   "deployspecter.cli",
+   "deployspecter.benchmark",
+   "deployspecter.pipeline",
+   "openai",
+   "anthropic",
+   "httpx"
+  ],
+  "gate2a_settings": "built from the fixed target with model_api_key=None"
+ },
+ "cluster": {
+  "image": "postgres:16@sha256:1beaa3084eee2676f20a9cd9928f0bf2c5bf674f8e49f81017912183d377c61c",
+  "server_settings": {
+   "cluster_name": "ds_live_disposable",
+   "logging_collector": "on",
+   "log_destination": "csvlog",
+   "log_directory": "log",
+   "log_filename": "ds.log",
+   "log_rotation_age": "0",
+   "log_rotation_size": "0",
+   "log_connections": "on",
+   "log_disconnections": "on",
+   "log_statement": "all",
+   "log_parameter_max_length": "-1",
+   "autovacuum": "off",
+   "max_prepared_transactions": "5"
+  },
+  "admin_user": "deployspecter",
+  "database": "deployspecter_test",
+  "prerequisite": "the test database deployspecter_test exists and is empty of ds_run and ds_char; the operator creates it once (section 2 of the approval document)",
+  "required_extra_settings": {
+   "log_duration": "off",
+   "log_min_duration_statement": "-1",
+   "log_min_duration_sample": "-1",
+   "log_transaction_sample_rate": "0"
+  },
+  "authentication_method": "scram-sha-256"
+ },
+ "container": {
+  "name": "deployspecter-live-pg",
+  "publish": "127.0.0.1:55433:5432",
+  "host": "127.0.0.1",
+  "port": "55433",
+  "tmpfs": "/var/lib/postgresql/data:rw,size=512m",
+  "memory": "1g",
+  "cpus": "2",
+  "pids_limit": "256",
+  "initial_database": "deployspecter",
+  "password": "operator-generated, exported as DS_PG_PASSWORD in the shell and in DATABASE_URL in the git-ignored .env; never written to evidence",
+  "note": "memory, cpus, pids-limit and the tmpfs size are additions to Gate 2A's accepted command; they bound resources and need confirming at container start"
+ },
+ "schema": {
+  "name": "ds_run",
+  "setup_sql_sha256": "3bb29d210ef4f54a2d5f37d5c9c9b9726a00ddc0e194f55655b6fabe0f39e272",
+  "setup_sql_source": "tests/live_app/reservations.py:SETUP_SQL",
+  "time_typed_columns": "none (enforced by evidence_binding.check_no_time_types on the pinned export)"
+ },
+ "state_checks": {
+  "repeats": 2,
+  "column_types": {
+   "events.id": "integer",
+   "events.capacity": "integer",
+   "events.reserved": "integer"
+  }
+ },
+ "initial_rows": {
+  "events": [
+   {
+    "id": 1,
+    "capacity": 3,
+    "reserved": 0
+   }
+  ],
+  "reservations": [],
+  "rejections": []
+ },
+ "parameter_log_model": {
+  "strings": "sent as text; logged as given, single quotes doubled",
+  "integers_booleans_floats": "sent in binary by psycopg 3 (Int2/Int4/Int8, Bool, Float binary dumpers); logged with the type's text output",
+  "float8": "shortest exact decimal (extra_float_digits=1, pinned in session_options): NaN, Infinity, -Infinity, '-0' for negative zero (observed), Python repr for non-integral finite values below 1e15 or in exponent form. Positive zero, integral values and 1e15 <= |x| < 1e16 have no established form and are refused before any SQL runs",
+  "observed_basis": "the third real run's op7b statements, tests/research_tracks/fixtures/gate_a1_v3_observed.csv"
+ },
+ "scenario": {
+  "application": "live_app.reservations (Gate 2A's own synthetic test application)",
+  "variant": "fixed",
+  "digest": "7ec485c2cc7abc583ed53e94280f1012ae8614fa1ef117bce66c7c679601e2c5",
+  "schedule": [
+   "a",
+   "b"
+  ],
+  "actors": [
+   "a",
+   "b"
+  ],
+  "seed_rows": 1,
+  "scored": false
+ },
+ "client_connection_policy": {
+  "psycopg_prepare_threshold": null,
+  "gate_a2_parent_sessions_and_readers": "Gate A1's RealEffects and SegmentEffects: prepare_threshold=None at connect, checked before use",
+  "gate2a_harness_admin_and_monitor": "prepare_threshold=None after Sandbox returns",
+  "gate2a_child_sessions": "already prepare_threshold=None in worker.py (frozen)",
+  "proof_boundary": "shown from the real frozen code and psycopg's real classes offline: Sandbox.__init__ sends three distinct statements on admin once each (none can be auto-prepared at psycopg's default threshold of 5) and none on monitor; SupervisedRunner.__init__ sends nothing; the property setter sends nothing. Whether the real log shows no prepared harness statement is what this run observes"
+ },
+ "b2_policy": {
+  "option": "A",
+  "for": "this characterization only",
+  "exception": "the supervisor's admin session runs CREATE ROLE and RESET log_statement with log_statement='none'; that interval is UNOBSERVABLE",
+  "observations": "reconciled read-only role-catalog reads (op0p, statement set op0p_role_catalog) in the reader segments before and after the sandbox bootstrap and the supervised call; never inside Gate 2A's protected window",
+  "permitted_claim": "the observed role-catalog states meet the stated before/after conditions, subject to what the catalog shows",
+  "limitations": [
+   "never proves the SQL or the temporary role's attributes inside the interval",
+   "a change made and undone inside the interval is undetectable",
+   "a clean final catalog is not proof of correct intermediate execution",
+   "the role's password or verifier is never observed"
+  ],
+  "option_b": "a separately reviewed supervisor revision (GATE_A2_2_SUPERVISOR_AUDIT.md section 4); not implemented"
+ },
+ "plain_serial": "refused",
+ "statement_sets_sha256": {
+  "op0p_preflight": "4369b10b23e75e0f235d45bc2acf8b88ced390006bd58622e1221afa58bf935f",
+  "op0r_reset_seeded": "0e7941c3ccf4cb113c57a8fc7ea36217e9f84226c60de8994f3f06f172dc9d3d",
+  "op6i_typed_check": "21c0adc4092aebedcb6a65986dd97c8504b6eb72df4d81b2da751d447d0caecd",
+  "op6f_typed_read": "f62920f83665594ca4990844783738779b42636a461538f243b6a151a0b21e60",
+  "op9c_cleanup": "a93015130513f01302bdeeacdbec77a6ac391cc132c91d55089880cd7bdc04da",
+  "gate2a_reset_model": "11eedd87725d5e0ffb011570a53acf638f666beca7e9b5ff94703ddcda3ff928",
+  "op0p_role_catalog": "3b85663660a9f39045a1eea2fe22465b01ef0e8085dbf3342a6f581369c7dedb"
+ },
+ "statement_counts": {
+  "op0p_preflight": 3,
+  "op0r_reset_seeded": 7,
+  "op6i_typed_check": 9,
+  "op6f_typed_read": 5,
+  "op9c_cleanup": 2,
+  "gate2a_reset_model": 10,
+  "op0p_role_catalog": 6
+ },
+ "gate2a_audit": {
+  "connectable_databases": [
+   "deployspecter",
+   "deployspecter_test",
+   "postgres",
+   "template1"
+  ],
+  "log_path": "log/ds.csv",
+  "tables": [
+   "events",
+   "rejections",
+   "reservations"
+  ],
+  "template_sha256": "14c8b42060d833fe7e5b5dd2e0f5560437c4a3981b16e4b8fabdb3bdf732ecc1",
+  "statuses": [
+   "VERIFIED",
+   "UNOBSERVABLE",
+   "REFUTED",
+   "INDETERMINATE",
+   "NOT_TESTED"
+  ],
+  "never_classified_all_sql_audited_while": "any claim is UNOBSERVABLE or NOT_TESTED",
+  "plain_serial": "refused by SegmentedRun: its result carries no run id or registered sessions"
+ },
+ "safety_ceilings": {
+  "batch_wall_clock_s": 600,
+  "session_options": {
+   "statement_timeout": 10000,
+   "lock_timeout": 3000,
+   "idle_in_transaction_session_timeout": 15000,
+   "extra_float_digits": 1
+  },
+  "log_wait_s": 5,
+  "backend_exit_wait_s": 5,
+  "gate2a": {
+   "LiveLimits": {
+    "statement_ms": 5000,
+    "lock_ms": 3000,
+    "deadlock_ms": 50,
+    "idle_in_transaction_ms": 15000,
+    "python_step_s": 5.0,
+    "run_s": 30.0
+   },
+   "SupervisorLimits": {
+    "handshake_s": 20.0,
+    "escalation_grace_s": 1.0,
+    "kill_wait_s": 5.0,
+    "db_call_s": 15.0,
+    "reset_lock_ms": 2000,
+    "reset_statement_ms": 10000,
+    "quiescence_s": 5.0,
+    "log_wait_s": 5.0
+   },
+   "confirmation_attempts": 125,
+   "exploration": {
+    "max_runs": 200,
+    "max_seconds": 120.0
+   },
+   "batch_wall_clock_s": 3600
+  }
+ },
+ "steps": [
+  "OP-1 operator: start a fresh disposable container and create deployspecter_test with Gate A1's reviewed commands (plan prints them); the driver runs no command",
+  "segment 0: op0p preflight (Gate A1's statements), op0p role catalog",
+  "gap 1: Sandbox construction from the fixed target; B5 option 1 on its admin and monitor sessions",
+  "segment 1: op0p role catalog; op0r seeded reset; op6i typed check; op6f typed read (verified initial digest)",
+  "gap 2: exactly one SupervisedRunner.run of the pinned scenario with schedule a, b",
+  "segment 2: op0p role catalog; op6f final read; op9c cleanup; whole-batch line completeness",
+  "OP-7 operator: copy the server log for the evidence, then docker stop deployspecter-live-pg"
+ ],
+ "expected_results": {
+  "VERIFIED": "every admin template phase except role creation, matched exactly; reader boundaries in both gaps; child sessions and Gate 2A's own reconciliation; the log-derived seed equals the manifest's initial_rows; snapshot ordering; the supervisor's initial snapshot equals the verified digest; the final read equals the supervisor's final snapshot; the role-catalog before/after conditions; the unlogged interval bounded by consecutive admin log lines; line completeness",
+  "UNOBSERVABLE": "role creation (B2); the snapshot values; the state between the snapshot and the worker; the run role inside the interval; what the runner-role DO block executed; container start, initdb and the operator's CREATE DATABASE",
+  "REFUTED": "any deviation from the template, an unattributed session, a prepared harness statement, a reader present at the sweep, a residual role, membership, setting or privilege, or a final read that disagrees",
+  "INDETERMINATE": "a stopped call, a missing observation or marker, an incomplete flush",
+  "NOT_TESTED": "after this run: Option A's catalog checks across more than one run, Option B, plain_serial attribution, the DROP/ALTER path of the prepared-name model",
+  "separation": "log-template agreement (what the admin session sent) is reported separately from database state (what the reconciled parent reads saw); neither stands in for the other"
+ },
+ "stop_conditions": [
+  "any refused precondition (model credential, libpq variable, credential source, target)",
+  "a preflight problem",
+  "any parent session that doesn't reconcile",
+  "any segment batch audit failing",
+  "the B5 policy failing on either harness session",
+  "any REFUTED or INDETERMINATE claim in a gap",
+  "the Gate 2A call raising or being flagged",
+  "an operator interrupt (recorded as interrupted_stop)",
+  "the batch wall-clock ceiling"
+ ],
+ "on_stop": "one read-only role-catalog observation from the new segment, then the coverage record, then failure.json; nothing is retried; the operator stops the container",
+ "artifacts_root": "docs/research/live_stepping/evidence/gate_a2_supervisor",
+ "artifacts": [
+  "approval.json (byte-for-byte)",
+  "approval_provenance.json",
+  "preflight.json",
+  "parent_reconciliation_segment_000.json to _002.json",
+  "batch_audit_segment_000.json to _002.json",
+  "construction.json",
+  "gate2a_coverage.json (claims, role catalog, B2 interval, calls, segments)",
+  "trace_summary.json",
+  "summary.json",
+  "failure.json (on any stop)",
+  "operator_server_log_copy.csv (copied by the operator)"
+ ],
+ "secret_handling": [
+  "the password lives only in the git-ignored .env as DATABASE_URL",
+  "MODEL_API_KEY and every PG* variable absent",
+  "no evidence file may contain the password; the operator checks after the run",
+  "the run role's verifier is generated by Gate 2A and kept out of the log by B2's interval"
+ ],
+ "teardown": [
+  "docker stop deployspecter-live-pg (the container was started with --rm, tmpfs storage)",
+  "remove .env",
+  "confirm port 55433 is free and deployspecter-pg (55432) untouched"
+ ],
+ "approval": {
+  "phase": "gate_a2_supervisor_characterization",
+  "requirement": "a new approval file naming this manifest's SHA-256 and the phase, signed by the owner with their SSH key and checked against allowed_signers; no earlier approval is valid"
+ },
+ "source_sha256": {
+  "research_tools/gate_a2_supervisor_characterize.py": "4214c8a6c99dc347953cc416cccbb9900713591162db694cd0cd74da94b5a256",
+  "research_tools/gate_a2_run.py": "31ce3ef6cc39b472fcc568ad5edbc05b09e5737f6701498c5e899232eaad9d32",
+  "research_tools/gate_a1_characterize.py": "128caa6d1d306ccd77411844e8c3b79b2bde1c13c0a9ed7ac65b94c8317e79bb",
+  "research_tools/track_a_run.py": "eb4c82bd77c3a1316d826c387d6732d124317b53021e32bd2ea84bb5b6d013ed",
+  "src/deployspecter/research/track_a/gate_a2_controls.py": "6cad55919864828db93c5b1e456ea04f2ddb83924642a71562361a7388cf328f",
+  "src/deployspecter/research/track_a/gate2a_audit.py": "3f2193d9087aea635b9e36dd7b91745a5fb486a38d76d8c41a749b8f46131e0d",
+  "src/deployspecter/research/track_a/gate2a_role_catalog.py": "6065a2d1b04085ae6c2f22b3603c14b7434e5ff4d3c188b258811edce874317a",
+  "src/deployspecter/research/track_a/gate2a_prepare_model.py": "30d4052bd1ee2ab4dc6cc023311cd51aa1fff4c271e4f4e6ec60ab952e700a44",
+  "src/deployspecter/research/track_a/characterization.py": "fdb2aa3fc4e48f73a2a9e8d267a31a9e10f05728515cf844a31a5978a2045ad4",
+  "src/deployspecter/research/track_a/parent_reconciliation.py": "ce2a14ef73a3b6251393efc73efc23f1f9812e84d296c28d693eef4e7ad64db6",
+  "src/deployspecter/research/track_a/catalog_export.py": "ab59af7ac920f45d022354559fd130bda5128dbde0229200065474739a66cb2e",
+  "src/deployspecter/research/track_a/evidence_binding.py": "770b77b7dc853c37e8b6cb169444a1538643bf2d03f465b0ab8bd546315dda16",
+  "src/deployspecter/research/track_a/pipeline.py": "1e3b07e50a3918ee29b894ecb26d95868b407a48e4419ed704737cdf0c5ec1af",
+  "src/deployspecter/research/track_a/scenario.py": "710d65e0f3fea9e7b5ce126b73e6ea70a0c693cf0e140cc29707e8a2080e2006",
+  "tests/live_app/reservations.py": "8d60890d642253f4bf2672d7d48d97e8341930840791e4bacd1b6a0eba8661c1",
+  "src/deployspecter/live/supervisor.py": "9d5119d083589172692cdd930300db3a6047b9f3250c90d09e75dba44e05b242",
+  "src/deployspecter/live/worker.py": "70be127f660f411f256e380eb746421cfcdf4b2e170445fb2284a9de6605f8e5",
+  "src/deployspecter/live/serverlog.py": "4b9dfadecda057c835111f8a1a12166bcbeba16bef798ce8a061aaa46c5c80fa",
+  "src/deployspecter/live/runner.py": "73f0df69f78ed38abcd167259094831675f1a4feaba0d97688802aa367504501",
+  "src/deployspecter/live/trace.py": "f49021cd2a959c18a24eb2fef8e2bc455c4aa5848dfcc304f35652db54694819",
+  "src/deployspecter/live/explore.py": "823f40ecc6bccfd4a19bd6606b64393cb5228dacaea35467de1d4c7c619800d4",
+  "src/deployspecter/live/driver.py": "605771d15555084cf2c339d274cb49ec3d294d797e691c922d22a0f7a678f97a",
+  "src/deployspecter/database.py": "a9f1b849bbc3e458be6d4d63a1271edd8fb5873ca237de513512272a31096b3d",
+  "src/deployspecter/config.py": "88035f01d1ec15dee7f0ab74619f8794f45e946b747841b63d1ce57aea9fd686",
+  "src/deployspecter/models.py": "e6457de745a68e6d6e71a53c6f69904aaa1806a5606955c83f3e9c9201d5740e"
+ }
+}

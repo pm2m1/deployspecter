@@ -42,7 +42,7 @@ from deployspecter.research.track_a import gate_a2_controls as c  # noqa: E402
 from deployspecter.research.track_a import parent_reconciliation as pr  # noqa: E402
 from deployspecter.research.track_a import pipeline as p  # noqa: E402
 
-MANIFEST = ROOT / "docs/research/live_stepping/track_a/execution_manifest_v4.json"
+MANIFEST = ROOT / "docs/research/live_stepping/track_a/execution_manifest_v5.json"
 V2_LOG = ROOT / "tests/research_tracks/fixtures/gate_a1_v2_observed.csv"
 URL = "postgresql://deployspecter:s3cret@127.0.0.1:55433/deployspecter"
 INITIAL = {"events": [{"id": 1, "capacity": 3, "reserved": 0}], "rejections": [], "reservations": []}
@@ -126,12 +126,10 @@ class Batch:
 
     def construct(self):
         kw = c.connection_keywords(conninfo_to_dict(URL), self.m)
-        box = Sandbox(c.harness_settings(kw))
-        if self.harness_policy:
-            assert c.apply_harness_policy(box, kw["test"]) == []
-        return box
+        return Sandbox(c.harness_settings(kw))  # SegmentedRun.bootstrap applies B5 option 1 itself
 
     def bootstrap(self):
+        self.seg.observe_roles("before the sandbox bootstrap")
         box = self.seg.bootstrap(self.construct)
         g = self.m["safety_ceilings"]["gate2a"]
         self.runner = SupervisedRunner(box, LiveLimits(**g["LiveLimits"]),
@@ -301,8 +299,10 @@ class TestFaultsThroughTheFrozenSupervisor:
         b.server.faults.add("incomplete_flush")
         refused(b.bootstrap, "incomplete flush")
 
-    def test_default_preparation_on_the_harness_is_refuted(self, monkeypatch, tmp_path):
-        b = Batch(monkeypatch, tmp_path, harness_policy=False)
+    def test_a_harness_session_that_keeps_preparing_is_still_refuted_by_the_matcher(self, monkeypatch, tmp_path):
+        """A connection whose property reports None but still prepares passes the policy check; the matcher, which
+        allowlists no prepared name, is the backstop."""
+        b = Batch(monkeypatch, tmp_path, "prepare_ignored")
         b.bootstrap()
         refused(b.gate2a, r"prepared-statement name: execute _pg3_0 \(B5\)")
 
@@ -414,10 +414,11 @@ class TestTheBlockedBoundary:
         with pytest.raises(drv.DriverRefused, match="whole-batch audit"):
             drv.require_executable(lifted, "run")
 
-    def test_the_v4_driver_refuses_the_v3_manifest(self):
-        v3 = ROOT / "docs/research/live_stepping/track_a/execution_manifest_v3.json"
-        with pytest.raises(drv.DriverRefused, match="version 4"):
-            drv.load_manifest(v3, hashlib.sha256(v3.read_bytes()).hexdigest())
+    def test_the_current_driver_refuses_the_older_manifests(self):
+        for old in ("v3", "v4"):
+            path = ROOT / f"docs/research/live_stepping/track_a/execution_manifest_{old}.json"
+            with pytest.raises(drv.DriverRefused, match="version 5"):
+                drv.load_manifest(path, hashlib.sha256(path.read_bytes()).hexdigest())
 
     def test_the_manifest_needs_the_audit_inputs(self, tmp_path):
         data = json.loads(MANIFEST.read_text())
@@ -427,7 +428,7 @@ class TestTheBlockedBoundary:
         with pytest.raises(drv.DriverRefused, match="Gate 2A audit's databases and log path"):
             drv.load_manifest(path, hashlib.sha256(path.read_bytes()).hexdigest())
 
-    def test_the_v4_manifest_pins_its_sources(self):
+    def test_the_current_manifest_pins_its_sources(self):
         m = manifest()
         a1.a2.verify_sources(m)
         assert {"src/deployspecter/research/track_a/gate2a_audit.py",

@@ -652,8 +652,8 @@ def standing_claims(cov: Coverage) -> None:
             "no Gate 2A run has been made under Gate A2's reader; the template is checked against frozen code only")
     cov.add("batch", "integer-array parameters log as '{a,b}'", NOT_TESTED,
             "Gate A1 characterized scalars only; arrays come from psycopg's text dumper and aren't characterized")
-    cov.add("batch", "role catalog before and after each run (option A)", NOT_TESTED,
-            "proposed, not implemented")
+    cov.add("batch", "option A's role-catalog observations against a real cluster", NOT_TESTED,
+            "implemented and tested only with fakes; the catalog queries haven't run on PostgreSQL 16")
 
 
 # ------------------------------------------------------------------ gaps between reader segments (B3, B6)
@@ -850,8 +850,9 @@ def audit_bootstrap_gap(rows: list[Row], *, index: int, prev_reader: str | None,
             "; ".join(dict.fromkeys(problems)) if problems else
             "ensure_test_database's existence check and runner-role DO block, the admin session's advisory lock, "
             "the monitor's connection: exactly the template")
-    cov.add(scope, "the runner role's attributes after the DO block", UNOBSERVABLE,
-            "a DO block logs as one statement; whether it created deployspecter_runner, and how, isn't logged")
+    cov.add(scope, "what the runner-role DO block executed", UNOBSERVABLE,
+            "a DO block logs as one statement; whether it created deployspecter_runner, and how, isn't logged (the "
+            "role's state afterwards is read from the catalog, in the next segment)")
     cov.add(scope, "container start, initdb and the operator's CREATE DATABASE", UNOBSERVABLE,
             "before the batch's first log position; outside the log this audit reads")
     readers = _reader_boundaries(scope, by, prev_reader, next_reader,

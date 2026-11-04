@@ -1,4 +1,4 @@
-"""Gate A2 driver with the Gate A2.1 and A2.2 controls (manifest version 4). Research-only. NOT EXECUTABLE.
+"""Gate A2 driver with the Gate A2.1 and A2.2 controls (manifest version 5). Research-only. NOT EXECUTABLE.
 
     plan     print the steps and the execution blockers; touches nothing
     export   the reconciled export batch; refused while the manifest lists execution blockers
@@ -40,7 +40,7 @@ import gate_a1_characterize as a1  # noqa: E402  (the verified Gate A1 batch, re
 ROOT = a1.ROOT
 v2 = a1.a2  # track_a_run: manifest digest, approval and evidence helpers, unchanged
 MANIFEST = "gate-a2-execution-manifest"
-VERSION = 4
+VERSION = 5
 APPLICATION = "reservations"
 LOCK_BY_VARIANT = {"buggy": False, "fixed": True}
 # The Gate 2A section (serial references, exploration, confirmation, batch-end export) isn't wired to the command line.
@@ -350,24 +350,40 @@ def gate2a_context(trace: Any, *, mode: str, scenario: Any, manifest: Mapping[st
 class SegmentedRun:
     """Gate A1 batches as reader segments, with each Gate 2A call in the gap between two of them.
 
-    * Before a call, the current segment closes (its end marker, Gate A1's audit of it) and its reader disconnects,
-      so no Gate A2 session can be present at the supervisor's outside-session sweep or during its run.
-    * After the call returns or raises, a new reader connects and starts a new segment. It reads the log from the
-      batch's first byte offset, carried forward explicitly, until its own start marker is there (bounded wait).
-    * The gap between the two segments is audited: the old reader's disconnection before Gate 2A's first statement,
-      the new reader's connection after its last, the admin session against the template, children inside their
-      run's window, and nothing unattributed. A call that raised, or a gap that doesn't verify, stops the batch.
+    The timeline of one call:
+
+    1. A reconciled role-catalog observation in the current segment (B2 option A, "before").
+    2. The segment closes (its end marker, then Gate A1's audit of it) and its reader disconnects.
+    3. Gate 2A runs: its outside-session sweep, reset, snapshot, role, child, teardown and its own log reconciliation.
+       No Gate A2 session exists until the call returns or raises.
+    4. A new reader connects and starts the next segment. It reads the log from the batch's first byte offset, carried
+       forward explicitly, until its own start marker is in a complete log (bounded wait).
+    5. The gap is audited (gate2a_audit); then a role-catalog observation ("after") is judged against step 1.
+
+    Each call ends as completed (a scoreable trace and a verified gap), flagged (a trace Gate 2A flagged), failed (the
+    call raised) or interrupted_unknown_effects (an operator's interrupt). Anything but completed stops the batch:
+    after a read-only "after" observation and a coverage record, never a retry.
     """
 
     def __init__(self, effects: Any, manifest: Mapping[str, Any], evidence: Any) -> None:
         from deployspecter.research.track_a import gate2a_audit as ga
+        from deployspecter.research.track_a import gate2a_role_catalog as rc
 
-        self.ga, self.effects, self.manifest, self.evidence = ga, effects, manifest, evidence
+        self.ga, self.rc, self.effects, self.manifest, self.evidence = ga, rc, effects, manifest, evidence
         self.coverage = ga.Coverage()
         self.segments: list[dict[str, Any]] = []
+        self.calls: list[dict[str, Any]] = []
+        self.roles: dict[str, Any] = {}
+        self.contracts: list[dict[str, Any]] = []
+        self.last_roles: Any = None
         self.harness: Any = None
         self.first_run = True
-        effects.log_position("whole")  # the batch's one offset; every later reader starts from it
+        self.stopped: str | None = None
+        from deployspecter.live.serverlog import LogUnverified
+        try:
+            effects.log_position("whole")  # the batch's one offset; every later reader starts from it
+        except LogUnverified as exc:
+            raise DriverRefused(f"the batch log has no position to start from: {exc}") from None
         self.current = self.new_segment(0)
 
     def new_segment(self, k: int) -> ParentBatch:
@@ -379,6 +395,14 @@ class SegmentedRun:
     def run(self, name: str, statements: list[tuple[str, tuple]]) -> Any:
         return self.current.run(name, statements)
 
+    def observe_roles(self, label: str) -> Any:
+        """A reconciled, read-only role-catalog read in the current segment; never inside Gate 2A's window."""
+        rc = self.rc
+        observation = self.op(rc.OP, rc.statements(), lambda conn: rc.read(conn, label))
+        self.roles[label] = observation
+        self.last_roles = observation
+        return observation
+
     def close_segment(self) -> None:
         self.current.close()
         self.segments.append({"start": self.current.start, "end": self.current.end,
@@ -386,6 +410,7 @@ class SegmentedRun:
         self.effects.reader_close()
 
     def reopen_and_read(self) -> list[Any]:
+        from deployspecter.live.serverlog import LogUnverified
         try:
             self.effects.reader_open()
         except Exception as exc:
@@ -398,6 +423,8 @@ class SegmentedRun:
                 rows = self.ga.parse_log(self.effects.log_read("whole"))
             except self.ga.AuditError:
                 rows = []  # a row still being written
+            except LogUnverified as exc:
+                raise DriverRefused(f"the batch log can't be read from its offset: {exc}") from None
             if any(r.message == f"statement: SELECT '{self.current.start}'" for r in rows):
                 return rows
             if a1.time.monotonic() >= until:
@@ -416,30 +443,65 @@ class SegmentedRun:
             raise DriverRefused("the segment boundaries are out of order in the log")
         return [r for r in rows if after.start < r.start < before.start], before.session
 
+    def role_conditions(self, hardened_after: bool) -> Any:
+        return self.rc.Conditions(self.manifest["target"]["admin_user"],
+                                  self.manifest["gate2a_audit"]["connectable_databases"], hardened_after)
+
     def bootstrap(self, construct: Callable[[], Any]) -> Any:
-        """Construct Gate 2A's Sandbox (and runner) in a gap of its own, then audit what that logged (B6)."""
+        """Construct Gate 2A's Sandbox in a gap of its own, apply B5 option 1 to it, then audit what that logged (B6).
+        A role-catalog observation before it is required, and one after it is judged against it."""
+        c = _controls()
+        if self.last_roles is None:
+            raise DriverRefused("no role-catalog observation was made before the sandbox bootstrap")
+        before = self.last_roles
         self.close_segment()
-        box = construct()
-        self.harness = self.ga.Harness(box.admin.info.backend_pid, box.monitor.info.backend_pid,
-                                       self.manifest["target"]["admin_user"], self.manifest["target"]["database"],
-                                       self.manifest["target"]["initial_database"])
+        box, raised = None, None
+        try:
+            box = construct()
+            want = {**{k: self.manifest["target"][k] for k in ("host", "hostaddr", "port")},
+                    "dbname": self.manifest["target"]["database"], "user": self.manifest["target"]["admin_user"]}
+            problems = c.apply_harness_policy(box, want)
+            if problems:
+                raise DriverRefused("B5 preparation policy: " + "; ".join(problems))
+            self.harness = self.ga.Harness(box.admin.info.backend_pid, box.monitor.info.backend_pid,
+                                           self.manifest["target"]["admin_user"],
+                                           self.manifest["target"]["database"],
+                                           self.manifest["target"]["initial_database"])
+        except BaseException as exc:
+            raised = exc
         rows = self.reopen_and_read()
         gap, next_reader = self.gap_rows(rows)
         cov = self.ga.Coverage()
+        if raised is not None:
+            cov.add(f"gap {len(self.segments)} (sandbox bootstrap)", "the sandbox was constructed", self.ga.REFUTED
+                    if isinstance(raised, DriverRefused) else self.ga.INDETERMINATE, f"{type(raised).__name__}: "
+                    f"{str(raised)[:200]}")
+            self.calls.append({"call": "bootstrap", "outcome": "failed" if isinstance(raised, Exception)
+                               else "interrupted_unknown_effects", "error": type(raised).__name__})
+            if box is not None:
+                getattr(box, "close", lambda: None)()
+            self.stop_call(cov, raised, "the sandbox bootstrap")
         self.ga.audit_bootstrap_gap(gap, index=len(self.segments), prev_reader=self.segments[-1]["reader"],
                                     next_reader=next_reader, harness=self.harness, cov=cov)
+        after = self.observe_roles("after the sandbox bootstrap")
+        self.rc.judge_bootstrap(before, after, self.role_conditions(False), f"gap {len(self.segments)} (sandbox "
+                                "bootstrap)", cov)
+        self.calls.append({"call": "bootstrap", "outcome": "completed" if not cov.fails_closed else "refused"})
         self.conclude(cov, "the sandbox bootstrap")
         return box
 
     def gate2a(self, call: Callable[[], Any], *, mode: str, scenario: Any,
                verified_initial_digest: str | None) -> Any:
-        """One Gate 2A call (``runner.run`` or ``runner.plain_serial``) in its own gap. Never retried."""
+        """One Gate 2A call (``runner.run``) in its own gap. Never retried."""
         if self.harness is None:
             raise DriverRefused("Gate 2A's sandbox wasn't constructed in an audited gap")
         if mode != "stepped":
             # plain_serial's public result has no run id and no registered sessions, so its gap could only be bound
             # to a run id read from the log being audited. Refused, not weakened.
             raise DriverRefused("a plain_serial call can't be bound to a supervisor-reported run id")
+        if self.last_roles is None:
+            raise DriverRefused("no role-catalog observation was made before the Gate 2A call")
+        before, hardened = self.last_roles, self.first_run
         self.close_segment()
         trace, error, raised = None, None, None
         try:
@@ -459,21 +521,53 @@ class SegmentedRun:
             flag_kinds=() if trace is None else tuple(f.kind for f in trace.evidence.flags), halted=halted,
             trace_initial=None if trace is None else trace.initial_state,
             verified_initial_digest=verified_initial_digest)
-        self.ga.audit_run_gap(gap, index=len(self.segments), prev_reader=self.segments[-1]["reader"],
-                              next_reader=next_reader, harness=self.harness, call=call_record, cov=cov)
-        if raised is not None:
-            self.coverage.extend(cov)
-            if not isinstance(raised, Exception):
-                raise raised  # an operator's interrupt stays one, so the failure record says so
-            raise DriverRefused(f"the Gate 2A call raised {error}; the batch stops, nothing is retried") from None
+        admin = self.ga.audit_run_gap(gap, index=len(self.segments), prev_reader=self.segments[-1]["reader"],
+                                      next_reader=next_reader, harness=self.harness, call=call_record, cov=cov)
+        if admin is not None:
+            self.contracts.append(self.rc.interval_contract(admin, cov))
+        outcome = ("interrupted_unknown_effects" if raised is not None and not isinstance(raised, Exception)
+                   else "failed" if raised is not None
+                   else "flagged" if trace.evidence.flags or not trace.scoreable else "completed")
+        self.calls.append({"call": f"gate2a {len(self.calls)}", "outcome": outcome, "error": error,
+                           "run_id": None if trace is None else trace.evidence.run_id})
+        if raised is not None or outcome != "completed" or cov.fails_closed:
+            self.stop_call(cov, raised, "a Gate 2A call", before=before, hardened=hardened)
+        after = self.observe_roles(f"after run {trace.evidence.run_id}")
+        self.rc.judge(before, after, self.role_conditions(hardened), f"run {trace.evidence.run_id}", cov)
         self.conclude(cov, "a Gate 2A call")
         return result
 
-    def conclude(self, cov: Any, what: str) -> None:
+    def stop_call(self, cov: Any, raised: BaseException | None, what: str, *, before: Any = None,
+              hardened: bool = False) -> None:
+        """Keep the evidence of a stopped call: one read-only role-catalog observation from the new segment (it may
+        show a role an interrupted teardown left behind), the coverage so far, then refuse. Nothing is retried."""
+        after = None
+        try:
+            after = self.observe_roles(f"after a stopped {what}")
+        except Exception as exc:  # the observation itself failing stops nothing further; it is only recorded
+            cov.add("batch", "role catalog after the stop", self.ga.INDETERMINATE, f"{type(exc).__name__}")
+        if before is not None:
+            self.rc.judge(before, after, self.role_conditions(hardened), "after the stop", cov)
         self.coverage.extend(cov)
+        self.stopped = what
+        self.evidence.write("gate2a_coverage.json", self.report())
+        if raised is not None and (not isinstance(raised, Exception) or isinstance(raised, DriverRefused)):
+            raise raised  # an operator's interrupt stays one; a refusal keeps its own reason
+        if raised is not None:
+            raise DriverRefused(f"{what} raised {type(raised).__name__}; the batch stops, nothing is retried") \
+                from None
+        bad = [c for c in cov.claims if c.status in (self.ga.REFUTED, self.ga.INDETERMINATE)]
+        raise DriverRefused(f"{what} didn't verify: " + "; ".join(f"{c.claim}: {c.basis}" for c in bad[:3]))
+
+    def conclude(self, cov: Any, what: str) -> None:
         if cov.fails_closed:
-            bad = [c for c in cov.claims if c.status in (self.ga.REFUTED, self.ga.INDETERMINATE)]
-            raise DriverRefused(f"{what} didn't verify: " + "; ".join(f"{c.claim}: {c.basis}" for c in bad[:3]))
+            self.stop_call(cov, None, what)
+        self.coverage.extend(cov)
+
+    def report(self) -> dict[str, Any]:
+        return {"segments": self.segments, "calls": self.calls, "stopped": self.stopped,
+                "role_catalog": self.rc.observations_from(self.roles), "b2_interval": self.contracts,
+                **self.coverage.report()}
 
     def finish(self) -> dict[str, Any]:
         """Close the last segment, then check every session's line numbers across the whole batch."""
@@ -485,7 +579,7 @@ class SegmentedRun:
         last = self.ga.marker_row(rows, self.segments[-1]["end"])
         self.ga.line_completeness([r for r in rows if first.start <= r.start <= last.start], self.coverage)
         self.ga.standing_claims(self.coverage)
-        report = {"segments": self.segments, **self.coverage.report()}
+        report = self.report()
         self.evidence.write("gate2a_coverage.json", report)
         return report
 

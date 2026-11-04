@@ -25,13 +25,18 @@ from psycopg.conninfo import conninfo_to_dict
 from deployspecter.live import serverlog
 from deployspecter.live.supervisor import REQUIRED_SETTINGS, SupervisedRunner
 from deployspecter.live.trace import ActorResult, LiveTrace
+from deployspecter.research.track_a import characterization as ch
 from deployspecter.research.track_a import gate2a_audit as ga
 from deployspecter.research.track_a import gate2a_prepare_model as pm
+from deployspecter.research.track_a import gate2a_role_catalog as rc
 from deployspecter.research.track_a import parent_reconciliation as pr
 
 LOG_PATH = "log/ds.csv"
 ADMIN_USER, TEST_DB, INITIAL_DB = "deployspecter", "deployspecter_test", "deployspecter"
 DATABASES = ("postgres", "deployspecter", "deployspecter_test", "template1")
+RUNNER_ATTRS = dict(rc.RUNNER_ATTRIBUTES)
+ROLE_SQL = dict(rc.ROLE_CATALOG)
+ROLE_COLS = rc.ROLE_COLUMNS
 
 
 class Description:
@@ -95,7 +100,15 @@ class FakeServer:
         self.pid = 200
         self.sessions: dict[int, Session] = {}
         self.tables: dict[str, list[dict[str, Any]]] = {}
-        self.roles = {ADMIN_USER, "deployspecter_runner"}
+        # The role catalog, as pg_roles, pg_auth_members, pg_db_role_setting and pg_database.datacl would show it.
+        self.roles: dict[str, dict[str, Any]] = {ADMIN_USER: {**RUNNER_ATTRS, "rolsuper": True, "rolcreaterole": True,
+                                                              "rolcreatedb": True, "rolcanlogin": True,
+                                                              "rolreplication": True, "rolbypassrls": True}}
+        if "runner_role_preexists" in faults:
+            self.roles["deployspecter_runner"] = dict(RUNNER_ATTRS)
+        self.members: set[tuple[str, str]] = set()  # (role, member)
+        self.role_settings: dict[str, list[str]] = {}
+        self.acls: dict[str, str] = dict.fromkeys(DATABASES, "")  # '' is the default: PUBLIC may connect
         self.connections = 0
         self.inject: dict[str, list[str]] = {}  # after a statement text, an extra admin statement is logged
         self.suppress: set[str] = set()  # statements whose log row is lost
@@ -172,6 +185,48 @@ class FakeServer:
             return Cursor([(d,) for d in DATABASES])
         if text == ga.STALE_ROLES_SQL:
             return Cursor([(r,) for r in sorted(self.roles) if r.startswith("ds_run_")])
+        if text.startswith("DO $$ BEGIN") and "deployspecter_runner" in text:
+            if "deployspecter_runner" not in self.roles:
+                self.roles["deployspecter_runner"] = {**RUNNER_ATTRS, "rolcanlogin": "runner_role_wrong" in self.faults}
+            return Cursor([])
+        m = re.fullmatch(r'REVOKE ALL ON DATABASE "([a-z0-9_]+)" FROM PUBLIC', text)
+        if m:
+            self.acls[m.group(1)] = f"{{{ADMIN_USER}=CTc/{ADMIN_USER}}}"
+        m = re.fullmatch(r'GRANT CONNECT ON DATABASE "([a-z0-9_]+)" TO "([a-z0-9_]+)"', text)
+        if m:
+            acl = self.acls[m.group(1)] or f"{{{ADMIN_USER}=CTc/{ADMIN_USER}}}"
+            self.acls[m.group(1)] = acl[:-1] + f",{m.group(2)}=c/{ADMIN_USER}}}"
+        m = re.fullmatch(r'ALTER ROLE "([a-z0-9_]+)" SET "([a-z_]+)" = (.*)', text)
+        if m:
+            self.role_settings.setdefault(m.group(1), []).append(f"{m.group(2)}={m.group(3).strip(chr(39))}")
+        m = re.fullmatch(r'ALTER ROLE "([a-z0-9_]+)" NOLOGIN', text)
+        if m and m.group(1) in self.roles:
+            self.roles[m.group(1)]["rolcanlogin"] = False
+        m = re.fullmatch(r'DROP OWNED BY "([a-z0-9_]+)"', text)
+        if m and "residual_privilege" not in self.faults:
+            for db, acl in self.acls.items():
+                self.acls[db] = re.sub(rf",{m.group(1)}=[^,}}]*", "", acl)
+        if text == ROLE_SQL["roles"]:
+            return Cursor([(n, *(a[c] for c in ROLE_COLS)) for n, a in sorted(self.roles.items())])
+        if text == ROLE_SQL["memberships"]:
+            return Cursor(sorted((r, mem, False) for r, mem in self.members))
+        if text == ROLE_SQL["role_settings"]:
+            return Cursor(sorted(("", r, "{" + ",".join(v) + "}")
+                                 for r, v in self.role_settings.items()))
+        if text == ROLE_SQL["database_acls"]:
+            return Cursor(sorted(self.acls.items()))
+        if text == ch.PREFLIGHT[0]:
+            wrong = {"log_statement": "ddl"} if "preflight_bad" in self.faults else {}
+            return Cursor(sorted({**ch.EXPECTED_SETTINGS, **wrong}.items()))
+        if text == ch.PREFLIGHT[1]:
+            return Cursor([(0,)])
+        if text == ch.PREFLIGHT[2]:
+            return Cursor([(TEST_DB, ADMIN_USER, True, 160015)])
+        if text.startswith("SELECT md5("):
+            return Cursor([("d",)])
+        m = re.fullmatch(r'SELECT count\(\*\) FROM ds_run\."([a-z_]+)"( WHERE .*)?', text, re.S)
+        if m:
+            return Cursor([(1 if m.group(2) else len(self.tables.get(m.group(1), [])),)])
         if text == ga.ACTIVITY_SQL:
             excluded = set(params[0])
             return Cursor([(s.pid, s.user, s.db, s.app, "client backend", "") for s in list(self.sessions.values())
@@ -190,10 +245,13 @@ class FakeServer:
             self.tables = {"events": [], "reservations": [], "rejections": []}
         m = re.fullmatch(r'INSERT INTO "([a-z_]+)" \(([^)]*)\) VALUES \(.*\)', text)
         if m:
-            if "seed_fails" in self.faults:
+            if "seed_fails" in self.faults and conn.session.app == ga.HARNESS_APP:  # Gate 2A's reset only
                 raise psycopg.errors.UniqueViolation("simulated: duplicate key")
             cols = [c.strip().strip('"') for c in m.group(2).split(",")]
-            self.tables[m.group(1)].append(dict(zip(cols, params, strict=True)))
+            row = dict(zip(cols, params, strict=True))
+            if "parent_seed_differs" in self.faults and conn.session.app.startswith("ds_parent_op0r"):
+                row["reserved"] = 1
+            self.tables[m.group(1)].append(row)
         if text == ga.TABLES_SQL:
             return Cursor([(t,) for t in sorted(self.tables)])
         m = re.fullmatch(r'SELECT \* FROM "([a-z_]+)" ORDER BY 1', text)
@@ -221,14 +279,20 @@ class FakeServer:
             return Cursor([(m.group(1),)])
         if text == ga.COUNTER_SQL:
             return Cursor([(self.connections,)])
-        m = re.match(r'CREATE ROLE "([a-z0-9_]+)"', text)
+        m = re.match(r'CREATE ROLE "([a-z0-9_]+)" LOGIN .* CONNECTION LIMIT (\d+) IN ROLE "([a-z_]+)"', text)
         if m:
-            self.roles.add(m.group(1))
+            if "create_role_fails" in self.faults:
+                raise psycopg.errors.DuplicateObject("simulated: role already exists")
+            self.roles[m.group(1)] = {**RUNNER_ATTRS, "rolcanlogin": True, "rolconnlimit": int(m.group(2))}
+            self.members.add((m.group(3), m.group(1)))
         m = re.fullmatch(r'DROP ROLE "([a-z0-9_]+)"', text)
         if m:
             if "role_drop_fails" in self.faults:
                 raise psycopg.errors.DependentObjectsStillExist("simulated: role is still referenced")
-            self.roles.discard(m.group(1))
+            if "residual_role" not in self.faults:
+                self.roles.pop(m.group(1), None)
+                self.members = {(r, mem) for r, mem in self.members if mem != m.group(1)}
+                self.role_settings.pop(m.group(1), None)
         if text == ga.ROLE_COUNT_SQL:
             return Cursor([(int(params[0] in self.roles),)])
         if text == ga.REGISTRATION_SQL:
@@ -264,7 +328,8 @@ class FakeConn:
     @prepare_threshold.setter
     def prepare_threshold(self, value: int | None) -> None:
         self._threshold = value
-        self.prep.manager.prepare_threshold = value
+        if "prepare_ignored" not in self.server.faults:  # a lying connection: reports None, keeps preparing
+            self.prep.manager.prepare_threshold = value
 
     @property
     def closed(self) -> bool:
@@ -365,6 +430,12 @@ class FakeProc:
         if line.strip() != "go" or self.behaviour == "timeout" or self.finished:
             return
         self.finished = True
+        if self.behaviour == "worker_fails":  # the worker reports its own failure, as worker.main does
+            for conn in [*self.actors.values(), self.monitor]:
+                conn.close()
+            self.send({"type": "failed", "error": "RuntimeError", "detail": "simulated application failure"})
+            self.kill()
+            return
         for conn in [*self.actors.values(), self.monitor]:
             if conn.session.pid not in self.server.unkillable:  # a lingering session outlives the child
                 conn.close()
