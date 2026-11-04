@@ -44,6 +44,8 @@ DISCONNECTED = re.compile(r"^disconnection: session time: \d+:\d{2}:\d{2}\.\d{3}
                           r"user=(\S+) database=(\S+) host=(\S+) port=(\d+)$")
 AUTH_METHODS = frozenset({"scram-sha-256"})
 
+UNNAMED = ("statement: ", "execute <unnamed>: ")  # how statements log when the client prepares nothing
+
 LOG_READER_APP = "ds_parent_log_reader"
 READER_POLL = "SELECT count(*) FROM pg_stat_activity WHERE application_name = $1"
 
@@ -160,7 +162,8 @@ def reader_session(start_row: list[str], end_row: list[str], *, user: str, datab
 
 def reconcile_parent_session(rows: list[list[str]], *, tag: str, expected: tuple[ExpectedStatement, ...],
                              user: str, database: str, authentication: str | None = None,
-                             reader: ReaderSession | None = None, reader_poll_limit: int = 0) -> ParentReconciliation:
+                             reader: ReaderSession | None = None, reader_poll_limit: int = 0,
+                             unnamed_only: bool = False) -> ParentReconciliation:
     """Reconcile one tagged parent session from the rows strictly between its markers.
 
     ``authentication``: the one method the session must authenticate with. When None, an authentication record is
@@ -168,6 +171,8 @@ def reconcile_parent_session(rows: list[list[str]], *, tag: str, expected: tuple
     ``reader``: the established log-reader session. Only it may appear besides the tagged session and background
     processes, and only issuing the exact end-of-session poll for this tag, after the session's work, at most
     ``reader_poll_limit`` times, on consecutive session lines from the start marker to the end marker.
+    ``unnamed_only``: the client disabled automatic preparation, so a statement logged under a prepared-statement name
+    ("execute _pg3_0:" and the like) means the connection isn't the one that was reviewed, and fails.
     """
     out = ParentReconciliation(ok=False)
     if not TAG.match(tag):
@@ -245,6 +250,9 @@ def reconcile_parent_session(rows: list[list[str]], *, tag: str, expected: tuple
     unexplained = [r[MESSAGE][:60] for r, (m, _d) in zip(body, statements, strict=True) if not m]
     if unexplained:
         out.problems.append(f"unexplained session rows: {unexplained[:3]}")
+    named = [r for r, (m, _d) in zip(body, statements, strict=True) if m and not r[MESSAGE].startswith(UNNAMED)]
+    if unnamed_only and named:
+        out.problems.append("a statement was logged under a prepared-statement name")
 
     if reader is not None:
         last_work = mine_at[-2] if len(mine_at) >= 2 else len(rows)  # the session's last row before disconnecting

@@ -30,7 +30,11 @@ import track_a_run as a2  # noqa: E402  (reuses only its manifest, approval and 
 
 ROOT = a2.ROOT
 PACKAGE = "gate-a1-characterization"
-VERSION = 2
+VERSION = 3
+# psycopg 3 prepares a query once a connection has run it prepare_threshold (default 5) times, and the server then logs
+# it as "execute _pg3_N:" (seen in the second real run). Gate A1's own connections disable that, so every statement is
+# logged as "statement:" or "execute <unnamed>:". The manifest must declare the same policy.
+PREPARE_THRESHOLD = None
 POLL_INTERVAL_S = 0.05  # wait_gone's poll interval; with backend_exit_wait_s it bounds the polls per window
 DriverRefused = a2.DriverRefused
 
@@ -51,7 +55,17 @@ def load_package(path: Path, expected_sha256: str) -> dict[str, Any]:
         raise DriverRefused(f"not a version {VERSION} Gate A1 manifest")
     if package.get("scope") != "characterization_only" or package.get("never_heldout_evidence") is not True:
         raise DriverRefused("Gate A1 is characterization only")
+    policy = package.get("client_connection_policy")
+    if not isinstance(policy, dict) or "psycopg_prepare_threshold" not in policy \
+            or policy["psycopg_prepare_threshold"] is not PREPARE_THRESHOLD:
+        raise DriverRefused("the manifest doesn't declare Gate A1's connection policy (automatic preparation off)")
     return package
+
+
+def require_unprepared(conn: Any) -> None:
+    """Refuse a connection on which psycopg could still prepare statements automatically."""
+    if getattr(conn, "prepare_threshold", "unknown") is not PREPARE_THRESHOLD:
+        raise DriverRefused("a Gate A1 connection has automatic statement preparation enabled")
 
 
 def reader_poll_limit(package: dict[str, Any]) -> int:
@@ -99,7 +113,8 @@ class Batch:
         rec = pr.reconcile_parent_session(rows, tag=tag, expected=expected, user=self.package["cluster"]["admin_user"],
                                           database=database,
                                           authentication=self.package["cluster"]["authentication_method"],
-                                          reader=reader, reader_poll_limit=reader_poll_limit(self.package))
+                                          reader=reader, reader_poll_limit=reader_poll_limit(self.package),
+                                          unnamed_only=True)
         record = {"op": name, "tag": tag, "ok": rec.ok, "problems": rec.problems, "statements": rec.statements_seen}
         self.records.append(record)
         self.tags.add(tag)
@@ -259,8 +274,13 @@ class RealEffects:  # pragma: no cover - never constructed in tests; needs an ap
             raise DriverRefused(str(exc)) from None
         timeouts = package["safety_ceilings"]["session_options"]
         self.options = " ".join(f"-c {k}={v}" for k, v in timeouts.items())
-        self.log_conn = psycopg.connect(**self.target, autocommit=True,
+        self.log_conn = psycopg.connect(**self.target, autocommit=True, prepare_threshold=PREPARE_THRESHOLD,
                                         application_name="ds_parent_log_reader", options=self.options)
+        try:
+            require_unprepared(self.log_conn)
+        except DriverRefused:
+            self.log_conn.close()
+            raise
         info, want = self.log_conn.info, self.target
         if (info.host, str(info.port), info.dbname, info.user) != (want["host"], want["port"], want["dbname"],
                                                                    want["user"]):
@@ -273,8 +293,9 @@ class RealEffects:  # pragma: no cover - never constructed in tests; needs an ap
     def parent_connection(self, tag, database):
         if database != "deployspecter_test":
             raise DriverRefused("Gate A1 connects only to the test database")
-        with self.psycopg.connect(**self.target, autocommit=True, application_name=tag,
-                                  options=self.options) as conn:
+        with self.psycopg.connect(**self.target, autocommit=True, prepare_threshold=PREPARE_THRESHOLD,
+                                  application_name=tag, options=self.options) as conn:
+            require_unprepared(conn)
             yield conn
 
     def log_position(self, key="op"):

@@ -1,24 +1,28 @@
 # Gate A1: minimal PostgreSQL characterization, approval package
 
-**Status: READY_FOR_NEW_USER_AUTHORIZATION. This is not an authorization.** Version 2 hasn't run. It needs a new
-approval file and a **new signature** covering the digest below; the version 1 approval and signature can't be reused.
+**Status: READY_FOR_NEW_USER_AUTHORIZATION. This is not an authorization.** Version 3 hasn't run. It needs a new
+approval file and a **new signature** covering the digest below; the version 1 and version 2 approvals and signatures
+can't be reused.
 
-- **Manifest:** `gate_a1_manifest.json`, **version 2**, SHA-256
-  `d92ea5900eb22c163da9faac2f00e67ec1c38395cc8cfe170bf856a85f1ba0c9`.
-- **Version 1** (`04f1d751…`) ran once and is superseded (section 0). It is recorded in the manifest's `supersedes`.
+- **Manifest:** `gate_a1_manifest.json`, **version 3**, SHA-256
+  `768cce7e04de126a79c35a7040c79cd7d20edd25515429fabca128450872e044`.
+- **Versions 1** (`04f1d751…`) **and 2** (`d92ea590…`) each ran once and are superseded (section 0). Both are recorded
+  in the manifest's `supersedes`, and the driver refuses both.
 - **Superseded drafts,** never run and never approved, kept in the manifest's `draft_history`:
     - `3b98c82e…`, the milestone 4 draft;
     - `c58d0d10…`, after the final review's driver fixes;
     - `1c8d1a55…`, before parse errors were kept out of records.
 - **Driver:** `research_tools/gate_a1_characterize.py`.
 - **Pure logic:** `src/deployspecter/research/track_a/characterization.py`.
-- **Tests:** `tests/research_tracks/test_gate_a1.py`, all offline.
+- **Tests:** `tests/research_tracks/test_gate_a1.py`, and the real-log tests `test_gate_a1_observed_log.py` (run 1)
+  and `test_gate_a1_v2_observed_log.py` (run 2), all offline.
 
 ## 0. Run history
 
 | Version | Manifest | Run | Result |
 |---|---|---|---|
 | 1 | `04f1d7518685d0555a9925ccd5d4d7bd1260ac3431f34e2cb7e4c1a8d3f17520` | Once, on 2026-11-04, under the owner's signed approval; PostgreSQL 16.15 on the pinned image | **`refused_fail_closed` at op0p**. Evidence: `evidence/gate_a1/20261104T113256Z-d0b21a60/`, kept locally and uncommitted. No catalog, state or binding operation ran; the container was torn down |
+| 2 | `d92ea5900eb22c163da9faac2f00e67ec1c38395cc8cfe170bf856a85f1ba0c9` | Once, on 2026-11-04, under a new signed approval; PostgreSQL 16.15 on the pinned image | **`refused_fail_closed` at the seeded op0r reset** (the sixth operation). Evidence: `evidence/gate_a1/20261104T132842Z-1c432509/`, kept locally and uncommitted. Preflight passed; both exports agreed; the `information_schema` re-read agreed; `verify_context` reached MATCH. The state checks, bindings, cleanup and batch audit didn't run |
 
 **The two causes,** both confirmed from the observed rows:
 
@@ -33,7 +37,44 @@ approval file and a **new signature** covering the digest below; the version 1 a
 (SHA-256 `445342d9…`), not the signed bytes (`ec9a4f86…`). The content was identical, but the evidence copy couldn't
 be checked against the signature. Version 2 copies the file byte for byte and records its provenance.
 
-## 0.1 What version 2 changes
+**The version 2 cause, confirmed from the observed rows.**
+- psycopg 3 prepares a query once a connection has run it `prepare_threshold` times (default 5), and the server then
+  logs it as `execute _pg3_N:`.
+- The log reader is one long-lived connection. Its sixth poll logged as `execute _pg3_2:`, with the approved text, the
+  correct tag parameter, the correct session and a consecutive line. Its `pg_current_logfile` and `pg_stat_file` queries
+  had become `_pg3_0` and `_pg3_1` outside the windows.
+- All 17 prepared executions were the reader's, and were of exactly those three approved texts. No other session
+  appeared.
+- Version 2 required the exact `execute <unnamed>:` form for the poll, so it refused.
+- This is client-side behaviour, not a PostgreSQL defect.
+
+## 0.0 What version 3 changes
+
+- **psycopg's automatic preparation is disabled on Gate A1's own connections.**
+    - `prepare_threshold=None` is passed at both connection sites, the log reader and every tagged parent session, both
+      in `RealEffects`.
+    - Each connection is checked before use, and one that could still prepare is refused.
+    - The manifest must declare the same policy (`client_connection_policy`), or the driver refuses it.
+    - Nothing in Gate A1 asks for preparation explicitly: there is no `prepare=`, no `executemany` and no cursor.
+- **Prepared forms now fail rather than pass.**
+    - Tagged sessions may log only `statement:` or `execute <unnamed>:`.
+    - The batch audit holds the reader to the same rule.
+    - The reconciler is not widened to accept any prepared-statement name.
+- **Unchanged:** the SQL statement sets, the parameter checks, session identity, the reader limits, the target, the
+  image and the operator commands. Gate 2A, Gate A2 and Phase 9B connections are not touched. Gate A2's own reader
+  would need its own preparation and logging review.
+
+### What the version 3 evidence will and won't establish
+
+- **It characterizes one client configuration:** psycopg 3.3.6 with automatic preparation **disabled**, against the
+  pinned PostgreSQL 16 image.
+- **It establishes nothing about default, auto-prepared psycopg sessions.** The version 2 run remains the only
+  evidence of that behaviour: preparation after five executions, and `_pg3_N` names in the log.
+- **Future Gate A2 connections need their own preparation and logging policy review.** No result here applies to them
+  automatically.
+- **No scientific or production claim may generalize silently beyond the tested configuration.**
+
+## 0.1 What version 2 changed
 
 - **Parent-session records:**
     - The record sequence is strict: received, then exactly one authenticated record (identity = admin user,
@@ -178,7 +219,7 @@ invocation. The signature step is the owner's own procedure. **The driver doesn'
 2. Write `approval.json` yourself, **outside** the evidence tree:
 
    ```json
-   {"manifest_sha256": "d92ea5900eb22c163da9faac2f00e67ec1c38395cc8cfe170bf856a85f1ba0c9", "phase": "gate_a1", "approver": "<you>", "approved_on": "<date>"}
+   {"manifest_sha256": "768cce7e04de126a79c35a7040c79cd7d20edd25515429fabca128450872e044", "phase": "gate_a1", "approver": "<you>", "approved_on": "<date>"}
    ```
 3. Sign it, for example `ssh-keygen -Y sign -f ~/.ssh/id_ed25519 -n deployspecter-gate-a1 approval.json`.
 4. Verify the signature before running:
@@ -206,7 +247,7 @@ If the `CREATE DATABASE` fails, stop the container and start again.
 ```sh
 env -u MODEL_API_KEY uv run python research_tools/gate_a1_characterize.py characterize \
   --manifest docs/research/live_stepping/track_a/gate_a1_manifest.json \
-  --manifest-sha256 d92ea5900eb22c163da9faac2f00e67ec1c38395cc8cfe170bf856a85f1ba0c9 \
+  --manifest-sha256 768cce7e04de126a79c35a7040c79cd7d20edd25515429fabca128450872e044 \
   --approval <path to your approval.json>
 ```
 
@@ -264,48 +305,50 @@ and the password from `.env`.
 - **Authorization is the owner's own decision and action:** reviewing, signing, verifying and running in person
   (section 5).
 
-## 7. Verification record (offline only, version 2)
+## 7. Verification record (offline only, version 3)
 
 - **Tests:**
-    - 44 Gate A1 driver tests, and 39 tests on the real op0p log (`test_gate_a1_observed_log.py`). The op0p sequence
-      observed on PostgreSQL 16.15 reconciles, and each kind of unexpected activity applied to those real rows refuses;
-    - the root suite: 1,344 passed and 1 skipped (`langgraph` isn't installed there);
-    - the isolated suite: 1,392 passed;
-    - v1 compatibility: 37 tests in each environment;
-    - the Gate 2A frozen guard: 5 tests, in the isolated environment;
-    - Ruff is clean;
-    - the frozen v2 contract and Gate 2A files are unchanged against `48df818` and `8a4a131`;
-    - `-m live` collects 0 tests.
-- **The real-log fixture:**
-    - `tests/research_tracks/fixtures/gate_a1_op0p_observed.csv` holds 22 verbatim rows of the version 1 run's log:
-      the log reader's session and the op0p session. The server's own initialisation, the readiness probes and
-      `CREATE DATABASE` are omitted.
-    - Its SHA-256 is pinned by a test, and its provenance file names the source evidence file and its SHA-256.
-    - The original evidence is unchanged.
+    - Gate A1 driver tests, including the preparation policy at both connection sites, the refusal of a connection
+      that could still prepare, the manifest policy check, a modelled default-prepared reader that stops at the
+      sixth operation as the real run did, and a modelled default-prepared parent session that is refused;
+    - real-log tests for run 1 (39) and run 2 (16);
+    - the full numbers are in the commit message.
+- **Run 2's log is a pinned fixture:**
+    - `tests/research_tracks/fixtures/gate_a1_v2_observed.csv` is the complete copied log, verbatim: 160 CSV rows on
+      196 lines.
+    - Under the version 3 rules:
+        - the first five operations reconcile completely against statement lists taken from the code;
+        - the seeded reset fails only on the prepared poll, and its seed parameters match the offline chain;
+        - the reader's prepared statements outside the windows also fail the batch audit;
+        - wrong text, wrong order, an extra statement, a wrong parameter, a prepared statement, a wrong poll or an
+          unknown reader session, each applied to the real rows, refuses.
+    - The fake's preparation model is checked against the real reader's 45 statements.
+    - One query, `pg_read_binary_file`, ran six times and was never prepared. That is consistent with psycopg keying
+      prepared queries by parameter types as well as text, which the model doesn't cover.
+    - **Synthetic post-fix logs stay in `test_gate_a1.py`. No real row was rewritten to resemble a successful run.**
 - **Mutation testing** (scratchpad harness, run in isolated copies):
     - each mutant runs in a fresh copy of the tree;
     - the copy's manifests are re-pinned, so a digest check can't kill a mutant trivially;
-    - tests run in their own process group, under a fixed 30 s wall-clock watchdog and a batch budget;
+    - tests run in their own process group, under a fixed 30 s watchdog and a batch budget;
     - the worktree is hashed before and after every mutant.
 
   | Suite | Mutants | Killed by a test assertion | Killed by the watchdog | Equivalent | Survived | Errors |
   |---|---|---|---|---|---|---|
-  | Gate A1 (27 of them target the version 2 authentication, reader and approval paths) | 55 | 55 | 0 | 0 | 0 | 0 |
+  | Gate A1 (12 new for version 3: the connection policy, the unnamed-form checks and statement order) | 67 | 67 | 0 | 0 | 0 | 0 |
   | Gate A2 (offline; Gate 2A code untouched) | 22 | 21 | 0 | 1 | 0 | 0 |
 
-    - **Two survivors appeared during this work, and both were closed by new tests:**
-        - "authorization found anywhere": a test now moves only the authorized record;
-        - Gate A2's "per-row user and database unchecked": its suite now changes a statement row's user and database.
     - **The equivalent mutant** removes the "failed reconciliation is an unknown effect" term. It is unreachable,
       because `parent_operation` raises before returning a failed record.
-    - **The watchdog self-check still holds** for the mutant that removes the log-wait bound: the bounded test kills it,
-      and the watchdog stops it against the old, unbounded test.
+    - **The watchdog self-check still holds:** the bounded test kills the unbounded-wait mutant, and the watchdog
+      stops it against the old test.
 
 ## 8. Limits that remain
 
 - The parent is a superuser (section 4).
-- **One real observation isn't a characterization.** Only op0p's session and the reader's first window have been seen
-  on the real server. The other operations, the catalog, the state checks and the bindings haven't run (section 3).
+- **Two partial real runs aren't a characterization.** Six operations have been observed on the real server, ending at
+  the seeded reset. op6i, op6f, op7b, op9c and the whole-batch audit haven't run, and nothing has run with
+  preparation disabled (sections 0 and 3).
+- **The tested client configuration is psycopg with automatic preparation off** (section 0.0).
 - Two bracketing log-reader reads can't audit themselves: the reader's connection and first position query before the
   batch start marker, and its final read after the batch end marker.
 - The batch audit allows the reader's poll form anywhere in the batch. Its tag parameter is constrained only inside
@@ -318,11 +361,11 @@ and the password from `.env`.
 
 ## 9. Readiness
 
-**READY_FOR_NEW_USER_AUTHORIZATION.** The version 2 package is complete, the statements and sources are pinned, and
+**READY_FOR_NEW_USER_AUTHORIZATION.** The version 3 package is complete, the statements and sources are pinned, and
 every effect and command is listed.
 
 **Not authorized:**
-- a new run needs a **new** approval file naming the version 2 digest, a **new** signature from the owner, and a fresh
+- a new run needs a **new** approval file naming the version 3 digest, a **new** signature from the owner, and a fresh
   container;
-- the version 1 approval and signature are never valid for version 2;
+- the version 1 and version 2 approvals and signatures are never valid for version 3;
 - nothing is retried automatically.

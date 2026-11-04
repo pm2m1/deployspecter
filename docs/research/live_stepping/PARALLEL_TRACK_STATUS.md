@@ -225,6 +225,12 @@ Neither track depends on it yet.
     - **Version 2, offline:** strict connection-record and log-reader accounting, built from the real rows; a pinned
       real-log fixture; the approval copied byte for byte. READY_FOR_NEW_USER_AUTHORIZATION, which needs a new
       signature.
+    - **Second real run (version 2): `refused_fail_closed` at the seeded op0r reset.** Preflight, both exports, the
+      `information_schema` re-read and MATCH succeeded first. The cause: psycopg's automatic preparation renamed the
+      log reader's sixth poll `execute _pg3_2:`.
+    - **Version 3, offline:** automatic preparation is off on Gate A1's own connections, and prepared forms fail. Run
+      2's log is a pinned fixture. The evidence will characterize only that client configuration.
+      READY_FOR_NEW_USER_AUTHORIZATION, which needs a new signature.
 
 **Track B:**
 

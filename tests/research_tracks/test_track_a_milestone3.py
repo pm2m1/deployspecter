@@ -63,7 +63,7 @@ def csv_bytes(rows):
     return out.getvalue().encode()
 
 
-def session_rows(tag, statements, session="s1", pid="4242", **kw):
+def session_rows(tag, statements, session="s1", pid="4242", verbs=None, **kw):
     """A session as PostgreSQL 16 logs it (observed in the first Gate A1 run): received (no user, database or name
     yet), authenticated and authorized (no application name yet), the statements, then the disconnection."""
     port = str(50000 + int(pid) % 10000)
@@ -72,9 +72,9 @@ def session_rows(tag, statements, session="s1", pid="4242", **kw):
             row(session, f'connection authenticated: identity="{USER}" method=scram-sha-256 '
                          f"(/var/lib/postgresql/data/pg_hba.conf:128)", pid=pid),
             row(session, f"connection authorized: user={USER} database={DB} application_name={tag}", pid=pid)]
-    for text, params in statements:
+    for n, (text, params) in enumerate(statements):
         detail = ", ".join(f"${i} = {pr.literal(v)}" for i, v in enumerate(params, 1))
-        verb = "execute <unnamed>" if params else "statement"
+        verb = verbs[n] if verbs else ("execute <unnamed>" if params else "statement")
         rows.append(row(session, f"{verb}: {text}", app=tag, pid=pid,
                         detail=f"parameters: {detail}" if params else "", **kw))
     rows.append(row(session, f"disconnection: session time: 0:00:00.010 user={USER} database={DB} host=172.17.0.1 "

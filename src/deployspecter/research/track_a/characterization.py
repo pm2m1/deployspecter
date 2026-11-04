@@ -251,6 +251,8 @@ def audit_batch(rows: list[list[str]], *, reconciled_tags: set[str], user: str, 
                 match = pr.STATEMENT.match(r[pr.MESSAGE])
                 if match and not any(p.match(match.group(1)) for p in LOG_READER_ALLOWED):
                     bad.append(match.group(1)[:60])
+                if match and not r[pr.MESSAGE].startswith(pr.UNNAMED):  # Gate A1's reader prepares nothing
+                    bad.append(f"prepared statement {r[pr.MESSAGE].split(':', 1)[0]}")
                 if r[pr.SEVERITY] != "LOG":
                     bad.append(r[pr.SEVERITY])
             out.sessions[session] = "log_reader" if not bad else "log_reader_violation"

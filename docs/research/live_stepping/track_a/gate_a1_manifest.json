@@ -1,6 +1,6 @@
 {
  "package": "gate-a1-characterization",
- "version": 2,
+ "version": 3,
  "status": "WAITING_FOR_SEPARATE_EXECUTION_APPROVAL",
  "scope": "characterization_only",
  "never_heldout_evidence": true,
@@ -122,10 +122,10 @@
   "failure.json (on any stop)"
  ],
  "source_sha256": {
-  "research_tools/gate_a1_characterize.py": "2b8a43d741f8f74fb953944a0bf6e48358ad44490747940e1c4bb88797b53caf",
+  "research_tools/gate_a1_characterize.py": "002895062a75e90a1b31c2064c190b2cf3d5bdafbf414d6123f1a3a170ee3968",
   "research_tools/track_a_run.py": "eb4c82bd77c3a1316d826c387d6732d124317b53021e32bd2ea84bb5b6d013ed",
-  "src/deployspecter/research/track_a/characterization.py": "e18b97a5efc3b9af34dc1f830904a8ad0fd41c7ab5628e4a4deda66a2c3924d0",
-  "src/deployspecter/research/track_a/parent_reconciliation.py": "9c90a948649835299f69dbb7837e34d14729acf0a0206648ea7321017dad9170",
+  "src/deployspecter/research/track_a/characterization.py": "fdb2aa3fc4e48f73a2a9e8d267a31a9e10f05728515cf844a31a5978a2045ad4",
+  "src/deployspecter/research/track_a/parent_reconciliation.py": "72c6e9dc9e73bc42dadfa9fc0a9c653f9448165b54bf0252fea4824cc491d6c8",
   "src/deployspecter/research/track_a/catalog_export.py": "ab59af7ac920f45d022354559fd130bda5128dbde0229200065474739a66cb2e",
   "src/deployspecter/research/track_a/evidence_binding.py": "770b77b7dc853c37e8b6cb169444a1538643bf2d03f465b0ab8bd546315dda16",
   "src/deployspecter/research/track_a/pipeline.py": "1e3b07e50a3918ee29b894ecb26d95868b407a48e4419ed704737cdf0c5ec1af",
@@ -173,17 +173,35 @@
   "DATABASE_URL": "postgresql://deployspecter:<password>@127.0.0.1:55433/deployspecter in the git-ignored .env",
   "MODEL_API_KEY": "must be absent from the shell and from .env; the driver refuses otherwise"
  },
- "supersedes": {
-  "version": 1,
-  "sha256": "04f1d7518685d0555a9925ccd5d4d7bd1260ac3431f34e2cb7e4c1a8d3f17520",
-  "commit": "e4a695c2611a10411711a328e8ac023168d06f8a",
-  "history": "executed once on 2026-11-04 under the owner's signed approval; refused_fail_closed at op0p (evidence/gate_a1/20261104T113256Z-d0b21a60, kept locally, uncommitted). Its approval and signature cover version 1 only and are never valid for this version."
- },
+ "supersedes": [
+  {
+   "version": 1,
+   "sha256": "04f1d7518685d0555a9925ccd5d4d7bd1260ac3431f34e2cb7e4c1a8d3f17520",
+   "commit": "e4a695c2611a10411711a328e8ac023168d06f8a",
+   "history": "executed once on 2026-11-04 under the owner's signed approval; refused_fail_closed at op0p (evidence/gate_a1/20261104T113256Z-d0b21a60, kept locally, uncommitted). Its approval and signature cover version 1 only and are never valid for this version."
+  },
+  {
+   "version": 2,
+   "sha256": "d92ea5900eb22c163da9faac2f00e67ec1c38395cc8cfe170bf856a85f1ba0c9",
+   "commit": "576099ff62083351e6c598cb7c2060d370cffd65",
+   "history": "executed once on 2026-11-04 under the owner's signed approval; refused_fail_closed at the seeded op0r reset, because psycopg's automatic preparation renamed the log reader's sixth poll (evidence/gate_a1/20261104T132842Z-1c432509, kept locally, uncommitted). Its approval and signature cover version 2 only and are never valid for this version."
+  }
+ ],
  "session_accounting": {
   "parent_session_records": "connection received; exactly one connection authenticated (identity = admin user, method = authentication_method); exactly one connection authorized (user, database, tag); the approved statements; exactly one disconnection matching the connection; session lines consecutive from 1. Any other record fails",
-  "log_reader": "one session for the whole batch, identified by the rows that wrote each operation's markers. Inside an operation window it may only issue the exact end-of-session poll for that operation's tag, after the session's last statement, on consecutive session lines between the two markers",
+  "log_reader": "one session for the whole batch, identified by the rows that wrote each operation's markers. Inside an operation window it may only issue the exact end-of-session poll for that operation's tag, after the session's last statement, on consecutive session lines between the two markers; its statements are never prepared",
   "reader_poll_limit_per_window": 102,
   "batch_audit": "the established reader's rows must run on consecutive session lines between the batch markers; a second session naming itself the log reader fails the audit",
   "observed_basis": "PostgreSQL 16.15 records from the version 1 run; see tests/research_tracks/fixtures"
+ },
+ "client_connection_policy": {
+  "psycopg_prepare_threshold": null,
+  "scope": "Gate A1-owned connections only: the log reader and every tagged parent session, both opened by RealEffects in research_tools/gate_a1_characterize.py. Not Gate 2A, Gate A2, Phase 9B or any application or arm connection",
+  "statement_forms": [
+   "statement:",
+   "execute <unnamed>:"
+  ],
+  "enforced": "set at both connection sites, checked on each connection before use, and any statement logged under a prepared-statement name fails reconciliation and the batch audit",
+  "limitation": "the evidence characterizes psycopg with automatic preparation disabled; it establishes nothing about default auto-prepared sessions, which the version 2 run observed"
  }
 }

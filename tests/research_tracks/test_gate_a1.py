@@ -11,6 +11,7 @@ import json
 import math
 import socket
 import sys
+from collections import Counter
 from pathlib import Path
 
 import psycopg
@@ -61,10 +62,28 @@ class Cursor:
         return self.rows[0]
 
 
+class PsycopgPreparation:
+    """psycopg 3's automatic preparation, as the second real run logged it (evidence 20261104T132842Z-1c432509): a
+    connection's first ``threshold`` executions of a query are logged unprepared ("statement:" without parameters,
+    "execute <unnamed>:" with them); from the next execution on, as "execute _pg3_<n>:", named in the order queries
+    were first prepared. None disables preparation, which is Gate A1's policy. Keyed by query text only, so it doesn't
+    model psycopg's per-parameter-type keys (see the real-log tests)."""
+
+    def __init__(self, threshold):
+        self.threshold, self.counts, self.names = threshold, Counter(), {}
+
+    def verb(self, text, params):
+        self.counts[text] += 1
+        if self.threshold is not None and self.counts[text] > self.threshold:
+            return f"execute {self.names.setdefault(text, f'_pg3_{len(self.names)}')}"
+        return "execute <unnamed>" if params else "statement"
+
+
 class FakeEffects:
     def __init__(self, breakage=None):
         self.breakage, self.log, self.n = breakage, [], 0
         self.reader_session, self.reader_line = "lr", 3  # its connection rows precede the batch
+        self.reader_prep = PsycopgPreparation(5 if breakage == "default_prepare_reader" else a1.PREPARE_THRESHOLD)
         self.tables = {}
         self.bindings = {}
 
@@ -82,7 +101,9 @@ class FakeEffects:
         logged = [(pr.ExpectedStatement(t).server_text(), p) for t, p in executed]
         if self.breakage == "extra_in_reset" and tag.startswith("ds_parent_op0r"):
             logged.append(("SELECT 1", ()))
-        rows = session_rows(tag, logged, session=f"p{self.n}", pid=str(2000 + self.n))
+        prep = PsycopgPreparation(5 if self.breakage == "default_prepare_parent" else a1.PREPARE_THRESHOLD)
+        rows = session_rows(tag, logged, session=f"p{self.n}", pid=str(2000 + self.n),
+                            verbs=[prep.verb(t, p) for t, p in logged])
         if self.breakage == "no_auth_row":
             rows = [r for r in rows if not r[pr.MESSAGE].startswith("connection authenticated:")]
             for n, r in enumerate(rows, 1):
@@ -145,6 +166,9 @@ class FakeEffects:
 
     def reader(self, message, detail=""):
         """One log-reader session, as the real one logs: one session and process, consecutive session lines."""
+        verb, text = message.split(": ", 1)
+        if verb in ("statement", "execute <unnamed>"):
+            message = f"{self.reader_prep.verb(text, detail)}: {text}"
         self.reader_line += 1
         r = row(self.reader_session, message, app=ch.LOG_READER_APP, pid="91", detail=detail)
         r[pr.LINE] = str(self.reader_line)
@@ -438,7 +462,7 @@ class TestFinalReview:
             host, port, dbname, user = "127.0.0.1", 55433, "deployspecter_test", "deployspecter"
 
         class Conn:
-            info = Info()
+            info, prepare_threshold = Info(), None
 
         calls = []
         monkeypatch.setattr(psycopg, "connect", lambda *a, **k: calls.append((a, k)) or Conn())
@@ -450,6 +474,7 @@ class TestFinalReview:
         assert args == () and {k: kwargs[k] for k in ("host", "hostaddr", "port", "dbname", "user")} == {
             "host": "127.0.0.1", "hostaddr": "127.0.0.1", "port": "55433", "dbname": "deployspecter_test",
             "user": "deployspecter"}
+        assert "prepare_threshold" in kwargs and kwargs["prepare_threshold"] is None
         assert "s3cret" not in repr(effects.settings)
 
     @pytest.mark.parametrize("field, value", [("host", "10.0.0.5"), ("port", 55432), ("dbname", "deployspecter"),
@@ -464,7 +489,7 @@ class TestFinalReview:
         setattr(Info, field, value)
 
         class Conn:
-            info = Info()
+            info, prepare_threshold = Info(), None
 
             def close(self):
                 closed.append(True)
@@ -550,3 +575,96 @@ class TestRecoveryAfterTheFirstRun:
         with pytest.raises(a1.DriverRefused, match="changed while it was being read"):
             self._main(tmp_path, monkeypatch, signed, tamper=True)
         assert [d.name for d in tmp_path.iterdir()] == ["signed"]  # refused before any evidence or connection
+
+
+class TestPreparationPolicy:
+    """The second real run (evidence/gate_a1/20261104T132842Z-1c432509) stopped because psycopg prepared the reader's
+    sixth poll. Gate A1 v3 disables automatic preparation on its own connections. These logs are synthetic: the
+    fake applies the preparation model that the real-log tests check against the second run's log."""
+
+    def test_under_the_policy_nothing_is_logged_prepared(self, tmp_path):
+        effects = FakeEffects()
+        p, _ = package()
+        assert a1.characterize(effects, p, a1.a2.EvidenceDir.create(tmp_path))["outcome"] == "CHARACTERIZED"
+        assert not any(r[pr.MESSAGE].startswith("execute _pg3_") for r in effects.log)
+        inserts = [r for r in effects.log if r[pr.MESSAGE].startswith("execute <unnamed>: INSERT INTO ds_char")]
+        assert len(inserts) == len(ch.CASES)  # the repeated binding INSERTs stay unprepared
+
+    def test_a_default_prepared_reader_reproduces_the_second_run(self, tmp_path):
+        effects = FakeEffects("default_prepare_reader")
+        p, _ = package()
+        with pytest.raises(a1.DriverRefused, match="op0r didn't reconcile.*other than this session's poll"):
+            a1.characterize(effects, p, a1.a2.EvidenceDir.create(tmp_path))
+        assert effects.n == 6  # stopped at the sixth operation, the seeded reset, as the real run did
+
+    def test_a_default_prepared_parent_session_is_refused(self, tmp_path):
+        with pytest.raises(a1.DriverRefused, match="didn't reconcile.*prepared-statement name"):
+            run(tmp_path, "default_prepare_parent")
+
+    def test_the_manifest_must_declare_the_policy(self, tmp_path):
+        for policy in (None, {}, {"psycopg_prepare_threshold": 5}, {"psycopg_prepare_threshold": 0}):
+            data = json.loads(PACKAGE.read_text())
+            data.pop("client_connection_policy")
+            if policy is not None:
+                data["client_connection_policy"] = policy
+            path = tmp_path / "m.json"
+            path.write_text(json.dumps(data))
+            with pytest.raises(a1.DriverRefused, match="connection policy"):
+                a1.load_package(path, hashlib.sha256(path.read_bytes()).hexdigest())
+
+    def _effects(self, monkeypatch, threshold):
+        class Info:
+            host, port, dbname, user = "127.0.0.1", 55433, "deployspecter_test", "deployspecter"
+
+        calls, closed = [], []
+
+        class Conn:
+            info, prepare_threshold = Info(), threshold
+
+            def close(self):
+                closed.append(True)
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_exc):
+                closed.append(True)
+
+        monkeypatch.setattr(psycopg, "connect", lambda *a, **k: calls.append(k) or Conn())
+        monkeypatch.delenv("MODEL_API_KEY", raising=False)
+        monkeypatch.setenv("DATABASE_URL", "postgresql://deployspecter:s3cret@127.0.0.1:55433/deployspecter")
+        return calls, closed
+
+    def test_every_gate_a1_connection_disables_preparation(self, monkeypatch):
+        calls, _closed = self._effects(monkeypatch, None)
+        p, _ = package()
+        effects = a1.RealEffects(p)
+        with effects.parent_connection("ds_parent_op0p_0123456789ab", "deployspecter_test"):
+            pass
+        assert len(calls) == 2 and all("prepare_threshold" in k and k["prepare_threshold"] is None for k in calls)
+
+    def test_a_connection_that_would_still_prepare_is_refused(self, monkeypatch):
+        _calls, closed = self._effects(monkeypatch, 5)
+        p, _ = package()
+        with pytest.raises(a1.DriverRefused, match="automatic statement preparation"):
+            a1.RealEffects(p)
+        assert closed == [True]
+
+    def test_a_parent_connection_that_would_still_prepare_is_refused(self, monkeypatch):
+        calls, _closed = self._effects(monkeypatch, None)
+        p, _ = package()
+        effects = a1.RealEffects(p)
+        monkeypatch.setattr(psycopg, "connect", lambda *a, **k: type(
+            "Prepared", (), {"prepare_threshold": 5, "__enter__": lambda s: s, "__exit__": lambda s, *e: None})())
+        effects.psycopg = psycopg
+        with pytest.raises(a1.DriverRefused, match="automatic statement preparation"):
+            with effects.parent_connection("ds_parent_op0p_0123456789ab", "deployspecter_test"):
+                pass
+
+    def test_the_batch_audit_refuses_a_prepared_reader_statement(self):
+        reader = pr.ReaderSession("lr", "91", "deployspecter", "deployspecter_test", start_line=4, end_line=6)
+        r = row("lr", "execute _pg3_0: SELECT pg_current_logfile('csvlog')", app=ch.LOG_READER_APP, pid="91")
+        r[pr.LINE] = "5"
+        out = ch.audit_batch([r], reconciled_tags=set(), user="deployspecter", databases={"deployspecter_test"},
+                             reader=reader)
+        assert not out.ok and "prepared statement execute _pg3_0" in out.problems[0]
