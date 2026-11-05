@@ -20,9 +20,20 @@ This prototype runs real Python application handlers concurrently on psycopg 3, 
 ```bash
 cd ~/Desktop/deployspecter-real-app-mvp && research_tools/mvp_demo.sh            # sync, as before
 cd ~/Desktop/deployspecter-real-app-mvp && research_tools/mvp_demo.sh OUT all    # sync + async + isolated runner
+cd ~/Desktop/deployspecter-real-app-mvp && research_tools/mvp_demo.sh OUT full   # all + PGQueuer and Chancy
 ```
 
-The second argument is `sync` (the default), `async` or `all`.
+The second argument selects the mode:
+
+| Mode | What it adds |
+|---|---|
+| `sync` | the default |
+| `async` | the async engine demos |
+| `all` | sync and async, plus the isolated-runner smoke test |
+| `thirdparty` | fetches and verifies the pinned sdists, then runs PGQueuer and Chancy and both negative controls in the isolated runner |
+| `full` | `all`, then `thirdparty` |
+
+The optional third-party tests live in `tests/thirdparty_isolated`, outside the core suite. They run when `DS_THIRDPARTY_SDIST_DIR` points at the fetched sdists.
 
 The script runs these steps:
 
@@ -83,6 +94,29 @@ Other commands each need a running instance: run `research_tools/mvp_pg.sh start
 - **Probes:** the container reports what it observes (identity, filesystem, secrets, the host and 55432, the internet, DNS and cgroup limits), and the host refuses the run unless every probe matches. Corroboration and the oracle run on the host. Teardown removes the container, the network and the work directory, and checks the protected container is unchanged.
 - **Not a hostile-code sandbox:** it shares the Docker Desktop VM's kernel and has no gVisor or Kata.
 - **Third-party run (`results/third_party_chancy_capture_1`):** chancy 0.26.0's own migration applier ran in it through its public API, `Migrator.migrate(conn)`, on a stepped async connection. That's a capture, with no allowlist, no defect hypothesis and no oracle. The server log corroborates all 36 statements, and six tables were created.
+
+## Third-party runtimes in the isolated runner (`experimental/thirdparty/`)
+
+Both adapters are pinned to their library version and source hashes, accept only a stepped connection, and patch nothing.
+
+| Library | Seam | Result | Negative control (must be refuted) |
+|---|---|---|---|
+| PGQueuer 1.6.0 | Its public `Driver` port. `PsycopgDriver`'s `fetch`/`execute` build `AsyncSteppedRawCursor` instead of a plain `AsyncRawCursor`. LISTEN, `pg_notify` and the `notifies()` watcher are PGQueuer's own | Install, enqueue, then a drain-mode worker: claim, trusted handler, finish, shutdown. The server log corroborates 37 statements (62 values compared, 10 unchecked); oracle Q1–Q3 holds (`results/third_party_pgqueuer_lifecycle_1`) | `Queries.from_psycopg_connection(conn)`: its direct `AsyncRawCursor` bypasses the gate, and the server log refutes the run (`…_public_factory_refuted_1`) |
+| Chancy 0.26.0 | A `SteppedChancy` subclass overrides only `pool`: a one-connection `AsyncConnectionPool` whose `connection_class` hands over the actor's stepped connection once. Options: `notifications=False`, `no_default_plugins=True`, `AsyncExecutor` | Migrate, declare, push, worker start, the job claimed and run, `succeeded`, worker stop, pool close. The server log corroborates 86 statements (63 values compared, 16 unchecked); oracle C1–C3 holds (`results/third_party_chancy_runtime_1`) | `notifications=True`: the worker's own LISTEN connection is an unexplained session (`…_notifications_refuted_1`) |
+
+The async engine supports these with three opt-in features:
+- gated raw (`$n`) cursors;
+- recorded NOTIFY deliveries;
+- `Handler.serialize_tasks`, which lets a framework's tasks take turns on one connection.
+
+The server-log check compares one-dimensional arrays and `bytea` exactly.
+
+**Unsupported paths:**
+- Chancy's sync APIs (`sync_pool`), and its LISTEN listener;
+- PGQueuer's asyncpg drivers;
+- any library code that builds its own connection or cursor outside the seam. The server log catches these.
+
+**Hostile-grade isolation is NOT COMPLETE:** only `runc` is available (`results/isolation_runtime_scan_1`).
 
 ## Live catalog verification (`catalog_export.py`)
 
@@ -170,5 +204,5 @@ Budgets: K = 6 valid workloads per source, S = 60 schedules per workload per bui
 - **Trusted synthetic fixtures only.** All three were written with their defects known, so every comparison here is a smoke test, not a benchmark.
 - **Exploration scope.** "Exhausted" means the decision frontier emptied within the budget, assuming each prefix re-executes to the same decision points. It isn't a completeness proof.
 - **Statement allowlists.** These are reviewed captures (`ledger_orm.py` and `planning_adapter.ALLOWED_SQL`). A new ORM query shape needs a new reviewed entry.
-- **Third-party scope.** One pinned library's migration path has run, as a capture in the isolated runner. Its job-queue runtime builds its own psycopg pool from a DSN, which can't be intercepted without patching. pgqueuer stays blocked (`CORPUS_SHORTLIST.json`).
+- **Third-party scope.** PGQueuer 1.6.0's lifecycle and Chancy 0.26.0's job runtime run through version-pinned adapters, in a restricted container that is not hostile-grade. Neither is a blind evaluation case. Candidates and open rulings are in `CORPUS_MANIFEST.json` and `protocol/`.
 - **Release path.** See `RELEASE_PATH.md`. The frozen `fixed` build is not a valid negative control for `release_seats`.

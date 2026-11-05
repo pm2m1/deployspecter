@@ -63,3 +63,24 @@
 | `release_compare_1` | 2 completed | 0.081551 |
 | `async_compare_1` | 2 completed | 0.062097 |
 | **Increment total** | 4 sent, 0 failed | **0.143648** (cap $10) |
+
+## Increment 4 (2026-11-05): third-party runtimes, corpus and protocol package
+
+20. **PGQueuer 1.6.0.** `thirdparty/pgqueuer_adapter.py` adds a Driver-port adapter. `results/third_party_pgqueuer_lifecycle_1` records the lifecycle, and `…_public_factory_refuted_1` the negative control.
+21. **Chancy 0.26.0.** `thirdparty/chancy_adapter.py` adds a one-connection stepped pool. `results/third_party_chancy_runtime_1` records the job runtime, and `…_notifications_refuted_1` the negative control.
+22. **Async engine additions.** Raw cursors, recorded notifications, and `Handler.serialize_tasks`. The server-log check now compares arrays and `bytea`.
+23. **Isolated runner.** It gains the `pgqueuer` and `chancy-runtime` modes and their negative controls, hashed requirements (`requirements.pgqueuer.txt`) and a pinned sdist fetcher.
+24. **Tests and demo.** The optional suite `tests/thirdparty_isolated` covers the four verdicts, a tampered-sdist refusal and teardown after an interruption. `mvp_demo.sh` gains the `thirdparty` and `full` modes.
+25. **Isolation.** `results/isolation_runtime_scan_1` records that hostile-grade isolation is NOT COMPLETE: only runc, and no VM manager.
+26. **Corpus.** `CORPUS_MANIFEST.json` adds five new blind-eligible candidates (dbos, weblate, mlflow, saq, pgmq), pinned, with no defect labels and the rulings still needed. The frozen rules are unchanged.
+27. **Protocol.** `protocol/AMENDMENT_003_DRAFT.md` (DRAFT, not adopted, outside the protocol directory) and `protocol/REVIEW_ISSUES.md`.
+28. **Muse.** `results/pgqueuer_compare_1`: Muse matched the deterministic sources and did not improve on them.
+
+### Meta usage in this increment (estimates at Meta's published rates, not billing data)
+
+| Run | Requests | Estimated USD |
+|---|---|---|
+| `pgqueuer_compare_1` | 1 completed | 0.010854 |
+| **Increment total** | 1 sent, 0 failed | **0.010854** (cap $10) |
+
+Account balance was not checked through the API. The Responses API returns per-request usage, which is what is recorded here.
