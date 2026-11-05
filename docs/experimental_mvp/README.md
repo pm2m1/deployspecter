@@ -23,6 +23,9 @@ This prototype runs real Python application handlers concurrently on psycopg 3, 
 - **Muse:** in the NONBLIND pilot comparison it matched the deterministic sources and found nothing they missed (`results/real_app_pilot_chancy_compare_1`).
 - **Protocol:** Amendment 003's five decisions are PROPOSED only (`protocol/DECISIONS_003.md`). Confirmatory research stays blocked. The independent-evaluation handoff package is in `handoff/`; no reviewer has been engaged.
 - **Isolation:** hostile-grade isolation is BLOCKED (`results/isolation_runtime_scan_2`).
+- **Simultaneous mixed-version execution: LIVE-TESTED (NONBLIND).** Chancy 0.25.1 and 0.26.0 workers ran at the same time, in two restricted containers, with one coordinator granting every statement. See `simultaneous/RESULTS.md` (`research_tools/mvp_demo.sh OUT simultaneous`).
+  - The released code never ran a job twice in 10 seeded schedules; the claim-lock mutant did, in 2 of 10.
+  - A cancel was lost in every cell except 0.26.0-cancel with a 0.26.0 worker. That is a mixed-deployment hazard outside the documented upgrade procedure, not a defect.
 
 ## Reproduce in one command
 
@@ -41,6 +44,7 @@ The second argument selects the mode:
 | `all` | sync and async, plus the isolated-runner smoke test |
 | `thirdparty` | fetches and verifies the pinned sdists (PGQueuer 1.6.0, Chancy 0.26.0 and 0.25.1). In the isolated runner it then runs PGQueuer, the Chancy runtime, both negative controls, concurrent workers, the claim-lock mutant control and the mixed-version pilot |
 | `full` | `all`, then `thirdparty` |
+| `simultaneous` | fetches the pinned sdists, then runs Chancy 0.25.1 and 0.26.0 workers at the same time under the coordinator, in five scenarios |
 
 The optional third-party tests live in `tests/thirdparty_isolated`, outside the core suite. They run when `DS_THIRDPARTY_SDIST_DIR` points at the fetched sdists.
 

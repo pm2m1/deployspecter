@@ -117,3 +117,26 @@ Account balance was not checked through the API. The Responses API returns per-r
 |---|---|---|
 | `real_app_pilot_chancy_compare_1` | 1 completed (408 input / 2177 output tokens) | 0.009762 |
 | **Increment total** | 1 sent, 0 failed | **0.009762** (cap $10) |
+
+## Increment 7 (2026-11-05): actual simultaneous mixed-version execution
+
+43. **`ds-coord/1`** (`coordinated.py`): one statement scheduler across processes.
+    - Global grant numbering, and lockstep across processes.
+    - Cross-process lock attribution, through a global pid map.
+    - Window gates and markers; stale-grant declines.
+    - Fail-closed on lost peers, timeouts, unexpected messages and stalls.
+    - Tests: 13 offline, 5 live.
+44. **Simultaneous runner** (`research_tools/isolated/run_coordinated.py`): three restricted containers (coordinator, 0.25.1, 0.26.0) on one internal network, nine scenarios, explore and repeat modes, refusal reasons, and the `simultaneous` demo mode.
+45. **Frozen properties P1–P8** (`simultaneous/PROPERTIES.md`, `chancy_properties.py`), frozen at `03967c4` before any run, with one recorded amendment to the read query.
+46. **Engine fixes this increment exposed.** Each has a regression test that fails without it.
+    - Corroboration orders each session by completion.
+    - A cancellation is deferred to the statement boundary.
+    - A COMMIT cancelled before its grant rolls back.
+    - Client-side driver refusals are classified as such.
+    - The `quiesced` hold no longer catches COMMITs, and is no longer used for stops.
+47. **Results** (`simultaneous/RESULTS.md`): the final sets, 36 of 36 SOUND.
+    - The mutation control is distinguished: P2 in 2 of 10 runs, against 0 of 10 for the released code.
+    - The cancel cells violate P7 under an undocumented deployment; this is not claimed as a defect.
+    - 17 earlier refusals are all kept and explained.
+
+**Meta usage in this increment:** none (0 requests, $0). A Muse question is recorded as a proposed future experiment.
