@@ -42,6 +42,38 @@ def first_violation(report: dict[str, Any]) -> dict[str, Any] | None:
     return {"grants": coord.get("grants"), "elapsed_ms": coord.get("elapsed_ms")}
 
 
+KEY_STATEMENTS = {"claim": "SKIP LOCKED", "push": 'INSERT INTO "chancy_jobs"', "cancel": "SET state = 'failed'",
+                  "flush": 'UPDATE "chancy_jobs" SET state = %(state)s'}
+
+
+def interleaving(run_dir: Path) -> list[dict[str, Any]]:
+    """The run's application-level statements in global grant order, each with its version, actor, backend pid and
+    the trace's outcome and row count (from that process's own trace), plus the COMMIT that ended its transaction."""
+    r = json.loads((run_dir / "report.json").read_text())
+    coord = (r.get("simultaneous") or {}).get("coordinator") or {}
+    statements = coord.get("statements", {})
+    ops = {}
+    for f in run_dir.glob("*.trace.json"):
+        t = json.loads(f.read_text())
+        for op in t["records"]:
+            if op.get("grant") is not None:
+                ops[op["grant"]] = (op, t["actors"][op["actor"]]["backend_pid"])
+    out, open_txn = [], {}
+    for d in coord.get("decisions", []):
+        text = statements.get(d["statement_id"], d["sql"])
+        what = next((k for k, needle in KEY_STATEMENTS.items() if needle in text), None)
+        op, pid = ops.get(d["grant"], ({}, None))
+        if what:
+            out.append({"grant": d["grant"], "version": d["version"], "actor": d["actor"], "pid": pid, "what": what,
+                        "outcome": op.get("outcome"), "rows": op.get("rowcount"), "blocked": d["blocked"] or None})
+            open_txn[d["actor"]] = what
+        elif d["kind"] in ("transaction_exit", "commit") and open_txn.get(d["actor"]):
+            out.append({"grant": d["grant"], "version": d["version"], "actor": d["actor"], "pid": pid,
+                        "what": f"commit ({open_txn.pop(d['actor'])})", "outcome": op.get("outcome"),
+                        "blocked": d["blocked"] or None})  # who waited on a lock when this was decided
+    return out
+
+
 def row(run_dir: Path) -> dict[str, Any]:
     r = json.loads((run_dir / "report.json").read_text())
     s = r.get("summary") or {}
@@ -76,10 +108,13 @@ def aggregate(rows: list[dict[str, Any]], candidates: int | None = None) -> dict
 
 def main() -> int:
     rows = []
-    for d in sys.argv[1:]:
+    for d in ([] if sys.argv[1] == "--interleaving" else sys.argv[1:]):
         p = Path(d)
         runs = [p] if (p / "report.json").exists() else sorted(x for x in p.iterdir() if (x / "report.json").exists())
         rows += [row(x) for x in runs]
+    if sys.argv[1] == "--interleaving":
+        print(json.dumps(interleaving(Path(sys.argv[2])), indent=1, default=str))
+        return 0
     print(json.dumps({"runs": rows, "aggregate": aggregate(rows)}, indent=1, default=str))
     return 0
 

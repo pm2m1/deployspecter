@@ -427,8 +427,9 @@ def main() -> int:
         row = {"run": tag, "policy": policy, **(r.get("summary") or {"verdict": r["verdict"]})}
         rows.append(row)
         print(json.dumps(row, default=str), flush=True)
-        if r["verdict"] != "SOUND":
-            break  # never retried silently: the first refused or incomplete run ends the batch
+        if r["verdict"] != "SOUND" and a.cmd == "run":
+            break  # a run batch ends at its first refused or incomplete run
+        # explore goes on to the next schedule and counts the refusal; no schedule is ever re-run after one
     (a.out / "summary.json").write_text(json.dumps(rows, indent=1, default=str))
     return 0 if all(r["verdict"] == "SOUND" for r in rows) and len(rows) == len(policies) else 1
 

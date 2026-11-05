@@ -1,0 +1,512 @@
+{
+ "actors": {
+  "new_migrate": {
+   "handler": "chancy-0.26.0.migrate",
+   "args": {},
+   "state": "finished",
+   "result": {
+    "version": {
+     "str": 6,
+     "sha256": "4f3ca66d226a"
+    },
+    "migrated": true
+   },
+   "exception": null,
+   "exception_class": null,
+   "backend_pid": 4870,
+   "transactions": 1
+  }
+ },
+ "records": [
+  {
+   "seq": 0,
+   "actor": "new_migrate",
+   "kind": "transaction_enter",
+   "sql": "BEGIN",
+   "statement_id": "a8402858d4f1",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "new_migrate",
+    "handler": "migrate",
+    "invocation_id": "isolated_chancy_plan_0:new_migrate",
+    "migration_phase": "",
+    "logical_op": 0,
+    "session": {
+     "backend_pid": 4870
+    },
+    "task": "ds-actor-new_migrate",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:119:migrate",
+    "framework_entry": null,
+    "txn": "new_migrate:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 0,
+   "decision": 0,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 9.59,
+   "completed_ms": 9.76
+  },
+  {
+   "seq": 1,
+   "actor": "new_migrate",
+   "kind": "execute",
+   "sql": "CREATE TABLE IF NOT EXISTS \"chancy_schema_version\" ( version_of VARCHAR(255) PRIMARY KEY, version INT )",
+   "statement_id": "920b81e0ec32",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "new_migrate",
+    "handler": "migrate",
+    "invocation_id": "isolated_chancy_plan_0:new_migrate",
+    "migration_phase": "",
+    "logical_op": 1,
+    "session": {
+     "backend_pid": 4870
+    },
+    "task": "ds-actor-new_migrate",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:156:upsert_version_table",
+    "framework_entry": null,
+    "txn": "new_migrate:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 1,
+   "decision": 1,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 9.8,
+   "completed_ms": 9.99
+  },
+  {
+   "seq": 2,
+   "actor": "new_migrate",
+   "kind": "execute",
+   "sql": "SELECT version FROM \"chancy_schema_version\" WHERE version_of = %s",
+   "statement_id": "82d080aaa5ab",
+   "params": [
+    {
+     "str": 6,
+     "sha256": "5d607b5ef9ee"
+    }
+   ],
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "new_migrate",
+    "handler": "migrate",
+    "invocation_id": "isolated_chancy_plan_0:new_migrate",
+    "migration_phase": "",
+    "logical_op": 2,
+    "session": {
+     "backend_pid": 4870
+    },
+    "task": "ds-actor-new_migrate",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:172:get_current_version",
+    "framework_entry": null,
+    "txn": "new_migrate:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 2,
+   "decision": 2,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    {
+     "version": 6
+    }
+   ],
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 10.03,
+   "completed_ms": 10.46
+  },
+  {
+   "seq": 3,
+   "actor": "new_migrate",
+   "kind": "execute",
+   "sql": "SELECT 1 FROM pg_constraint c JOIN pg_class t ON t.oid = c.conrelid WHERE c.conname = %s AND t.relname = %s",
+   "statement_id": "56e630e79cc6",
+   "params": [
+    {
+     "str": 23,
+     "sha256": "552aa749d39c"
+    },
+    {
+     "str": 13,
+     "sha256": "f6fb4c35d69f"
+    }
+   ],
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "new_migrate",
+    "handler": "migrate",
+    "invocation_id": "isolated_chancy_plan_0:new_migrate",
+    "migration_phase": "",
+    "logical_op": 3,
+    "session": {
+     "backend_pid": 4870
+    },
+    "task": "ds-actor-new_migrate",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrations/v7.py:22:up",
+    "framework_entry": null,
+    "txn": "new_migrate:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 3,
+   "decision": 3,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    {
+     "?column?": 1
+    }
+   ],
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 10.48,
+   "completed_ms": 10.88
+  },
+  {
+   "seq": 4,
+   "actor": "new_migrate",
+   "kind": "execute",
+   "sql": "ALTER TABLE \"chancy_leader\" RENAME CONSTRAINT \"leader_worker_id_unique\" TO \"chancy_leader_worker_id_unique\"",
+   "statement_id": "ce83f42a13e3",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "new_migrate",
+    "handler": "migrate",
+    "invocation_id": "isolated_chancy_plan_0:new_migrate",
+    "migration_phase": "",
+    "logical_op": 4,
+    "session": {
+     "backend_pid": 4870
+    },
+    "task": "ds-actor-new_migrate",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrations/v7.py:32:up",
+    "framework_entry": null,
+    "txn": "new_migrate:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 4,
+   "decision": 4,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 10.9,
+   "completed_ms": 11.13
+  },
+  {
+   "seq": 5,
+   "actor": "new_migrate",
+   "kind": "execute",
+   "sql": "CREATE TABLE IF NOT EXISTS \"chancy_schema_version\" ( version_of VARCHAR(255) PRIMARY KEY, version INT )",
+   "statement_id": "920b81e0ec32",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "new_migrate",
+    "handler": "migrate",
+    "invocation_id": "isolated_chancy_plan_0:new_migrate",
+    "migration_phase": "",
+    "logical_op": 5,
+    "session": {
+     "backend_pid": 4870
+    },
+    "task": "ds-actor-new_migrate",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:156:upsert_version_table",
+    "framework_entry": null,
+    "txn": "new_migrate:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 5,
+   "decision": 5,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 11.16,
+   "completed_ms": 11.28
+  },
+  {
+   "seq": 6,
+   "actor": "new_migrate",
+   "kind": "execute",
+   "sql": "INSERT INTO \"chancy_schema_version\" (version_of, version) VALUES (%s, %s) ON CONFLICT (version_of) DO UPDATE SET version = EXCLUDED.version",
+   "statement_id": "749948e0ba18",
+   "params": [
+    {
+     "str": 6,
+     "sha256": "5d607b5ef9ee"
+    },
+    7
+   ],
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "new_migrate",
+    "handler": "migrate",
+    "invocation_id": "isolated_chancy_plan_0:new_migrate",
+    "migration_phase": "",
+    "logical_op": 6,
+    "session": {
+     "backend_pid": 4870
+    },
+    "task": "ds-actor-new_migrate",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:193:set_current_version",
+    "framework_entry": null,
+    "txn": "new_migrate:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 6,
+   "decision": 6,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 11.31,
+   "completed_ms": 11.51
+  },
+  {
+   "seq": 7,
+   "actor": "new_migrate",
+   "kind": "execute",
+   "sql": "ALTER TABLE \"chancy_jobs\" ADD COLUMN claim_id UUID",
+   "statement_id": "bff3311d6ec8",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "new_migrate",
+    "handler": "migrate",
+    "invocation_id": "isolated_chancy_plan_0:new_migrate",
+    "migration_phase": "",
+    "logical_op": 7,
+    "session": {
+     "backend_pid": 4870
+    },
+    "task": "ds-actor-new_migrate",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrations/v8.py:10:up",
+    "framework_entry": null,
+    "txn": "new_migrate:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 7,
+   "decision": 7,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 11.55,
+   "completed_ms": 11.71
+  },
+  {
+   "seq": 8,
+   "actor": "new_migrate",
+   "kind": "execute",
+   "sql": "CREATE TABLE IF NOT EXISTS \"chancy_schema_version\" ( version_of VARCHAR(255) PRIMARY KEY, version INT )",
+   "statement_id": "920b81e0ec32",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "new_migrate",
+    "handler": "migrate",
+    "invocation_id": "isolated_chancy_plan_0:new_migrate",
+    "migration_phase": "",
+    "logical_op": 8,
+    "session": {
+     "backend_pid": 4870
+    },
+    "task": "ds-actor-new_migrate",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:156:upsert_version_table",
+    "framework_entry": null,
+    "txn": "new_migrate:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 8,
+   "decision": 8,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 11.74,
+   "completed_ms": 11.85
+  },
+  {
+   "seq": 9,
+   "actor": "new_migrate",
+   "kind": "execute",
+   "sql": "INSERT INTO \"chancy_schema_version\" (version_of, version) VALUES (%s, %s) ON CONFLICT (version_of) DO UPDATE SET version = EXCLUDED.version",
+   "statement_id": "749948e0ba18",
+   "params": [
+    {
+     "str": 6,
+     "sha256": "5d607b5ef9ee"
+    },
+    8
+   ],
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "new_migrate",
+    "handler": "migrate",
+    "invocation_id": "isolated_chancy_plan_0:new_migrate",
+    "migration_phase": "",
+    "logical_op": 9,
+    "session": {
+     "backend_pid": 4870
+    },
+    "task": "ds-actor-new_migrate",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:193:set_current_version",
+    "framework_entry": null,
+    "txn": "new_migrate:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 9,
+   "decision": 9,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 11.87,
+   "completed_ms": 11.98
+  },
+  {
+   "seq": 10,
+   "actor": "new_migrate",
+   "kind": "transaction_exit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "new_migrate",
+    "handler": "migrate",
+    "invocation_id": "isolated_chancy_plan_0:new_migrate",
+    "migration_phase": "",
+    "logical_op": 10,
+    "session": {
+     "backend_pid": 4870
+    },
+    "task": "ds-actor-new_migrate",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:119:migrate",
+    "framework_entry": null,
+    "txn": "new_migrate:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 10,
+   "decision": 10,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 12.0,
+   "completed_ms": 12.1
+  },
+  {
+   "seq": 11,
+   "actor": "new_migrate",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "new_migrate",
+    "handler": "migrate",
+    "invocation_id": "isolated_chancy_plan_0:new_migrate",
+    "migration_phase": "",
+    "logical_op": 11,
+    "session": {
+     "backend_pid": 4870
+    },
+    "task": "ds-actor-new_migrate",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/app.py:333:migrate",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 11,
+   "decision": 11,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 12.13,
+   "completed_ms": 12.15
+  }
+ ]
+}
