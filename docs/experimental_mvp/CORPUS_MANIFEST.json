@@ -1,0 +1,215 @@
+{
+ "manifest": "ds-real-app-corpus-candidate-manifest",
+ "version": 1,
+ "prepared_on": "2026-11-05",
+ "status": "CANDIDATES_FOR_INDEPENDENT_REVIEW; NOT A BLIND CORPUS; NO CASE ADOPTED",
+ "selection_rules": "unchanged: CORPUS_SHORTLIST.json v2 (frozen); this manifest applies them, it doesn't amend them",
+ "evidence_method": "PyPI JSON metadata (requires_dist, licence, requires_python, release times); each sdist downloaded and its sha256 verified; git ls-remote for the release tag; archive file *names* listed to apply the migration-area rule; pyproject.toml [project.scripts] read for entrypoints. For the five new candidates no source, migration body, test, issue, changelog or fix commit was read.",
+ "defect_labels": "None collected for any candidate. Labels must come from an independent curator who seals them before any tool or Muse prompt is run against the case; no such curator or sealing exists yet.",
+ "independence": "INCOMPLETE: no separate oracle author, label curator or blind evaluator has been assigned",
+ "candidates": [
+  {
+   "id": "pgqueuer",
+   "role": "development_and_compatibility_target",
+   "blind_eligible": false,
+   "exposure": "NONBLIND: its driver, queue manager and query modules were read to build the adapter; its schema install SQL is in recorded traces",
+   "version": "1.6.0",
+   "sdist_sha256": "ed1306404f96e25c84c951f434e8b06b091e04e0177af0d5441505a7944f156e",
+   "tag_commit": "efcd65689a49a067e68662702f4c5fbee1235df0",
+   "licence": "MIT",
+   "requires_python": ">=3.10",
+   "driver": "psycopg 3 (extra 'psycopg') or asyncpg",
+   "framework": "none (async job queue)",
+   "migration_area": "none selected by the frozen rule (no migrations/ directory)",
+   "entrypoints": [
+    "Queries(driver).install()",
+    "Queries(driver).enqueue(...)",
+    "QueueManager(Queries(driver)).run()"
+   ],
+   "postgres": "not declared in metadata",
+   "oracle": "lifecycle oracle Q1-Q3 written by the developers (not independent)",
+   "instrumentation": "SUPPORTED via the Driver port adapter (results/third_party_pgqueuer_lifecycle_1); the public from_psycopg_connection path bypasses the gate (refuted: results/third_party_pgqueuer_public_factory_refuted_1)"
+  },
+  {
+   "id": "chancy",
+   "role": "development_and_compatibility_target",
+   "blind_eligible": false,
+   "exposure": "NONBLIND: its app, worker, migration applier and executor were read to build the adapter; its migration SQL is in recorded traces",
+   "version": "0.26.0",
+   "sdist_sha256": "ac98b9c502d7bdb6f47d53fac1c22b4dc55e6cfcfec84b08b1a0cbaee45aef06",
+   "tag_commit": "73fd582c0e5d2f8655316e09f189ba0c57d76ca7",
+   "licence": "MIT",
+   "requires_python": ">=3.11",
+   "driver": "psycopg 3 with psycopg_pool",
+   "framework": "none (async job queue)",
+   "migration_area": "chancy/migrations/v8.py + chancy/migrate.py (frozen rule)",
+   "entrypoints": [
+    "Chancy.migrate()",
+    "Chancy.declare(Queue)",
+    "Chancy.push(job)",
+    "Worker.start()/stop()"
+   ],
+   "postgres": "not declared in metadata",
+   "oracle": "lifecycle oracle C1-C3 written by the developers (not independent)",
+   "instrumentation": "SUPPORTED with notifications=False through a one-connection pool adapter (results/third_party_chancy_runtime_1); notifications=True opens an uninstrumented LISTEN connection (refuted: results/third_party_chancy_notifications_refuted_1)"
+  },
+  {
+   "id": "dbos",
+   "role": "candidate",
+   "blind_eligible": true,
+   "exposure": "metadata and file names only",
+   "version": "3.4.0",
+   "released": "2026-10-28T15:25:33Z",
+   "sdist_sha256": "e152a517686fd1875b6eb3d6bf83c87f700a6c244fe872b6da7955f750e18953",
+   "repository": "https://github.com/dbos-inc/dbos-transact-py",
+   "tag": "3.4.0",
+   "tag_commit": "718d06613d9b7dc4c935e098e4608b6745267760",
+   "licence": "MIT",
+   "requires_python": ">=3.10",
+   "driver": "psycopg[binary]>=3.1 (required)",
+   "framework": "SQLAlchemy[asyncio]>=2.0.43 (durable workflows)",
+   "migration_area": "none selected by the frozen rule (no migrations/ directory in the core package; one under _templates is a project template, not the library's)",
+   "entrypoints": [
+    "dbos (dbos.cli.cli:app)"
+   ],
+   "postgres": "not declared in metadata",
+   "oracle": "none",
+   "instrumentation": "TO_VERIFY: builds its own SQLAlchemy engines from a URL; needs a creator/async_creator seam"
+  },
+  {
+   "id": "weblate",
+   "role": "candidate",
+   "blind_eligible": true,
+   "exposure": "metadata and file names only",
+   "version": "2026.11",
+   "released": "2026-11-02T18:54:56Z",
+   "sdist_sha256": "ca7babadfba3844f2a8950922f3418179cdd4d7d20f519ec7f551789278e1a65",
+   "repository": "https://github.com/WeblateOrg/weblate",
+   "tag": "weblate-2026.11",
+   "tag_commit": "08b6dd96576a0013fcfd8d35ea990f704b2389f5",
+   "licence": "GPL-3.0-or-later",
+   "requires_python": ">=3.12",
+   "driver": "psycopg[binary]==3.3.8 (extra 'postgres')",
+   "framework": "Django 6.0 (multi-app)",
+   "migration_area": "AMBIGUOUS under the frozen rule: no package-level migrations/; app-level migrations/ in trans (102 files), accounts (25), addons (20), billing (16), auth (15), workspaces (8), ... A reviewer must rule which counts as the 'core package' before any file is read",
+   "mixed_version_scenario": "likely (Django data migrations run while old and new web/celery workers coexist); not examined",
+   "entrypoints": [
+    "weblate (weblate.runner:main)",
+    "weblate-generate-secret-key"
+   ],
+   "postgres": "not declared in metadata",
+   "oracle": "none",
+   "instrumentation": "UNSUPPORTED today: Django's backend opens its own psycopg connections; a Django database-backend seam is not built"
+  },
+  {
+   "id": "mlflow",
+   "role": "candidate",
+   "blind_eligible": true,
+   "exposure": "metadata and file names only",
+   "version": "3.18.0",
+   "released": "2026-11-03T23:46:06Z",
+   "sdist_sha256": "04e912d5b154b417c5930ba47ef3dc2f74738fb3ba93e3d70499955ec8884540",
+   "repository": "https://github.com/mlflow/mlflow",
+   "tag": "v3.18.0",
+   "tag_commit": "ba41106d110b67096384da12b6b85473457598db",
+   "licence": "Apache-2.0 (classifier)",
+   "requires_python": ">=3.10",
+   "driver": "psycopg[binary] (extra 'db'); psycopg2-binary also declared",
+   "framework": "SQLAlchemy >=1.4,<3 with Alembic",
+   "migration_area": "AMBIGUOUS under the frozen rule: Alembic revisions in mlflow/store/db_migrations/versions (71 files, not numbered) and mlflow/server/auth/db/migrations/versions (8); the rule's 'highest-numbered migrations/ file' is undefined for hash-named revisions",
+   "mixed_version_scenario": "likely (tracking-server schema upgrades while clients of the previous version write); not examined",
+   "entrypoints": [
+    "mlflow (mlflow.cli:cli)"
+   ],
+   "postgres": "not declared in metadata",
+   "oracle": "none",
+   "instrumentation": "TO_VERIFY: SQLAlchemy engine from a tracking URI; the psycopg dialect must be the one used"
+  },
+  {
+   "id": "saq",
+   "role": "candidate",
+   "blind_eligible": true,
+   "exposure": "metadata and file names only",
+   "version": "0.26.5",
+   "released": "2026-10-29T03:38:18Z",
+   "sdist_sha256": "75e8664ca1351f46a400d28d0441612be4feb6c51ab206cdfad9dc06fcb42acc",
+   "repository": "https://github.com/tobymao/saq",
+   "tag": "v0.26.5",
+   "tag_commit": "4a9ecc242f04861552955a5a40f6232889f94354",
+   "licence": "MIT",
+   "requires_python": ">=3.11",
+   "driver": "psycopg[pool]>=3.2.0 (extra 'postgres')",
+   "framework": "none (async job queue)",
+   "migration_area": "none selected by the frozen rule (no migrations/ directory; one module under saq/queue)",
+   "entrypoints": [
+    "library (no declared scripts)"
+   ],
+   "postgres": "not declared in metadata",
+   "oracle": "none",
+   "instrumentation": "TO_VERIFY: async psycopg pool, likely the same seam as chancy"
+  },
+  {
+   "id": "pgmq",
+   "role": "candidate",
+   "blind_eligible": true,
+   "exposure": "metadata and file names only",
+   "version": "1.1.4",
+   "released": "2026-09-20T17:42:13Z",
+   "sdist_sha256": "bbbe21ea69a7a574ed691f7dac62a485cad0e7e1c0dee6dc8daaf6e23cf3ada6",
+   "repository": "https://github.com/pgmq/pgmq-py",
+   "tag": "v1.1.4",
+   "tag_commit": "7e5f139d9b9a1eaf2457b2de3eceda0518159a78",
+   "licence": "Apache-2.0",
+   "requires_python": ">=3.10",
+   "driver": "psycopg[binary,pool]>=3.2.10 (required)",
+   "framework": "client of the pgmq PostgreSQL extension",
+   "migration_area": "none selected by the frozen rule (no migrations/ directory); the schema is the extension's",
+   "entrypoints": [
+    "pgmq-api (pgmq.api.__main__:main)"
+   ],
+   "postgres": "needs the pgmq extension (not in the pinned disposable image)",
+   "oracle": "none",
+   "instrumentation": "TO_VERIFY; also needs an extension-enabled disposable image"
+  }
+ ],
+ "excluded_this_screen": [
+  {
+   "id": "open-webui",
+   "reason": "licence classifier 'Other/Proprietary License' (Open WebUI License): not OSI-approved"
+  },
+  {
+   "id": "prefect",
+   "reason": "declares asyncpg, not psycopg 3"
+  },
+  {
+   "id": "nautobot",
+   "reason": "declares psycopg2-binary, not psycopg 3"
+  },
+  {
+   "id": "pretalx",
+   "reason": "declares psycopg2-binary, not psycopg 3"
+  },
+  {
+   "id": "dagster-postgres",
+   "reason": "declares psycopg2-binary, not psycopg 3"
+  },
+  {
+   "id": "apache-superset",
+   "reason": "declares psycopg2-binary, not psycopg 3"
+  },
+  {
+   "id": "wagtail",
+   "reason": "declares no PostgreSQL driver"
+  },
+  {
+   "id": "kolibri",
+   "reason": "declares no PostgreSQL driver"
+  }
+ ],
+ "rulings_needed": [
+  "Which directory is the 'core package's migrations/' for a multi-app Django project (weblate)?",
+  "How the 'highest-numbered' rule applies to hash-named Alembic revisions (mlflow): by revision graph head, by release, or not at all?",
+  "Whether a driver declared only under an optional extra (weblate 'postgres', mlflow 'db', saq 'postgres') satisfies 'declared dependency' (pgqueuer entered the shortlist that way)",
+  "Who curates and seals defect labels, and who writes per-case oracles, without access to fixes"
+ ]
+}
