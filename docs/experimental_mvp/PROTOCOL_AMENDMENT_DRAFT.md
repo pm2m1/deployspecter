@@ -1,5 +1,7 @@
 # DRAFT, NOT ADOPTED: a prospective evaluation of Muse on real-application workloads
 
+> **Superseded on 2026-11-05 by `protocol/AMENDMENT_003_DRAFT.md`, with its open questions in `protocol/REVIEW_ISSUES.md`.** This earlier draft is kept unchanged below as a record.
+
 This is a draft for the owner's review.
 
 - **It changes nothing in force.** The frozen protocol (version 1.2, Amendments 001 and 002), its A–G and R arms, Gate 2A, Gate A1 and the Gate A2 guards stay as they are. No arm name is reused or redefined.
