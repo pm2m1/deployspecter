@@ -96,3 +96,24 @@ Account balance was not checked through the API. The Responses API returns per-r
 35. **Capability matrix.** `CAPABILITY_MATRIX.md`.
 
 **Meta usage in this increment:** none (0 requests, $0). No new pathway had an independent outcome on which a Muse comparison would mean anything.
+
+## Increment 6 (2026-11-05): from engineering MVP to a real-application pilot
+
+36. **Mixed-version pilot (NONBLIND).** Chancy 0.25.1 → 0.26.0 runs as a four-phase rolling deploy in the isolated runner (`chancy-mixed`).
+    - The migration area (v8) was selected by the frozen rules.
+    - 0.25.1 is pinned by its source hashes.
+    - The server log now matches a str that the server coerced to uuid by canonical or 32-hex form; anything else is UNVERIFIED.
+    - Evidence: `results/real_app_pilot_chancy_mixed_1`. All phases corroborated; oracle M1–M4 holds; **no defect**.
+37. **Mutation control.** Declared mutants (`--mutant`) are applied to the isolated build copy only. `results/mutation_control_chancy_1`: the original holds, and the `no_skip_locked_claim` mutant violates K1/K2. It is a control, not a defect, and not Muse evidence.
+38. **Muse pilot (NONBLIND).** `results/real_app_pilot_chancy_compare_1`, comparing curated, systematic and Muse workloads at equal budgets. No source found a violation, and Muse showed **no advantage**.
+39. **Protocol.** `protocol/DECISIONS_003.md` records proposed rulings for issues #6–#9 and #14, all **PROPOSED**: none accepted, implemented or verified. Confirmatory research stays blocked.
+40. **Independent-evaluation handoff.** `handoff/` holds the curator, oracle-reviewer and runner packages, the access-separation procedure and templates, with `research_tools/seal_labels.py` for sealing and leak checks. No reviewer has been engaged.
+41. **Engine fix.** `AsyncRun.quiesced` makes framework stops safe; it was exposed by the failed `demo_full_3`. It has a regression test, and the pilot was reproduced in 5 of 5 runs.
+42. **Release candidate rc1.** `RELEASE_CANDIDATE.md` and `.json`, `research_tools/rc_manifest.py`, and the acceptance run `results/demo_full_4` (exit 0).
+
+### Meta usage in this increment (estimates at Meta's published rates, not billing data)
+
+| Run | Requests | Estimated USD |
+|---|---|---|
+| `real_app_pilot_chancy_compare_1` | 1 completed (408 input / 2177 output tokens) | 0.009762 |
+| **Increment total** | 1 sent, 0 failed | **0.009762** (cap $10) |

@@ -15,6 +15,15 @@ This prototype runs real Python application handlers concurrently on psycopg 3, 
 - The Gate A2 demonstration stays blocked.
 - Gate 2A, Gate A1, WorkloadSpec v2 and the Track A modules are imported, never edited.
 
+## Status (2026-11-05)
+
+- **Engineering release candidate `rc1`:** see `RELEASE_CANDIDATE.md`. Its manifest, `RELEASE_CANDIDATE.json`, pins the code at `d9890f8` with per-file hashes, and `python research_tools/rc_manifest.py verify --manifest docs/experimental_mvp/RELEASE_CANDIDATE.json` checks a checkout against it.
+- **Real-application pilot:** Chancy 0.25.1 → 0.26.0 as a rolling deploy, NONBLIND. Corroborated and reproduced. **No defect was found.** See `results/real_app_pilot_chancy_mixed_1` and `demo_full_4`.
+- **Mutation control:** a declared claim-lock mutant of Chancy 0.26.0 is distinguished by the oracle (`results/mutation_control_chancy_1`).
+- **Muse:** in the NONBLIND pilot comparison it matched the deterministic sources and found nothing they missed (`results/real_app_pilot_chancy_compare_1`).
+- **Protocol:** Amendment 003's five decisions are PROPOSED only (`protocol/DECISIONS_003.md`). Confirmatory research stays blocked. The independent-evaluation handoff package is in `handoff/`; no reviewer has been engaged.
+- **Isolation:** hostile-grade isolation is BLOCKED (`results/isolation_runtime_scan_2`).
+
 ## Reproduce in one command
 
 ```bash
@@ -30,7 +39,7 @@ The second argument selects the mode:
 | `sync` | the default |
 | `async` | the async engine demos |
 | `all` | sync and async, plus the isolated-runner smoke test |
-| `thirdparty` | fetches and verifies the pinned sdists, then runs PGQueuer and Chancy and both negative controls in the isolated runner |
+| `thirdparty` | fetches and verifies the pinned sdists (PGQueuer 1.6.0, Chancy 0.26.0 and 0.25.1). In the isolated runner it then runs PGQueuer, the Chancy runtime, both negative controls, concurrent workers, the claim-lock mutant control and the mixed-version pilot |
 | `full` | `all`, then `thirdparty` |
 
 The optional third-party tests live in `tests/thirdparty_isolated`, outside the core suite. They run when `DS_THIRDPARTY_SDIST_DIR` points at the fetched sdists.
@@ -116,7 +125,9 @@ The server-log check compares one-dimensional arrays and `bytea` exactly.
 - PGQueuer's asyncpg drivers;
 - any library code that builds its own connection or cursor outside the seam. The server log catches these.
 
-**Hostile-grade isolation is NOT COMPLETE:** only `runc` is available (`results/isolation_runtime_scan_1`).
+**Hostile-grade isolation is BLOCKED:** only `runc` is available (`results/isolation_runtime_scan_1`, `_2`).
+
+**Stopping a framework.** `AsyncRun.quiesced(actor)` holds new operations from the actor's earlier tasks before the gate, and lets the statement in flight finish. Inside it, a framework's `stop()` cancels those tasks at the gate, and each is recorded as `cancelled_while_held`. Without the hold, Chancy's `Worker.stop` can cancel a statement on the wire. The server log then refutes the run, which is what happened in `results/demo_full_3`.
 
 ## Django (`experimental/django_backend`)
 
