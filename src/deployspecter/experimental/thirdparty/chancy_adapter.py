@@ -44,6 +44,16 @@ PINNED_BY_VERSION = {  # sha256 of the files in each verified sdist
                "chancy/worker.py": "2742f88da03bcaca2158691e09554dbbf7fa906da4425072f34023ad1b298af3",
                "chancy/migrate.py": "b25d63e03dd13b17c41283415c97533baa11bf8243b17cf5a0ba7a50a8be715b",
                "chancy/executors/asyncex.py": "b3617071805ec538b3bc30c19864af8bcca1bf5654f51644f3e0a7db5ddd9525"},
+    # historical case chancy-2895c4a (docs/experimental_mvp/historical/chancy_2895c4a): the fix commit and its parent,
+    # built from hash-pinned `git archive` trees (research_tools/isolated/run_isolated.py CHANCY_GIT)
+    "git-80f570f": {"chancy/app.py": "10418da33d183d8ef0a8bc1c24a2b3078c44edb770b48addeedea72ebee8bdcf",
+                    "chancy/worker.py": "fc851ac97b65adb724ae0767c01cf3c4f68d4e3b3515431a877faf43eb67be31",
+                    "chancy/migrate.py": "2f19e93779a146ef6b162edf76e2fe174a0405a028d9f38339793ee0213b240e",
+                    "chancy/executors/asyncex.py": "356db539d0dabbcbdf20cdd5d5b65dfd792e4fa9e0615d8d0e9cf69c5050c742"},
+    "git-2895c4a": {"chancy/app.py": "160de307b11bbdb097eeab2a692f8ade3543c356efe92eb88b35c56f92573265",
+                    "chancy/worker.py": "b045bccdfc1ddfe1ec2d7df4d97d6169f454db3cc14eb441cfc2048252c68cdd",
+                    "chancy/migrate.py": "2f19e93779a146ef6b162edf76e2fe174a0405a028d9f38339793ee0213b240e",
+                    "chancy/executors/asyncex.py": "f6495e78fb80973f1227a9060c9698ef61f984f15180d06f3e4f917aa4eae855"},
 }
 PINNED_SOURCES = PINNED_BY_VERSION["0.26.0"]
 NOWHERE_DSN = "postgresql://stepped-pool-only.invalid/none"  # only sync_pool would use it, and must fail

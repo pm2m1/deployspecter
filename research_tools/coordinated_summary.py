@@ -50,7 +50,7 @@ def interleaving(run_dir: Path) -> list[dict[str, Any]]:
     """The run's application-level statements in global grant order, each with its version, actor, backend pid and
     the trace's outcome and row count (from that process's own trace), plus the COMMIT that ended its transaction."""
     r = json.loads((run_dir / "report.json").read_text())
-    coord = (r.get("simultaneous") or {}).get("coordinator") or {}
+    coord = (r.get("simultaneous") or r.get("run") or {}).get("coordinator") or {}
     statements = coord.get("statements", {})
     ops = {}
     for f in run_dir.glob("*.trace.json"):

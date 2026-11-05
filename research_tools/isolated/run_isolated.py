@@ -67,6 +67,14 @@ CHANCY_SDIST = "chancy-0.26.0.tar.gz"
 CHANCY_SDIST_SHA256 = "ac98b9c502d7bdb6f47d53fac1c22b4dc55e6cfcfec84b08b1a0cbaee45aef06"
 CHANCY_SDISTS = {CHANCY_SDIST: CHANCY_SDIST_SHA256,  # the mixed-version pilot also needs the previous release
                  "chancy-0.25.1.tar.gz": "264ed4f732cb51c405b789e0727c4d045fdfa1dcee1e3eed6d762df6c44122d7"}
+# Commit-pinned Chancy trees for the historical case chancy-2895c4a: ``git archive --format=tar <commit> chancy``,
+# deterministic for a commit; name -> (tar sha256, commit, git tree)
+CHANCY_GIT = {
+    "chancy-git-80f570f.tar": ("8747cdc8258aa46d445c82babcdf513c6c8d8e44fae5c67d11c9caffc795deaa",
+                               "80f570f0b8332212e46c3c27af5940946f6486a9", "a5a389c45c8db1f53275a6c121bb3bf520796adb"),
+    "chancy-git-2895c4a.tar": ("cbc461d2e7cb5edcc48830470405c1dfea91fe5c68381afd6bade26a193ed626",
+                               "2895c4a7fc173cec3d645221f63c4e51e2cf7e84", "bdf46b6b445bdc8519a3c96133a411610fc4a57a"),
+}
 CHANCY_EXTRA_REQUIREMENTS = ("psycopg-pool==3.3.3 "
                              "--hash=sha256:9b9cd6a4fcec47a410f7e82d408540e7f77b478509e91b44c1a5457a13e5ff37\n")
 CAPTURE_SCHEMA = "chancy_capture"
@@ -139,12 +147,20 @@ def build_image(work: Path, *, chancy_sdist: Path | None = None, pgqueuer_sdist:
     if chancy_sdist is not None:
         import tarfile
         got = hashlib.sha256(chancy_sdist.read_bytes()).hexdigest()
-        if CHANCY_SDISTS.get(chancy_sdist.name) != got:
-            raise RuntimeError(f"{chancy_sdist.name} isn't a pinned sdist (sha256 {got[:12]})")
         unpack = work / "sdist"
-        with tarfile.open(chancy_sdist) as tf:
-            tf.extractall(unpack, filter="data")  # data only: no links out, no device files, no absolute paths
-        shutil.copytree(unpack / chancy_sdist.name.removesuffix(".tar.gz") / "chancy", ctx / "app" / "src" / "chancy")
+        if chancy_sdist.name in CHANCY_GIT:  # a commit-pinned tree (historical case), not a released sdist
+            if CHANCY_GIT[chancy_sdist.name][0] != got:
+                raise RuntimeError(f"{chancy_sdist.name} isn't the pinned tree (sha256 {got[:12]})")
+            with tarfile.open(chancy_sdist) as tf:
+                tf.extractall(unpack, filter="data")
+            shutil.copytree(unpack / "chancy", ctx / "app" / "src" / "chancy")
+        else:
+            if CHANCY_SDISTS.get(chancy_sdist.name) != got:
+                raise RuntimeError(f"{chancy_sdist.name} isn't a pinned sdist (sha256 {got[:12]})")
+            with tarfile.open(chancy_sdist) as tf:
+                tf.extractall(unpack, filter="data")  # data only: no links out, no device files, no absolute paths
+            shutil.copytree(unpack / chancy_sdist.name.removesuffix(".tar.gz") / "chancy",
+                            ctx / "app" / "src" / "chancy")
         if mutant is not None:
             rel, old, new, _why = MUTANTS[mutant]
             target_file = ctx / "app" / "src" / rel

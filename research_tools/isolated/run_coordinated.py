@@ -183,7 +183,7 @@ def simultaneous(target: hz.Target, images: dict[str, Any], spec: dict[str, Any]
             result["precondition"] = {"schema_version": initial["schema_version"],
                                       "jobs_before": len(initial["jobs_detail"])}
             versions = {v.get("version_of"): v.get("version") for v in initial["schema_version"]}
-            if versions.get("chancy") != "8":
+            if versions.get("chancy") != spec.get("expect_schema", "8"):
                 raise RuntimeError(f"the migration isn't complete before the window: {initial['schema_version']}")
             if initial["jobs_detail"]:
                 raise RuntimeError("jobs exist before the simultaneous phase")
@@ -213,7 +213,7 @@ def simultaneous(target: hz.Target, images: dict[str, Any], spec: dict[str, Any]
                 f = work / f"{who}.env"
                 f.write_text("\n".join(envs[who]) + "\n")
                 f.chmod(0o600)
-                image = images["B" if who == "coordinator" else who][0]
+                image = (images.get("B") or images["A"])[0] if who == "coordinator" else images[who][0]
                 alias = ["--network-alias", "ds-coord"] if who == "coordinator" else []
                 procs[who] = subprocess.Popen(
                     ["docker", "run", "--rm", "--name", names[who], "--network", net, *alias, *ri.RUNTIME_FLAGS,
