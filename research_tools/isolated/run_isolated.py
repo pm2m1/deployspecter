@@ -76,6 +76,8 @@ SCHEMAS = {"smoke": CAPTURE_SCHEMA, "chancy": CAPTURE_SCHEMA, "pgqueuer": "pgq_c
 INSIDE_MODE = {"smoke": "smoke", "chancy": "chancy_migrate", "pgqueuer": "pgqueuer_lifecycle",
                "chancy-runtime": "chancy_runtime"}
 CAPTURE_MODES = ("chancy", "pgqueuer", "chancy-runtime")
+PGQ_DEFAULT_WORKLOAD = {"jobs": [{"payload": "alpha", "priority": 0}, {"payload": "beta", "priority": 0}],
+                        "batch_size": 1}
 EXPECTED_PROBES = {"uid": 65534, "root_writable": False, "app_writable": False, "tmp_writable": True,
                    "ssh_dir_present": False, "secret_like_env": []}
 
@@ -148,7 +150,8 @@ def protected_state() -> str:
 
 
 def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path, image: tuple[str, str],
-              mode: str = "smoke", pgq_variant: str = "adapter", chancy_variant: str = "pool_only") -> dict[str, Any]:
+              mode: str = "smoke", pgq_variant: str = "adapter", chancy_variant: str = "pool_only",
+              pgq_workload: dict[str, Any] | None = None) -> dict[str, Any]:
     before = protected_state()
     work = Path(tempfile.mkdtemp(prefix="ds_iso_"))
     nonce = secrets.token_hex(4)
@@ -187,7 +190,8 @@ def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path
                 f"DS_PG_PASSWORD={target.password}", f"DS_PG_DB={target.dbname}",
                 f"DS_SCHEDULE={json.dumps(schedule)}", f"DS_VARIANT={variant}",
                 f"DS_MODE={INSIDE_MODE[mode]}", f"DS_SCHEMA={schema}", f"DS_PGQ_VARIANT={pgq_variant}",
-                f"DS_CHANCY_VARIANT={chancy_variant}"]) + "\n")
+                f"DS_CHANCY_VARIANT={chancy_variant}",
+                f"DS_PGQ_WORKLOAD={json.dumps(pgq_workload or PGQ_DEFAULT_WORKLOAD)}"]) + "\n")
             envfile.chmod(0o600)
             admin.execute(f"SELECT '{start}'")
             started = time.monotonic()
@@ -248,7 +252,8 @@ def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path
                          memory_limited=probes["memory_limit"] == str(512 * 1024 * 1024))
         result.update(probes=probes, isolation_checks=isolation, isolation_ok=all(isolation.values()),
                       initial_state_digest=digest, final_state=final, final_state_digest=oracle.digest(final),
-                      oracle_violations=(None if mode == "chancy" else pgqueuer_check(final, inside["raw_results"])
+                      oracle_violations=(None if mode == "chancy" else pgqueuer_check(
+                                             final, inside["raw_results"], pgq_workload or PGQ_DEFAULT_WORKLOAD)
                                          if mode == "pgqueuer" else chancy_check(final, inside["raw_results"])
                                          if mode == "chancy-runtime" else oracle.check(final, backfill_done=done)),
                       pinned_sources=inside.get("pinned_sources"),
@@ -341,16 +346,40 @@ def chancy_check(final: dict[str, Any], raw: dict[str, Any]) -> list[str]:
     return out
 
 
-def pgqueuer_check(final: dict[str, Any], raw: dict[str, Any]) -> list[str]:
+def validate_pgq_workload(w: Any) -> list[str]:
+    """Deterministic. A structured PGQueuer workload: 1 to 5 jobs, each a short lowercase payload and a priority in
+    0..9, and a worker batch size in 1..3. Nothing else is accepted; nothing is repaired."""
+    import re
+    if not isinstance(w, dict) or set(w) != {"jobs", "batch_size"}:
+        return ["shape: exactly 'jobs' and 'batch_size'"]
+    out = []
+    if not isinstance(w["batch_size"], int) or isinstance(w["batch_size"], bool) or not 1 <= w["batch_size"] <= 3:
+        out.append("batch_size: an int in 1..3")
+    jobs = w["jobs"]
+    if not isinstance(jobs, list) or not 1 <= len(jobs) <= 5:
+        return out + ["jobs: 1 to 5"]
+    for j in jobs:
+        if not isinstance(j, dict) or set(j) != {"payload", "priority"}:
+            out.append("job: exactly 'payload' and 'priority'")
+            continue
+        if not isinstance(j["payload"], str) or not re.fullmatch(r"[a-z][a-z0-9_]{0,15}", j["payload"]):
+            out.append(f"payload {j['payload']!r}: ^[a-z][a-z0-9_]{{0,15}}$")
+        if not isinstance(j["priority"], int) or isinstance(j["priority"], bool) or not 0 <= j["priority"] <= 9:
+            out.append(f"priority {j['priority']!r}: an int in 0..9")
+    return out
+
+
+def pgqueuer_check(final: dict[str, Any], raw: dict[str, Any], workload: dict[str, Any]) -> list[str]:
     """Independent of the adapter and of PGQueuer's code, from its documented lifecycle and the workload:
-    Q1 every enqueued payload was handled exactly once, under its own job id; Q2 no job for the entrypoint is left in
+    Q1 every enqueued payload was handled exactly once, under its own job id (duplicates counted);
+    Q2 no job for the entrypoint is left in
     the queue; Q3 each job's log has exactly one 'successful' and no 'exception' or 'failed'."""
     out = []
     missing = [t["table"] for t in final["tables"] if not t["present"]]
     if missing:
         return [f"Q0 the lifecycle's tables don't all exist: {missing}"]
     enqueued = (raw.get("enqueue") or {}).get("job_ids", [])
-    want = sorted(zip(enqueued, ["alpha", "beta"], strict=False))
+    want = sorted(zip(enqueued, [j["payload"] for j in workload["jobs"]], strict=False))
     got = sorted((r["job_id"], r["payload"]) for r in final["results"])
     if got != want:
         out.append(f"Q1 handled {got}, but enqueued {want}")

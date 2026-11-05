@@ -167,8 +167,9 @@ async def pgqueuer_lifecycle() -> dict:
     pinned = pq.verify_pinned()
     lim = Limits(statement_ms=20000, run_s=120, python_step_s=60)
     connect = async_actor_connection_factory(info, lim, search_path=os.environ["DS_SCHEMA"], autocommit=True)
-    phases = [("install", pq.install, {}), ("enqueue", pq.enqueue, {"payloads": ["alpha", "beta"]}),
-              ("work", pq.work, {})]
+    workload = json.loads(os.environ.get("DS_PGQ_WORKLOAD") or json.dumps(pq.DEFAULT_WORKLOAD))
+    phases = [("install", pq.install, {}), ("enqueue", pq.enqueue, {"jobs": workload["jobs"]}),
+              ("work", pq.work, {"batch_size": workload["batch_size"]})]
     if os.environ.get("DS_PGQ_VARIANT") == "public_factory":  # the negative control: PGQueuer's own driver
         phases = [("install", pq.install_through_public_factory, {})]
     runs = []

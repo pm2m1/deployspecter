@@ -32,6 +32,11 @@ COMMON = ("A deterministic scheduler will run your invocations concurrently and 
           "listed handlers with the listed argument types; you cannot write SQL or code. Every proposal must satisfy "
           "the stated constraints exactly, or it is rejected. Return JSON only.")
 INSTRUCTIONS = {
+    "pgqueuer": "You design test workloads for a job queue library running on PostgreSQL. Your workloads are executed "
+                "for real and the database's final state is checked independently. Propose workloads that exercise "
+                "different parts of the queue's claim, priority and batching behaviour. You cannot write SQL or "
+                "code. Every proposal must satisfy the stated constraints exactly, or it is rejected. Return JSON "
+                "only.",
     "release": "You design concurrency test workloads, including the initial database state they need, for a small "
                "Python reservations service. " + COMMON + " Also state invariant hypotheses, in the given grammar, "
                "that a correct service should keep.",
@@ -419,10 +424,46 @@ def validate_release(p: Any) -> tuple[dict[str, Any] | None, list[dict[str, Any]
     return to_workload_spec(prop.model_dump(exclude={"invariant_hypotheses"})), hyps, reasons
 
 
+# ------------------------------------------------------------------ the PGQueuer target (structured queue workloads)
+
+
+class PgqJob(BaseModel):
+    payload: str
+    priority: int
+
+
+class PgqProposal(BaseModel):
+    rationale: str
+    jobs: list[PgqJob]
+    batch_size: int
+
+
+class PgqSet(BaseModel):
+    proposals: list[PgqProposal]
+
+
+def pgqueuer_context() -> dict[str, Any]:
+    return {"system": "a PostgreSQL-backed job queue library (PGQueuer 1.6.0): a producer enqueues jobs for one "
+                      "registered entrypoint; one worker in drain mode dequeues them in batches, runs the registered "
+                      "handler (it records each job it is given) and marks each finished, then stops",
+            "registered_entrypoint": "ds_job",
+            "constraints": {"jobs": "1 to 5, each {payload, priority}",
+                            "payload": "a lowercase identifier matching ^[a-z][a-z0-9_]{0,15}$",
+                            "priority": "an int in 0..9", "batch_size": "the worker's dequeue batch size, 1..3"}}
+
+
+def pgq_proposal_to_workload(p: Any) -> dict[str, Any] | None:
+    try:
+        prop = PgqProposal.model_validate(p)
+    except Exception:
+        return None
+    return {"jobs": [{"payload": j.payload, "priority": j.priority} for j in prop.jobs], "batch_size": prop.batch_size}
+
+
 # ------------------------------------------------------------------ the request
 
 TARGETS = {"ledger": (ledger_context, LedgerSet), "planner": (planner_context, PlannerSet),
-           "release": (release_context, ReleaseSet)}
+           "release": (release_context, ReleaseSet), "pgqueuer": (pgqueuer_context, PgqSet)}
 
 
 def prompt(target: str, n: int) -> str:

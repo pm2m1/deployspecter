@@ -97,16 +97,17 @@ async def install_through_public_factory(conn: Any) -> dict[str, Any]:
     return {"installed": True}
 
 
-async def enqueue(conn: Any, *, payloads: list[str]) -> dict[str, Any]:
+async def enqueue(conn: Any, *, jobs: list[dict[str, Any]]) -> dict[str, Any]:
+    """Each job is {"payload": str, "priority": int}, already validated on the host (``validate_workload``)."""
     from pgqueuer.queries import Queries
     queries = Queries(stepped_driver(conn))
     ids = []
-    for p in payloads:
-        ids += await queries.enqueue(ENTRYPOINT, p.encode())
+    for j in jobs:
+        ids += await queries.enqueue(ENTRYPOINT, j["payload"].encode(), priority=j["priority"])
     return {"job_ids": [int(i) for i in ids]}
 
 
-async def work(conn: Any) -> dict[str, Any]:
+async def work(conn: Any, *, batch_size: int = 1) -> dict[str, Any]:
     """A worker in drain mode: it claims, runs the trusted handler and finishes every job, then shuts down."""
     from datetime import timedelta
 
@@ -123,5 +124,10 @@ async def work(conn: Any) -> dict[str, Any]:
         await driver.execute("INSERT INTO ds_pgq_results (job_id, payload) VALUES ($1, $2)", job.id, job.payload)
         handled.append(int(job.id))
 
-    await qm.run(dequeue_timeout=timedelta(seconds=1), batch_size=1, mode=QueueExecutionMode.drain)
+    await qm.run(dequeue_timeout=timedelta(seconds=1), batch_size=batch_size, mode=QueueExecutionMode.drain)
     return {"handled": handled}
+
+
+# ------------------------------------------------------------------ structured workloads (validated on the host)
+
+DEFAULT_WORKLOAD = {"jobs": [{"payload": "alpha", "priority": 0}, {"payload": "beta", "priority": 0}], "batch_size": 1}
