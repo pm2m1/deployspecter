@@ -52,7 +52,7 @@ from deployspecter.experimental.corroborate import corroborate  # noqa: E402
 REPO = ri.REPO
 SCHEMA = ri.CAPTURE_SCHEMA
 OLD, NEW = "0.25.1", "0.26.0"
-MARKERS = {"fetch": {"regex": "SKIP LOCKED"}, "claim": {"regex": "SKIP LOCKED", "rows": True},
+MARKERS = {"fetch": {"regex": "WITH selected_jobs AS"}, "claim": {"regex": "WITH selected_jobs AS", "rows": True},
            "push": {"regex": 'INSERT INTO "chancy_jobs"'}, "cancel": {"regex": "SET state = 'failed'"}}
 FLUSH = r'UPDATE "chancy_jobs" SET state = %\(state\)s'
 FROZEN = {"properties": "docs/experimental_mvp/simultaneous/PROPERTIES.md",
@@ -99,7 +99,7 @@ def scenario(name: str) -> dict[str, Any]:
         return {"processes": {"A": [A_W], "B": [B_W, {"actor": "new_push", "fn": "push", "args": {
                     "ns": [0], "queue": "q_shared", "max_attempts": 2, "flaky_in": OLD}}]},
                 "gates": _window(["new_push"], both) + [
-                    {"actor": "new_worker", "match": "SKIP LOCKED",
+                    {"actor": "new_worker", "match": "WITH selected_jobs AS",
                      "from": [{"actor": "new_push", "marker": "push", "count": 1}],
                      "until": [{"actor": "old_worker", "marker": "claim", "count": 1}]}],
                 "covers": [0], "or_count": {"key": "handled", "n": 0, "at_least": 2}, "retry": [0],
@@ -347,7 +347,7 @@ def summary(r: dict[str, Any]) -> dict[str, Any]:
         window["by_actor"][d["actor"]] = window["by_actor"].get(d["actor"], 0) + 1
         if i and inside[i - 1]["version"] != d["version"]:
             window["version_switches"] += 1
-        if "SKIP LOCKED" in statements.get(d["statement_id"], d["sql"]):
+        if "WITH selected_jobs AS" in statements.get(d["statement_id"], d["sql"]):
             window["claims_by_version"][d["version"]] = window["claims_by_version"].get(d["version"], 0) + 1
     return {"verdict": r.get("verdict"), "grants": len(ds), "grants_by_version": by_v, "window": window,
             "sessions": (r.get("corroboration") or {}).get("sessions"),

@@ -42,8 +42,8 @@ def first_violation(report: dict[str, Any]) -> dict[str, Any] | None:
     return {"grants": coord.get("grants"), "elapsed_ms": coord.get("elapsed_ms")}
 
 
-KEY_STATEMENTS = {"claim": "SKIP LOCKED", "push": 'INSERT INTO "chancy_jobs"', "cancel": "SET state = 'failed'",
-                  "flush": 'UPDATE "chancy_jobs" SET state = %(state)s'}
+KEY_STATEMENTS = {"claim": "WITH selected_jobs AS", "push": 'INSERT INTO "chancy_jobs"',
+                  "cancel": "SET state = 'failed'", "flush": 'UPDATE "chancy_jobs" SET state = %(state)s'}
 
 
 def interleaving(run_dir: Path) -> list[dict[str, Any]]:
