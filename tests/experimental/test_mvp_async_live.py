@@ -296,3 +296,29 @@ class TestFrameworkSupport:
         assert len(raw) == 3 and {op.provenance["on_behalf_of"] for op in raw[1:]} == {"q"}
         assert c["ok"], c["problems"]
         assert c["params_compared"] == 5 and c["params_unchecked"] == 0  # incl. the bytea, compared by digest
+
+
+class TestTypedParameters:
+    @pytest.mark.parametrize("zone", ["UTC", "Asia/Kolkata"])
+    def test_date_time_interval_uuid_and_arrays_reconcile_exactly_in_any_session_zone(self, target, zone):
+        import datetime as dt
+        import uuid
+        values = (dt.datetime(2026, 11, 5, 8, 30, 59, 357123, tzinfo=dt.UTC),
+                  dt.datetime(2026, 11, 5, 8, 30, 59, 357123, tzinfo=dt.timezone(dt.timedelta(hours=5, minutes=30))),
+                  dt.datetime(2026, 11, 5, 8, 30, 59, 7), dt.date(2026, 11, 5), dt.time(8, 30, 59, 357000),
+                  dt.time(8, 30, tzinfo=dt.timezone(dt.timedelta(hours=-3))), dt.timedelta(seconds=30),
+                  dt.timedelta(days=1, seconds=3723, microseconds=5), dt.timedelta(microseconds=-1),
+                  uuid.UUID("03fbb261-c406-2a37-a654-f9643fe1ba94"), [dt.timedelta(0), dt.timedelta(days=1)], None)
+        query = "SELECT " + ", ".join(f"${i + 1}" for i in range(len(values)))
+        zone_sql = f"SET TIME ZONE '{zone}'"
+
+        async def typed(conn):
+            await conn.execute(zone_sql)
+            cur = sa.AsyncSteppedRawCursor(conn)
+            await cur.execute(query, values)
+            return await cur.fetchone()
+
+        trace, c, _l, _k = run_handlers(target, ("a", typed, [zone_sql, query]))
+        assert trace.actors["a"]["exception"] is None
+        assert c["ok"], c["problems"]
+        assert (c["params_compared"], c["params_mismatched"], c["params_unchecked"]) == (12, 0, 0)

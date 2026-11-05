@@ -26,6 +26,7 @@ the only corroboration for such bypasses.
 from __future__ import annotations
 
 import contextlib
+import datetime
 import hashlib
 import importlib.util
 import json
@@ -34,6 +35,7 @@ import re
 import sys
 import threading
 import time
+import uuid
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from typing import Any
@@ -74,11 +76,33 @@ def statement_id(text: str) -> str:
     return hashlib.sha256(normal_sql(text).encode()).hexdigest()[:12]
 
 
+_EPOCH = datetime.datetime(1970, 1, 1, tzinfo=datetime.UTC)
+_US = datetime.timedelta(microseconds=1)
+
+
 def sanitize(value: Any) -> Any:
     """Integers, floats, booleans and NULL are kept exactly (they drive the handlers' arithmetic); strings and bytes
-    are reduced to their length and a short digest, so no application text reaches the trace."""
+    are reduced to their length and a short digest, so no application text reaches the trace. Date/time values keep
+    exactly what PostgreSQL's comparison needs: an aware datetime its instant (microseconds since the epoch), a naive
+    one its wall-clock value, a time its wall clock (and offset), a timedelta its days and the rest in microseconds.
+    A UUID, like a string, is kept only as a digest of its canonical form."""
     if value is None or isinstance(value, (bool, int, float)):
         return value
+    if isinstance(value, datetime.datetime):
+        if value.tzinfo is not None and value.utcoffset() is not None:
+            return {"timestamptz_us": (value - _EPOCH) // _US}
+        return {"timestamp": value.isoformat(sep=" ", timespec="microseconds")}
+    if isinstance(value, datetime.date):
+        return {"date": value.isoformat()}
+    if isinstance(value, datetime.time):
+        if value.tzinfo is not None and value.utcoffset() is not None:
+            return {"timetz": value.replace(tzinfo=None).isoformat(timespec="microseconds"),
+                    "offset_s": int(value.utcoffset().total_seconds())}
+        return {"time": value.isoformat(timespec="microseconds")}
+    if isinstance(value, datetime.timedelta):
+        return {"interval_days": value.days, "interval_us": value.seconds * 1_000_000 + value.microseconds}
+    if isinstance(value, uuid.UUID):
+        return {"uuid_sha256": hashlib.sha256(str(value).encode()).hexdigest()[:12]}
     if isinstance(value, str):
         return {"str": len(value), "sha256": hashlib.sha256(value.encode()).hexdigest()[:12]}
     if isinstance(value, (bytes, bytearray, memoryview)):

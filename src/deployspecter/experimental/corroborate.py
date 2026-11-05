@@ -72,10 +72,13 @@ class Corroboration:
     params_unchecked: int = 0
     sessions: dict[str, str] = field(default_factory=dict)
     problems: list[str] = field(default_factory=list)
+    unchecked_kinds: dict[str, int] = field(default_factory=dict)
+    params_mismatched: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return {"ok": self.ok, "matched": self.matched, "params_compared": self.params_compared,
-                "params_unchecked": self.params_unchecked, "sessions": self.sessions, "problems": self.problems}
+                "params_mismatched": self.params_mismatched, "params_unchecked": self.params_unchecked,
+                "unchecked_kinds": self.unchecked_kinds, "sessions": self.sessions, "problems": self.problems}
 
 
 def _expected(op: Any) -> list[tuple[str, list[Any] | None]]:
@@ -125,8 +128,79 @@ def _array_elements(text: str) -> list[str | None] | None:
     return out
 
 
+_TS = re.compile(r"^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?([+-]\d{2}(?::\d{2}(?::\d{2})?)?)?$")
+_TIME = re.compile(r"^(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?([+-]\d{2}(?::\d{2}(?::\d{2})?)?)?$")
+_INTERVAL = re.compile(r"^(?:(-?\d+) years? ?)?(?:(-?\d+) mons? ?)?(?:(-?\d+) days? ?)?"
+                       r"(?:([+-])?(\d+):(\d{2}):(\d{2})(?:\.(\d{1,6}))?)?$")
+
+
+def _offset_s(text: str | None) -> int | None:
+    if not text:
+        return None
+    sign = -1 if text[0] == "-" else 1
+    parts = [int(x) for x in text[1:].split(":")] + [0, 0]
+    return sign * (parts[0] * 3600 + parts[1] * 60 + parts[2])
+
+
+def _us(frac: str | None) -> int:
+    return int((frac or "").ljust(6, "0") or 0)
+
+
+def datetime_matches(logged_text: str, want: dict[str, Any]) -> bool | None:
+    """PostgreSQL's own output of a bound date/time parameter, compared exactly with the trace's typed value. None:
+    a representation this checker doesn't reconcile (infinity, BC dates, a non-'postgres' IntervalStyle, months)."""
+    import datetime as dt
+    if "timestamptz_us" in want or "timestamp" in want:
+        m = _TS.match(logged_text)
+        if not m:
+            return None
+        y, mo, d, h, mi, se, frac, off = m.groups()
+        wall = dt.datetime(int(y), int(mo), int(d), int(h), int(mi), int(se), _us(frac))
+        if "timestamp" in want:  # a wall-clock value: no offset may appear, and every field must be equal
+            return off is None and wall.isoformat(sep=" ", timespec="microseconds") == want["timestamp"]
+        if off is None:
+            return False  # an instant was sent; the server shows a wall clock without a zone: not the same type
+        instant = wall.replace(tzinfo=dt.timezone(dt.timedelta(seconds=_offset_s(off) or 0)))
+        epoch = dt.datetime(1970, 1, 1, tzinfo=dt.UTC)
+        return (instant - epoch) // dt.timedelta(microseconds=1) == want["timestamptz_us"]  # the same instant
+    if "date" in want:
+        return logged_text == want["date"] if re.fullmatch(r"\d{4}-\d{2}-\d{2}", logged_text) else None
+    if "time" in want or "timetz" in want:
+        m = _TIME.match(logged_text)
+        if not m:
+            return None
+        h, mi, se, frac, off = m.groups()
+        wall = dt.time(int(h), int(mi), int(se), _us(frac)).isoformat(timespec="microseconds")
+        if "time" in want:
+            return off is None and wall == want["time"]
+        return off is not None and wall == want["timetz"] and _offset_s(off) == want["offset_s"]  # both, exactly
+    if "interval_us" in want:
+        m = _INTERVAL.match(logged_text)
+        if not m or not logged_text:
+            return None
+        years, mons, days, sign, h, mi, se, frac = m.groups()
+        if years or mons:
+            return None  # a month is no fixed number of microseconds; a timedelta never has months
+        time_us = 0
+        if h is not None:
+            time_us = ((int(h) * 60 + int(mi)) * 60 + int(se)) * 1_000_000 + _us(frac)
+            time_us = -time_us if sign == "-" else time_us
+        # component-wise, as PostgreSQL keeps them: '1 day' is not '24:00:00'
+        return int(days or 0) == want["interval_days"] and time_us == want["interval_us"]
+    return None
+
+
 def _value_matches(logged: str, want: Any) -> bool | None:
     """True or False when comparable; None when the trace's sanitized form can't be compared with the log."""
+    if isinstance(want, dict) and want.keys() & {"timestamptz_us", "timestamp", "date", "time", "timetz",
+                                                  "interval_us"}:
+        if logged == "NULL":
+            return False
+        return datetime_matches(logged[1:-1].replace("''", "'") if logged.startswith("'") else logged, want)
+    if isinstance(want, dict) and "uuid_sha256" in want:
+        text = logged[1:-1] if logged.startswith("'") else ""
+        return bool(re.fullmatch(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", text)) and \
+            hashlib.sha256(text.encode()).hexdigest()[:12] == want["uuid_sha256"]
     if isinstance(want, list):  # a one-dimensional array, compared element by element
         text = logged[1:-1].replace("''", "'") if logged.startswith("'") else None
         items = _array_elements(text) if text is not None else None
@@ -235,9 +309,12 @@ def corroborate(log: bytes, *, start: str, end: str, trace: Any, admin_pid: int 
                 verdict = _value_matches(logged.get(i, "<absent>"), value)
                 if verdict is None:
                     out.params_unchecked += 1
+                    kind = (sorted(value)[0] if isinstance(value, dict) and value else type(value).__name__)
+                    out.unchecked_kinds[kind] = out.unchecked_kinds.get(kind, 0) + 1
                 elif verdict:
                     out.params_compared += 1
                 else:
+                    out.params_mismatched += 1
                     out.problems.append(f"{actors[pid]}: ${i} of {text[:40]!r} isn't the value the trace records")
     for pid, items in expected.items():
         if cursor[pid] < len(items):
