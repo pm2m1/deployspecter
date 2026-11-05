@@ -111,7 +111,8 @@ def code_revision() -> dict[str, Any]:
     try:
         head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=here, capture_output=True, text=True,
                               timeout=5).stdout.strip()
-        dirty = bool(subprocess.run(["git", "status", "--porcelain", "--", "."], cwd=here.parents[2],
+        # tracked changes only: an untracked results folder isn't a code change
+        dirty = bool(subprocess.run(["git", "status", "--porcelain", "--untracked-files=no"], cwd=here.parents[2],
                                     capture_output=True, text=True, timeout=5).stdout.strip())
     except Exception:  # no git: say so rather than guess
         return {"head": None, "dirty": None}

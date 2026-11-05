@@ -100,7 +100,8 @@ def protected_state() -> str:
                   check=False).stdout.strip()
 
 
-def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path) -> dict[str, Any]:
+def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path, image: tuple[str, str]) -> dict[
+        str, Any]:
     before = protected_state()
     work = Path(tempfile.mkdtemp(prefix="ds_iso_"))
     nonce = secrets.token_hex(4)
@@ -108,7 +109,7 @@ def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path
     envfile = work / "env"
     result: dict[str, Any] = {"variant": variant, "schedule": schedule, "network": net}
     try:
-        tag, image_id = build_image(work)
+        tag, image_id = image
         result.update(image=tag, image_id=image_id, runtime_flags=RUNTIME_FLAGS)
         docker("network", "create", "--internal", net)
         docker("network", "connect", "--alias", "ds-mvp-pg", net, PG_CONTAINER)
@@ -203,8 +204,15 @@ def main() -> int:
     target.conninfo()  # refuses anything but the disposable database
     a.out.mkdir(parents=True, exist_ok=False)
     race = ["j", "j", "a", "a", "a", "a", "a", "j", "j"]
+    build_dir = Path(tempfile.mkdtemp(prefix="ds_iso_build_"))
+    try:
+        image = build_image(build_dir)  # one image for both builds of the fixture
+    finally:
+        shutil.rmtree(build_dir, ignore_errors=True)
     report = {"kind": "EXPERIMENTAL isolated-runner smoke test on a trusted fixture; not a hostile-code sandbox",
-              "runs": {v: run_smoke(target, variant=v, schedule=race, out=a.out) for v in ("buggy", "fixed")}}
+              "image": {"tag": image[0], "id": image[1]},
+              "runs": {v: run_smoke(target, variant=v, schedule=race, out=a.out, image=image)
+                       for v in ("buggy", "fixed")}}
     (a.out / "report.json").write_text(json.dumps(report, indent=1, default=str))
     ok = True
     for v, r in report["runs"].items():
