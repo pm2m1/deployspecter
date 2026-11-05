@@ -7,6 +7,7 @@ points is not exploring every possible asyncio interleaving.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import os
 from pathlib import Path
 
@@ -398,3 +399,40 @@ class TestQuiesced:
         classes = [op.error_class for op in trace.records if op.outcome == "aborted"]
         assert classes == ["cancelled_while_held"]  # never "cancelled" mid-statement
         assert c["ok"], c["problems"]
+
+    def test_without_the_hold_the_same_stop_cancels_mid_statement_and_the_server_log_refuses(self, target,
+                                                                                              monkeypatch):
+        """Adversarial control for the test above: ``quiesced`` disabled. The busy task is cancelled while its
+        statement is on the wire, the trace says so, and the server-log reconciliation refuses the run."""
+        @contextlib.asynccontextmanager
+        async def no_hold(self, actor):
+            yield
+
+        monkeypatch.setattr(sa.AsyncRun, "quiesced", no_hold)
+        async def framework(conn):
+            async def busy():
+                while True:
+                    async with conn.transaction():
+                        await conn.execute("SELECT pg_sleep(0.5)")
+
+            loop = asyncio.create_task(busy())
+            while conn._ds_actor.state != "executing":  # the statement is on the wire
+                await asyncio.sleep(0.005)
+            async with conn._ds_actor.run.quiesced(conn._ds_actor):  # a no-op here
+                loop.cancel()
+                await asyncio.gather(loop, return_exceptions=True)
+            return "ok"
+
+        admin = target.admin()
+        try:
+            sync_app.reset(admin, SEED)
+            lim = st.Limits()
+            actor = st.Actor("q", st.Handler("test", "framework", framework, frozenset({"SELECT pg_sleep(0.5)"}), {},
+                                             serialize_tasks=True), {})
+            connect = sa.async_actor_connection_factory(target.conninfo(), lim, search_path=A.SCHEMA)
+            run = sa.AsyncRun([actor], connect, hz.async_monitor(target), limits=lim, run_id="unquiesced")
+            trace, c = hz.corroborated(admin, run, user=target.user)
+        finally:
+            admin.close()
+        assert "cancelled" in [op.error_class for op in trace.records if op.outcome == "aborted"]
+        assert not c["ok"] and c["problems"]

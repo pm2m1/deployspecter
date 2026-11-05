@@ -272,18 +272,21 @@ def corroborate(log: bytes, *, start: str, end: str, trace: Any, admin_pid: int 
         return out
     window = rows[a + 1:b]
     actors = {str(v["backend_pid"]): name for name, v in trace.actors.items()}
-    granted = sorted((op for op in trace.records if op.grant is not None), key=lambda op: op.grant)
-    expected: dict[str, list[tuple[str, list[Any] | None, int, Any]]] = {pid: [] for pid in actors}
-    for op in granted:
-        pid = str(trace.actors[op.actor]["backend_pid"])
-        expected[pid] += [(text, params, op.grant, op) for text, params in _expected(op)]
+    # One session's statements reach the server one at a time, in the order the trace recorded their completion
+    # (``seq``). Granted operations also carry the global grant order, checked across sessions below. Operations
+    # that ran without a grant (a transaction's exit on a halt or a cancellation, the harness's recorded cleanup
+    # ROLLBACK) sit at their own position on their session: usually last, but not always (an actor whose framework
+    # task was cancelled under ``quiesced`` keeps working afterwards).
+    ordered: dict[str, list[tuple[int, int, str, list[Any] | None, int | None, Any]]] = {pid: [] for pid in actors}
     for op in trace.records:
-        # Operations that ran without a grant: a transaction's exit while the run was being halted, and the
-        # harness's recorded cleanup after a failed handler. Last on their session, outside the grant order.
-        if op.grant is None and op.outcome == "ok":
-            pid = str(trace.actors[op.actor]["backend_pid"])
-            items = [("ROLLBACK", None)] if op.kind == "cleanup_rollback" else _expected(op)
-            expected[pid] += [(text, params, None, op) for text, params in items]
+        if op.grant is None and op.outcome != "ok":
+            continue  # never executed: refused, cancelled before its grant, or held
+        pid = str(trace.actors[op.actor]["backend_pid"])
+        items = [("ROLLBACK", None)] if op.kind == "cleanup_rollback" else _expected(op)
+        ordered[pid] += [(op.seq, i, text, params, op.grant, op) for i, (text, params) in enumerate(items)]
+    expected: dict[str, list[tuple[str, list[Any] | None, int | None, Any]]] = {
+        pid: [(text, params, grant, op) for _s, _i, text, params, grant, op in sorted(rows, key=lambda r: r[:2])]
+        for pid, rows in ordered.items()}
     cursor = dict.fromkeys(actors, 0)
     order: list[int] = []
     for r in window:
