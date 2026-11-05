@@ -508,9 +508,12 @@ class Coordinator:
                 counted = bool(count) and sum(list(r.get(count["key"], [])).count(count["n"])
                                               for r in reports.values()) >= int(count["at_least"])
                 late = first_grant_at is not None and time.monotonic() - first_grant_at > self.stop.get("after_s", 1e9)
-                if covers <= got or counted or late:
+                # "handled_all": every listed item must also appear in some process's report["handled"]
+                started = {x for r in reports.values() for x in r.get("handled", [])}
+                covered = covers <= got and set(self.stop.get("handled_all", [])) <= started
+                if covered or counted or late:
                     stopped = True
-                    why = "covered" if (covers <= got or counted) else "after_s"
+                    why = "covered" if (covered or counted) else "after_s"
                     self.events.append({"event": "stop", "why": why, "at_grant": len(self.decisions),
                                         "t_ms": self._ms()})
                     await self._broadcast({"t": "signal", "name": "stop"}, live)

@@ -1,0 +1,115 @@
+{
+ "protocol": "ds-coord/1",
+ "outcome": "completed",
+ "reason": null,
+ "policy": {
+  "kind": "alternate"
+ },
+ "gates": [],
+ "stop": {
+  "key": "succeeded",
+  "covers": [],
+  "after_s": 45
+ },
+ "processes": {
+  "B": {
+   "version": "3.4.0",
+   "run_id": "procr_B",
+   "monitor_pid": 387,
+   "actors": {
+    "operator": {
+     "backend_pid": 388,
+     "handler": "procrastinate-3.4.0.migrate"
+    }
+   },
+   "bye": "completed"
+  }
+ },
+ "decisions": [
+  {
+   "decision": 0,
+   "grant": 0,
+   "epoch": 1,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "operator",
+   "source": "alternate",
+   "enabled": [
+    "operator"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "a8402858d4f1",
+   "sql": "BEGIN",
+   "t_ms": 36.06
+  },
+  {
+   "decision": 1,
+   "grant": 1,
+   "epoch": 2,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "operator",
+   "source": "alternate",
+   "enabled": [
+    "operator"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "352b66e619c3",
+   "sql": "-- Append new event type to reflect transition from failed -> todo ALTER TYPE procrastinate_job_event_type ADD VALUE 'retried' AFTER 'scheduled'; -- Procedure to retry failed jobs CREATE FUNCTION procrastinate_retry_job_v2( job_id bigint, retry_at timestamp with time zone, new_priority integer, new_",
+   "t_ms": 86.74
+  },
+  {
+   "decision": 2,
+   "grant": 2,
+   "epoch": 3,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "operator",
+   "source": "alternate",
+   "enabled": [
+    "operator"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 137.25
+  }
+ ],
+ "statements": {
+  "a8402858d4f1": "BEGIN",
+  "352b66e619c3": "-- Append new event type to reflect transition from failed -> todo ALTER TYPE procrastinate_job_event_type ADD VALUE 'retried' AFTER 'scheduled'; -- Procedure to retry failed jobs CREATE FUNCTION procrastinate_retry_job_v2( job_id bigint, retry_at timestamp with time zone, new_priority integer, new_queue_name character varying, new_lock character varying ) RETURNS void LANGUAGE plpgsql AS $$ DECLARE _job_id bigint; _abort_requested boolean; _current_status procrastinate_job_status; BEGIN SELECT status, abort_requested FROM procrastinate_jobs WHERE id = job_id AND status IN ('doing', 'failed') FOR UPDATE INTO _current_status, _abort_requested; IF _current_status = 'doing' AND _abort_requested THEN UPDATE procrastinate_jobs SET status = 'failed'::procrastinate_job_status WHERE id = job_id AND status = 'doing' RETURNING id INTO _job_id; ELSE UPDATE procrastinate_jobs SET status = 'todo'::procrastinate_job_status, attempts = attempts + 1, scheduled_at = retry_at, priority = COALESCE(new_priority, priority), queue_name = COALESCE(new_queue_name, queue_name), lock = COALESCE(new_lock, lock) WHERE id = job_id AND status IN ('doing', 'failed') RETURNING id INTO _job_id; END IF; IF _job_id IS NULL THEN RAISE 'Job was not found or has an invalid status to retry (job id: %)', job_id; END IF; END; $$;",
+  "79663c1d3b43": "COMMIT"
+ },
+ "events": [
+  {
+   "event": "start",
+   "t_ms": 35.9,
+   "pids": {
+    "388": "operator"
+   }
+  },
+  {
+   "event": "stop",
+   "why": "covered",
+   "at_grant": 0,
+   "t_ms": 36.03
+  },
+  {
+   "event": "bye",
+   "process": "B",
+   "t_ms": 205.72
+  },
+  {
+   "event": "end",
+   "t_ms": 205.72
+  }
+ ],
+ "grants": 3,
+ "elapsed_ms": 205.73
+}

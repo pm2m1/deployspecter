@@ -60,7 +60,8 @@ PAYLOAD = ["deployspecter/__init__.py", "deployspecter/experimental/__init__.py"
            "deployspecter/experimental/thirdparty/__init__.py",
            "deployspecter/experimental/thirdparty/pgqueuer_adapter.py",
            "deployspecter/experimental/thirdparty/chancy_adapter.py",
-           "deployspecter/experimental/coordinated.py"]
+           "deployspecter/experimental/coordinated.py",
+           "deployspecter/experimental/thirdparty/procrastinate_adapter.py"]
 LOCKED = ["psycopg", "psycopg-binary", "typing-extensions"]
 # The one third-party candidate whose migration path takes a caller-supplied connection (CORPUS_SHORTLIST.json v2).
 CHANCY_SDIST = "chancy-0.26.0.tar.gz"
@@ -75,6 +76,13 @@ CHANCY_GIT = {
     "chancy-git-2895c4a.tar": ("cbc461d2e7cb5edcc48830470405c1dfea91fe5c68381afd6bade26a193ed626",
                                "2895c4a7fc173cec3d645221f63c4e51e2cf7e84", "bdf46b6b445bdc8519a3c96133a411610fc4a57a"),
 }
+# procrastinate releases for the rolling-upgrade case (docs/experimental_mvp/rolling_upgrade/procrastinate_3.3_3.4),
+# and its dependency closure pinned at the 3.4.0 release date (2025-07-18), by wheel sha256
+PROCRASTINATE_SDISTS = {
+    "procrastinate-3.3.0.tar.gz": "5e03de136e6ea7a2f97e15d9cfc10727b11a3214086844f31b19706068588eb7",
+    "procrastinate-3.4.0.tar.gz": "9cd3af413f351c88da40681d3d88b6df8904c8a3423aec87687c0b7eb7d684a4",
+}
+PROCRASTINATE_REQUIREMENTS = Path(__file__).with_name("requirements.procrastinate.txt")
 CHANCY_EXTRA_REQUIREMENTS = ("psycopg-pool==3.3.3 "
                              "--hash=sha256:9b9cd6a4fcec47a410f7e82d408540e7f77b478509e91b44c1a5457a13e5ff37\n")
 CAPTURE_SCHEMA = "chancy_capture"
@@ -147,7 +155,7 @@ def mutant_declaration(sdist: Path, mutant: str, base: str) -> str:
 
 
 def build_image(work: Path, *, chancy_sdist: Path | None = None, pgqueuer_sdist: Path | None = None,
-                mutant: str | None = None) -> tuple[str, str]:
+                mutant: str | None = None, procrastinate_sdist: Path | None = None) -> tuple[str, str]:
     ctx = work / "context"
     (ctx / "app" / "src").mkdir(parents=True)
     extra = ""
@@ -181,6 +189,16 @@ def build_image(work: Path, *, chancy_sdist: Path | None = None, pgqueuer_sdist:
                 raise RuntimeError(f"mutant {mutant}: the substring doesn't occur exactly once in {rel}")
             target_file.write_text(text.replace(old, new))
         extra = CHANCY_EXTRA_REQUIREMENTS
+    if procrastinate_sdist is not None:
+        copy_verified_package(procrastinate_sdist, name=procrastinate_sdist.name,
+                              sha256=PROCRASTINATE_SDISTS.get(procrastinate_sdist.name, "unpinned"),
+                              package="procrastinate", work=work, dest=ctx / "app" / "src")
+        # the package reads its own distribution metadata at import: install the sdist's own PKG-INFO, as pip would
+        stem = procrastinate_sdist.name.removesuffix(".tar.gz")
+        dist = ctx / "app" / "src" / f"{stem}.dist-info"
+        dist.mkdir()
+        shutil.copyfile(work / "sdist_procrastinate" / stem / "PKG-INFO", dist / "METADATA")
+        extra = CHANCY_EXTRA_REQUIREMENTS + PROCRASTINATE_REQUIREMENTS.read_text()
     for rel in PAYLOAD:
         dst = ctx / "app" / "src" / rel
         dst.parent.mkdir(parents=True, exist_ok=True)

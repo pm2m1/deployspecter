@@ -344,6 +344,54 @@ async def chancy_coordinated() -> dict:
             "received": r.received}
 
 
+async def procr_coordinated() -> dict:
+    """One process of a coordinated procrastinate run (rolling-upgrade case): this image's pinned release, its
+    actors (whitelisted adapter functions), its own connections and monitor; every grant from the coordinator."""
+    import psycopg
+
+    from deployspecter.experimental.coordinated import RemoteAsyncRun
+    from deployspecter.experimental.stepping import Actor, Handler, Limits
+    from deployspecter.experimental.stepping_async import async_actor_connection_factory
+    from deployspecter.experimental.thirdparty import procrastinate_adapter as pa
+
+    functions = {"schema": pa.p_schema, "migrate": pa.p_migrate, "defer": pa.p_defer, "work": pa.p_work,
+                 "admin_retry": pa.p_admin_retry}
+
+    class CaptureHandler(Handler):
+        def allows(self, text: str) -> bool:
+            return True
+
+    info = {"host": os.environ["DS_PG_HOST"], "port": int(os.environ["DS_PG_PORT"]),
+            "user": os.environ["DS_PG_USER"], "password": os.environ["DS_PG_PASSWORD"],
+            "dbname": os.environ["DS_PG_DB"]}
+
+    async def monitor() -> psycopg.AsyncConnection:
+        conn = await psycopg.AsyncConnection.connect(**info, autocommit=True, prepare_threshold=None,
+                                                     application_name="ds_mvp_admin")
+        cur = await conn.execute("SELECT current_setting('cluster_name'), current_database()")
+        if await cur.fetchone() != ("ds_mvp_disposable", "ds_mvp"):
+            await conn.close()
+            raise SystemExit("not the disposable database")
+        return conn
+
+    plan = json.loads(os.environ["DS_CO_PLAN"])
+    version = pa.installed_version()
+    lim = Limits(statement_ms=20000, run_s=float(plan.get("run_s", 150)), python_step_s=90)
+    connect = async_actor_connection_factory(info, lim, search_path=os.environ["DS_SCHEMA"], autocommit=False)
+    actors = [Actor(a["actor"], CaptureHandler(f"procrastinate-{version}", a["fn"], functions[a["fn"]], frozenset(),
+                                               {}, serialize_tasks=True), dict(a.get("args", {})))
+              for a in plan["actors"]]
+    host, port = plan["coordinator"]
+    r = RemoteAsyncRun(actors, connect, monitor, process=plan["process"], version=version, endpoint=(host, port),
+                       token=os.environ["DS_CO_NONCE"], markers=plan.get("markers", {}),
+                       report=lambda: {"handled": list(pa.HANDLED), "succeeded": list(pa.SUCCEEDED)},
+                       limits=lim, run_id=f"procr_{plan['process']}")
+    trace = await r.execute()
+    return {"pinned_sources": {"version": version, **pa.PINNED_BY_VERSION[version]}, "process": plan["process"],
+            "version": version, "monitor_pid": r.monitor_pid, "trace": trace.to_dict(),
+            "raw_results": trace.raw_results, "received": r.received}
+
+
 async def coordinator() -> dict:
     """The coordinator container: no database credentials, no application code; it only decides grants."""
     from deployspecter.experimental.coordinated import Coordinator
@@ -367,6 +415,8 @@ def main() -> int:
         out.update(asyncio.run(chancy_plan()))
     elif os.environ.get("DS_MODE") == "chancy_coordinated":
         out.update(asyncio.run(chancy_coordinated()))
+    elif os.environ.get("DS_MODE") == "procr_coordinated":
+        out.update(asyncio.run(procr_coordinated()))
     elif os.environ.get("DS_MODE") == "coordinator":
         out.update(asyncio.run(coordinator()))
     else:

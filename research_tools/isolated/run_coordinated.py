@@ -159,6 +159,12 @@ def prephases(target: hz.Target, images: dict[str, Any], out: Path) -> list[dict
     return phases
 
 
+def _digest(state: dict[str, Any], app: Any) -> str:
+    if app is None:
+        return oracle.digest(state)
+    return hashlib.sha256(json.dumps(state, sort_keys=True, default=str).encode()).hexdigest()
+
+
 def simultaneous(target: hz.Target, images: dict[str, Any], spec: dict[str, Any], policy: dict[str, Any],
                  out: Path, *, label: str, app: Any = None) -> dict[str, Any]:
     """``app``: optional hooks for another application (``schema``, ``inside_mode``, ``state(admin)``,
@@ -195,7 +201,7 @@ def simultaneous(target: hz.Target, images: dict[str, Any], spec: dict[str, Any]
                     raise RuntimeError(f"the migration isn't complete before the window: {initial['schema_version']}")
                 if initial["jobs_detail"]:
                     raise RuntimeError("jobs exist before the simultaneous phase")
-            result["initial_state_digest"] = oracle.digest(initial)
+            result["initial_state_digest"] = _digest(initial, app)
             from deployspecter.live.serverlog import ServerLog
             log = ServerLog(lambda q, prm=None: admin.execute(q, prm).fetchone())
             log.position()
@@ -208,6 +214,8 @@ def simultaneous(target: hz.Target, images: dict[str, Any], spec: dict[str, Any]
                                             "stall_s": 30,
                                             "stop": {"key": "succeeded", "covers": spec["covers"], "after_s": 45,
                                                      **({"or_count": spec["or_count"]} if "or_count" in spec
+                                                        else {}),
+                                                     **({"handled_all": spec["handled_all"]} if "handled_all" in spec
                                                         else {})}})]}
             for p, actors in spec["processes"].items():
                 envs[p] = ["DS_PG_HOST=ds-mvp-pg", "DS_PG_PORT=5432", f"DS_PG_USER={target.user}",
@@ -215,7 +223,8 @@ def simultaneous(target: hz.Target, images: dict[str, Any], spec: dict[str, Any]
                            f"DS_MODE={app.inside_mode if app else 'chancy_coordinated'}", f"DS_SCHEMA={schema}",
                            f"DS_CO_NONCE={token}",
                            "DS_CO_PLAN=" + json.dumps({"process": p, "coordinator": ["ds-coord", 7777],
-                                                       "markers": MARKERS, "actors": actors, "run_s": 160}),
+                                                       "markers": app.markers if app else MARKERS,
+                                                       "actors": actors, "run_s": 160}),
                            *[f"{k}={v}" for k, v in images.get("env", {}).get(p, {}).items()]]
             started = time.monotonic()
             for who in ["coordinator", *sorted(spec["processes"])]:
@@ -303,7 +312,7 @@ def simultaneous(target: hz.Target, images: dict[str, Any], spec: dict[str, Any]
             pinned_sources={p: o.get("pinned_sources") for p, o in inside.items()},
             outcomes={p: t["outcome"] for p, t in traces.items()},
             exceptions={n: a["exception"] for t in traces.values() for n, a in t["actors"].items() if a["exception"]},
-            raw_results=results, final_state=final, final_state_digest=oracle.digest(final),
+            raw_results=results, final_state=final, final_state_digest=_digest(final, app),
             trace_sha256={p: hashlib.sha256(json.dumps(t, sort_keys=True, default=str).encode()).hexdigest()
                           for p, t in traces.items()},
             outputs={k: {kk: vv for kk, vv in v.items() if kk != "out"} for k, v in outputs.items()},
@@ -351,8 +360,9 @@ def summary(r: dict[str, Any]) -> dict[str, Any]:
     txn_order = [(d["actor"], d["kind"]) for d in ds if d["kind"] in ("commit", "transaction_exit")]
     # the mixed-version window: from the first producer grant (every worker had completed a claim query: the gate)
     # to the stop signal
-    producers = {a for acts in (r.get("spec") or {}).get("processes", {}).values() for a in
-                 [x["actor"] for x in acts] if a.endswith("_push")}
+    producers = set((r.get("spec") or {}).get("producers") or
+                    [a for acts in (r.get("spec") or {}).get("processes", {}).values() for a in
+                     [x["actor"] for x in acts] if a.endswith("_push")])
     opened = next((d["grant"] for d in ds if d["actor"] in producers), None)
     closed = stop["at_grant"] if stop else len(ds)
     inside = [d for d in ds if opened is not None and opened <= d["grant"] < closed]
@@ -363,7 +373,8 @@ def summary(r: dict[str, Any]) -> dict[str, Any]:
         window["by_actor"][d["actor"]] = window["by_actor"].get(d["actor"], 0) + 1
         if i and inside[i - 1]["version"] != d["version"]:
             window["version_switches"] += 1
-        if "WITH selected_jobs AS" in statements.get(d["statement_id"], d["sql"]):
+        text = statements.get(d["statement_id"], d["sql"])
+        if "WITH selected_jobs AS" in text or "procrastinate_fetch_job_v2" in text:
             window["claims_by_version"][d["version"]] = window["claims_by_version"].get(d["version"], 0) + 1
     return {"verdict": r.get("verdict"), "grants": len(ds), "grants_by_version": by_v, "window": window,
             "sessions": (r.get("corroboration") or {}).get("sessions"),
