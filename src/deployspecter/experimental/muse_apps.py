@@ -32,6 +32,12 @@ COMMON = ("A deterministic scheduler will run your invocations concurrently and 
           "listed handlers with the listed argument types; you cannot write SQL or code. Every proposal must satisfy "
           "the stated constraints exactly, or it is rejected. Return JSON only.")
 INSTRUCTIONS = {
+    "chancy_mixed": "You design test workloads for a rolling deploy of a PostgreSQL-backed job queue library, in which "
+                    "old and new releases run against one schema. Your workloads are executed for real and the "
+                    "database's final state is checked independently. Propose workloads likely to expose problems "
+                    "in how jobs created, claimed or finished by one release are handled by the other. You cannot "
+                    "write SQL or code. Every proposal must satisfy the stated constraints exactly, or it is "
+                    "rejected. Return JSON only.",
     "pgqueuer": "You design test workloads for a job queue library running on PostgreSQL. Your workloads are executed "
                 "for real and the database's final state is checked independently. Propose workloads that exercise "
                 "different parts of the queue's claim, priority and batching behaviour. You cannot write SQL or "
@@ -460,10 +466,46 @@ def pgq_proposal_to_workload(p: Any) -> dict[str, Any] | None:
     return {"jobs": [{"payload": j.payload, "priority": j.priority} for j in prop.jobs], "batch_size": prop.batch_size}
 
 
+# ------------------------------------------------------------------ the Chancy rolling-deploy target (NONBLIND pilot)
+
+
+class MixedProposal(BaseModel):
+    rationale: str
+    setup_jobs: int
+    old_push_jobs: int
+    old_worker_handles: int
+    new_push_jobs: int
+
+
+class MixedSet(BaseModel):
+    proposals: list[MixedProposal]
+
+
+def chancy_mixed_context() -> dict[str, Any]:
+    return {"system": "a PostgreSQL-backed job queue library being upgraded by a rolling deploy from its previous "
+                      "release to a new release whose migrations add a column to the jobs table",
+            "phases": ["the old release migrates its schema, declares a queue and pushes setup_jobs jobs",
+                       "the new release applies its migrations to the live schema",
+                       "on the new schema, an old-release producer pushes old_push_jobs jobs while an old-release "
+                       "worker runs; the worker stops once it has handled old_worker_handles jobs",
+                       "the new release pushes new_push_jobs jobs and a new-release worker drains every job"],
+            "constraints": {"setup_jobs": "1..5", "old_push_jobs": "0..3", "old_worker_handles": "0..8",
+                            "new_push_jobs": "0..3"}}
+
+
+def mixed_proposal_to_workload(p: Any) -> dict[str, Any] | None:
+    try:
+        prop = MixedProposal.model_validate(p)
+    except Exception:
+        return None
+    return {k: getattr(prop, k) for k in ("setup_jobs", "old_push_jobs", "old_worker_handles", "new_push_jobs")}
+
+
 # ------------------------------------------------------------------ the request
 
 TARGETS = {"ledger": (ledger_context, LedgerSet), "planner": (planner_context, PlannerSet),
-           "release": (release_context, ReleaseSet), "pgqueuer": (pgqueuer_context, PgqSet)}
+           "release": (release_context, ReleaseSet), "pgqueuer": (pgqueuer_context, PgqSet),
+           "chancy_mixed": (chancy_mixed_context, MixedSet)}
 
 
 def prompt(target: str, n: int) -> str:

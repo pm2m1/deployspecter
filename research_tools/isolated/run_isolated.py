@@ -398,7 +398,23 @@ def chancy_mixed_check(final: dict[str, Any], phases: list[dict[str, Any]]) -> l
     return out
 
 
-def run_chancy_mixed(target: hz.Target, *, old_sdist: Path, new_sdist: Path, out: Path) -> dict[str, Any]:
+MIXED_DEFAULT = {"setup_jobs": 4, "old_push_jobs": 2, "old_worker_handles": 3, "new_push_jobs": 2}
+
+
+def validate_mixed_workload(w: Any) -> list[str]:
+    """Deterministic. A structured rolling-deploy workload: four bounded integers, nothing else."""
+    bounds = {"setup_jobs": (1, 5), "old_push_jobs": (0, 3), "old_worker_handles": (0, 8), "new_push_jobs": (0, 3)}
+    if not isinstance(w, dict) or set(w) != set(bounds):
+        return [f"shape: exactly {sorted(bounds)}"]
+    out = []
+    for k, (lo, hi) in bounds.items():
+        if not isinstance(w[k], int) or isinstance(w[k], bool) or not lo <= w[k] <= hi:
+            out.append(f"{k}: an int in {lo}..{hi}")
+    return out
+
+
+def run_chancy_mixed(target: hz.Target, *, old_sdist: Path, new_sdist: Path, out: Path,
+                     workload: dict[str, Any] | None = None, images: dict[str, Any] | None = None) -> dict[str, Any]:
     """The NONBLIND mixed-version pilot: Chancy 0.25.1 (old) and 0.26.0 (new) on one schema, as a rolling deploy:
     1. old: migrate to v6, declare the queue, push jobs 0..3;
     2. new: apply v7 and v8 (the deploy's migration step);
@@ -406,21 +422,28 @@ def run_chancy_mixed(target: hz.Target, *, old_sdist: Path, new_sdist: Path, out
        handled 3), the two scheduled against each other;
     4. new: push jobs 6..7, then a new worker drains every remaining job.
     Each phase is one isolated container, one stepped run per step, corroborated against the server log."""
-    images = {}
-    for label, sdist in (("old", old_sdist), ("new", new_sdist)):
+    w = workload or MIXED_DEFAULT
+    if validate_mixed_workload(w):
+        raise RuntimeError(f"invalid workload: {validate_mixed_workload(w)}")
+    images = dict(images or {})
+    for label, sdist in (("old", old_sdist), ("new", new_sdist)) if not images else ():
         build_dir = Path(tempfile.mkdtemp(prefix="ds_iso_build_"))
         try:
             images[label] = build_image(build_dir, chancy_sdist=sdist)
         finally:
             shutil.rmtree(build_dir, ignore_errors=True)
-    plans = [("1_old_setup", "old", [{"actors": [{"actor": "old_setup", "fn": "setup", "args": {"ns": [0, 1, 2, 3]}}]}],
-              [0, 1, 2, 3]),
+    a_n, b_n, c_n = w["setup_jobs"], w["old_push_jobs"], w["new_push_jobs"]
+    setup_ns, old_ns, new_ns = list(range(a_n)), list(range(a_n, a_n + b_n)), list(range(a_n + b_n, a_n + b_n + c_n))
+    old_actors = ([{"actor": "old_push", "fn": "push", "args": {"ns": old_ns}}] if old_ns else []) + [
+        {"actor": "old_worker", "fn": "work",  # capped at the jobs that exist, so it never idles to its timeout
+         "args": {"handle_at_least": min(w["old_worker_handles"], a_n + b_n)}}]
+    plans = [("1_old_setup", "old", [{"actors": [{"actor": "old_setup", "fn": "setup", "args": {"ns": setup_ns}}]}],
+              setup_ns),
              ("2_new_migrate", "new", [{"actors": [{"actor": "new_migrate", "fn": "migrate"}]}], []),
-             ("3_old_on_new_schema", "old", [{"actors": [
-                 {"actor": "old_push", "fn": "push", "args": {"ns": [4, 5]}},
-                 {"actor": "old_worker", "fn": "work", "args": {"handle_at_least": 3}}],
-                 "schedule": ["old_push", "old_worker"] * 200}], [4, 5]),
-             ("4_new", "new", [{"actors": [{"actor": "new_push", "fn": "push", "args": {"ns": [6, 7]}}]}], [6, 7])]
+             ("3_old_on_new_schema", "old", [{"actors": old_actors,
+                                              "schedule": [a["actor"] for a in old_actors] * 200}], old_ns),
+             ("4_new", "new", [{"actors": [{"actor": "new_push", "fn": "push", "args": {"ns": new_ns}}]}]
+              if new_ns else [], new_ns)]
     phases = []
     pushed: list[str] = []
     for i, (name, which, plan, ns) in enumerate(plans):
