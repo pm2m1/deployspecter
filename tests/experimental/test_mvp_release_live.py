@@ -188,3 +188,22 @@ def test_an_initial_state_that_already_violates_the_oracle_is_refused(target):
     doc["state_goals"][0]["constraints"][2]["value"] = I(1)  # reserved 1, but jack holds 4
     with pytest.raises(st.Refused, match="already violates"):
         run(target, doc, "corrected", SERIAL)
+
+
+class TestMutants:
+    """The frozen oracle's reach over four mutants of the corrected release, under exhaustive exploration."""
+
+    @pytest.mark.parametrize("mutant, dup_one, independent", [
+        ("no_reservation_lock", 0, 0),  # the guard turns the double release into an error: safe, not live
+        ("no_guard", 0, 0),  # equivalent under the locks
+        ("no_event_lock", 0, 170),  # a lost decrement, only between two holders
+        ("off_by_one", 10, 36),
+    ])
+    def test_which_mutants_the_oracle_distinguishes(self, target, mutant, dup_one, independent):
+        doc = document([release("a", "jack"), release("b", "jill")], {"jack": [3], "jill": [2]})
+        counts = []
+        for d in (DUP_ONE, doc):
+            results, exhausted = explore(target, d, f"mutant_{mutant}")
+            assert exhausted
+            counts.append(sum(bool(r.violations) for r in results))
+        assert counts == [dup_one, independent]

@@ -32,6 +32,9 @@ COMMON = ("A deterministic scheduler will run your invocations concurrently and 
           "listed handlers with the listed argument types; you cannot write SQL or code. Every proposal must satisfy "
           "the stated constraints exactly, or it is rejected. Return JSON only.")
 INSTRUCTIONS = {
+    "release": "You design concurrency test workloads, including the initial database state they need, for a small "
+               "Python reservations service. " + COMMON + " Also state invariant hypotheses, in the given grammar, "
+               "that a correct service should keep.",
     "ledger": "You design concurrency test workloads for a small Python service built on an ORM. " + COMMON
               + " Also state invariant hypotheses, in the given grammar, that a correct service should keep.",
     "planner": "You design concurrency test workloads, including the initial database state they need, for a small "
@@ -328,9 +331,98 @@ def planner_systematic(limit: int) -> list[tuple[str, dict[str, Any]]]:
     return out[:limit]
 
 
+# ------------------------------------------------------------------ the release target (WorkloadSpec v2 + hypotheses)
+
+RES_COLUMNS = {"events": {"id", "capacity", "reserved"}, "reservations": {"id", "event_id", "qty"},
+               "rejections": {"id", "event_id", "seats_available"}}  # numeric columns only
+
+
+class ResHypothesis(BaseModel):
+    kind: Literal["column_at_least", "column_le_column", "equals_child_sum", "column_sum_unchanged"]
+    table: str
+    column: str
+    bound: int | None
+    other_column: str | None
+    child_table: str | None
+    child_fk: str | None
+    child_column: str | None
+    statement: str
+
+
+class ReleaseProposal(PlannerProposal):
+    invariant_hypotheses: list[ResHypothesis]
+
+
+class ReleaseSet(BaseModel):
+    proposals: list[ReleaseProposal]
+
+
+def release_context() -> dict[str, Any]:
+    ctx = planner_context()
+    ctx["constraints"]["hypotheses"] = (
+        "1 to 4 per workload, each one of: column_at_least(table, column, bound); column_le_column(table, column, "
+        "other_column) meaning column <= other_column in every row; equals_child_sum(table, column, child_table, "
+        "child_fk, child_column) meaning each row's column equals the sum of child_column over child rows whose "
+        "child_fk is the row's id; column_sum_unchanged(table, column). Numeric columns only: "
+        + json.dumps({k: sorted(v) for k, v in RES_COLUMNS.items()}) + ". Unused fields are null; statement is one "
+        "sentence.")
+    return ctx
+
+
+def res_hypothesis_problem(h: dict[str, Any]) -> str | None:
+    def col(t: Any, c: Any) -> bool:
+        return t in RES_COLUMNS and c in RES_COLUMNS[t]
+    k = h["kind"]
+    if not col(h["table"], h["column"]):
+        return f"{h['table']}.{h['column']} isn't a numeric column"
+    if k == "column_at_least" and not isinstance(h["bound"], int):
+        return "column_at_least needs an int bound"
+    if k == "column_le_column" and not col(h["table"], h["other_column"]):
+        return "column_le_column names a column that doesn't exist"
+    if k == "equals_child_sum" and not (col(h["child_table"], h["child_fk"]) and col(h["child_table"],
+                                                                                    h["child_column"])):
+        return "equals_child_sum names a column that doesn't exist"
+    return None
+
+
+def evaluate_res_hypothesis(h: dict[str, Any], initial: dict[str, list[dict[str, Any]]],
+                            final: dict[str, list[dict[str, Any]]]) -> bool:
+    """True when the final state satisfies the hypothesis. Pure; a fixed grammar, no generated code."""
+    rows, k = final[h["table"]], h["kind"]
+    if k == "column_at_least":
+        return all(r[h["column"]] >= h["bound"] for r in rows)
+    if k == "column_le_column":
+        return all(r[h["column"]] <= r[h["other_column"]] for r in rows)
+    if k == "column_sum_unchanged":
+        return sum(r[h["column"]] for r in rows) == sum(r[h["column"]] for r in initial[h["table"]])
+    sums: dict[Any, int] = {}
+    for r in final[h["child_table"]]:
+        sums[r[h["child_fk"]]] = sums.get(r[h["child_fk"]], 0) + r[h["child_column"]]
+    return all(r[h["column"]] == sums.get(r["id"], 0) for r in rows)
+
+
+def validate_release(p: Any) -> tuple[dict[str, Any] | None, list[dict[str, Any]], list[str]]:
+    """(WorkloadSpec v2 document or None, valid hypotheses, reasons). The document is still judged by the chain."""
+    try:
+        prop = ReleaseProposal.model_validate(p)
+    except Exception as exc:
+        return None, [], [f"shape: {str(exc)[:200]}"]
+    reasons, hyps = [], []
+    if not 1 <= len(prop.invariant_hypotheses) <= 4:
+        reasons.append("hypotheses: 1 to 4")
+    for h in prop.invariant_hypotheses:
+        problem = res_hypothesis_problem(h.model_dump())
+        if problem:
+            reasons.append(f"hypothesis: {problem}")
+        else:
+            hyps.append(h.model_dump())
+    return to_workload_spec(prop.model_dump(exclude={"invariant_hypotheses"})), hyps, reasons
+
+
 # ------------------------------------------------------------------ the request
 
-TARGETS = {"ledger": (ledger_context, LedgerSet), "planner": (planner_context, PlannerSet)}
+TARGETS = {"ledger": (ledger_context, LedgerSet), "planner": (planner_context, PlannerSet),
+           "release": (release_context, ReleaseSet)}
 
 
 def prompt(target: str, n: int) -> str:

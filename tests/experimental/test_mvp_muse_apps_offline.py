@@ -115,3 +115,44 @@ class TestPlannerMapping:
             for leak in ("lock_row", "with_for_update", "for update", "buggy", "fixed", "lost update", "oracle",
                          "check_invariants", "r1 ", "l1 "):
                 assert leak not in text, (target, leak)
+
+
+RH = {"table": "events", "column": "reserved", "bound": None, "other_column": None, "child_table": None,
+      "child_fk": None, "child_column": None, "statement": ""}
+R_INITIAL = {"events": [{"id": 1, "capacity": 10, "reserved": 4}], "reservations": [{"id": 1, "event_id": 1, "qty": 4}],
+             "rejections": []}
+R_DOUBLE = {"events": [{"id": 1, "capacity": 10, "reserved": -4}], "reservations": [], "rejections": []}
+
+
+class TestReleaseHypotheses:
+    def test_the_child_sum_identity_catches_the_double_release(self):
+        h = {**RH, "kind": "equals_child_sum", "child_table": "reservations", "child_fk": "event_id",
+             "child_column": "qty"}
+        assert ma.res_hypothesis_problem(h) is None
+        assert ma.evaluate_res_hypothesis(h, R_INITIAL, R_INITIAL)
+        assert not ma.evaluate_res_hypothesis(h, R_INITIAL, R_DOUBLE)
+
+    def test_bounds_and_column_comparisons(self):
+        nonneg = {**RH, "kind": "column_at_least", "bound": 0}
+        within = {**RH, "kind": "column_le_column", "other_column": "capacity"}
+        assert not ma.evaluate_res_hypothesis(nonneg, R_INITIAL, R_DOUBLE)
+        assert ma.evaluate_res_hypothesis(within, R_INITIAL, R_DOUBLE)
+
+    @pytest.mark.parametrize("change", [{"column": "holder"}, {"table": "users"},
+                                        {"kind": "column_le_column", "other_column": "nope"},
+                                        {"kind": "equals_child_sum", "child_table": "events", "child_fk": "nope",
+                                         "child_column": "qty"}])
+    def test_a_hypothesis_outside_the_grammar_is_rejected(self, change):
+        assert ma.res_hypothesis_problem({**RH, "kind": "column_at_least", "bound": 0, **change})
+
+    def test_a_release_proposal_maps_to_a_document_the_chain_bridges(self):
+        p = planner_ok()
+        p["invariant_hypotheses"] = [{**RH, "kind": "column_at_least", "bound": 0}]
+        doc, hyps, reasons = ma.validate_release(p)
+        assert reasons == [] and len(hyps) == 1 and pa.plan(doc).outcome == "bridged"
+
+    def test_the_release_prompt_carries_no_fix_build_or_oracle(self):
+        text = ma.prompt("release", 3).lower()
+        for leak in ("lock_row", "for update", "buggy", "fixed", "corrected", "mutant", "lost update", "oracle",
+                     "double", "r1 ", "r5"):
+            assert leak not in text, leak

@@ -61,6 +61,7 @@ TRUSTED_SOURCES = {
     "live_app.reservations": REPO / "tests" / "live_app" / "reservations.py",
     "live_app.properties": REPO / "tests" / "live_app" / "properties.py",
     "experimental.reservations_corrected": Path(__file__).resolve().parent / "apps" / "reservations_corrected.py",
+    "experimental.reservations_mutants": Path(__file__).resolve().parent / "apps" / "reservations_mutants.py",
 }
 TRUSTED_OPERATIONS = {"live_app.reservations:reserve_seats", "live_app.reservations:release_seats"}
 EXACT_TAGS = {"int": int, "float": float, "bool": bool, "str": str}
@@ -91,10 +92,12 @@ PINNED_SHA256 = {
     "live_app.reservations": "8d60890d642253f4bf2672d7d48d97e8341930840791e4bacd1b6a0eba8661c1",
     "live_app.properties": "fa67687c3a58a7d9c873f1710dfc114ac26d3cbd96e3b579484c58a44e803f5b",
     "experimental.reservations_corrected": "d656ee637a7a345afddad2f6b7fca7ceb2a1e78ec64ff32511599230771828cd",
+    "experimental.reservations_mutants": "2a36c5e204adb00fe42c37c357e955f8d90660f7e84179c76f58e4cd9af1ceb4",
 }
 # The two frozen builds come from Track A's harness-owned switch; ``corrected`` is this prototype's separately named
 # reference (``apps/reservations_corrected.py``). The frozen ``fixed`` build is not relabelled as correct.
 CORRECTED = "corrected"
+MUTANT_PREFIX = "mutant_"  # mutant_<name>: one of reservations_mutants.MUTANTS, for invariant measurements only
 
 
 def load_trusted(module: str) -> ModuleType:
@@ -271,10 +274,14 @@ class PlannedReservations:
         self.expected = expected_rows(p)
 
     def registry(self, variant: str) -> dict[tuple[str, str], Handler]:
-        if variant not in sc.VARIANTS and variant != CORRECTED:
+        mutant = variant[len(MUTANT_PREFIX):] if variant.startswith(MUTANT_PREFIX) else None
+        if variant not in sc.VARIANTS and variant != CORRECTED and mutant is None:
             raise ValueError(f"unknown variant {variant!r}")
-        switch = sc.VARIANTS.get(variant, sc.VARIANTS["fixed"])  # corrected reserves exactly as lock_row=True
+        switch = sc.VARIANTS.get(variant, sc.VARIANTS["fixed"])  # corrected and mutants reserve as lock_row=True
         corrected = load_trusted("experimental.reservations_corrected") if variant == CORRECTED else None
+        mutants = load_trusted("experimental.reservations_mutants") if mutant is not None else None
+        if mutants is not None and mutant not in mutants.MUTANTS:
+            raise ValueError(f"unknown mutant {mutant!r}")
         out = {}
         for ep in sc.REGISTRY_CONFIG["entrypoints"]:
             operation = ep["operation"]
@@ -286,6 +293,9 @@ class PlannedReservations:
             bound = partial(fn, **switch)
             if corrected is not None and name == "release_seats":
                 fn, allowed = corrected.release_seats, set(corrected.ALLOWED_RELEASE)
+                bound = partial(fn)
+            if mutants is not None and name == "release_seats":
+                fn, allowed = mutants.MUTANTS[mutant], set(mutants.ALLOWED)
                 bound = partial(fn)
             bound.__name__, bound.__module__ = name, fn.__module__  # type: ignore[attr-defined]
             for version in ep["versions"]:

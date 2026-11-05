@@ -92,6 +92,8 @@ def propose(client: MetaClient, *, n: int, ledger: Path, call_label: str) -> lis
     entry.update(status=reply.status, latency_s=reply.latency_seconds, input_tokens=reply.input_tokens,
                  output_tokens=reply.output_tokens, reasoning_tokens=reply.reasoning_tokens,
                  estimated_usd=reply.approx_cost_usd, cumulative_estimated_usd=round(client.estimated_usd, 6))
+    entry["raw_reply_sha256"] = hashlib.sha256(reply.text.encode()).hexdigest()
+    (ledger.parent / f"{call_label}.reply.json").write_text(reply.text)  # kept at once: a later failure can't lose it
     try:
         raw = json.loads(reply.text).get("proposals", [])
     except ValueError:

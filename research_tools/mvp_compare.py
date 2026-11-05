@@ -21,6 +21,16 @@ from deployspecter.experimental import muse as mz
 from deployspecter.experimental import workloads as wl
 from deployspecter.experimental.apps import reservations_mixed as app
 
+ENGINE = {"engine": "sync"}  # set by --engine; the async engine runs the same workloads on reservations_mixed_async
+
+
+def explore(target: hz.Target, w: wl.Workload, *, variant: str, max_runs: int) -> tuple[list[Any], bool]:
+    if ENGINE["engine"] == "async":
+        from deployspecter.experimental.apps import reservations_mixed_async
+        return hz.explore_app(target, reservations_mixed_async, w.invocations, w.seed, variant=variant,
+                              max_runs=max_runs, label=w.label)
+    return hz.explore_workload(target, w, variant=variant, max_runs=max_runs)
+
 
 def evaluate(target: hz.Target, source: str, proposals: list[tuple[str, dict[str, Any]]], *, k: int, s: int,
              runs_dir: Path) -> dict[str, Any]:
@@ -31,8 +41,8 @@ def evaluate(target: hz.Target, source: str, proposals: list[tuple[str, dict[str
     handlers, touching, schedules = set(), set(), 0
     rows = []
     for w in valid:
-        buggy, b_ex = hz.explore_workload(target, w, variant="buggy", max_runs=s)
-        fixed, f_ex = hz.explore_workload(target, w, variant="fixed", max_runs=s)
+        buggy, b_ex = explore(target, w, variant="buggy", max_runs=s)
+        fixed, f_ex = explore(target, w, variant="fixed", max_runs=s)
         for r in buggy + fixed:
             for op in r.trace.records:
                 if op.outcome == "ok":
@@ -73,8 +83,11 @@ def main() -> int:
     ap.add_argument("--muse-calls", type=int, default=0)
     ap.add_argument("--proposals-per-call", type=int, default=4)
     ap.add_argument("--muse-usd", type=float, default=3.0)
+    ap.add_argument("--engine", choices=["sync", "async"], default="sync")
+    ap.add_argument("--muse-timeout", type=float, default=900.0)
     ap.add_argument("--out", type=Path, required=True)
     a = ap.parse_args()
+    ENGINE["engine"] = a.engine
     secret = Path(os.environ.get("DS_MVP_SECRET_FILE", os.path.expanduser("~/.ds_mvp_pg_password")))
     target = hz.Target("127.0.0.1", int(os.environ.get("DS_MVP_PORT", "55441")), "ds_mvp", secret.read_text().strip())
     a.out.mkdir(parents=True, exist_ok=False)
@@ -84,7 +97,7 @@ def main() -> int:
                evaluate(target, "systematic", wl.systematic(50), k=a.workloads, s=a.schedules, runs_dir=runs)]
     if a.muse_calls:
         client = mz.client_from_env_file(Path.home() / "Desktop/deployspecter/.env", max_requests=a.muse_calls,
-                                         max_estimated_usd=a.muse_usd)
+                                         max_estimated_usd=a.muse_usd, timeout=a.muse_timeout)
         proposals: list[tuple[str, dict[str, Any]]] = []
         for i in range(a.muse_calls):
             try:
@@ -107,7 +120,8 @@ def main() -> int:
                      f"{len(r['distinct_handlers'])} | {r['migration_touching_statements']}/"
                      f"{r['migration_touching_possible']} | {r['unique_schedules']} | "
                      f"{r['workloads_with_verified_violation']} | {r['fixed_build_violations']} | {r['seconds']} |")
-    (a.out / "summary.md").write_text("Engineering smoke test on one trusted synthetic fixture; not a benchmark.\n\n"
+    (a.out / "summary.md").write_text(f"Engineering smoke test on one trusted synthetic fixture ({a.engine} engine); "
+                                      "not a benchmark.\n\n"
                                       + "\n".join(lines) + "\n")
     print("\n".join(lines))
     return 0
