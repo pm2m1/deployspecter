@@ -122,15 +122,27 @@ def copy_verified_package(sdist: Path, *, name: str, sha256: str, package: str, 
 # Controlled mutants of pinned public code, applied to the isolated build copy only (never in place): an exact
 # substring of one file, replaced; the mutated file's sha256 is declared to the adapter.
 MUTANTS = {"no_skip_locked_claim": ("chancy/worker.py", "FOR UPDATE OF {jobs} SKIP LOCKED", "",
-                                    "the job claim's row lock is removed: two workers can claim one job")}
+                                    "the job claim's row lock is removed: two workers can claim one job"),
+           # Ablations of the historical fix chancy-2895c4a (applied to the fix commit's tree, base git-2895c4a); each
+           # removes one part of the fix: a controlled experiment, not a defect
+           "abl_no_fence": ("chancy/worker.py", "AND claim_id IS NOT DISTINCT FROM %(claim_id)s", "",
+                            "F2 removed: the completion update is no longer fenced by the claim"),
+           "abl_cancel_keeps_claim": ("chancy/app.py", "SET state = 'failed', claim_id = NULL, completed_at = NOW()",
+                                      "SET state = 'failed', completed_at = NOW()",
+                                      "F3 removed: cancel_job_ex no longer invalidates the claim"),
+           "abl_no_claim_assignment": ("chancy/worker.py", "claim_id = gen_random_uuid(),", "",
+                                       "F1 removed: the claim query no longer assigns a claim id")}
 
 
 def mutant_declaration(sdist: Path, mutant: str, base: str) -> str:
     """What the adapter must accept for this mutant: '<id>:<base>:<file>:<sha256 of the mutated file>'."""
     import tarfile
     rel, old, new, _why = MUTANTS[mutant]
+    member = rel if sdist.name in CHANCY_GIT else f"{sdist.name.removesuffix('.tar.gz')}/{rel}"
     with tarfile.open(sdist) as tf:
-        text = tf.extractfile(f"{sdist.name.removesuffix('.tar.gz')}/{rel}").read().decode()
+        text = tf.extractfile(member).read().decode()
+    if text.count(old) != 1:
+        raise RuntimeError(f"mutant {mutant}: the substring doesn't occur exactly once in {rel}")
     return f"{mutant}:{base}:{rel}:{hashlib.sha256(text.replace(old, new).encode()).hexdigest()}"
 
 
