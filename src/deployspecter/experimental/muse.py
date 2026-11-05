@@ -113,7 +113,8 @@ def _append(ledger: Path, entry: dict[str, Any]) -> None:
         f.write(json.dumps(entry, sort_keys=True, default=str) + "\n")
 
 
-def client_from_env_file(path: Path, *, max_requests: int, max_estimated_usd: float) -> MetaClient:
+def client_from_env_file(path: Path, *, max_requests: int, max_estimated_usd: float,
+                         timeout: float = 300.0) -> MetaClient:
     """Reads only MODEL_API_KEY, MODEL_API_BASE_URL and MODEL_NAME from the file; never prints them, never reads a
     database URL from it."""
     from dotenv import dotenv_values
@@ -123,5 +124,5 @@ def client_from_env_file(path: Path, *, max_requests: int, max_estimated_usd: fl
     settings = Settings(admin_dsn="", test_dsn="", model_api_key=values.get("MODEL_API_KEY") or None,
                         model_base_url=values.get("MODEL_API_BASE_URL") or DEFAULT_BASE_URL,
                         model_name=values.get("MODEL_NAME") or DEFAULT_MODEL)
-    return MetaClient(settings, max_requests=max_requests, max_estimated_usd=max_estimated_usd,
+    return MetaClient(settings, timeout=timeout, max_requests=max_requests, max_estimated_usd=max_estimated_usd,
                       reasoning_effort="medium", store=False)

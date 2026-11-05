@@ -1,0 +1,1713 @@
+{
+ "kind": "EXPERIMENTAL engineering smoke test on two trusted synthetic fixtures; not a benchmark",
+ "budgets": {
+  "valid_workloads_per_source": 6,
+  "schedules_per_workload_per_build": 60,
+  "muse_calls_per_target": 2,
+  "muse_proposals_per_call": 6
+ },
+ "ledger": [
+  {
+   "source": "curated",
+   "proposals": 4,
+   "valid": 4,
+   "executed": 4,
+   "rejected": 0,
+   "rejections": [],
+   "handlers_reached": [
+    "deposit",
+    "transfer",
+    "withdraw"
+   ],
+   "distinct_app_statements_reached": 7,
+   "workloads_with_verified_violation": 3,
+   "fixed_build_false_positives": 0,
+   "schedules_explored": 216,
+   "hypotheses": {
+    "never_violated": 4
+   },
+   "workloads": [
+    {
+     "label": "curated#0",
+     "invocations": [
+      "a=withdraw{'account_id': 1, 'amount': 70}",
+      "b=withdraw{'account_id': 1, 'amount': 60}"
+     ],
+     "seed": [
+      {
+       "id": 1,
+       "owner": "owner1",
+       "opening": 100,
+       "balance": 100
+      }
+     ],
+     "buggy_runs": 24,
+     "buggy_exhausted": true,
+     "buggy_violating_runs": 22,
+     "first_violation": {
+      "schedule": [
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "b",
+       "b",
+       "b",
+       "b",
+       "b",
+       "a",
+       "a",
+       "a",
+       "b",
+       "a",
+       "a",
+       "b",
+       "b",
+       "b",
+       "b"
+      ],
+      "violations": [
+       "L1 account 1: balance 40 but opening 100 plus entries -130"
+      ]
+     },
+     "fixed_runs": 8,
+     "fixed_exhausted": true,
+     "fixed_violating_runs": 0,
+     "hypotheses": [
+      {
+       "kind": "column_at_least",
+       "statement": "no overdraft",
+       "verdict": "never_violated",
+       "buggy_runs_violating": 0,
+       "fixed_runs_violating": 0
+      }
+     ]
+    },
+    {
+     "label": "curated#1",
+     "invocations": [
+      "a=deposit{'account_id': 1, 'amount': 10}",
+      "b=deposit{'account_id': 1, 'amount': 20}"
+     ],
+     "seed": [
+      {
+       "id": 1,
+       "owner": "owner1",
+       "opening": 0,
+       "balance": 0
+      }
+     ],
+     "buggy_runs": 24,
+     "buggy_exhausted": true,
+     "buggy_violating_runs": 22,
+     "first_violation": {
+      "schedule": [
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "b",
+       "b",
+       "b",
+       "b",
+       "b",
+       "a",
+       "a",
+       "a",
+       "b",
+       "a",
+       "a",
+       "b",
+       "b",
+       "b",
+       "b"
+      ],
+      "violations": [
+       "L1 account 1: balance 20 but opening 0 plus entries 30"
+      ]
+     },
+     "fixed_runs": 8,
+     "fixed_exhausted": true,
+     "fixed_violating_runs": 0,
+     "hypotheses": [
+      {
+       "kind": "column_at_least",
+       "statement": "no overdraft",
+       "verdict": "never_violated",
+       "buggy_runs_violating": 0,
+       "fixed_runs_violating": 0
+      }
+     ]
+    },
+    {
+     "label": "curated#2",
+     "invocations": [
+      "a=transfer{'src': 1, 'dst': 2, 'amount': 30}",
+      "b=transfer{'src': 2, 'dst': 1, 'amount': 10}"
+     ],
+     "seed": [
+      {
+       "id": 1,
+       "owner": "owner1",
+       "opening": 100,
+       "balance": 100
+      },
+      {
+       "id": 2,
+       "owner": "owner2",
+       "opening": 100,
+       "balance": 100
+      }
+     ],
+     "buggy_runs": 24,
+     "buggy_exhausted": true,
+     "buggy_violating_runs": 22,
+     "first_violation": {
+      "schedule": [
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "b",
+       "b",
+       "b",
+       "b",
+       "b",
+       "a",
+       "a",
+       "a",
+       "b",
+       "a",
+       "a",
+       "b",
+       "b",
+       "b",
+       "b"
+      ],
+      "violations": [
+       "L1 account 1: balance 110 but opening 100 plus entries -20",
+       "L1 account 2: balance 90 but opening 100 plus entries 20"
+      ]
+     },
+     "fixed_runs": 8,
+     "fixed_exhausted": true,
+     "fixed_violating_runs": 0,
+     "hypotheses": [
+      {
+       "kind": "column_at_least",
+       "statement": "no overdraft",
+       "verdict": "never_violated",
+       "buggy_runs_violating": 0,
+       "fixed_runs_violating": 0
+      }
+     ]
+    },
+    {
+     "label": "curated#3",
+     "invocations": [
+      "a=withdraw{'account_id': 1, 'amount': 50}",
+      "b=deposit{'account_id': 2, 'amount': 50}"
+     ],
+     "seed": [
+      {
+       "id": 1,
+       "owner": "owner1",
+       "opening": 100,
+       "balance": 100
+      },
+      {
+       "id": 2,
+       "owner": "owner2",
+       "opening": 0,
+       "balance": 0
+      }
+     ],
+     "buggy_runs": 60,
+     "buggy_exhausted": false,
+     "buggy_violating_runs": 0,
+     "first_violation": null,
+     "fixed_runs": 60,
+     "fixed_exhausted": false,
+     "fixed_violating_runs": 0,
+     "hypotheses": [
+      {
+       "kind": "column_at_least",
+       "statement": "no overdraft",
+       "verdict": "never_violated",
+       "buggy_runs_violating": 0,
+       "fixed_runs_violating": 0
+      }
+     ]
+    }
+   ],
+   "seconds": 14.89
+  },
+  {
+   "source": "systematic",
+   "proposals": 6,
+   "valid": 6,
+   "executed": 6,
+   "rejected": 0,
+   "rejections": [],
+   "handlers_reached": [
+    "deposit",
+    "transfer",
+    "withdraw"
+   ],
+   "distinct_app_statements_reached": 7,
+   "workloads_with_verified_violation": 6,
+   "fixed_build_false_positives": 0,
+   "schedules_explored": 192,
+   "hypotheses": {
+    "never_violated": 6
+   },
+   "workloads": [
+    {
+     "label": "systematic#0",
+     "invocations": [
+      "a=deposit{'account_id': 1, 'amount': 25}",
+      "b=deposit{'account_id': 1, 'amount': 25}"
+     ],
+     "seed": [
+      {
+       "id": 1,
+       "owner": "owner1",
+       "opening": 100,
+       "balance": 100
+      },
+      {
+       "id": 2,
+       "owner": "owner2",
+       "opening": 0,
+       "balance": 0
+      }
+     ],
+     "buggy_runs": 24,
+     "buggy_exhausted": true,
+     "buggy_violating_runs": 22,
+     "first_violation": {
+      "schedule": [
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "b",
+       "b",
+       "b",
+       "b",
+       "b",
+       "a",
+       "a",
+       "a",
+       "b",
+       "a",
+       "a",
+       "b",
+       "b",
+       "b",
+       "b"
+      ],
+      "violations": [
+       "L1 account 1: balance 125 but opening 100 plus entries 50"
+      ]
+     },
+     "fixed_runs": 8,
+     "fixed_exhausted": true,
+     "fixed_violating_runs": 0,
+     "hypotheses": [
+      {
+       "kind": "column_at_least",
+       "statement": "no overdraft",
+       "verdict": "never_violated",
+       "buggy_runs_violating": 0,
+       "fixed_runs_violating": 0
+      }
+     ]
+    },
+    {
+     "label": "systematic#1",
+     "invocations": [
+      "a=deposit{'account_id': 1, 'amount': 25}",
+      "b=transfer{'src': 1, 'dst': 2, 'amount': 40}"
+     ],
+     "seed": [
+      {
+       "id": 1,
+       "owner": "owner1",
+       "opening": 100,
+       "balance": 100
+      },
+      {
+       "id": 2,
+       "owner": "owner2",
+       "opening": 0,
+       "balance": 0
+      }
+     ],
+     "buggy_runs": 24,
+     "buggy_exhausted": true,
+     "buggy_violating_runs": 22,
+     "first_violation": {
+      "schedule": [
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "b",
+       "b",
+       "b",
+       "b",
+       "b",
+       "a",
+       "a",
+       "a",
+       "b",
+       "a",
+       "a",
+       "b",
+       "b",
+       "b",
+       "b"
+      ],
+      "violations": [
+       "L1 account 1: balance 60 but opening 100 plus entries -15"
+      ]
+     },
+     "fixed_runs": 8,
+     "fixed_exhausted": true,
+     "fixed_violating_runs": 0,
+     "hypotheses": [
+      {
+       "kind": "column_at_least",
+       "statement": "no overdraft",
+       "verdict": "never_violated",
+       "buggy_runs_violating": 0,
+       "fixed_runs_violating": 0
+      }
+     ]
+    },
+    {
+     "label": "systematic#2",
+     "invocations": [
+      "a=deposit{'account_id': 1, 'amount': 25}",
+      "b=withdraw{'account_id': 1, 'amount': 60}"
+     ],
+     "seed": [
+      {
+       "id": 1,
+       "owner": "owner1",
+       "opening": 100,
+       "balance": 100
+      },
+      {
+       "id": 2,
+       "owner": "owner2",
+       "opening": 0,
+       "balance": 0
+      }
+     ],
+     "buggy_runs": 24,
+     "buggy_exhausted": true,
+     "buggy_violating_runs": 22,
+     "first_violation": {
+      "schedule": [
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "b",
+       "b",
+       "b",
+       "b",
+       "b",
+       "a",
+       "a",
+       "a",
+       "b",
+       "a",
+       "a",
+       "b",
+       "b",
+       "b",
+       "b"
+      ],
+      "violations": [
+       "L1 account 1: balance 40 but opening 100 plus entries -35"
+      ]
+     },
+     "fixed_runs": 8,
+     "fixed_exhausted": true,
+     "fixed_violating_runs": 0,
+     "hypotheses": [
+      {
+       "kind": "column_at_least",
+       "statement": "no overdraft",
+       "verdict": "never_violated",
+       "buggy_runs_violating": 0,
+       "fixed_runs_violating": 0
+      }
+     ]
+    },
+    {
+     "label": "systematic#3",
+     "invocations": [
+      "a=transfer{'src': 1, 'dst': 2, 'amount': 40}",
+      "b=transfer{'src': 1, 'dst': 2, 'amount': 40}"
+     ],
+     "seed": [
+      {
+       "id": 1,
+       "owner": "owner1",
+       "opening": 100,
+       "balance": 100
+      },
+      {
+       "id": 2,
+       "owner": "owner2",
+       "opening": 0,
+       "balance": 0
+      }
+     ],
+     "buggy_runs": 24,
+     "buggy_exhausted": true,
+     "buggy_violating_runs": 22,
+     "first_violation": {
+      "schedule": [
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "b",
+       "b",
+       "b",
+       "b",
+       "b",
+       "a",
+       "a",
+       "a",
+       "b",
+       "a",
+       "a",
+       "b",
+       "b",
+       "b",
+       "b"
+      ],
+      "violations": [
+       "L1 account 1: balance 60 but opening 100 plus entries -80",
+       "L1 account 2: balance 40 but opening 0 plus entries 80"
+      ]
+     },
+     "fixed_runs": 8,
+     "fixed_exhausted": true,
+     "fixed_violating_runs": 0,
+     "hypotheses": [
+      {
+       "kind": "column_at_least",
+       "statement": "no overdraft",
+       "verdict": "never_violated",
+       "buggy_runs_violating": 0,
+       "fixed_runs_violating": 0
+      }
+     ]
+    },
+    {
+     "label": "systematic#4",
+     "invocations": [
+      "a=transfer{'src': 1, 'dst': 2, 'amount': 40}",
+      "b=withdraw{'account_id': 1, 'amount': 60}"
+     ],
+     "seed": [
+      {
+       "id": 1,
+       "owner": "owner1",
+       "opening": 100,
+       "balance": 100
+      },
+      {
+       "id": 2,
+       "owner": "owner2",
+       "opening": 0,
+       "balance": 0
+      }
+     ],
+     "buggy_runs": 24,
+     "buggy_exhausted": true,
+     "buggy_violating_runs": 22,
+     "first_violation": {
+      "schedule": [
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "b",
+       "b",
+       "b",
+       "b",
+       "b",
+       "a",
+       "a",
+       "a",
+       "b",
+       "a",
+       "a",
+       "b",
+       "b",
+       "b",
+       "b"
+      ],
+      "violations": [
+       "L1 account 1: balance 40 but opening 100 plus entries -100"
+      ]
+     },
+     "fixed_runs": 8,
+     "fixed_exhausted": true,
+     "fixed_violating_runs": 0,
+     "hypotheses": [
+      {
+       "kind": "column_at_least",
+       "statement": "no overdraft",
+       "verdict": "never_violated",
+       "buggy_runs_violating": 0,
+       "fixed_runs_violating": 0
+      }
+     ]
+    },
+    {
+     "label": "systematic#5",
+     "invocations": [
+      "a=withdraw{'account_id': 1, 'amount': 60}",
+      "b=withdraw{'account_id': 1, 'amount': 60}"
+     ],
+     "seed": [
+      {
+       "id": 1,
+       "owner": "owner1",
+       "opening": 100,
+       "balance": 100
+      },
+      {
+       "id": 2,
+       "owner": "owner2",
+       "opening": 0,
+       "balance": 0
+      }
+     ],
+     "buggy_runs": 24,
+     "buggy_exhausted": true,
+     "buggy_violating_runs": 22,
+     "first_violation": {
+      "schedule": [
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "b",
+       "b",
+       "b",
+       "b",
+       "b",
+       "a",
+       "a",
+       "a",
+       "b",
+       "a",
+       "a",
+       "b",
+       "b",
+       "b",
+       "b"
+      ],
+      "violations": [
+       "L1 account 1: balance 40 but opening 100 plus entries -120"
+      ]
+     },
+     "fixed_runs": 8,
+     "fixed_exhausted": true,
+     "fixed_violating_runs": 0,
+     "hypotheses": [
+      {
+       "kind": "column_at_least",
+       "statement": "no overdraft",
+       "verdict": "never_violated",
+       "buggy_runs_violating": 0,
+       "fixed_runs_violating": 0
+      }
+     ]
+    }
+   ],
+   "seconds": 16.69
+  },
+  {
+   "source": "muse",
+   "proposals": 12,
+   "valid": 12,
+   "executed": 6,
+   "rejected": 0,
+   "rejections": [],
+   "handlers_reached": [
+    "deposit",
+    "transfer",
+    "withdraw"
+   ],
+   "distinct_app_statements_reached": 7,
+   "workloads_with_verified_violation": 6,
+   "fixed_build_false_positives": 0,
+   "schedules_explored": 280,
+   "hypotheses": {
+    "detects_buggy_only": 7,
+    "false_at_start": 5,
+    "never_violated": 6
+   },
+   "workloads": [
+    {
+     "label": "muse_ledger_0#0",
+     "invocations": [
+      "alice=deposit{'account_id': 1, 'amount': 500}",
+      "bob=deposit{'account_id': 1, 'amount': 300}"
+     ],
+     "seed": [
+      {
+       "id": 1,
+       "owner": "owner1",
+       "opening": 0,
+       "balance": 0
+      }
+     ],
+     "buggy_runs": 24,
+     "buggy_exhausted": true,
+     "buggy_violating_runs": 22,
+     "first_violation": {
+      "schedule": [
+       "alice",
+       "alice",
+       "alice",
+       "alice",
+       "alice",
+       "bob",
+       "bob",
+       "bob",
+       "bob",
+       "bob",
+       "alice",
+       "alice",
+       "alice",
+       "bob",
+       "alice",
+       "alice",
+       "bob",
+       "bob",
+       "bob",
+       "bob"
+      ],
+      "violations": [
+       "L1 account 1: balance 300 but opening 0 plus entries 800"
+      ]
+     },
+     "fixed_runs": 8,
+     "fixed_exhausted": true,
+     "fixed_violating_runs": 0,
+     "hypotheses": [
+      {
+       "kind": "equals_base_plus_child_sum",
+       "statement": "Balance equals opening plus ledger sum.",
+       "verdict": "detects_buggy_only",
+       "buggy_runs_violating": 22,
+       "fixed_runs_violating": 0
+      },
+      {
+       "kind": "child_sum_equals",
+       "statement": "Total ledger delta equals total deposits.",
+       "verdict": "false_at_start",
+       "buggy_runs_violating": 0,
+       "fixed_runs_violating": 0
+      },
+      {
+       "kind": "column_at_least",
+       "statement": "Balance is at least total deposits.",
+       "verdict": "false_at_start",
+       "buggy_runs_violating": 22,
+       "fixed_runs_violating": 0
+      }
+     ]
+    },
+    {
+     "label": "muse_ledger_0#1",
+     "invocations": [
+      "alice=withdraw{'account_id': 1, 'amount': 500}",
+      "bob=withdraw{'account_id': 1, 'amount': 500}"
+     ],
+     "seed": [
+      {
+       "id": 1,
+       "owner": "owner1",
+       "opening": 1000,
+       "balance": 1000
+      }
+     ],
+     "buggy_runs": 24,
+     "buggy_exhausted": true,
+     "buggy_violating_runs": 22,
+     "first_violation": {
+      "schedule": [
+       "alice",
+       "alice",
+       "alice",
+       "alice",
+       "alice",
+       "bob",
+       "bob",
+       "bob",
+       "bob",
+       "bob",
+       "alice",
+       "alice",
+       "alice",
+       "bob",
+       "alice",
+       "alice",
+       "bob",
+       "bob",
+       "bob",
+       "bob"
+      ],
+      "violations": [
+       "L1 account 1: balance 500 but opening 1000 plus entries -1000"
+      ]
+     },
+     "fixed_runs": 8,
+     "fixed_exhausted": true,
+     "fixed_violating_runs": 0,
+     "hypotheses": [
+      {
+       "kind": "equals_base_plus_child_sum",
+       "statement": "Balance equals opening plus ledger sum.",
+       "verdict": "detects_buggy_only",
+       "buggy_runs_violating": 22,
+       "fixed_runs_violating": 0
+      },
+      {
+       "kind": "child_sum_equals",
+       "statement": "Total ledger delta equals total withdrawals.",
+       "verdict": "false_at_start",
+       "buggy_runs_violating": 0,
+       "fixed_runs_violating": 0
+      },
+      {
+       "kind": "column_at_least",
+       "statement": "Balances never go negative.",
+       "verdict": "never_violated",
+       "buggy_runs_violating": 0,
+       "fixed_runs_violating": 0
+      }
+     ]
+    },
+    {
+     "label": "muse_ledger_0#2",
+     "invocations": [
+      "alice=transfer{'amount': 500, 'dst': 2, 'src': 1}",
+      "bob=transfer{'amount': 300, 'dst': 2, 'src': 1}"
+     ],
+     "seed": [
+      {
+       "id": 1,
+       "owner": "owner1",
+       "opening": 1000,
+       "balance": 1000
+      },
+      {
+       "id": 2,
+       "owner": "owner2",
+       "opening": 1000,
+       "balance": 1000
+      }
+     ],
+     "buggy_runs": 24,
+     "buggy_exhausted": true,
+     "buggy_violating_runs": 22,
+     "first_violation": {
+      "schedule": [
+       "alice",
+       "alice",
+       "alice",
+       "alice",
+       "alice",
+       "bob",
+       "bob",
+       "bob",
+       "bob",
+       "bob",
+       "alice",
+       "alice",
+       "alice",
+       "bob",
+       "alice",
+       "alice",
+       "bob",
+       "bob",
+       "bob",
+       "bob"
+      ],
+      "violations": [
+       "L1 account 1: balance 700 but opening 1000 plus entries -800",
+       "L1 account 2: balance 1300 but opening 1000 plus entries 800"
+      ]
+     },
+     "fixed_runs": 8,
+     "fixed_exhausted": true,
+     "fixed_violating_runs": 0,
+     "hypotheses": [
+      {
+       "kind": "equals_base_plus_child_sum",
+       "statement": "Balance equals opening plus ledger sum.",
+       "verdict": "detects_buggy_only",
+       "buggy_runs_violating": 22,
+       "fixed_runs_violating": 0
+      },
+      {
+       "kind": "column_sum_unchanged",
+       "statement": "Total balance sum is preserved by transfers.",
+       "verdict": "never_violated",
+       "buggy_runs_violating": 0,
+       "fixed_runs_violating": 0
+      },
+      {
+       "kind": "child_sum_equals",
+       "statement": "Total ledger delta is zero for transfers.",
+       "verdict": "never_violated",
+       "buggy_runs_violating": 0,
+       "fixed_runs_violating": 0
+      }
+     ]
+    },
+    {
+     "label": "muse_ledger_0#3",
+     "invocations": [
+      "alice=transfer{'amount': 200, 'dst': 2, 'src': 1}",
+      "bob=deposit{'account_id': 2, 'amount': 300}"
+     ],
+     "seed": [
+      {
+       "id": 1,
+       "owner": "owner1",
+       "opening": 500,
+       "balance": 500
+      },
+      {
+       "id": 2,
+       "owner": "owner2",
+       "opening": 0,
+       "balance": 0
+      }
+     ],
+     "buggy_runs": 24,
+     "buggy_exhausted": true,
+     "buggy_violating_runs": 22,
+     "first_violation": {
+      "schedule": [
+       "alice",
+       "alice",
+       "alice",
+       "alice",
+       "alice",
+       "bob",
+       "bob",
+       "bob",
+       "bob",
+       "bob",
+       "alice",
+       "alice",
+       "alice",
+       "bob",
+       "alice",
+       "alice",
+       "bob",
+       "bob",
+       "bob",
+       "bob"
+      ],
+      "violations": [
+       "L1 account 2: balance 300 but opening 0 plus entries 500"
+      ]
+     },
+     "fixed_runs": 8,
+     "fixed_exhausted": true,
+     "fixed_violating_runs": 0,
+     "hypotheses": [
+      {
+       "kind": "equals_base_plus_child_sum",
+       "statement": "Balance equals opening plus ledger sum.",
+       "verdict": "detects_buggy_only",
+       "buggy_runs_violating": 22,
+       "fixed_runs_violating": 0
+      },
+      {
+       "kind": "child_sum_equals",
+       "statement": "Total ledger delta equals net transfer plus deposit.",
+       "verdict": "false_at_start",
+       "buggy_runs_violating": 0,
+       "fixed_runs_violating": 0
+      },
+      {
+       "kind": "column_at_least",
+       "statement": "Balances never go negative.",
+       "verdict": "never_violated",
+       "buggy_runs_violating": 0,
+       "fixed_runs_violating": 0
+      }
+     ]
+    },
+    {
+     "label": "muse_ledger_0#4",
+     "invocations": [
+      "alice=transfer{'amount': 400, 'dst': 2, 'src': 1}",
+      "bob=withdraw{'account_id': 1, 'amount': 300}"
+     ],
+     "seed": [
+      {
+       "id": 1,
+       "owner": "owner1",
+       "opening": 1000,
+       "balance": 1000
+      },
+      {
+       "id": 2,
+       "owner": "owner2",
+       "opening": 0,
+       "balance": 0
+      }
+     ],
+     "buggy_runs": 24,
+     "buggy_exhausted": true,
+     "buggy_violating_runs": 22,
+     "first_violation": {
+      "schedule": [
+       "alice",
+       "alice",
+       "alice",
+       "alice",
+       "alice",
+       "bob",
+       "bob",
+       "bob",
+       "bob",
+       "bob",
+       "alice",
+       "alice",
+       "alice",
+       "bob",
+       "alice",
+       "alice",
+       "bob",
+       "bob",
+       "bob",
+       "bob"
+      ],
+      "violations": [
+       "L1 account 1: balance 700 but opening 1000 plus entries -700"
+      ]
+     },
+     "fixed_runs": 8,
+     "fixed_exhausted": true,
+     "fixed_violating_runs": 0,
+     "hypotheses": [
+      {
+       "kind": "equals_base_plus_child_sum",
+       "statement": "Balance equals opening plus ledger sum.",
+       "verdict": "detects_buggy_only",
+       "buggy_runs_violating": 22,
+       "fixed_runs_violating": 0
+      },
+      {
+       "kind": "child_sum_equals",
+       "statement": "Total ledger delta equals net transfer plus withdrawal.",
+       "verdict": "false_at_start",
+       "buggy_runs_violating": 0,
+       "fixed_runs_violating": 0
+      },
+      {
+       "kind": "column_at_least",
+       "statement": "Balances never go negative.",
+       "verdict": "never_violated",
+       "buggy_runs_violating": 0,
+       "fixed_runs_violating": 0
+      }
+     ]
+    },
+    {
+     "label": "muse_ledger_0#5",
+     "invocations": [
+      "alice=transfer{'amount': 100, 'dst': 2, 'src': 1}",
+      "bob=transfer{'amount': 100, 'dst': 3, 'src': 2}",
+      "carol=transfer{'amount': 100, 'dst': 1, 'src': 3}"
+     ],
+     "seed": [
+      {
+       "id": 1,
+       "owner": "owner1",
+       "opening": 500,
+       "balance": 500
+      },
+      {
+       "id": 2,
+       "owner": "owner2",
+       "opening": 500,
+       "balance": 500
+      },
+      {
+       "id": 3,
+       "owner": "owner3",
+       "opening": 500,
+       "balance": 500
+      }
+     ],
+     "buggy_runs": 60,
+     "buggy_exhausted": false,
+     "buggy_violating_runs": 58,
+     "first_violation": {
+      "schedule": [
+       "alice",
+       "alice",
+       "alice",
+       "alice",
+       "alice",
+       "bob",
+       "bob",
+       "bob",
+       "bob",
+       "bob",
+       "carol",
+       "carol",
+       "carol",
+       "carol",
+       "carol",
+       "alice",
+       "alice",
+       "alice",
+       "alice",
+       "alice",
+       "bob",
+       "bob",
+       "bob",
+       "carol",
+       "bob",
+       "bob",
+       "carol",
+       "carol",
+       "carol",
+       "carol"
+      ],
+      "violations": [
+       "L1 account 3: balance 400 but opening 500 plus entries 0"
+      ]
+     },
+     "fixed_runs": 60,
+     "fixed_exhausted": false,
+     "fixed_violating_runs": 0,
+     "hypotheses": [
+      {
+       "kind": "equals_base_plus_child_sum",
+       "statement": "Balance equals opening plus ledger sum.",
+       "verdict": "detects_buggy_only",
+       "buggy_runs_violating": 58,
+       "fixed_runs_violating": 0
+      },
+      {
+       "kind": "column_sum_unchanged",
+       "statement": "Total balance sum is preserved by cyclic transfers.",
+       "verdict": "detects_buggy_only",
+       "buggy_runs_violating": 55,
+       "fixed_runs_violating": 0
+      },
+      {
+       "kind": "child_sum_equals",
+       "statement": "Total ledger delta is zero for cyclic transfers.",
+       "verdict": "never_violated",
+       "buggy_runs_violating": 0,
+       "fixed_runs_violating": 0
+      }
+     ]
+    }
+   ],
+   "seconds": 33.18
+  }
+ ],
+ "planner": [
+  {
+   "source": "curated",
+   "documents": 1,
+   "outcomes": {
+    "bridged@bridge": 1
+   },
+   "bridged": 1,
+   "executed": 1,
+   "handlers_reached": [
+    "reserve_seats"
+   ],
+   "workloads_with_verified_violation": 1,
+   "fixed_build_false_positives": 0,
+   "schedules_explored": 96,
+   "documents_detail": [
+    {
+     "label": "curated#0",
+     "name": "track_a_two_buyers",
+     "outcome": "bridged",
+     "stage": "bridge",
+     "detail": null,
+     "buggy": {
+      "runs": 60,
+      "exhausted": false,
+      "violating_runs": 53,
+      "violations": [
+       "R1 event 1",
+       "R2 event 1"
+      ]
+     },
+     "fixed": {
+      "runs": 36,
+      "exhausted": true,
+      "violating_runs": 0,
+      "violations": []
+     },
+     "rows": [
+      [
+       "events",
+       {
+        "capacity": 3,
+        "id": 1,
+        "reserved": 0
+       }
+      ]
+     ]
+    }
+   ],
+   "seconds": 6.91
+  },
+  {
+   "source": "systematic",
+   "documents": 6,
+   "outcomes": {
+    "bridged@bridge": 6
+   },
+   "bridged": 6,
+   "executed": 6,
+   "handlers_reached": [
+    "reserve_seats"
+   ],
+   "workloads_with_verified_violation": 5,
+   "fixed_build_false_positives": 0,
+   "schedules_explored": 564,
+   "documents_detail": [
+    {
+     "label": "systematic#0",
+     "name": "grid_c2_q1",
+     "outcome": "bridged",
+     "stage": "bridge",
+     "detail": null,
+     "buggy": {
+      "runs": 60,
+      "exhausted": false,
+      "violating_runs": 53,
+      "violations": [
+       "R1 event 1"
+      ]
+     },
+     "fixed": {
+      "runs": 36,
+      "exhausted": true,
+      "violating_runs": 0,
+      "violations": []
+     },
+     "rows": [
+      [
+       "events",
+       {
+        "capacity": 2,
+        "id": 1,
+        "reserved": 0
+       }
+      ]
+     ]
+    },
+    {
+     "label": "systematic#1",
+     "name": "grid_c2_q2",
+     "outcome": "bridged",
+     "stage": "bridge",
+     "detail": null,
+     "buggy": {
+      "runs": 60,
+      "exhausted": false,
+      "violating_runs": 53,
+      "violations": [
+       "R1 event 1",
+       "R2 event 1"
+      ]
+     },
+     "fixed": {
+      "runs": 36,
+      "exhausted": true,
+      "violating_runs": 0,
+      "violations": []
+     },
+     "rows": [
+      [
+       "events",
+       {
+        "capacity": 2,
+        "id": 1,
+        "reserved": 0
+       }
+      ]
+     ]
+    },
+    {
+     "label": "systematic#2",
+     "name": "grid_c2_q3",
+     "outcome": "bridged",
+     "stage": "bridge",
+     "detail": null,
+     "buggy": {
+      "runs": 60,
+      "exhausted": false,
+      "violating_runs": 0,
+      "violations": []
+     },
+     "fixed": {
+      "runs": 24,
+      "exhausted": true,
+      "violating_runs": 0,
+      "violations": []
+     },
+     "rows": [
+      [
+       "events",
+       {
+        "capacity": 2,
+        "id": 1,
+        "reserved": 0
+       }
+      ]
+     ]
+    },
+    {
+     "label": "systematic#3",
+     "name": "grid_c3_q1",
+     "outcome": "bridged",
+     "stage": "bridge",
+     "detail": null,
+     "buggy": {
+      "runs": 60,
+      "exhausted": false,
+      "violating_runs": 53,
+      "violations": [
+       "R1 event 1"
+      ]
+     },
+     "fixed": {
+      "runs": 36,
+      "exhausted": true,
+      "violating_runs": 0,
+      "violations": []
+     },
+     "rows": [
+      [
+       "events",
+       {
+        "capacity": 3,
+        "id": 1,
+        "reserved": 0
+       }
+      ]
+     ]
+    },
+    {
+     "label": "systematic#4",
+     "name": "grid_c3_q2",
+     "outcome": "bridged",
+     "stage": "bridge",
+     "detail": null,
+     "buggy": {
+      "runs": 60,
+      "exhausted": false,
+      "violating_runs": 53,
+      "violations": [
+       "R1 event 1",
+       "R2 event 1"
+      ]
+     },
+     "fixed": {
+      "runs": 36,
+      "exhausted": true,
+      "violating_runs": 0,
+      "violations": []
+     },
+     "rows": [
+      [
+       "events",
+       {
+        "capacity": 3,
+        "id": 1,
+        "reserved": 0
+       }
+      ]
+     ]
+    },
+    {
+     "label": "systematic#5",
+     "name": "grid_c3_q3",
+     "outcome": "bridged",
+     "stage": "bridge",
+     "detail": null,
+     "buggy": {
+      "runs": 60,
+      "exhausted": false,
+      "violating_runs": 53,
+      "violations": [
+       "R1 event 1",
+       "R2 event 1"
+      ]
+     },
+     "fixed": {
+      "runs": 36,
+      "exhausted": true,
+      "violating_runs": 0,
+      "violations": []
+     },
+     "rows": [
+      [
+       "events",
+       {
+        "capacity": 3,
+        "id": 1,
+        "reserved": 0
+       }
+      ]
+     ]
+    }
+   ],
+   "seconds": 37.41
+  },
+  {
+   "source": "muse",
+   "documents": 12,
+   "outcomes": {
+    "unsupported@plan_state:no_filler_policy": 6,
+    "bridged@bridge": 6
+   },
+   "bridged": 6,
+   "executed": 6,
+   "handlers_reached": [
+    "release_seats",
+    "reserve_seats"
+   ],
+   "workloads_with_verified_violation": 5,
+   "fixed_build_false_positives": 1,
+   "schedules_explored": 618,
+   "documents_detail": [
+    {
+     "label": "muse_planner_0#0",
+     "name": "overbook_pair",
+     "outcome": "unsupported",
+     "stage": "plan_state",
+     "detail": {
+      "goal_label": "evt",
+      "code": "no_filler_policy",
+      "reason": "capacity needs a value and no trusted policy supplies one"
+     }
+    },
+    {
+     "label": "muse_planner_0#1",
+     "name": "triple_race",
+     "outcome": "unsupported",
+     "stage": "plan_state",
+     "detail": {
+      "goal_label": "evt",
+      "code": "no_filler_policy",
+      "reason": "capacity needs a value and no trusted policy supplies one"
+     }
+    },
+    {
+     "label": "muse_planner_0#2",
+     "name": "reserve_release_race",
+     "outcome": "unsupported",
+     "stage": "plan_state",
+     "detail": {
+      "goal_label": "alice_res",
+      "code": "no_filler_policy",
+      "reason": "event_id needs a value and no trusted policy supplies one"
+     }
+    },
+    {
+     "label": "muse_planner_0#3",
+     "name": "double_release",
+     "outcome": "unsupported",
+     "stage": "plan_state",
+     "detail": {
+      "goal_label": "alice_res",
+      "code": "no_filler_policy",
+      "reason": "event_id needs a value and no trusted policy supplies one"
+     }
+    },
+    {
+     "label": "muse_planner_0#4",
+     "name": "mixed_qty_race",
+     "outcome": "unsupported",
+     "stage": "plan_state",
+     "detail": {
+      "goal_label": "evt",
+      "code": "no_filler_policy",
+      "reason": "capacity needs a value and no trusted policy supplies one"
+     }
+    },
+    {
+     "label": "muse_planner_0#5",
+     "name": "cross_event_iso",
+     "outcome": "unsupported",
+     "stage": "plan_state",
+     "detail": {
+      "goal_label": "evts",
+      "code": "no_filler_policy",
+      "reason": "capacity needs a value and no trusted policy supplies one"
+     }
+    },
+    {
+     "label": "muse_planner_1#0",
+     "name": "overbook_two_way",
+     "outcome": "bridged",
+     "stage": "bridge",
+     "detail": null,
+     "buggy": {
+      "runs": 60,
+      "exhausted": false,
+      "violating_runs": 53,
+      "violations": [
+       "R1 event 1",
+       "R2 event 1"
+      ]
+     },
+     "fixed": {
+      "runs": 36,
+      "exhausted": true,
+      "violating_runs": 0,
+      "violations": []
+     },
+     "rows": [
+      [
+       "events",
+       {
+        "capacity": 10,
+        "id": 1,
+        "reserved": 0
+       }
+      ]
+     ]
+    },
+    {
+     "label": "muse_planner_1#1",
+     "name": "overbook_three_way",
+     "outcome": "bridged",
+     "stage": "bridge",
+     "detail": null,
+     "buggy": {
+      "runs": 60,
+      "exhausted": false,
+      "violating_runs": 53,
+      "violations": [
+       "R1 event 5",
+       "R2 event 5"
+      ]
+     },
+     "fixed": {
+      "runs": 60,
+      "exhausted": false,
+      "violating_runs": 0,
+      "violations": []
+     },
+     "rows": [
+      [
+       "events",
+       {
+        "capacity": 10,
+        "id": 5,
+        "reserved": 0
+       }
+      ]
+     ]
+    },
+    {
+     "label": "muse_planner_1#2",
+     "name": "exact_fill_no_reject",
+     "outcome": "bridged",
+     "stage": "bridge",
+     "detail": null,
+     "buggy": {
+      "runs": 60,
+      "exhausted": false,
+      "violating_runs": 53,
+      "violations": [
+       "R1 event 3"
+      ]
+     },
+     "fixed": {
+      "runs": 36,
+      "exhausted": true,
+      "violating_runs": 0,
+      "violations": []
+     },
+     "rows": [
+      [
+       "events",
+       {
+        "capacity": 10,
+        "id": 3,
+        "reserved": 0
+       }
+      ]
+     ]
+    },
+    {
+     "label": "muse_planner_1#3",
+     "name": "reserve_release_race",
+     "outcome": "bridged",
+     "stage": "bridge",
+     "detail": null,
+     "buggy": {
+      "runs": 60,
+      "exhausted": false,
+      "violating_runs": 0,
+      "violations": []
+     },
+     "fixed": {
+      "runs": 30,
+      "exhausted": true,
+      "violating_runs": 0,
+      "violations": []
+     },
+     "rows": [
+      [
+       "events",
+       {
+        "capacity": 10,
+        "id": 10,
+        "reserved": 6
+       }
+      ],
+      [
+       "reservations",
+       {
+        "event_id": 10,
+        "holder": "henry",
+        "qty": 6
+       }
+      ]
+     ]
+    },
+    {
+     "label": "muse_planner_1#4",
+     "name": "double_release_same_holder",
+     "outcome": "bridged",
+     "stage": "bridge",
+     "detail": null,
+     "buggy": {
+      "runs": 60,
+      "exhausted": false,
+      "violating_runs": 6,
+      "violations": [
+       "R1 event 20"
+      ]
+     },
+     "fixed": {
+      "runs": 36,
+      "exhausted": true,
+      "violating_runs": 34,
+      "violations": [
+       "R1 event 20"
+      ]
+     },
+     "rows": [
+      [
+       "events",
+       {
+        "capacity": 10,
+        "id": 20,
+        "reserved": 8
+       }
+      ],
+      [
+       "reservations",
+       {
+        "event_id": 20,
+        "holder": "jack",
+        "qty": 4
+       }
+      ],
+      [
+       "reservations",
+       {
+        "event_id": 20,
+        "holder": "jack",
+        "qty": 4
+       }
+      ]
+     ]
+    },
+    {
+     "label": "muse_planner_1#5",
+     "name": "mixed_two_reserve_one_release",
+     "outcome": "bridged",
+     "stage": "bridge",
+     "detail": null,
+     "buggy": {
+      "runs": 60,
+      "exhausted": false,
+      "violating_runs": 53,
+      "violations": [
+       "R1 event 30"
+      ]
+     },
+     "fixed": {
+      "runs": 60,
+      "exhausted": false,
+      "violating_runs": 0,
+      "violations": []
+     },
+     "rows": [
+      [
+       "events",
+       {
+        "capacity": 10,
+        "id": 30,
+        "reserved": 5
+       }
+      ],
+      [
+       "reservations",
+       {
+        "event_id": 30,
+        "holder": "kate",
+        "qty": 5
+       }
+      ]
+     ]
+    }
+   ],
+   "seconds": 45.21
+  }
+ ],
+ "muse_cost": {
+  "requests": 4,
+  "estimated_usd": 0.148953,
+  "failed_calls": [],
+  "note": "a failed (timed-out) request may still be billed; its tokens are unknown"
+ }
+}

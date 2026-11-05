@@ -1,0 +1,2169 @@
+{
+ "ledger": [
+  [
+   "muse_ledger_0#0",
+   {
+    "invariant_hypotheses": [
+     {
+      "base_column": "opening",
+      "bound": null,
+      "child_column": "delta",
+      "child_fk": "account_id",
+      "child_table": "entries",
+      "column": "balance",
+      "kind": "equals_base_plus_child_sum",
+      "statement": "Balance equals opening plus ledger sum.",
+      "table": "accounts"
+     },
+     {
+      "base_column": null,
+      "bound": 800,
+      "child_column": "delta",
+      "child_fk": null,
+      "child_table": "entries",
+      "column": "delta",
+      "kind": "child_sum_equals",
+      "statement": "Total ledger delta equals total deposits.",
+      "table": "entries"
+     },
+     {
+      "base_column": null,
+      "bound": 800,
+      "child_column": null,
+      "child_fk": null,
+      "child_table": null,
+      "column": "balance",
+      "kind": "column_at_least",
+      "statement": "Balance is at least total deposits.",
+      "table": "accounts"
+     }
+    ],
+    "invocations": [
+     {
+      "actor": "alice",
+      "args": [
+       {
+        "name": "account_id",
+        "value": 1
+       },
+       {
+        "name": "amount",
+        "value": 500
+       }
+      ],
+      "handler": "deposit"
+     },
+     {
+      "actor": "bob",
+      "args": [
+       {
+        "name": "account_id",
+        "value": 1
+       },
+       {
+        "name": "amount",
+        "value": 300
+       }
+      ],
+      "handler": "deposit"
+     }
+    ],
+    "rationale": "Concurrent deposits to the same account race on read-modify-write of balance and should expose lost updates.",
+    "seed_accounts": [
+     {
+      "id": 1,
+      "opening": 0
+     }
+    ]
+   }
+  ],
+  [
+   "muse_ledger_0#1",
+   {
+    "invariant_hypotheses": [
+     {
+      "base_column": "opening",
+      "bound": null,
+      "child_column": "delta",
+      "child_fk": "account_id",
+      "child_table": "entries",
+      "column": "balance",
+      "kind": "equals_base_plus_child_sum",
+      "statement": "Balance equals opening plus ledger sum.",
+      "table": "accounts"
+     },
+     {
+      "base_column": null,
+      "bound": -1000,
+      "child_column": "delta",
+      "child_fk": null,
+      "child_table": "entries",
+      "column": "delta",
+      "kind": "child_sum_equals",
+      "statement": "Total ledger delta equals total withdrawals.",
+      "table": "entries"
+     },
+     {
+      "base_column": null,
+      "bound": 0,
+      "child_column": null,
+      "child_fk": null,
+      "child_table": null,
+      "column": "balance",
+      "kind": "column_at_least",
+      "statement": "Balances never go negative.",
+      "table": "accounts"
+     }
+    ],
+    "invocations": [
+     {
+      "actor": "alice",
+      "args": [
+       {
+        "name": "account_id",
+        "value": 1
+       },
+       {
+        "name": "amount",
+        "value": 500
+       }
+      ],
+      "handler": "withdraw"
+     },
+     {
+      "actor": "bob",
+      "args": [
+       {
+        "name": "account_id",
+        "value": 1
+       },
+       {
+        "name": "amount",
+        "value": 500
+       }
+      ],
+      "handler": "withdraw"
+     }
+    ],
+    "rationale": "Concurrent withdrawals from the same funded account race on balance update and test ledger consistency.",
+    "seed_accounts": [
+     {
+      "id": 1,
+      "opening": 1000
+     }
+    ]
+   }
+  ],
+  [
+   "muse_ledger_0#2",
+   {
+    "invariant_hypotheses": [
+     {
+      "base_column": "opening",
+      "bound": null,
+      "child_column": "delta",
+      "child_fk": "account_id",
+      "child_table": "entries",
+      "column": "balance",
+      "kind": "equals_base_plus_child_sum",
+      "statement": "Balance equals opening plus ledger sum.",
+      "table": "accounts"
+     },
+     {
+      "base_column": null,
+      "bound": null,
+      "child_column": null,
+      "child_fk": null,
+      "child_table": null,
+      "column": "balance",
+      "kind": "column_sum_unchanged",
+      "statement": "Total balance sum is preserved by transfers.",
+      "table": "accounts"
+     },
+     {
+      "base_column": null,
+      "bound": 0,
+      "child_column": "delta",
+      "child_fk": null,
+      "child_table": "entries",
+      "column": "delta",
+      "kind": "child_sum_equals",
+      "statement": "Total ledger delta is zero for transfers.",
+      "table": "entries"
+     }
+    ],
+    "invocations": [
+     {
+      "actor": "alice",
+      "args": [
+       {
+        "name": "amount",
+        "value": 500
+       },
+       {
+        "name": "dst",
+        "value": 2
+       },
+       {
+        "name": "src",
+        "value": 1
+       }
+      ],
+      "handler": "transfer"
+     },
+     {
+      "actor": "bob",
+      "args": [
+       {
+        "name": "amount",
+        "value": 300
+       },
+       {
+        "name": "dst",
+        "value": 2
+       },
+       {
+        "name": "src",
+        "value": 1
+       }
+      ],
+      "handler": "transfer"
+     }
+    ],
+    "rationale": "Concurrent transfers in the same direction contend on both source and destination balances.",
+    "seed_accounts": [
+     {
+      "id": 1,
+      "opening": 1000
+     },
+     {
+      "id": 2,
+      "opening": 1000
+     }
+    ]
+   }
+  ],
+  [
+   "muse_ledger_0#3",
+   {
+    "invariant_hypotheses": [
+     {
+      "base_column": "opening",
+      "bound": null,
+      "child_column": "delta",
+      "child_fk": "account_id",
+      "child_table": "entries",
+      "column": "balance",
+      "kind": "equals_base_plus_child_sum",
+      "statement": "Balance equals opening plus ledger sum.",
+      "table": "accounts"
+     },
+     {
+      "base_column": null,
+      "bound": 300,
+      "child_column": "delta",
+      "child_fk": null,
+      "child_table": "entries",
+      "column": "delta",
+      "kind": "child_sum_equals",
+      "statement": "Total ledger delta equals net transfer plus deposit.",
+      "table": "entries"
+     },
+     {
+      "base_column": null,
+      "bound": 0,
+      "child_column": null,
+      "child_fk": null,
+      "child_table": null,
+      "column": "balance",
+      "kind": "column_at_least",
+      "statement": "Balances never go negative.",
+      "table": "accounts"
+     }
+    ],
+    "invocations": [
+     {
+      "actor": "alice",
+      "args": [
+       {
+        "name": "amount",
+        "value": 200
+       },
+       {
+        "name": "dst",
+        "value": 2
+       },
+       {
+        "name": "src",
+        "value": 1
+       }
+      ],
+      "handler": "transfer"
+     },
+     {
+      "actor": "bob",
+      "args": [
+       {
+        "name": "account_id",
+        "value": 2
+       },
+       {
+        "name": "amount",
+        "value": 300
+       }
+      ],
+      "handler": "deposit"
+     }
+    ],
+    "rationale": "Transfer destination races with a concurrent deposit to the same account on balance update.",
+    "seed_accounts": [
+     {
+      "id": 1,
+      "opening": 500
+     },
+     {
+      "id": 2,
+      "opening": 0
+     }
+    ]
+   }
+  ],
+  [
+   "muse_ledger_0#4",
+   {
+    "invariant_hypotheses": [
+     {
+      "base_column": "opening",
+      "bound": null,
+      "child_column": "delta",
+      "child_fk": "account_id",
+      "child_table": "entries",
+      "column": "balance",
+      "kind": "equals_base_plus_child_sum",
+      "statement": "Balance equals opening plus ledger sum.",
+      "table": "accounts"
+     },
+     {
+      "base_column": null,
+      "bound": -300,
+      "child_column": "delta",
+      "child_fk": null,
+      "child_table": "entries",
+      "column": "delta",
+      "kind": "child_sum_equals",
+      "statement": "Total ledger delta equals net transfer plus withdrawal.",
+      "table": "entries"
+     },
+     {
+      "base_column": null,
+      "bound": 0,
+      "child_column": null,
+      "child_fk": null,
+      "child_table": null,
+      "column": "balance",
+      "kind": "column_at_least",
+      "statement": "Balances never go negative.",
+      "table": "accounts"
+     }
+    ],
+    "invocations": [
+     {
+      "actor": "alice",
+      "args": [
+       {
+        "name": "amount",
+        "value": 400
+       },
+       {
+        "name": "dst",
+        "value": 2
+       },
+       {
+        "name": "src",
+        "value": 1
+       }
+      ],
+      "handler": "transfer"
+     },
+     {
+      "actor": "bob",
+      "args": [
+       {
+        "name": "account_id",
+        "value": 1
+       },
+       {
+        "name": "amount",
+        "value": 300
+       }
+      ],
+      "handler": "withdraw"
+     }
+    ],
+    "rationale": "Transfer source races with a concurrent withdrawal from the same account on balance update.",
+    "seed_accounts": [
+     {
+      "id": 1,
+      "opening": 1000
+     },
+     {
+      "id": 2,
+      "opening": 0
+     }
+    ]
+   }
+  ],
+  [
+   "muse_ledger_0#5",
+   {
+    "invariant_hypotheses": [
+     {
+      "base_column": "opening",
+      "bound": null,
+      "child_column": "delta",
+      "child_fk": "account_id",
+      "child_table": "entries",
+      "column": "balance",
+      "kind": "equals_base_plus_child_sum",
+      "statement": "Balance equals opening plus ledger sum.",
+      "table": "accounts"
+     },
+     {
+      "base_column": null,
+      "bound": null,
+      "child_column": null,
+      "child_fk": null,
+      "child_table": null,
+      "column": "balance",
+      "kind": "column_sum_unchanged",
+      "statement": "Total balance sum is preserved by cyclic transfers.",
+      "table": "accounts"
+     },
+     {
+      "base_column": null,
+      "bound": 0,
+      "child_column": "delta",
+      "child_fk": null,
+      "child_table": "entries",
+      "column": "delta",
+      "kind": "child_sum_equals",
+      "statement": "Total ledger delta is zero for cyclic transfers.",
+      "table": "entries"
+     }
+    ],
+    "invocations": [
+     {
+      "actor": "alice",
+      "args": [
+       {
+        "name": "amount",
+        "value": 100
+       },
+       {
+        "name": "dst",
+        "value": 2
+       },
+       {
+        "name": "src",
+        "value": 1
+       }
+      ],
+      "handler": "transfer"
+     },
+     {
+      "actor": "bob",
+      "args": [
+       {
+        "name": "amount",
+        "value": 100
+       },
+       {
+        "name": "dst",
+        "value": 3
+       },
+       {
+        "name": "src",
+        "value": 2
+       }
+      ],
+      "handler": "transfer"
+     },
+     {
+      "actor": "carol",
+      "args": [
+       {
+        "name": "amount",
+        "value": 100
+       },
+       {
+        "name": "dst",
+        "value": 1
+       },
+       {
+        "name": "src",
+        "value": 3
+       }
+      ],
+      "handler": "transfer"
+     }
+    ],
+    "rationale": "Three-way cyclic transfers overlap on every account and stress ordering and lost updates.",
+    "seed_accounts": [
+     {
+      "id": 1,
+      "opening": 500
+     },
+     {
+      "id": 2,
+      "opening": 500
+     },
+     {
+      "id": 3,
+      "opening": 500
+     }
+    ]
+   }
+  ],
+  [
+   "muse_ledger_1#0",
+   {
+    "invariant_hypotheses": [
+     {
+      "base_column": "opening",
+      "bound": null,
+      "child_column": "delta",
+      "child_fk": "account_id",
+      "child_table": "entries",
+      "column": "balance",
+      "kind": "equals_base_plus_child_sum",
+      "statement": "Balance equals opening plus sum of entry deltas.",
+      "table": "accounts"
+     },
+     {
+      "base_column": null,
+      "bound": 0,
+      "child_column": null,
+      "child_fk": null,
+      "child_table": null,
+      "column": "balance",
+      "kind": "column_at_least",
+      "statement": "Balances never go negative.",
+      "table": "accounts"
+     }
+    ],
+    "invocations": [
+     {
+      "actor": "alice",
+      "args": [
+       {
+        "name": "account_id",
+        "value": 1
+       },
+       {
+        "name": "amount",
+        "value": 200
+       }
+      ],
+      "handler": "deposit"
+     },
+     {
+      "actor": "bob",
+      "args": [
+       {
+        "name": "account_id",
+        "value": 1
+       },
+       {
+        "name": "amount",
+        "value": 300
+       }
+      ],
+      "handler": "deposit"
+     }
+    ],
+    "rationale": "Concurrent deposits to the same account race on read-modify-write of balance.",
+    "seed_accounts": [
+     {
+      "id": 1,
+      "opening": 100
+     }
+    ]
+   }
+  ],
+  [
+   "muse_ledger_1#1",
+   {
+    "invariant_hypotheses": [
+     {
+      "base_column": "opening",
+      "bound": null,
+      "child_column": "delta",
+      "child_fk": "account_id",
+      "child_table": "entries",
+      "column": "balance",
+      "kind": "equals_base_plus_child_sum",
+      "statement": "Balance equals opening plus sum of entry deltas.",
+      "table": "accounts"
+     },
+     {
+      "base_column": null,
+      "bound": 0,
+      "child_column": null,
+      "child_fk": null,
+      "child_table": null,
+      "column": "balance",
+      "kind": "column_at_least",
+      "statement": "Balances never go negative.",
+      "table": "accounts"
+     }
+    ],
+    "invocations": [
+     {
+      "actor": "alice",
+      "args": [
+       {
+        "name": "account_id",
+        "value": 2
+       },
+       {
+        "name": "amount",
+        "value": 200
+       }
+      ],
+      "handler": "withdraw"
+     },
+     {
+      "actor": "bob",
+      "args": [
+       {
+        "name": "account_id",
+        "value": 2
+       },
+       {
+        "name": "amount",
+        "value": 300
+       }
+      ],
+      "handler": "withdraw"
+     }
+    ],
+    "rationale": "Concurrent withdrawals from the same account race on balance update.",
+    "seed_accounts": [
+     {
+      "id": 2,
+      "opening": 1000
+     }
+    ]
+   }
+  ],
+  [
+   "muse_ledger_1#2",
+   {
+    "invariant_hypotheses": [
+     {
+      "base_column": "opening",
+      "bound": null,
+      "child_column": "delta",
+      "child_fk": "account_id",
+      "child_table": "entries",
+      "column": "balance",
+      "kind": "equals_base_plus_child_sum",
+      "statement": "Balance equals opening plus sum of entry deltas.",
+      "table": "accounts"
+     },
+     {
+      "base_column": null,
+      "bound": null,
+      "child_column": null,
+      "child_fk": null,
+      "child_table": null,
+      "column": "balance",
+      "kind": "column_sum_unchanged",
+      "statement": "Total balances remain unchanged.",
+      "table": "accounts"
+     },
+     {
+      "base_column": null,
+      "bound": 0,
+      "child_column": null,
+      "child_fk": null,
+      "child_table": null,
+      "column": "balance",
+      "kind": "column_at_least",
+      "statement": "Balances never go negative.",
+      "table": "accounts"
+     }
+    ],
+    "invocations": [
+     {
+      "actor": "alice",
+      "args": [
+       {
+        "name": "amount",
+        "value": 100
+       },
+       {
+        "name": "dst",
+        "value": 2
+       },
+       {
+        "name": "src",
+        "value": 1
+       }
+      ],
+      "handler": "transfer"
+     },
+     {
+      "actor": "bob",
+      "args": [
+       {
+        "name": "amount",
+        "value": 150
+       },
+       {
+        "name": "dst",
+        "value": 2
+       },
+       {
+        "name": "src",
+        "value": 1
+       }
+      ],
+      "handler": "transfer"
+     }
+    ],
+    "rationale": "Concurrent transfers in the same direction contend on both source and destination balances.",
+    "seed_accounts": [
+     {
+      "id": 1,
+      "opening": 1000
+     },
+     {
+      "id": 2,
+      "opening": 1000
+     }
+    ]
+   }
+  ],
+  [
+   "muse_ledger_1#3",
+   {
+    "invariant_hypotheses": [
+     {
+      "base_column": "opening",
+      "bound": null,
+      "child_column": "delta",
+      "child_fk": "account_id",
+      "child_table": "entries",
+      "column": "balance",
+      "kind": "equals_base_plus_child_sum",
+      "statement": "Balance equals opening plus sum of entry deltas.",
+      "table": "accounts"
+     },
+     {
+      "base_column": null,
+      "bound": null,
+      "child_column": null,
+      "child_fk": null,
+      "child_table": null,
+      "column": "balance",
+      "kind": "column_sum_unchanged",
+      "statement": "Total balances remain unchanged.",
+      "table": "accounts"
+     }
+    ],
+    "invocations": [
+     {
+      "actor": "alice",
+      "args": [
+       {
+        "name": "amount",
+        "value": 200
+       },
+       {
+        "name": "dst",
+        "value": 2
+       },
+       {
+        "name": "src",
+        "value": 1
+       }
+      ],
+      "handler": "transfer"
+     },
+     {
+      "actor": "bob",
+      "args": [
+       {
+        "name": "amount",
+        "value": 150
+       },
+       {
+        "name": "dst",
+        "value": 1
+       },
+       {
+        "name": "src",
+        "value": 2
+       }
+      ],
+      "handler": "transfer"
+     }
+    ],
+    "rationale": "Opposite transfers overlap accounts in reverse order and expose non-atomic balance updates.",
+    "seed_accounts": [
+     {
+      "id": 1,
+      "opening": 500
+     },
+     {
+      "id": 2,
+      "opening": 500
+     }
+    ]
+   }
+  ],
+  [
+   "muse_ledger_1#4",
+   {
+    "invariant_hypotheses": [
+     {
+      "base_column": "opening",
+      "bound": null,
+      "child_column": "delta",
+      "child_fk": "account_id",
+      "child_table": "entries",
+      "column": "balance",
+      "kind": "equals_base_plus_child_sum",
+      "statement": "Balance equals opening plus sum of entry deltas.",
+      "table": "accounts"
+     },
+     {
+      "base_column": null,
+      "bound": 0,
+      "child_column": null,
+      "child_fk": null,
+      "child_table": null,
+      "column": "balance",
+      "kind": "column_at_least",
+      "statement": "Balances never go negative.",
+      "table": "accounts"
+     },
+     {
+      "base_column": null,
+      "bound": 100,
+      "child_column": "delta",
+      "child_fk": null,
+      "child_table": "entries",
+      "column": "delta",
+      "kind": "child_sum_equals",
+      "statement": "Total entry deltas equal expected net amount.",
+      "table": "entries"
+     }
+    ],
+    "invocations": [
+     {
+      "actor": "alice",
+      "args": [
+       {
+        "name": "account_id",
+        "value": 3
+       },
+       {
+        "name": "amount",
+        "value": 400
+       }
+      ],
+      "handler": "deposit"
+     },
+     {
+      "actor": "bob",
+      "args": [
+       {
+        "name": "account_id",
+        "value": 3
+       },
+       {
+        "name": "amount",
+        "value": 300
+       }
+      ],
+      "handler": "withdraw"
+     }
+    ],
+    "rationale": "A deposit racing a withdrawal on the same account loses one balance update.",
+    "seed_accounts": [
+     {
+      "id": 3,
+      "opening": 400
+     }
+    ]
+   }
+  ],
+  [
+   "muse_ledger_1#5",
+   {
+    "invariant_hypotheses": [
+     {
+      "base_column": "opening",
+      "bound": null,
+      "child_column": "delta",
+      "child_fk": "account_id",
+      "child_table": "entries",
+      "column": "balance",
+      "kind": "equals_base_plus_child_sum",
+      "statement": "Balance equals opening plus sum of entry deltas.",
+      "table": "accounts"
+     },
+     {
+      "base_column": null,
+      "bound": 0,
+      "child_column": null,
+      "child_fk": null,
+      "child_table": null,
+      "column": "balance",
+      "kind": "column_at_least",
+      "statement": "Balances never go negative.",
+      "table": "accounts"
+     },
+     {
+      "base_column": null,
+      "bound": 0,
+      "child_column": "delta",
+      "child_fk": null,
+      "child_table": "entries",
+      "column": "delta",
+      "kind": "child_sum_equals",
+      "statement": "Total entry deltas equal expected net amount.",
+      "table": "entries"
+     }
+    ],
+    "invocations": [
+     {
+      "actor": "alice",
+      "args": [
+       {
+        "name": "account_id",
+        "value": 1
+       },
+       {
+        "name": "amount",
+        "value": 100
+       }
+      ],
+      "handler": "deposit"
+     },
+     {
+      "actor": "bob",
+      "args": [
+       {
+        "name": "amount",
+        "value": 150
+       },
+       {
+        "name": "dst",
+        "value": 2
+       },
+       {
+        "name": "src",
+        "value": 1
+       }
+      ],
+      "handler": "transfer"
+     },
+     {
+      "actor": "cara",
+      "args": [
+       {
+        "name": "account_id",
+        "value": 2
+       },
+       {
+        "name": "amount",
+        "value": 100
+       }
+      ],
+      "handler": "withdraw"
+     }
+    ],
+    "rationale": "Three-way mix of deposit transfer and withdrawal creates overlapping read-modify-write on two accounts.",
+    "seed_accounts": [
+     {
+      "id": 1,
+      "opening": 800
+     },
+     {
+      "id": 2,
+      "opening": 800
+     }
+    ]
+   }
+  ]
+ ],
+ "planner": [
+  [
+   "muse_planner_0#0",
+   {
+    "actors": [
+     {
+      "arguments": [
+       {
+        "int_value": 1,
+        "kind": "int",
+        "name": "event_id",
+        "str_value": null
+       },
+       {
+        "int_value": null,
+        "kind": "str",
+        "name": "holder",
+        "str_value": "alice"
+       },
+       {
+        "int_value": 6,
+        "kind": "int",
+        "name": "qty",
+        "str_value": null
+       }
+      ],
+      "entrypoint": "reserve_seats",
+      "name": "actor1"
+     },
+     {
+      "arguments": [
+       {
+        "int_value": 1,
+        "kind": "int",
+        "name": "event_id",
+        "str_value": null
+       },
+       {
+        "int_value": null,
+        "kind": "str",
+        "name": "holder",
+        "str_value": "bob"
+       },
+       {
+        "int_value": 6,
+        "kind": "int",
+        "name": "qty",
+        "str_value": null
+       }
+      ],
+      "entrypoint": "reserve_seats",
+      "name": "actor2"
+     }
+    ],
+    "name": "overbook_pair",
+    "rationale": "Two concurrent reserves whose combined qty exceeds capacity to expose lost-update overbooking.",
+    "state_goals": [
+     {
+      "constraints": [
+       {
+        "field": "id",
+        "int_value": 1,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       }
+      ],
+      "count": 1,
+      "entity": "event",
+      "label": "evt"
+     },
+     {
+      "constraints": [
+       {
+        "field": "event_id",
+        "int_value": 1,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       }
+      ],
+      "count": 2,
+      "entity": "reservation",
+      "label": "res"
+     }
+    ]
+   }
+  ],
+  [
+   "muse_planner_0#1",
+   {
+    "actors": [
+     {
+      "arguments": [
+       {
+        "int_value": 1,
+        "kind": "int",
+        "name": "event_id",
+        "str_value": null
+       },
+       {
+        "int_value": null,
+        "kind": "str",
+        "name": "holder",
+        "str_value": "alice"
+       },
+       {
+        "int_value": 4,
+        "kind": "int",
+        "name": "qty",
+        "str_value": null
+       }
+      ],
+      "entrypoint": "reserve_seats",
+      "name": "actor1"
+     },
+     {
+      "arguments": [
+       {
+        "int_value": 1,
+        "kind": "int",
+        "name": "event_id",
+        "str_value": null
+       },
+       {
+        "int_value": null,
+        "kind": "str",
+        "name": "holder",
+        "str_value": "bob"
+       },
+       {
+        "int_value": 4,
+        "kind": "int",
+        "name": "qty",
+        "str_value": null
+       }
+      ],
+      "entrypoint": "reserve_seats",
+      "name": "actor2"
+     },
+     {
+      "arguments": [
+       {
+        "int_value": 1,
+        "kind": "int",
+        "name": "event_id",
+        "str_value": null
+       },
+       {
+        "int_value": null,
+        "kind": "str",
+        "name": "holder",
+        "str_value": "carol"
+       },
+       {
+        "int_value": 4,
+        "kind": "int",
+        "name": "qty",
+        "str_value": null
+       }
+      ],
+      "entrypoint": "reserve_seats",
+      "name": "actor3"
+     }
+    ],
+    "name": "triple_race",
+    "rationale": "Three-way reserve race on same event to test atomic check-and-increment of reserved.",
+    "state_goals": [
+     {
+      "constraints": [
+       {
+        "field": "id",
+        "int_value": 1,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       }
+      ],
+      "count": 1,
+      "entity": "event",
+      "label": "evt"
+     },
+     {
+      "constraints": [
+       {
+        "field": "event_id",
+        "int_value": 1,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       }
+      ],
+      "count": 3,
+      "entity": "reservation",
+      "label": "res"
+     }
+    ]
+   }
+  ],
+  [
+   "muse_planner_0#2",
+   {
+    "actors": [
+     {
+      "arguments": [
+       {
+        "int_value": 1,
+        "kind": "int",
+        "name": "event_id",
+        "str_value": null
+       },
+       {
+        "int_value": null,
+        "kind": "str",
+        "name": "holder",
+        "str_value": "alice"
+       },
+       {
+        "int_value": 5,
+        "kind": "int",
+        "name": "qty",
+        "str_value": null
+       }
+      ],
+      "entrypoint": "reserve_seats",
+      "name": "worker1"
+     },
+     {
+      "arguments": [
+       {
+        "int_value": 1,
+        "kind": "int",
+        "name": "event_id",
+        "str_value": null
+       },
+       {
+        "int_value": null,
+        "kind": "str",
+        "name": "holder",
+        "str_value": "bob"
+       },
+       {
+        "int_value": 5,
+        "kind": "int",
+        "name": "qty",
+        "str_value": null
+       }
+      ],
+      "entrypoint": "reserve_seats",
+      "name": "worker2"
+     },
+     {
+      "arguments": [
+       {
+        "int_value": null,
+        "kind": "str",
+        "name": "holder",
+        "str_value": "alice"
+       }
+      ],
+      "entrypoint": "release_seats",
+      "name": "worker3"
+     }
+    ],
+    "name": "reserve_release_race",
+    "rationale": "Concurrent reserves interleaved with release of one holder to test read-modify-write on reserved.",
+    "state_goals": [
+     {
+      "constraints": [
+       {
+        "field": "id",
+        "int_value": 1,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       }
+      ],
+      "count": 1,
+      "entity": "event",
+      "label": "evt"
+     },
+     {
+      "constraints": [
+       {
+        "field": "holder",
+        "int_value": null,
+        "kind": "str",
+        "op": "eq",
+        "str_value": "alice"
+       }
+      ],
+      "count": 1,
+      "entity": "reservation",
+      "label": "alice_res"
+     }
+    ]
+   }
+  ],
+  [
+   "muse_planner_0#3",
+   {
+    "actors": [
+     {
+      "arguments": [
+       {
+        "int_value": null,
+        "kind": "str",
+        "name": "holder",
+        "str_value": "alice"
+       }
+      ],
+      "entrypoint": "release_seats",
+      "name": "rel1"
+     },
+     {
+      "arguments": [
+       {
+        "int_value": null,
+        "kind": "str",
+        "name": "holder",
+        "str_value": "alice"
+       }
+      ],
+      "entrypoint": "release_seats",
+      "name": "rel2"
+     },
+     {
+      "arguments": [
+       {
+        "int_value": 1,
+        "kind": "int",
+        "name": "event_id",
+        "str_value": null
+       },
+       {
+        "int_value": null,
+        "kind": "str",
+        "name": "holder",
+        "str_value": "alice"
+       },
+       {
+        "int_value": 3,
+        "kind": "int",
+        "name": "qty",
+        "str_value": null
+       }
+      ],
+      "entrypoint": "reserve_seats",
+      "name": "res1"
+     }
+    ],
+    "name": "double_release",
+    "rationale": "Two concurrent releases of same holder racing with a reserve to test double-delete and reserved accounting.",
+    "state_goals": [
+     {
+      "constraints": [
+       {
+        "field": "id",
+        "int_value": 1,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       }
+      ],
+      "count": 1,
+      "entity": "event",
+      "label": "evt"
+     },
+     {
+      "constraints": [
+       {
+        "field": "holder",
+        "int_value": null,
+        "kind": "str",
+        "op": "eq",
+        "str_value": "alice"
+       }
+      ],
+      "count": 1,
+      "entity": "reservation",
+      "label": "alice_res"
+     }
+    ]
+   }
+  ],
+  [
+   "muse_planner_0#4",
+   {
+    "actors": [
+     {
+      "arguments": [
+       {
+        "int_value": 5,
+        "kind": "int",
+        "name": "event_id",
+        "str_value": null
+       },
+       {
+        "int_value": null,
+        "kind": "str",
+        "name": "holder",
+        "str_value": "alice"
+       },
+       {
+        "int_value": 8,
+        "kind": "int",
+        "name": "qty",
+        "str_value": null
+       }
+      ],
+      "entrypoint": "reserve_seats",
+      "name": "a1"
+     },
+     {
+      "arguments": [
+       {
+        "int_value": 5,
+        "kind": "int",
+        "name": "event_id",
+        "str_value": null
+       },
+       {
+        "int_value": null,
+        "kind": "str",
+        "name": "holder",
+        "str_value": "bob"
+       },
+       {
+        "int_value": 7,
+        "kind": "int",
+        "name": "qty",
+        "str_value": null
+       }
+      ],
+      "entrypoint": "reserve_seats",
+      "name": "a2"
+     }
+    ],
+    "name": "mixed_qty_race",
+    "rationale": "Two large reserves racing so one must take rejection path to test rejection insert vs reservation insert.",
+    "state_goals": [
+     {
+      "constraints": [
+       {
+        "field": "id",
+        "int_value": 5,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       }
+      ],
+      "count": 1,
+      "entity": "event",
+      "label": "evt"
+     },
+     {
+      "constraints": [
+       {
+        "field": "event_id",
+        "int_value": 5,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       }
+      ],
+      "count": 1,
+      "entity": "rejection",
+      "label": "rej"
+     }
+    ]
+   }
+  ],
+  [
+   "muse_planner_0#5",
+   {
+    "actors": [
+     {
+      "arguments": [
+       {
+        "int_value": 1,
+        "kind": "int",
+        "name": "event_id",
+        "str_value": null
+       },
+       {
+        "int_value": null,
+        "kind": "str",
+        "name": "holder",
+        "str_value": "alice"
+       },
+       {
+        "int_value": 2,
+        "kind": "int",
+        "name": "qty",
+        "str_value": null
+       }
+      ],
+      "entrypoint": "reserve_seats",
+      "name": "w1"
+     },
+     {
+      "arguments": [
+       {
+        "int_value": 2,
+        "kind": "int",
+        "name": "event_id",
+        "str_value": null
+       },
+       {
+        "int_value": null,
+        "kind": "str",
+        "name": "holder",
+        "str_value": "bob"
+       },
+       {
+        "int_value": 2,
+        "kind": "int",
+        "name": "qty",
+        "str_value": null
+       }
+      ],
+      "entrypoint": "reserve_seats",
+      "name": "w2"
+     }
+    ],
+    "name": "cross_event_iso",
+    "rationale": "Reserves on different events concurrently to test isolation and absence of cross-event interference.",
+    "state_goals": [
+     {
+      "constraints": [
+       {
+        "field": "id",
+        "int_value": 0,
+        "kind": "int",
+        "op": "gt",
+        "str_value": null
+       }
+      ],
+      "count": 2,
+      "entity": "event",
+      "label": "evts"
+     },
+     {
+      "constraints": [
+       {
+        "field": "qty",
+        "int_value": 2,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       }
+      ],
+      "count": 2,
+      "entity": "reservation",
+      "label": "ress"
+     }
+    ]
+   }
+  ],
+  [
+   "muse_planner_1#0",
+   {
+    "actors": [
+     {
+      "arguments": [
+       {
+        "int_value": 1,
+        "kind": "int",
+        "name": "event_id",
+        "str_value": null
+       },
+       {
+        "int_value": null,
+        "kind": "str",
+        "name": "holder",
+        "str_value": "alice"
+       },
+       {
+        "int_value": 6,
+        "kind": "int",
+        "name": "qty",
+        "str_value": null
+       }
+      ],
+      "entrypoint": "reserve_seats",
+      "name": "alice_r"
+     },
+     {
+      "arguments": [
+       {
+        "int_value": 1,
+        "kind": "int",
+        "name": "event_id",
+        "str_value": null
+       },
+       {
+        "int_value": null,
+        "kind": "str",
+        "name": "holder",
+        "str_value": "bob"
+       },
+       {
+        "int_value": 6,
+        "kind": "int",
+        "name": "qty",
+        "str_value": null
+       }
+      ],
+      "entrypoint": "reserve_seats",
+      "name": "bob_r"
+     }
+    ],
+    "name": "overbook_two_way",
+    "rationale": "Two concurrent reserves of 6 seats on capacity 10 exceed capacity together. Serial execution allows only one to succeed with one rejection. Exposes lost-update on events.reserved leading to overbooking.",
+    "state_goals": [
+     {
+      "constraints": [
+       {
+        "field": "id",
+        "int_value": 1,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       },
+       {
+        "field": "capacity",
+        "int_value": 10,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       },
+       {
+        "field": "reserved",
+        "int_value": 0,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       }
+      ],
+      "count": 1,
+      "entity": "event",
+      "label": "e1"
+     }
+    ]
+   }
+  ],
+  [
+   "muse_planner_1#1",
+   {
+    "actors": [
+     {
+      "arguments": [
+       {
+        "int_value": 5,
+        "kind": "int",
+        "name": "event_id",
+        "str_value": null
+       },
+       {
+        "int_value": null,
+        "kind": "str",
+        "name": "holder",
+        "str_value": "carol"
+       },
+       {
+        "int_value": 4,
+        "kind": "int",
+        "name": "qty",
+        "str_value": null
+       }
+      ],
+      "entrypoint": "reserve_seats",
+      "name": "carol_r"
+     },
+     {
+      "arguments": [
+       {
+        "int_value": 5,
+        "kind": "int",
+        "name": "event_id",
+        "str_value": null
+       },
+       {
+        "int_value": null,
+        "kind": "str",
+        "name": "holder",
+        "str_value": "dave"
+       },
+       {
+        "int_value": 4,
+        "kind": "int",
+        "name": "qty",
+        "str_value": null
+       }
+      ],
+      "entrypoint": "reserve_seats",
+      "name": "dave_r"
+     },
+     {
+      "arguments": [
+       {
+        "int_value": 5,
+        "kind": "int",
+        "name": "event_id",
+        "str_value": null
+       },
+       {
+        "int_value": null,
+        "kind": "str",
+        "name": "holder",
+        "str_value": "erin"
+       },
+       {
+        "int_value": 4,
+        "kind": "int",
+        "name": "qty",
+        "str_value": null
+       }
+      ],
+      "entrypoint": "reserve_seats",
+      "name": "erin_r"
+     }
+    ],
+    "name": "overbook_three_way",
+    "rationale": "Three concurrent reserves of 4 seats on capacity 10 total 12. At most two can succeed. Stresses 3-way read-modify-write race on capacity check and reserved update.",
+    "state_goals": [
+     {
+      "constraints": [
+       {
+        "field": "id",
+        "int_value": 5,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       },
+       {
+        "field": "capacity",
+        "int_value": 10,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       },
+       {
+        "field": "reserved",
+        "int_value": 0,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       }
+      ],
+      "count": 1,
+      "entity": "event",
+      "label": "e1"
+     }
+    ]
+   }
+  ],
+  [
+   "muse_planner_1#2",
+   {
+    "actors": [
+     {
+      "arguments": [
+       {
+        "int_value": 3,
+        "kind": "int",
+        "name": "event_id",
+        "str_value": null
+       },
+       {
+        "int_value": null,
+        "kind": "str",
+        "name": "holder",
+        "str_value": "frank"
+       },
+       {
+        "int_value": 5,
+        "kind": "int",
+        "name": "qty",
+        "str_value": null
+       }
+      ],
+      "entrypoint": "reserve_seats",
+      "name": "frank_r"
+     },
+     {
+      "arguments": [
+       {
+        "int_value": 3,
+        "kind": "int",
+        "name": "event_id",
+        "str_value": null
+       },
+       {
+        "int_value": null,
+        "kind": "str",
+        "name": "holder",
+        "str_value": "grace"
+       },
+       {
+        "int_value": 5,
+        "kind": "int",
+        "name": "qty",
+        "str_value": null
+       }
+      ],
+      "entrypoint": "reserve_seats",
+      "name": "grace_r"
+     }
+    ],
+    "name": "exact_fill_no_reject",
+    "rationale": "Two concurrent reserves of 5 seats exactly fill capacity 10. Both should succeed with no rejection and reserved equals capacity. Detects false rejection or lost increment under exact-fill boundary.",
+    "state_goals": [
+     {
+      "constraints": [
+       {
+        "field": "id",
+        "int_value": 3,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       },
+       {
+        "field": "capacity",
+        "int_value": 10,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       },
+       {
+        "field": "reserved",
+        "int_value": 0,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       }
+      ],
+      "count": 1,
+      "entity": "event",
+      "label": "e1"
+     }
+    ]
+   }
+  ],
+  [
+   "muse_planner_1#3",
+   {
+    "actors": [
+     {
+      "arguments": [
+       {
+        "int_value": 10,
+        "kind": "int",
+        "name": "event_id",
+        "str_value": null
+       },
+       {
+        "int_value": null,
+        "kind": "str",
+        "name": "holder",
+        "str_value": "ivy"
+       },
+       {
+        "int_value": 6,
+        "kind": "int",
+        "name": "qty",
+        "str_value": null
+       }
+      ],
+      "entrypoint": "reserve_seats",
+      "name": "ivy_r"
+     },
+     {
+      "arguments": [
+       {
+        "int_value": null,
+        "kind": "str",
+        "name": "holder",
+        "str_value": "henry"
+       }
+      ],
+      "entrypoint": "release_seats",
+      "name": "henry_rel"
+     }
+    ],
+    "name": "reserve_release_race",
+    "rationale": "Concurrent reserve of 6 seats races with release of existing 6 seats on capacity 10 with 4 free. Order determines reserve success. Exposes increment versus decrement lost update on events.reserved and reservation visibility race.",
+    "state_goals": [
+     {
+      "constraints": [
+       {
+        "field": "id",
+        "int_value": 10,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       },
+       {
+        "field": "capacity",
+        "int_value": 10,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       },
+       {
+        "field": "reserved",
+        "int_value": 6,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       }
+      ],
+      "count": 1,
+      "entity": "event",
+      "label": "e1"
+     },
+     {
+      "constraints": [
+       {
+        "field": "event_id",
+        "int_value": 10,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       },
+       {
+        "field": "holder",
+        "int_value": null,
+        "kind": "str",
+        "op": "eq",
+        "str_value": "henry"
+       },
+       {
+        "field": "qty",
+        "int_value": 6,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       }
+      ],
+      "count": 1,
+      "entity": "reservation",
+      "label": "r1"
+     }
+    ]
+   }
+  ],
+  [
+   "muse_planner_1#4",
+   {
+    "actors": [
+     {
+      "arguments": [
+       {
+        "int_value": null,
+        "kind": "str",
+        "name": "holder",
+        "str_value": "jack"
+       }
+      ],
+      "entrypoint": "release_seats",
+      "name": "jack_a"
+     },
+     {
+      "arguments": [
+       {
+        "int_value": null,
+        "kind": "str",
+        "name": "holder",
+        "str_value": "jack"
+       }
+      ],
+      "entrypoint": "release_seats",
+      "name": "jack_b"
+     }
+    ],
+    "name": "double_release_same_holder",
+    "rationale": "Two concurrent releases of the same holder with two 4-seat reservations. Only one release should take effect. Detects double decrement of reserved leading to negative values and double delete.",
+    "state_goals": [
+     {
+      "constraints": [
+       {
+        "field": "id",
+        "int_value": 20,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       },
+       {
+        "field": "capacity",
+        "int_value": 10,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       },
+       {
+        "field": "reserved",
+        "int_value": 8,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       }
+      ],
+      "count": 1,
+      "entity": "event",
+      "label": "e1"
+     },
+     {
+      "constraints": [
+       {
+        "field": "event_id",
+        "int_value": 20,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       },
+       {
+        "field": "holder",
+        "int_value": null,
+        "kind": "str",
+        "op": "eq",
+        "str_value": "jack"
+       },
+       {
+        "field": "qty",
+        "int_value": 4,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       }
+      ],
+      "count": 2,
+      "entity": "reservation",
+      "label": "rjack"
+     }
+    ]
+   }
+  ],
+  [
+   "muse_planner_1#5",
+   {
+    "actors": [
+     {
+      "arguments": [
+       {
+        "int_value": 30,
+        "kind": "int",
+        "name": "event_id",
+        "str_value": null
+       },
+       {
+        "int_value": null,
+        "kind": "str",
+        "name": "holder",
+        "str_value": "leo"
+       },
+       {
+        "int_value": 5,
+        "kind": "int",
+        "name": "qty",
+        "str_value": null
+       }
+      ],
+      "entrypoint": "reserve_seats",
+      "name": "leo_r"
+     },
+     {
+      "arguments": [
+       {
+        "int_value": 30,
+        "kind": "int",
+        "name": "event_id",
+        "str_value": null
+       },
+       {
+        "int_value": null,
+        "kind": "str",
+        "name": "holder",
+        "str_value": "mia"
+       },
+       {
+        "int_value": 5,
+        "kind": "int",
+        "name": "qty",
+        "str_value": null
+       }
+      ],
+      "entrypoint": "reserve_seats",
+      "name": "mia_r"
+     },
+     {
+      "arguments": [
+       {
+        "int_value": null,
+        "kind": "str",
+        "name": "holder",
+        "str_value": "kate"
+       }
+      ],
+      "entrypoint": "release_seats",
+      "name": "kate_rel"
+     }
+    ],
+    "name": "mixed_two_reserve_one_release",
+    "rationale": "Two reserves of 5 seats race with release of 5 seats on capacity 10 half full. Interleaving decides how many reserves succeed. Catches combined overbooking and lost increment-decrement anomalies.",
+    "state_goals": [
+     {
+      "constraints": [
+       {
+        "field": "id",
+        "int_value": 30,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       },
+       {
+        "field": "capacity",
+        "int_value": 10,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       },
+       {
+        "field": "reserved",
+        "int_value": 5,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       }
+      ],
+      "count": 1,
+      "entity": "event",
+      "label": "e1"
+     },
+     {
+      "constraints": [
+       {
+        "field": "event_id",
+        "int_value": 30,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       },
+       {
+        "field": "holder",
+        "int_value": null,
+        "kind": "str",
+        "op": "eq",
+        "str_value": "kate"
+       },
+       {
+        "field": "qty",
+        "int_value": 5,
+        "kind": "int",
+        "op": "eq",
+        "str_value": null
+       }
+      ],
+      "count": 1,
+      "entity": "reservation",
+      "label": "r1"
+     }
+    ]
+   }
+  ]
+ ]
+}
