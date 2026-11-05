@@ -1,7 +1,7 @@
 {
  "manifest": "ds-real-app-corpus-shortlist",
- "version": 1,
- "status": "FROZEN_SELECTION_RULES_CANDIDATES_UNREVIEWED",
+ "version": 2,
+ "status": "FROZEN_SELECTION_RULES_TWO_CANDIDATES_PINNED_BOTH_BLOCKED_ON_ASYNC",
  "frozen_on": "2026-11-05",
  "purpose": "candidate open-source PostgreSQL applications for a future blind evaluation; no target-specific adapter exists yet",
  "selection_rules": [
@@ -12,33 +12,87 @@
   "not one of its development applications (InvenTree, paperless-ngx, langgraph checkpoint-postgres, procrastinate), which are known to the developers",
   "not GitLab-derived, and no confidential material",
   "the historical version is the latest tagged release before 2026-11-05, chosen by that rule alone",
-  "the migration or backfill area is chosen from the migrations directory listing by a rule fixed before reading any of it; defect reports, fix commits and patches are never read before the blind evaluation"
+  "the migration or backfill area is chosen from the migrations directory listing by a rule fixed before reading any of it; defect reports, fix commits and patches are never read before the blind evaluation",
+  "migration-area rule, fixed on 2026-11-05 before any migration file was read: the highest-numbered file in the core package's migrations/ directory (plugins excluded), plus the module that applies migrations; if the sdist has no migrations/ directory, no area is selected by this rule"
  ],
  "evidence_method": "PyPI JSON metadata (requires_dist) or the repository's declared dependency file only; no source, migration, issue or commit was read",
  "candidates": [
-  {"id": "chancy", "repository": "https://github.com/tktech/chancy", "pypi_version_checked": "0.26.0",
-   "licence": "not declared in PyPI metadata; to verify in the repository",
-   "driver_evidence": "requires_dist: psycopg[pool]>=3.2.1 (3.3.6 on Python 3.11)", "driver": "psycopg 3 (required)",
-   "framework": "none (job queue library)", "connection_management": "psycopg_pool (from the dependency); to verify",
-   "two_versions_feasible": "to verify", "migration_area": "TO_SELECT_BY_RULE", "status": "candidate"},
-  {"id": "pgqueuer", "repository": "https://github.com/janbjorge/pgqueuer/", "pypi_version_checked": "1.6.0",
-   "licence": "MIT", "driver_evidence": "requires_dist: psycopg>=3.2.0 and psycopg-pool>=3.2 under extra 'psycopg'; asyncpg under extra 'asyncpg'",
+  {
+   "id": "chancy",
+   "repository": "https://github.com/tktech/chancy",
+   "pypi_version_checked": "0.26.0",
+   "licence": "MIT (classifier and LICENSE file)",
+   "driver_evidence": "requires_dist: psycopg[pool]>=3.2.1 (3.3.6 on Python 3.11)",
+   "driver": "psycopg 3 (required)",
+   "framework": "none (job queue library)",
+   "connection_management": "async: psycopg AsyncConnection and psycopg_pool AsyncConnectionPool (263 async defs in the package; grep counts)",
+   "two_versions_feasible": "to verify",
+   "migration_area": "chancy/migrations/v8.py, applied by chancy/migrate.py (async Migrator)",
+   "status": "pinned; blocked on async stepping; no adapter, nothing executed",
+   "pinned_version": "0.26.0",
+   "uploaded": "2026-10-14T10:49:03Z",
+   "sdist": "chancy-0.26.0.tar.gz",
+   "sdist_sha256": "ac98b9c502d7bdb6f47d53fac1c22b4dc55e6cfcfec84b08b1a0cbaee45aef06",
+   "tag": "v0.26.0",
+   "tag_commit": "73fd582c0e5d2f8655316e09f189ba0c57d76ca7",
+   "requires_python": ">=3.11",
+   "isolation_compatibility": "blocked: the stepping prototype steps synchronous psycopg 3 only"
+  },
+  {
+   "id": "pgqueuer",
+   "repository": "https://github.com/janbjorge/pgqueuer/",
+   "pypi_version_checked": "1.6.0",
+   "licence": "MIT (classifier and LICENSE file)",
+   "driver_evidence": "requires_dist: psycopg>=3.2.0 and psycopg-pool>=3.2 under extra 'psycopg'; asyncpg under extra 'asyncpg'",
    "driver": "psycopg 3 only when installed with the psycopg extra; the default path may be asyncpg",
-   "framework": "none (job queue library, async)", "connection_management": "to verify",
-   "two_versions_feasible": "to verify", "known_constraint": "async API: the prototype steps synchronous psycopg only",
-   "migration_area": "TO_SELECT_BY_RULE", "status": "candidate, async support needed"},
-  {"id": "plane", "repository": "https://github.com/makeplane/plane", "driver_evidence": "UNVERIFIED: the dependency files tried weren't at the expected paths",
-   "status": "unverified; may not enter until its driver is shown"}
+   "framework": "none (job queue library, async)",
+   "connection_management": "async: psycopg AsyncConnection/AsyncConnectionPool or asyncpg (358 async defs in the package; grep counts)",
+   "two_versions_feasible": "to verify",
+   "known_constraint": "async API: the prototype steps synchronous psycopg only",
+   "migration_area": "none selected: the sdist has no migrations/ directory (the rule's fallback)",
+   "status": "pinned; blocked; no adapter, nothing executed",
+   "pinned_version": "1.6.0",
+   "uploaded": "2026-10-11T19:36:31Z",
+   "sdist": "pgqueuer-1.6.0.tar.gz",
+   "sdist_sha256": "ed1306404f96e25c84c951f434e8b06b091e04e0177af0d5441505a7944f156e",
+   "tag": "v1.6.0",
+   "tag_commit": "efcd65689a49a067e68662702f4c5fbee1235df0",
+   "requires_python": ">=3.10",
+   "isolation_compatibility": "blocked: async, and no migration area by rule"
+  },
+  {
+   "id": "plane",
+   "repository": "https://github.com/makeplane/plane",
+   "driver_evidence": "UNVERIFIED: the dependency files tried weren't at the expected paths",
+   "status": "unverified; may not enter until its driver is shown"
+  }
  ],
  "excluded": [
-  {"id": "pretix", "reason": "declares psycopg2-binary (pyproject.toml, master), not psycopg 3"},
-  {"id": "zulip", "reason": "declares psycopg2 (pyproject.toml, main), not psycopg 3"},
-  {"id": "django-q2", "reason": "declares no PostgreSQL driver; the driver is the host project's choice"},
-  {"id": "dramatiq-pg", "reason": "hosted on GitLab; excluded by rule"},
-  {"id": "procrastinate", "reason": "a development application of the frozen protocol (requires psycopg[pool])"}
+  {
+   "id": "pretix",
+   "reason": "declares psycopg2-binary (pyproject.toml, master), not psycopg 3"
+  },
+  {
+   "id": "zulip",
+   "reason": "declares psycopg2 (pyproject.toml, main), not psycopg 3"
+  },
+  {
+   "id": "django-q2",
+   "reason": "declares no PostgreSQL driver; the driver is the host project's choice"
+  },
+  {
+   "id": "dramatiq-pg",
+   "reason": "hosted on GitLab; excluded by rule"
+  },
+  {
+   "id": "procrastinate",
+   "reason": "a development application of the frozen protocol (requires psycopg[pool])"
+  }
  ],
  "limitations": [
   "three candidates is not a corpus; the shortlist must be extended under the same rules before any blind evaluation",
-  "the prototype supports synchronous psycopg 3 connections it constructs itself; framework and pool connection management is unsupported"
- ]
+  "the prototype supports synchronous psycopg 3 connections it constructs itself; framework and pool connection management is unsupported",
+  "both pinned candidates are asynchronous; entering either needs an async stepping path (AsyncConnection, AsyncCursor, AsyncConnectionPool) and an isolated container to run it"
+ ],
+ "pin_method": "PyPI JSON (version, upload time, sdist sha256), the sdist downloaded and its sha256 re-verified, git ls-remote for the release tag's commit; filenames listed from the archive; package code searched for connection identifiers with grep. Nothing was installed, imported or executed; no migration body, test, issue, fix commit or patch was read"
 }
