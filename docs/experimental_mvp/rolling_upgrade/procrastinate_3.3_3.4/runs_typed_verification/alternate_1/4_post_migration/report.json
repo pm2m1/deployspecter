@@ -1,0 +1,708 @@
+{
+ "spec": {
+  "name": "4_post_migration",
+  "covers": [],
+  "consumer_of": {},
+  "processes": {
+   "B": [
+    {
+     "actor": "operator",
+     "fn": "migrate",
+     "args": {
+      "migration": "03.04.00_50_post_add_retry_failed_job_procedure.sql"
+     }
+    }
+   ]
+  },
+  "gates": [],
+  "expect": {
+   "retry_v2": true,
+   "trigger_records_retried": false
+  }
+ },
+ "label": "4_post_migration",
+ "policy": {
+  "kind": "alternate"
+ },
+ "network": "ds-mvp-coord-88ab04e7",
+ "containers": {
+  "coordinator": "ds-mvp-coord-c-88ab04e7",
+  "B": "ds-mvp-coord-b-88ab04e7"
+ },
+ "frozen_sha256": {
+  "properties": "d701a2f4c5150c8874cfe1ca514fab1f88ba0af15e266a6d5c67d1398222d4cd",
+  "checker": "72320a82f9d9c3e0175e19221f3b5f3ec4368803a1e5060cdd70b8deb9d975e9"
+ },
+ "code_revision": {
+  "head": "02bf7367bedaa90ff1856a409677224f6464a7a7",
+  "dirty": false
+ },
+ "runtime_flags": [
+  "--read-only",
+  "--tmpfs",
+  "/tmp:rw,noexec,nosuid,nodev,size=64m",
+  "--cap-drop",
+  "ALL",
+  "--security-opt",
+  "no-new-privileges",
+  "--pids-limit",
+  "64",
+  "--memory",
+  "512m",
+  "--memory-swap",
+  "512m",
+  "--cpus",
+  "1",
+  "--ulimit",
+  "nofile=256:256",
+  "--user",
+  "65534:65534"
+ ],
+ "network_internal": "true",
+ "precondition": {
+  "retry_v2": true,
+  "trigger_records_retried": false
+ },
+ "initial_state_digest": "39aceb62d508c8ff20458d42d499633e105894da033d1d62bd9fe21f85420061",
+ "container_seconds": 0.66,
+ "sessions_left_after_run": [],
+ "refusal_reasons": [],
+ "coordinator": {
+  "protocol": "ds-coord/1",
+  "outcome": "completed",
+  "reason": null,
+  "policy": {
+   "kind": "alternate"
+  },
+  "gates": [],
+  "stop": {
+   "key": "succeeded",
+   "covers": [],
+   "after_s": 45
+  },
+  "processes": {
+   "B": {
+    "version": "3.4.0",
+    "run_id": "procr_B",
+    "monitor_pid": 112,
+    "actors": {
+     "operator": {
+      "backend_pid": 113,
+      "handler": "procrastinate-3.4.0.migrate"
+     }
+    },
+    "bye": "completed"
+   }
+  },
+  "decisions": [
+   {
+    "decision": 0,
+    "grant": 0,
+    "epoch": 1,
+    "process": "B",
+    "version": "3.4.0",
+    "actor": "operator",
+    "source": "alternate",
+    "enabled": [
+     "operator"
+    ],
+    "gated": [],
+    "blocked": {},
+    "kind": "transaction_enter",
+    "statement_id": "a8402858d4f1",
+    "sql": "BEGIN",
+    "t_ms": 39.49
+   },
+   {
+    "decision": 1,
+    "grant": 1,
+    "epoch": 2,
+    "process": "B",
+    "version": "3.4.0",
+    "actor": "operator",
+    "source": "alternate",
+    "enabled": [
+     "operator"
+    ],
+    "gated": [],
+    "blocked": {},
+    "kind": "execute",
+    "statement_id": "6317687c8100",
+    "sql": "DROP TRIGGER IF EXISTS procrastinate_trigger_status_events_update_v1 ON procrastinate_jobs; DROP FUNCTION IF EXISTS public.procrastinate_trigger_function_status_events_update_v1; CREATE FUNCTION public.procrastinate_trigger_function_status_events_update_v1() RETURNS trigger LANGUAGE plpgsql AS $func",
+    "t_ms": 90.41
+   },
+   {
+    "decision": 2,
+    "grant": 2,
+    "epoch": 3,
+    "process": "B",
+    "version": "3.4.0",
+    "actor": "operator",
+    "source": "alternate",
+    "enabled": [
+     "operator"
+    ],
+    "gated": [],
+    "blocked": {},
+    "kind": "transaction_exit",
+    "statement_id": "79663c1d3b43",
+    "sql": "COMMIT",
+    "t_ms": 141.13
+   }
+  ],
+  "statements": {
+   "a8402858d4f1": "BEGIN",
+   "6317687c8100": "DROP TRIGGER IF EXISTS procrastinate_trigger_status_events_update_v1 ON procrastinate_jobs; DROP FUNCTION IF EXISTS public.procrastinate_trigger_function_status_events_update_v1; CREATE FUNCTION public.procrastinate_trigger_function_status_events_update_v1() RETURNS trigger LANGUAGE plpgsql AS $function$ BEGIN WITH t AS ( SELECT CASE WHEN OLD.status = 'todo'::procrastinate_job_status AND NEW.status = 'doing'::procrastinate_job_status THEN 'started'::procrastinate_job_event_type WHEN OLD.status = 'doing'::procrastinate_job_status AND NEW.status = 'todo'::procrastinate_job_status THEN 'deferred_for_retry'::procrastinate_job_event_type WHEN OLD.status = 'doing'::procrastinate_job_status AND NEW.status = 'failed'::procrastinate_job_status THEN 'failed'::procrastinate_job_event_type WHEN OLD.status = 'doing'::procrastinate_job_status AND NEW.status = 'succeeded'::procrastinate_job_status THEN 'succeeded'::procrastinate_job_event_type WHEN OLD.status = 'todo'::procrastinate_job_status AND ( NEW.status = 'cancelled'::procrastinate_job_status OR NEW.status = 'failed'::procrastinate_job_status OR NEW.status = 'succeeded'::procrastinate_job_status ) THEN 'cancelled'::procrastinate_job_event_type WHEN OLD.status = 'doing'::procrastinate_job_status AND NEW.status = 'aborted'::procrastinate_job_status THEN 'aborted'::procrastinate_job_event_type WHEN OLD.status = 'failed'::procrastinate_job_status AND NEW.status = 'todo'::procrastinate_job_status THEN 'retried'::procrastinate_job_event_type ELSE NULL END as event_type ) INSERT INTO procrastinate_events(job_id, type) SELECT NEW.id, t.event_type FROM t WHERE t.event_type IS NOT NULL; RETURN NEW; END; $function$; CREATE TRIGGER procrastinate_trigger_status_events_update_v1 AFTER UPDATE OF status ON procrastinate_jobs FOR EACH ROW EXECUTE PROCEDURE procrastinate_trigger_function_status_events_update_v1();",
+   "79663c1d3b43": "COMMIT"
+  },
+  "events": [
+   {
+    "event": "start",
+    "t_ms": 39.07,
+    "pids": {
+     "113": "operator"
+    }
+   },
+   {
+    "event": "stop",
+    "why": "covered",
+    "at_grant": 0,
+    "t_ms": 39.44
+   },
+   {
+    "event": "bye",
+    "process": "B",
+    "t_ms": 209.64
+   },
+   {
+    "event": "end",
+    "t_ms": 209.65
+   }
+  ],
+  "grants": 3,
+  "elapsed_ms": 209.65
+ },
+ "corroboration": {
+  "ok": true,
+  "matched": 3,
+  "params_compared": 0,
+  "params_mismatched": 0,
+  "params_unchecked": 0,
+  "client_texts_matched": 0,
+  "unchecked_kinds": {},
+  "sessions": {
+   "113": "operator"
+  },
+  "problems": []
+ },
+ "isolation_checks": {
+  "B": {
+   "uid": true,
+   "root_writable": true,
+   "app_writable": true,
+   "tmp_writable": true,
+   "ssh_dir_present": true,
+   "secret_like_env": true,
+   "host_55432_unreachable": true,
+   "internet_tcp_unreachable": true,
+   "internet_dns_unresolved": true,
+   "pids_limited": true,
+   "memory_limited": true
+  },
+  "coordinator": {
+   "uid": true,
+   "root_writable": true,
+   "app_writable": true,
+   "tmp_writable": true,
+   "ssh_dir_present": true,
+   "secret_like_env": true,
+   "host_55432_unreachable": true,
+   "internet_tcp_unreachable": true,
+   "internet_dns_unresolved": true,
+   "pids_limited": true,
+   "memory_limited": true
+  }
+ },
+ "probes": {
+  "B": {
+   "uid": 65534,
+   "gid": 65534,
+   "root_writable": false,
+   "app_writable": false,
+   "tmp_writable": true,
+   "ssh_dir_present": false,
+   "env_keys": [
+    "DS_CO_NONCE",
+    "DS_CO_PLAN",
+    "DS_MODE",
+    "DS_PG_DB",
+    "DS_PG_HOST",
+    "DS_PG_PASSWORD",
+    "DS_PG_PORT",
+    "DS_PG_USER",
+    "DS_SCHEMA",
+    "GPG_KEY",
+    "HOME",
+    "HOSTNAME",
+    "LANG",
+    "PATH",
+    "PIP_DISABLE_PIP_VERSION_CHECK",
+    "PIP_NO_CACHE_DIR",
+    "PYTHONDONTWRITEBYTECODE",
+    "PYTHON_SHA256",
+    "PYTHON_VERSION"
+   ],
+   "secret_like_env": [],
+   "host_55432": "refused:gaierror",
+   "host_gateway_55441": "refused:gaierror",
+   "internet_tcp": "refused:OSError",
+   "internet_dns": "unresolved:gaierror",
+   "nproc_limit": "64",
+   "memory_limit": "536870912"
+  },
+  "coordinator": {
+   "uid": 65534,
+   "gid": 65534,
+   "root_writable": false,
+   "app_writable": false,
+   "tmp_writable": true,
+   "ssh_dir_present": false,
+   "env_keys": [
+    "DS_CO_NONCE",
+    "DS_CO_SPEC",
+    "DS_MODE",
+    "GPG_KEY",
+    "HOME",
+    "HOSTNAME",
+    "LANG",
+    "PATH",
+    "PIP_DISABLE_PIP_VERSION_CHECK",
+    "PIP_NO_CACHE_DIR",
+    "PYTHONDONTWRITEBYTECODE",
+    "PYTHON_SHA256",
+    "PYTHON_VERSION"
+   ],
+   "secret_like_env": [],
+   "host_55432": "refused:gaierror",
+   "host_gateway_55441": "refused:gaierror",
+   "internet_tcp": "refused:OSError",
+   "internet_dns": "unresolved:gaierror",
+   "nproc_limit": "64",
+   "memory_limit": "536870912"
+  }
+ },
+ "isolation_ok": true,
+ "versions": {
+  "B": "3.4.0"
+ },
+ "pinned_sources": {
+  "B": {
+   "version": "3.4.0",
+   "procrastinate/sql/queries.sql": "e6b932bcefe689ed2941f5c885b5ebc7f07913203f8363e9f03762cd59314ed3",
+   "procrastinate/sql/schema.sql": "c796dca40785a84ee434b930b4bc1bb11cc7a6da84ad6330cf6c49e953c902b9",
+   "procrastinate/app.py": "1147f1a56d55a23c396d364183296dc9ffd66bfc3b16d25e2033752276b35797",
+   "procrastinate/worker.py": "c4f6108f93471e145d6ae143d17a7112bc42fd7f9dc12ba102b301847aa421d0",
+   "procrastinate/manager.py": "2e41449c71b9b6ed74b5872fec3e103ddb4597646449dffab11e1e3de2107efe",
+   "procrastinate/psycopg_connector.py": "d93aaa49a39c1c5822c6fb34ddec6121969f454b253159a7abc891ba7d1c4c9e"
+  }
+ },
+ "outcomes": {
+  "B": "completed"
+ },
+ "exceptions": {},
+ "raw_results": {
+  "operator": {
+   "version": "3.4.0",
+   "migration": "03.04.00_50_post_add_retry_failed_job_procedure.sql",
+   "sha256": "ac4021eb9d029e08edc9ef7672ae7ea4ef82002858a400cc6b44abd3e79248b2"
+  }
+ },
+ "final_state": {
+  "schema_present": true,
+  "retry_v1": true,
+  "retry_v2": true,
+  "jobs": [
+   {
+    "id": 1,
+    "task_name": "ds_ok",
+    "n": 0,
+    "status": "succeeded",
+    "attempts": 1,
+    "queue_name": "ds_q"
+   },
+   {
+    "id": 2,
+    "task_name": "ds_fail",
+    "n": 1,
+    "status": "failed",
+    "attempts": 4,
+    "queue_name": "ds_q"
+   },
+   {
+    "id": 3,
+    "task_name": "ds_flaky",
+    "n": 2,
+    "status": "failed",
+    "attempts": 2,
+    "queue_name": "ds_q"
+   },
+   {
+    "id": 4,
+    "task_name": "ds_ok",
+    "n": 3,
+    "status": "succeeded",
+    "attempts": 1,
+    "queue_name": "ds_q"
+   },
+   {
+    "id": 5,
+    "task_name": "ds_fail",
+    "n": 4,
+    "status": "failed",
+    "attempts": 2,
+    "queue_name": "ds_q"
+   },
+   {
+    "id": 6,
+    "task_name": "ds_ok",
+    "n": 5,
+    "status": "succeeded",
+    "attempts": 1,
+    "queue_name": "ds_q"
+   },
+   {
+    "id": 7,
+    "task_name": "ds_flaky",
+    "n": 6,
+    "status": "succeeded",
+    "attempts": 1,
+    "queue_name": "ds_q"
+   },
+   {
+    "id": 8,
+    "task_name": "ds_flaky",
+    "n": 7,
+    "status": "succeeded",
+    "attempts": 1,
+    "queue_name": "ds_q"
+   },
+   {
+    "id": 9,
+    "task_name": "ds_fail",
+    "n": 8,
+    "status": "failed",
+    "attempts": 2,
+    "queue_name": "ds_q"
+   },
+   {
+    "id": 10,
+    "task_name": "ds_ok",
+    "n": 9,
+    "status": "succeeded",
+    "attempts": 1,
+    "queue_name": "ds_q"
+   },
+   {
+    "id": 11,
+    "task_name": "ds_flaky",
+    "n": 10,
+    "status": "failed",
+    "attempts": 2,
+    "queue_name": "ds_q"
+   },
+   {
+    "id": 12,
+    "task_name": "ds_flaky",
+    "n": 11,
+    "status": "failed",
+    "attempts": 2,
+    "queue_name": "ds_q"
+   },
+   {
+    "id": 13,
+    "task_name": "ds_fail",
+    "n": 12,
+    "status": "todo",
+    "attempts": 1,
+    "queue_name": "ds_q"
+   }
+  ],
+  "events": [
+   {
+    "job_id": 1,
+    "type": "deferred"
+   },
+   {
+    "job_id": 2,
+    "type": "deferred"
+   },
+   {
+    "job_id": 3,
+    "type": "deferred"
+   },
+   {
+    "job_id": 1,
+    "type": "started"
+   },
+   {
+    "job_id": 1,
+    "type": "succeeded"
+   },
+   {
+    "job_id": 2,
+    "type": "started"
+   },
+   {
+    "job_id": 2,
+    "type": "scheduled"
+   },
+   {
+    "job_id": 2,
+    "type": "deferred_for_retry"
+   },
+   {
+    "job_id": 2,
+    "type": "started"
+   },
+   {
+    "job_id": 2,
+    "type": "failed"
+   },
+   {
+    "job_id": 3,
+    "type": "started"
+   },
+   {
+    "job_id": 3,
+    "type": "scheduled"
+   },
+   {
+    "job_id": 3,
+    "type": "deferred_for_retry"
+   },
+   {
+    "job_id": 3,
+    "type": "started"
+   },
+   {
+    "job_id": 3,
+    "type": "failed"
+   },
+   {
+    "job_id": 4,
+    "type": "deferred"
+   },
+   {
+    "job_id": 5,
+    "type": "deferred"
+   },
+   {
+    "job_id": 4,
+    "type": "started"
+   },
+   {
+    "job_id": 4,
+    "type": "succeeded"
+   },
+   {
+    "job_id": 5,
+    "type": "started"
+   },
+   {
+    "job_id": 5,
+    "type": "scheduled"
+   },
+   {
+    "job_id": 5,
+    "type": "deferred_for_retry"
+   },
+   {
+    "job_id": 5,
+    "type": "started"
+   },
+   {
+    "job_id": 5,
+    "type": "failed"
+   },
+   {
+    "job_id": 6,
+    "type": "deferred"
+   },
+   {
+    "job_id": 7,
+    "type": "deferred"
+   },
+   {
+    "job_id": 2,
+    "type": "scheduled"
+   },
+   {
+    "job_id": 8,
+    "type": "deferred"
+   },
+   {
+    "job_id": 9,
+    "type": "deferred"
+   },
+   {
+    "job_id": 10,
+    "type": "deferred"
+   },
+   {
+    "job_id": 11,
+    "type": "deferred"
+   },
+   {
+    "job_id": 2,
+    "type": "started"
+   },
+   {
+    "job_id": 12,
+    "type": "deferred"
+   },
+   {
+    "job_id": 2,
+    "type": "failed"
+   },
+   {
+    "job_id": 13,
+    "type": "deferred"
+   },
+   {
+    "job_id": 6,
+    "type": "started"
+   },
+   {
+    "job_id": 6,
+    "type": "succeeded"
+   },
+   {
+    "job_id": 7,
+    "type": "started"
+   },
+   {
+    "job_id": 8,
+    "type": "started"
+   },
+   {
+    "job_id": 7,
+    "type": "succeeded"
+   },
+   {
+    "job_id": 8,
+    "type": "succeeded"
+   },
+   {
+    "job_id": 9,
+    "type": "started"
+   },
+   {
+    "job_id": 10,
+    "type": "started"
+   },
+   {
+    "job_id": 9,
+    "type": "scheduled"
+   },
+   {
+    "job_id": 9,
+    "type": "deferred_for_retry"
+   },
+   {
+    "job_id": 10,
+    "type": "succeeded"
+   },
+   {
+    "job_id": 9,
+    "type": "started"
+   },
+   {
+    "job_id": 11,
+    "type": "started"
+   },
+   {
+    "job_id": 9,
+    "type": "failed"
+   },
+   {
+    "job_id": 11,
+    "type": "scheduled"
+   },
+   {
+    "job_id": 11,
+    "type": "deferred_for_retry"
+   },
+   {
+    "job_id": 12,
+    "type": "started"
+   },
+   {
+    "job_id": 11,
+    "type": "started"
+   },
+   {
+    "job_id": 12,
+    "type": "scheduled"
+   },
+   {
+    "job_id": 12,
+    "type": "deferred_for_retry"
+   },
+   {
+    "job_id": 11,
+    "type": "failed"
+   },
+   {
+    "job_id": 12,
+    "type": "started"
+   },
+   {
+    "job_id": 13,
+    "type": "started"
+   },
+   {
+    "job_id": 12,
+    "type": "failed"
+   },
+   {
+    "job_id": 13,
+    "type": "scheduled"
+   },
+   {
+    "job_id": 13,
+    "type": "deferred_for_retry"
+   },
+   {
+    "job_id": 13,
+    "type": "scheduled"
+   }
+  ],
+  "trigger_records_retried": true
+ },
+ "final_state_digest": "7227856e556b01c27714d73aa18fb481dec4da9d2f6faf3b0e9b6031c7e69bad",
+ "trace_sha256": {
+  "B": "2ca1debd902c0e22772f50628e20d174d12e556c0794c812f27c9866bfe0451b"
+ },
+ "outputs": {
+  "coordinator": {
+   "exit": 0,
+   "stderr_tail": ""
+  },
+  "B": {
+   "exit": 0,
+   "stderr_tail": ""
+  }
+ },
+ "sound": true,
+ "complete": true,
+ "verdict": "SOUND",
+ "properties": {
+  "phase_only": true
+ },
+ "teardown": {
+  "containers_removed": true,
+  "network_removed": true,
+  "workdir_removed": true,
+  "protected_unchanged": true
+ }
+}
