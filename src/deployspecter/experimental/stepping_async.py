@@ -11,8 +11,10 @@ handler's own code runs on the result until its next request. Nothing is replaye
   at the connection), and ``AsyncConnection.transaction()`` entry and exit (BEGIN, SAVEPOINT, COMMIT, RELEASE,
   ROLLBACK), including its exit on an exception or cancellation. The implicit BEGIN of a non-autocommit connection is
   part of the first gated execute.
-* Refused, never executed: named (server-side) cursors, ``copy``, ``stream``, pipelines, use from another task, and any
-  statement outside the handler's allowlist.
+* Refused, never executed: named (server-side) cursors, ``copy``, ``stream``, pipelines, use from another actor's
+  task, a second operation on one connection while another is in flight, and any statement outside the handler's
+  allowlist. A task the actor's code (or a framework on its behalf, such as SQLAlchemy's shielded session close)
+  creates inherits the actor's context and may use its connection; such operations record ``on_behalf_of``.
 * Not interceptable here, so left to the server-log corroboration: raw ``pgconn`` calls, connections a handler opens
   itself, and a ``psycopg.AsyncCursor(conn)`` built directly (psycopg's ``TypeInfo.fetch`` does this).
 * Lock waits are seen through ``pg_blocking_pids`` on a separate async monitor connection. A halt cancels blocked
@@ -27,6 +29,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import contextvars
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
 from dataclasses import dataclass
@@ -132,6 +135,11 @@ class AsyncActor(Actor):
     task: asyncio.Task[Any] | None = None
 
 
+# The actor a task acts for. Set in the actor's own task; a task it (or a framework on its behalf) creates inherits a
+# copy of the context, so it is recognized as acting for the same actor. Another actor's task carries its own.
+_ACTING_FOR: contextvars.ContextVar[AsyncActor | None] = contextvars.ContextVar("ds_acting_for", default=None)
+
+
 class AsyncRun:
     """One execution of async actors under one schedule, on the running event loop. Never retried."""
 
@@ -173,16 +181,21 @@ class AsyncRun:
     async def gate(self, actor: AsyncActor, kind: str, text: str, params: Any, call: Callable[[], Awaitable[Any]],
                    *, cursor: Any = None, aborting: bool = False) -> Any:
         assert self.cv is not None
-        if asyncio.current_task() is not actor.task:
+        current = asyncio.current_task()
+        if current is not actor.task and _ACTING_FOR.get() is not actor:
             raise Refused(f"{actor.name}'s connection was used from another task")
+        if not aborting and (actor.request is not None or actor.state in ("pending", "granted", "executing",
+                                                                          "blocked")):
+            raise Refused(f"{actor.name}'s connection got a second operation while one was in flight")
         if self.aborted and not aborting:
             raise RunAborted("the run was halted")
         site, entry = call_sites()
         prov = {"app_version": actor.handler.app_version, "actor": actor.name, "handler": actor.handler.name,
                 "invocation_id": actor.invocation_id, "migration_phase": self.migration_phase,
                 "logical_op": actor.ops, "session": {"backend_pid": actor.backend_pid},
-                "task": actor.task.get_name() if actor.task else None, "call_site": site, "framework_entry": entry,
-                "txn": None}
+                "task": current.get_name() if current else None,
+                "on_behalf_of": actor.name if current is not actor.task else None,
+                "call_site": site, "framework_entry": entry, "txn": None}
         op = OpRecord(seq=-1, actor=actor.name, kind=kind, sql=normal_sql(text), statement_id=statement_id(text),
                       params=sanitize(params), provenance=prov, requested_ms=self._ms())
         actor.ops += 1
@@ -251,6 +264,7 @@ class AsyncRun:
     # -- the actor tasks
 
     async def _actor_main(self, actor: AsyncActor) -> None:
+        _ACTING_FOR.set(actor)
         try:
             actor.result = await actor.handler.fn(actor.conn, **actor.args)
             actor.state = "finished"

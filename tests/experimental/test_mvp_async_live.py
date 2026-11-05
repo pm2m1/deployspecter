@@ -236,3 +236,23 @@ class TestAsyncControl:
         trace, c, _l, _k = run_handlers(target, ("a", sneak, ["SELECT 1"]))
         assert trace.actors["a"]["exception"] is None
         assert not c["ok"] and c["problems"]
+
+
+class TestTaskIdentity:
+    def test_a_child_task_acts_for_its_actor_and_is_attributed(self, target):
+        async def spawns(conn):
+            await asyncio.create_task(conn.execute("SELECT 1"))  # e.g. a framework's shielded close
+            return "ok"
+
+        trace, c, leftovers, _ = run_handlers(target, ("a", spawns, ["SELECT 1"]))
+        op = [o for o in trace.records if o.sql == "SELECT 1"][0]
+        assert trace.raw_results["a"] == "ok" and op.provenance["on_behalf_of"] == "a"
+        assert op.provenance["task"] != "ds-actor-a" and c["ok"], c["problems"]
+
+    def test_two_concurrent_operations_on_one_connection_are_refused(self, target):
+        async def concurrent(conn):
+            await asyncio.gather(conn.execute("SELECT 1"), conn.execute("SELECT 1"))
+
+        trace, c, leftovers, _ = run_handlers(target, ("a", concurrent, ["SELECT 1"]))
+        assert trace.actors["a"]["exception_class"] == "refused"
+        assert "in flight" in trace.actors["a"]["exception"] and leftovers == 0
