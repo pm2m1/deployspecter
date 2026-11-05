@@ -99,8 +99,43 @@ def _expected(op: Any) -> list[tuple[str, list[Any] | None]]:
     return out
 
 
+def _array_elements(text: str) -> list[str | None] | None:
+    """A one-dimensional PostgreSQL array literal's elements (None for an unquoted NULL); None if not one."""
+    if not (text.startswith("{") and text.endswith("}")) or "{" in text[1:-1]:
+        return None
+    body, out, i = text[1:-1], [], 0
+    if not body:
+        return []
+    while i <= len(body):
+        if i < len(body) and body[i] == '"':
+            j, buf = i + 1, []
+            while j < len(body) and body[j] != '"':
+                if body[j] == "\\" and j + 1 < len(body):
+                    j += 1
+                buf.append(body[j])
+                j += 1
+            out.append("".join(buf))
+            i = j + 2  # past the closing quote and the comma
+        else:
+            j = body.find(",", i)
+            j = len(body) if j < 0 else j
+            item = body[i:j]
+            out.append(None if item == "NULL" else item)
+            i = j + 1
+    return out
+
+
 def _value_matches(logged: str, want: Any) -> bool | None:
     """True or False when comparable; None when the trace's sanitized form can't be compared with the log."""
+    if isinstance(want, list):  # a one-dimensional array, compared element by element
+        text = logged[1:-1].replace("''", "'") if logged.startswith("'") else None
+        items = _array_elements(text) if text is not None else None
+        if items is None or len(items) != len(want):
+            return None if items is None else False
+        verdicts = [(_value_matches("NULL", w) if item is None else _value_matches("'" + item.replace("'", "''")
+                                                                                   + "'", w)) for item, w in
+                    zip(items, want, strict=True)]
+        return None if None in verdicts else all(verdicts)
     if want is None:
         return logged == "NULL"
     if isinstance(want, bool):

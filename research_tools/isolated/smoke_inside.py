@@ -136,10 +136,57 @@ async def chancy_migrate() -> dict:
     return {"monitor_pid": r.monitor_pid, "trace": trace.to_dict(), "raw_results": trace.raw_results}
 
 
+async def pgqueuer_lifecycle() -> dict:
+    """PGQueuer 1.6.0's own queue lifecycle through the version-pinned adapter, one stepped run per phase (each its
+    own actor and connection): install, enqueue two jobs, then a worker in drain mode that claims, runs the trusted
+    handler and finishes them, and shuts down. Capture mode, as for chancy: the SQL is PGQueuer's, so there is no
+    allowlist; the host refuses the result unless the server log explains every row."""
+    import psycopg
+
+    from deployspecter.experimental.stepping import Actor, Handler, Limits
+    from deployspecter.experimental.stepping_async import AsyncRun, async_actor_connection_factory
+    from deployspecter.experimental.thirdparty import pgqueuer_adapter as pq
+
+    class CaptureHandler(Handler):
+        def allows(self, text: str) -> bool:
+            return True
+
+    info = {"host": os.environ["DS_PG_HOST"], "port": int(os.environ["DS_PG_PORT"]),
+            "user": os.environ["DS_PG_USER"], "password": os.environ["DS_PG_PASSWORD"],
+            "dbname": os.environ["DS_PG_DB"]}
+
+    async def monitor() -> psycopg.AsyncConnection:
+        conn = await psycopg.AsyncConnection.connect(**info, autocommit=True, prepare_threshold=None,
+                                                     application_name="ds_mvp_admin")
+        cur = await conn.execute("SELECT current_setting('cluster_name'), current_database()")
+        if await cur.fetchone() != ("ds_mvp_disposable", "ds_mvp"):
+            await conn.close()
+            raise SystemExit("not the disposable database")
+        return conn
+
+    pinned = pq.verify_pinned()
+    lim = Limits(statement_ms=20000, run_s=120, python_step_s=60)
+    connect = async_actor_connection_factory(info, lim, search_path=os.environ["DS_SCHEMA"], autocommit=True)
+    phases = [("install", pq.install, {}), ("enqueue", pq.enqueue, {"payloads": ["alpha", "beta"]}),
+              ("work", pq.work, {})]
+    runs = []
+    for name, fn, args in phases:
+        actor = Actor(name, CaptureHandler("pgqueuer-1.6.0", name, fn, frozenset(), {}, serialize_tasks=True), args)
+        r = AsyncRun([actor], connect, monitor, limits=lim, run_id=f"isolated_pgqueuer_{name}")
+        trace = await r.execute()
+        runs.append({"phase": name, "monitor_pid": r.monitor_pid, "trace": trace.to_dict(),
+                     "raw_results": trace.raw_results})
+        if trace.actors[name]["exception"]:
+            break  # a failed phase stops the lifecycle; the host reports it
+    return {"pinned_sources": pinned, "runs": runs}
+
+
 def main() -> int:
     out: dict = {"probes": probe()}
     if os.environ.get("DS_MODE") == "chancy_migrate":
         out.update(asyncio.run(chancy_migrate()))
+    elif os.environ.get("DS_MODE") == "pgqueuer_lifecycle":
+        out.update(asyncio.run(pgqueuer_lifecycle()))
     else:
         out.update(asyncio.run(run(json.loads(os.environ["DS_SCHEDULE"]), os.environ["DS_VARIANT"])))
     print(json.dumps(out, default=str))

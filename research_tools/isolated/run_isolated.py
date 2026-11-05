@@ -56,7 +56,9 @@ PAYLOAD = ["deployspecter/__init__.py", "deployspecter/experimental/__init__.py"
            "deployspecter/experimental/stepping.py", "deployspecter/experimental/stepping_async.py",
            "deployspecter/experimental/oracle.py", "deployspecter/experimental/apps/__init__.py",
            "deployspecter/experimental/apps/reservations_mixed.py",
-           "deployspecter/experimental/apps/reservations_mixed_async.py"]
+           "deployspecter/experimental/apps/reservations_mixed_async.py",
+           "deployspecter/experimental/thirdparty/__init__.py",
+           "deployspecter/experimental/thirdparty/pgqueuer_adapter.py"]
 LOCKED = ["psycopg", "psycopg-binary", "typing-extensions"]
 # The one third-party candidate whose migration path takes a caller-supplied connection (CORPUS_SHORTLIST.json v2).
 CHANCY_SDIST = "chancy-0.26.0.tar.gz"
@@ -64,6 +66,12 @@ CHANCY_SDIST_SHA256 = "ac98b9c502d7bdb6f47d53fac1c22b4dc55e6cfcfec84b08b1a0cbaee
 CHANCY_EXTRA_REQUIREMENTS = ("psycopg-pool==3.3.3 "
                              "--hash=sha256:9b9cd6a4fcec47a410f7e82d408540e7f77b478509e91b44c1a5457a13e5ff37\n")
 CAPTURE_SCHEMA = "chancy_capture"
+# PGQueuer 1.6.0 (CORPUS_SHORTLIST.json v2): its psycopg Driver port takes a caller-supplied AsyncConnection.
+PGQUEUER_SDIST = "pgqueuer-1.6.0.tar.gz"
+PGQUEUER_SDIST_SHA256 = "ed1306404f96e25c84c951f434e8b06b091e04e0177af0d5441505a7944f156e"
+PGQUEUER_REQUIREMENTS = Path(__file__).with_name("requirements.pgqueuer.txt")
+SCHEMAS = {"smoke": CAPTURE_SCHEMA, "chancy": CAPTURE_SCHEMA, "pgqueuer": "pgq_capture"}
+INSIDE_MODE = {"smoke": "smoke", "chancy": "chancy_migrate", "pgqueuer": "pgqueuer_lifecycle"}
 EXPECTED_PROBES = {"uid": 65534, "root_writable": False, "app_writable": False, "tmp_writable": True,
                    "ssh_dir_present": False, "secret_like_env": []}
 
@@ -82,10 +90,28 @@ def requirements_from_lock(names: list[str]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def build_image(work: Path, *, chancy_sdist: Path | None = None) -> tuple[str, str]:
+def copy_verified_package(sdist: Path, *, name: str, sha256: str, package: str, work: Path, dest: Path) -> None:
+    """Unpack a pinned sdist (data only) after re-verifying its sha256, and copy its package directory."""
+    import tarfile
+    got = hashlib.sha256(sdist.read_bytes()).hexdigest()
+    if sdist.name != name or got != sha256:
+        raise RuntimeError(f"{sdist.name} isn't the pinned sdist (sha256 {got[:12]})")
+    unpack = work / f"sdist_{package}"
+    with tarfile.open(sdist) as tf:
+        tf.extractall(unpack, filter="data")  # data only: no links out, no device files, no absolute paths
+    shutil.copytree(unpack / name.removesuffix(".tar.gz") / package, dest / package)
+
+
+def build_image(work: Path, *, chancy_sdist: Path | None = None, pgqueuer_sdist: Path | None = None) -> tuple[
+        str, str]:
     ctx = work / "context"
     (ctx / "app" / "src").mkdir(parents=True)
     extra = ""
+    base_requirements = requirements_from_lock(LOCKED)
+    if pgqueuer_sdist is not None:
+        copy_verified_package(pgqueuer_sdist, name=PGQUEUER_SDIST, sha256=PGQUEUER_SDIST_SHA256, package="pgqueuer",
+                              work=work, dest=ctx / "app" / "src")
+        base_requirements = PGQUEUER_REQUIREMENTS.read_text()  # includes psycopg and psycopg-binary 3.3.6
     if chancy_sdist is not None:
         import tarfile
         got = hashlib.sha256(chancy_sdist.read_bytes()).hexdigest()
@@ -102,7 +128,7 @@ def build_image(work: Path, *, chancy_sdist: Path | None = None) -> tuple[str, s
         shutil.copyfile(REPO / "src" / rel, dst)
     shutil.copyfile(Path(__file__).with_name("smoke_inside.py"), ctx / "app" / "smoke_inside.py")
     shutil.copyfile(Path(__file__).with_name("Dockerfile.runner"), ctx / "Dockerfile")
-    (ctx / "requirements.txt").write_text(requirements_from_lock(LOCKED) + extra)
+    (ctx / "requirements.txt").write_text(base_requirements + extra)
     digest = hashlib.sha256()
     for f in sorted(p for p in ctx.rglob("*") if p.is_file()):
         digest.update(str(f.relative_to(ctx)).encode() + b"\0" + f.read_bytes())
@@ -134,10 +160,11 @@ def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path
         seed = {"events": [{"id": 1, "capacity": 5, "reserved": 0}]}
         admin = target.admin()
         try:
-            if mode == "chancy":
-                admin.execute(f"DROP SCHEMA IF EXISTS {CAPTURE_SCHEMA} CASCADE")
-                admin.execute(f"CREATE SCHEMA {CAPTURE_SCHEMA}")
-                initial = {"catalog": catalog(admin)}
+            schema = SCHEMAS[mode]
+            if mode in ("chancy", "pgqueuer"):
+                admin.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")
+                admin.execute(f"CREATE SCHEMA {schema}")
+                initial = {"catalog": catalog(admin, schema)}
                 if initial["catalog"]:
                     raise RuntimeError("the capture schema isn't empty")
                 digest = oracle.digest(initial)
@@ -155,7 +182,7 @@ def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path
                 "DS_PG_HOST=ds-mvp-pg", "DS_PG_PORT=5432", f"DS_PG_USER={target.user}",
                 f"DS_PG_PASSWORD={target.password}", f"DS_PG_DB={target.dbname}",
                 f"DS_SCHEDULE={json.dumps(schedule)}", f"DS_VARIANT={variant}",
-                f"DS_MODE={'chancy_migrate' if mode == 'chancy' else 'smoke'}", f"DS_SCHEMA={CAPTURE_SCHEMA}"]) + "\n")
+                f"DS_MODE={INSIDE_MODE[mode]}", f"DS_SCHEMA={schema}"]) + "\n")
             envfile.chmod(0o600)
             admin.execute(f"SELECT '{start}'")
             started = time.monotonic()
@@ -171,8 +198,11 @@ def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path
                 result["stderr_tail"] = proc.stderr[-2000:]
                 raise RuntimeError(f"the container exited {proc.returncode}")
             inside = json.loads(proc.stdout.strip().splitlines()[-1])
+            if "runs" in inside:  # one run per lifecycle phase, merged: grants stay ordered within each phase
+                inside = merge_runs(inside)
             trace = inside["trace"]
-            pids = [a["backend_pid"] for a in trace["actors"].values()] + [inside["monitor_pid"]]
+            monitors = inside.get("monitor_pids") or [inside["monitor_pid"]]
+            pids = [a["backend_pid"] for a in trace["actors"].values()] + monitors
             gone = hz._wait_gone(admin, pids)
             admin.execute(f"SELECT '{end}'")
             until = time.monotonic() + 5
@@ -182,14 +212,19 @@ def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path
                 data = log.read()
             shaped = SimpleNamespace(actors=trace["actors"], records=[SimpleNamespace(**r) for r in trace["records"]])
             corr = corroborate(data, start=start, end=end, trace=shaped,
-                               admin_pid={admin.info.backend_pid, inside["monitor_pid"]}, user=target.user,
+                               admin_pid={admin.info.backend_pid, *monitors}, user=target.user,
                                database=target.dbname).to_dict()
             if not gone:
                 corr["ok"] = False
                 corr["problems"].append("a container session outlived the run")
-            final = {"catalog": catalog(admin)} if mode == "chancy" else oracle.read_state(admin)
             if mode == "chancy":
-                admin.execute(f"DROP SCHEMA IF EXISTS {CAPTURE_SCHEMA} CASCADE")
+                final = {"catalog": catalog(admin, schema)}
+            elif mode == "pgqueuer":
+                final = {"catalog": catalog(admin, schema), **pgqueuer_state(admin, schema)}
+            else:
+                final = oracle.read_state(admin)
+            if mode in ("chancy", "pgqueuer"):
+                admin.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")
         finally:
             admin.close()
         done = any(isinstance(r, dict) and r.get("status") == "done" for r in inside["raw_results"].values())
@@ -204,7 +239,9 @@ def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path
                          memory_limited=probes["memory_limit"] == str(512 * 1024 * 1024))
         result.update(probes=probes, isolation_checks=isolation, isolation_ok=all(isolation.values()),
                       initial_state_digest=digest, final_state=final, final_state_digest=oracle.digest(final),
-                      oracle_violations=None if mode == "chancy" else oracle.check(final, backfill_done=done),
+                      oracle_violations=(None if mode == "chancy" else pgqueuer_check(final, inside["raw_results"])
+                                         if mode == "pgqueuer" else oracle.check(final, backfill_done=done)),
+                      pinned_sources=inside.get("pinned_sources"),
                       corroboration=corr,
                       trace_sha256=hashlib.sha256(json.dumps(trace, sort_keys=True, default=str).encode()).hexdigest(),
                       raw_results=inside["raw_results"], code_revision=hz.code_revision(),
@@ -223,17 +260,72 @@ def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path
     return result
 
 
-def catalog(admin: Any) -> list[dict[str, Any]]:
+def catalog(admin: Any, schema: str = CAPTURE_SCHEMA) -> list[dict[str, Any]]:
     return [dict(zip(("table", "column", "type", "nullable"), r, strict=True)) for r in admin.execute(
         "SELECT table_name, column_name, data_type, is_nullable FROM information_schema.columns "
-        "WHERE table_schema = %s ORDER BY table_name, ordinal_position", (CAPTURE_SCHEMA,)).fetchall()]
+        "WHERE table_schema = %s ORDER BY table_name, ordinal_position", (schema,)).fetchall()]
+
+
+def merge_runs(inside: dict[str, Any]) -> dict[str, Any]:
+    """Several sequential runs (one per lifecycle phase) as one trace for one log window. Actor names are distinct
+    per phase; grants are offset per phase so the order check stays meaningful across them."""
+    actors: dict[str, Any] = {}
+    records: list[dict[str, Any]] = []
+    raw: dict[str, Any] = {}
+    for i, run in enumerate(inside["runs"]):
+        actors.update(run["trace"]["actors"])
+        raw.update(run["raw_results"])
+        for r in run["trace"]["records"]:
+            r = dict(r)
+            if r.get("grant") is not None:
+                r["grant"] = i * 1_000_000 + r["grant"]
+            records.append(r)
+    return {"probes": inside["probes"], "pinned_sources": inside.get("pinned_sources"),
+            "monitor_pids": [run["monitor_pid"] for run in inside["runs"]],
+            "phases": [{"phase": run["phase"], "outcome": run["trace"]["outcome"],
+                        "exception": run["trace"]["actors"][run["phase"]]["exception"]} for run in inside["runs"]],
+            "trace": {"actors": actors, "records": records}, "raw_results": raw}
+
+
+def pgqueuer_state(admin: Any, schema: str) -> dict[str, Any]:
+    def rows(q: str) -> list[dict[str, Any]]:
+        cur = admin.execute(q)
+        names = [d.name for d in cur.description]
+        return [dict(zip(names, r, strict=True)) for r in cur.fetchall()]
+    return {"queue": rows(f"SELECT id, entrypoint, status::text AS status FROM {schema}.pgqueuer ORDER BY id"),
+            "log": rows(f"SELECT job_id, status::text AS status, entrypoint FROM {schema}.pgqueuer_log ORDER BY id"),
+            "results": [{"job_id": r["job_id"], "payload": bytes(r["payload"]).decode()}
+                        for r in rows(f"SELECT job_id, payload FROM {schema}.ds_pgq_results ORDER BY job_id")]}
+
+
+def pgqueuer_check(final: dict[str, Any], raw: dict[str, Any]) -> list[str]:
+    """Independent of the adapter and of PGQueuer's code, from its documented lifecycle and the workload:
+    Q1 every enqueued payload was handled exactly once, under its own job id; Q2 no job for the entrypoint is left in
+    the queue; Q3 each job's log has exactly one 'successful' and no 'exception' or 'failed'."""
+    out = []
+    enqueued = (raw.get("enqueue") or {}).get("job_ids", [])
+    want = sorted(zip(enqueued, ["alpha", "beta"], strict=False))
+    got = sorted((r["job_id"], r["payload"]) for r in final["results"])
+    if got != want:
+        out.append(f"Q1 handled {got}, but enqueued {want}")
+    left = [r for r in final["queue"] if r["entrypoint"] == "ds_job"]
+    if left:
+        out.append(f"Q2 {len(left)} job(s) still in the queue: {left}")
+    for job in enqueued:
+        statuses = [r["status"] for r in final["log"] if r["job_id"] == job]
+        if statuses.count("successful") != 1 or {"exception", "failed"} & set(statuses):
+            out.append(f"Q3 job {job} logged {statuses}")
+    if not enqueued:
+        out.append("Q1 nothing was enqueued")
+    return out
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("mode", choices=["smoke", "chancy"])
+    ap.add_argument("mode", choices=["smoke", "chancy", "pgqueuer"])
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--chancy-sdist", type=Path, help="the downloaded chancy-0.26.0.tar.gz (sha256 is re-verified)")
+    ap.add_argument("--pgqueuer-sdist", type=Path, help="the downloaded pgqueuer-1.6.0.tar.gz (sha256 re-verified)")
     a = ap.parse_args()
     secret = Path(os.environ.get("DS_MVP_SECRET_FILE", os.path.expanduser("~/.ds_mvp_pg_password")))
     target = hz.Target("127.0.0.1", int(os.environ.get("DS_MVP_PORT", "55441")), "ds_mvp", secret.read_text().strip())
@@ -242,9 +334,30 @@ def main() -> int:
     race = ["j", "j", "a", "a", "a", "a", "a", "j", "j"]
     build_dir = Path(tempfile.mkdtemp(prefix="ds_iso_build_"))
     try:
-        image = build_image(build_dir, chancy_sdist=a.chancy_sdist if a.mode == "chancy" else None)
+        image = build_image(build_dir, chancy_sdist=a.chancy_sdist if a.mode == "chancy" else None,
+                            pgqueuer_sdist=a.pgqueuer_sdist if a.mode == "pgqueuer" else None)
     finally:
         shutil.rmtree(build_dir, ignore_errors=True)
+    if a.mode == "pgqueuer":
+        r = run_smoke(target, variant="pgqueuer_lifecycle", schedule=[], out=a.out, image=image, mode="pgqueuer")
+        report = {"kind": "EXPERIMENTAL: PGQueuer 1.6.0's queue lifecycle through a version-pinned Driver adapter on "
+                         "the async stepping engine, in the isolated runner; a compatibility test, not a blind "
+                         "evaluation",
+                  "library": {"name": "pgqueuer", "version": "1.6.0", "sdist_sha256": PGQUEUER_SDIST_SHA256,
+                              "tag_commit": "efcd65689a49a067e68662702f4c5fbee1235df0",
+                              "entrypoints": ["Queries(driver).install()", "Queries(driver).enqueue(...)",
+                                              "QueueManager(connection=driver).run(mode=drain)"],
+                              "adapter": "deployspecter.experimental.thirdparty.pgqueuer_adapter",
+                              "requirements_sha256": hashlib.sha256(PGQUEUER_REQUIREMENTS.read_bytes()).hexdigest()},
+                  "image": {"tag": image[0], "id": image[1]}, "run": r}
+        (a.out / "report.json").write_text(json.dumps(report, indent=1, default=str))
+        c = r.get("corroboration", {})
+        print("isolation", r.get("isolation_ok"), "corroborated", c.get("ok"), "statements", c.get("matched"),
+              "values", c.get("params_compared"), "unchecked", c.get("params_unchecked"), "oracle",
+              r.get("oracle_violations"), "result", r.get("raw_results"), "teardown", r["teardown"],
+              "problems", (c.get("problems") or [])[:5])
+        return 0 if (r.get("isolation_ok") and c.get("ok") and r.get("oracle_violations") == []
+                     and all(r["teardown"].values())) else 1
     if a.mode == "chancy":
         r = run_smoke(target, variant="chancy_migrate", schedule=[], out=a.out, image=image, mode="chancy")
         report = {"kind": "EXPERIMENTAL capture of one pinned third-party library's migration path in the isolated "
