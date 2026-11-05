@@ -11,7 +11,7 @@ This is the full one-command run at revision `5b146bf`. It **exited 15**. Every 
 
 The corroborator did its job. The harness was at fault: it let a framework stop interrupt a statement. The first recorded pilot (`real_app_pilot_chancy_mixed_1`) passed because the stop happened not to land during a heartbeat.
 
-**Fix** (next commit):
+**Fix** (commit `d42e369`, together with this note):
 - `AsyncRun.quiesced`: while a framework is being stopped, its earlier tasks' new operations are held before the gate. They are recorded as `cancelled_while_held` when cancelled there, and the statement in flight finishes first. The stopping task, and tasks it creates, are exempt.
 - `chancy_adapter.stop_worker` waits until no job update is queued and the pool's connection is free, then stops inside the hold.
 - Regression test: `TestQuiesced` in `tests/experimental/test_mvp_async_live.py`. With the hold disabled, it recorded a mid-statement `cancelled` op in 5 of 5 runs.
