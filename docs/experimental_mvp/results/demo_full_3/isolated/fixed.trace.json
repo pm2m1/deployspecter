@@ -1,0 +1,567 @@
+{
+ "run_id": "isolated_fixed",
+ "schedule": [
+  "j",
+  "j",
+  "a",
+  "a",
+  "a",
+  "a",
+  "a",
+  "j",
+  "j"
+ ],
+ "chosen": [
+  "j",
+  "j",
+  "a",
+  "a",
+  "j",
+  "j",
+  "a",
+  "a",
+  "a"
+ ],
+ "decisions": [
+  {
+   "index": 0,
+   "enabled": [
+    "j",
+    "a"
+   ],
+   "blocked": {},
+   "finished": [],
+   "requested": "j",
+   "chosen": "j",
+   "source": "schedule"
+  },
+  {
+   "index": 1,
+   "enabled": [
+    "j",
+    "a"
+   ],
+   "blocked": {},
+   "finished": [],
+   "requested": "j",
+   "chosen": "j",
+   "source": "schedule"
+  },
+  {
+   "index": 2,
+   "enabled": [
+    "j",
+    "a"
+   ],
+   "blocked": {},
+   "finished": [],
+   "requested": "a",
+   "chosen": "a",
+   "source": "schedule"
+  },
+  {
+   "index": 3,
+   "enabled": [
+    "j",
+    "a"
+   ],
+   "blocked": {},
+   "finished": [],
+   "requested": "a",
+   "chosen": "a",
+   "source": "schedule"
+  },
+  {
+   "index": 4,
+   "enabled": [
+    "j"
+   ],
+   "blocked": {
+    "a": [
+     "j"
+    ]
+   },
+   "finished": [],
+   "requested": "a",
+   "chosen": "j",
+   "source": "deferred"
+  },
+  {
+   "index": 5,
+   "enabled": [
+    "j"
+   ],
+   "blocked": {
+    "a": [
+     "j"
+    ]
+   },
+   "finished": [],
+   "requested": "a",
+   "chosen": "j",
+   "source": "deferred"
+  },
+  {
+   "index": 6,
+   "enabled": [
+    "a"
+   ],
+   "blocked": {},
+   "finished": [
+    "j"
+   ],
+   "requested": "a",
+   "chosen": "a",
+   "source": "schedule"
+  },
+  {
+   "index": 7,
+   "enabled": [
+    "a"
+   ],
+   "blocked": {},
+   "finished": [
+    "j"
+   ],
+   "requested": "a",
+   "chosen": "a",
+   "source": "schedule"
+  },
+  {
+   "index": 8,
+   "enabled": [
+    "a"
+   ],
+   "blocked": {},
+   "finished": [
+    "j"
+   ],
+   "requested": "a",
+   "chosen": "a",
+   "source": "schedule"
+  }
+ ],
+ "records": [
+  {
+   "seq": 0,
+   "actor": "j",
+   "kind": "transaction_enter",
+   "sql": "BEGIN",
+   "statement_id": "a8402858d4f1",
+   "params": null,
+   "provenance": {
+    "app_version": "job",
+    "actor": "j",
+    "handler": "backfill_v2",
+    "invocation_id": "isolated_fixed:j",
+    "migration_phase": "",
+    "logical_op": 0,
+    "session": {
+     "backend_pid": 4143
+    },
+    "task": "ds-actor-j",
+    "on_behalf_of": null,
+    "call_site": "../app/src/deployspecter/experimental/apps/reservations_mixed_async.py:94:_backfill",
+    "framework_entry": null,
+    "txn": "j:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 0,
+   "decision": 0,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 10.62,
+   "completed_ms": 10.82
+  },
+  {
+   "seq": 1,
+   "actor": "j",
+   "kind": "execute",
+   "sql": "SELECT id, reserved FROM events WHERE reserved_v2 IS NULL ORDER BY id LIMIT %s FOR UPDATE",
+   "statement_id": "07e3c328a1ee",
+   "params": [
+    10
+   ],
+   "provenance": {
+    "app_version": "job",
+    "actor": "j",
+    "handler": "backfill_v2",
+    "invocation_id": "isolated_fixed:j",
+    "migration_phase": "",
+    "logical_op": 1,
+    "session": {
+     "backend_pid": 4143
+    },
+    "task": "ds-actor-j",
+    "on_behalf_of": null,
+    "call_site": "../app/src/deployspecter/experimental/apps/reservations_mixed_async.py:95:_backfill",
+    "framework_entry": null,
+    "txn": "j:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 1,
+   "decision": 1,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    [
+     1,
+     0
+    ]
+   ],
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 10.87,
+   "completed_ms": 11.42
+  },
+  {
+   "seq": 2,
+   "actor": "a",
+   "kind": "transaction_enter",
+   "sql": "BEGIN",
+   "statement_id": "a8402858d4f1",
+   "params": null,
+   "provenance": {
+    "app_version": "v1",
+    "actor": "a",
+    "handler": "reserve",
+    "invocation_id": "isolated_fixed:a",
+    "migration_phase": "",
+    "logical_op": 0,
+    "session": {
+     "backend_pid": 4144
+    },
+    "task": "ds-actor-a",
+    "on_behalf_of": null,
+    "call_site": "../app/src/deployspecter/experimental/apps/reservations_mixed_async.py:42:reserve_v1",
+    "framework_entry": null,
+    "txn": "a:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 2,
+   "decision": 2,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 10.65,
+   "completed_ms": 11.58
+  },
+  {
+   "seq": 3,
+   "actor": "j",
+   "kind": "execute",
+   "sql": "UPDATE events SET reserved_v2 = %s WHERE id = %s AND reserved_v2 IS NULL",
+   "statement_id": "ede8a5fd116e",
+   "params": [
+    0,
+    1
+   ],
+   "provenance": {
+    "app_version": "job",
+    "actor": "j",
+    "handler": "backfill_v2",
+    "invocation_id": "isolated_fixed:j",
+    "migration_phase": "",
+    "logical_op": 2,
+    "session": {
+     "backend_pid": 4143
+    },
+    "task": "ds-actor-j",
+    "on_behalf_of": null,
+    "call_site": "../app/src/deployspecter/experimental/apps/reservations_mixed_async.py:98:_backfill",
+    "framework_entry": null,
+    "txn": "j:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 4,
+   "decision": 4,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 11.46,
+   "completed_ms": 67.76
+  },
+  {
+   "seq": 4,
+   "actor": "j",
+   "kind": "transaction_exit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "job",
+    "actor": "j",
+    "handler": "backfill_v2",
+    "invocation_id": "isolated_fixed:j",
+    "migration_phase": "",
+    "logical_op": 3,
+    "session": {
+     "backend_pid": 4143
+    },
+    "task": "ds-actor-j",
+    "on_behalf_of": null,
+    "call_site": "../app/src/deployspecter/experimental/apps/reservations_mixed_async.py:94:_backfill",
+    "framework_entry": null,
+    "txn": "j:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 5,
+   "decision": 5,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 67.83,
+   "completed_ms": 68.13
+  },
+  {
+   "seq": 5,
+   "actor": "a",
+   "kind": "execute",
+   "sql": "SELECT capacity, reserved FROM events WHERE id = %s FOR UPDATE",
+   "statement_id": "1611d48e3f65",
+   "params": [
+    1
+   ],
+   "provenance": {
+    "app_version": "v1",
+    "actor": "a",
+    "handler": "reserve",
+    "invocation_id": "isolated_fixed:a",
+    "migration_phase": "",
+    "logical_op": 1,
+    "session": {
+     "backend_pid": 4144
+    },
+    "task": "ds-actor-a",
+    "on_behalf_of": null,
+    "call_site": "../app/src/deployspecter/experimental/apps/reservations_mixed_async.py:37:_one",
+    "framework_entry": null,
+    "txn": "a:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 3,
+   "decision": 3,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    [
+     5,
+     0
+    ]
+   ],
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 11.6,
+   "completed_ms": 68.23
+  },
+  {
+   "seq": 6,
+   "actor": "a",
+   "kind": "execute",
+   "sql": "UPDATE events SET reserved = %s WHERE id = %s",
+   "statement_id": "bd7f741674bb",
+   "params": [
+    2,
+    1
+   ],
+   "provenance": {
+    "app_version": "v1",
+    "actor": "a",
+    "handler": "reserve",
+    "invocation_id": "isolated_fixed:a",
+    "migration_phase": "",
+    "logical_op": 2,
+    "session": {
+     "backend_pid": 4144
+    },
+    "task": "ds-actor-a",
+    "on_behalf_of": null,
+    "call_site": "../app/src/deployspecter/experimental/apps/reservations_mixed_async.py:49:reserve_v1",
+    "framework_entry": null,
+    "txn": "a:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 6,
+   "decision": 6,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 68.27,
+   "completed_ms": 68.98
+  },
+  {
+   "seq": 7,
+   "actor": "a",
+   "kind": "execute",
+   "sql": "INSERT INTO reservations (event_id, holder, qty) VALUES (%s, %s, %s) RETURNING id",
+   "statement_id": "5d477f871bcc",
+   "params": [
+    1,
+    {
+     "str": 5,
+     "sha256": "2bd806c97f0e"
+    },
+    2
+   ],
+   "provenance": {
+    "app_version": "v1",
+    "actor": "a",
+    "handler": "reserve",
+    "invocation_id": "isolated_fixed:a",
+    "migration_phase": "",
+    "logical_op": 3,
+    "session": {
+     "backend_pid": 4144
+    },
+    "task": "ds-actor-a",
+    "on_behalf_of": null,
+    "call_site": "../app/src/deployspecter/experimental/apps/reservations_mixed_async.py:37:_one",
+    "framework_entry": null,
+    "txn": "a:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 7,
+   "decision": 7,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    [
+     1
+    ]
+   ],
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 69.03,
+   "completed_ms": 69.47
+  },
+  {
+   "seq": 8,
+   "actor": "a",
+   "kind": "transaction_exit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "v1",
+    "actor": "a",
+    "handler": "reserve",
+    "invocation_id": "isolated_fixed:a",
+    "migration_phase": "",
+    "logical_op": 4,
+    "session": {
+     "backend_pid": 4144
+    },
+    "task": "ds-actor-a",
+    "on_behalf_of": null,
+    "call_site": "../app/src/deployspecter/experimental/apps/reservations_mixed_async.py:42:reserve_v1",
+    "framework_entry": null,
+    "txn": "a:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 8,
+   "decision": 8,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 69.51,
+   "completed_ms": 69.63
+  }
+ ],
+ "actors": {
+  "j": {
+   "handler": "job.backfill_v2",
+   "args": {
+    "batch": 10
+   },
+   "state": "finished",
+   "result": {
+    "status": {
+     "str": 4,
+     "sha256": "a4c3ed04a95a"
+    },
+    "filled": 1
+   },
+   "exception": null,
+   "exception_class": null,
+   "backend_pid": 4143,
+   "transactions": 1
+  },
+  "a": {
+   "handler": "v1.reserve",
+   "args": {
+    "event_id": 1,
+    "holder": {
+     "str": 5,
+     "sha256": "2bd806c97f0e"
+    },
+    "qty": 2
+   },
+   "state": "finished",
+   "result": {
+    "status": {
+     "str": 8,
+     "sha256": "c0d03c1239e0"
+    },
+    "reservation": 1,
+    "reserved_after": 2
+   },
+   "exception": null,
+   "exception_class": null,
+   "backend_pid": 4144,
+   "transactions": 1
+  }
+ },
+ "outcome": "completed",
+ "diagnostics": [],
+ "migration_phase": "",
+ "fingerprint": "2a42f2d797cf2b5f6f2714f253a0222133c2c9d4a19684ee2a779937b73f84cf"
+}

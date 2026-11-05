@@ -360,3 +360,41 @@ async def idle_long(conn):
     await conn.execute("SELECT 1")
     await asyncio.sleep(0.6)  # keeps the controller busy so q's second request waits at the gate
     return "idle"
+
+
+class TestQuiesced:
+    def test_stopping_a_busy_framework_task_inside_quiesced_cancels_it_only_at_the_gate(self, target):
+        """Regression (demo_full_3): Chancy 0.25.1's Worker.stop cancelled its heartbeat mid-statement, and the server
+        log refuted the trace. Inside ``quiesced`` the busy task is held before the gate and cancelled there; the
+        stopping task itself (and what it creates) still reaches the gate."""
+        async def framework(conn):
+            async def busy():
+                while True:  # no pause: it is always about to send its next statement
+                    async with conn.transaction():
+                        await conn.execute("SELECT 1")
+                        await conn.execute("SELECT 1")
+
+            loop = asyncio.create_task(busy())
+            await asyncio.sleep(0.3)
+            async with conn._ds_actor.run.quiesced(conn._ds_actor):
+                loop.cancel()
+                await asyncio.gather(loop, return_exceptions=True)
+                await asyncio.create_task(conn.execute("SELECT 1"))  # created inside: exempt, like a stop task
+            await conn.execute("SELECT 1")  # the actor works afterwards
+            return "ok"
+
+        admin = target.admin()
+        try:
+            sync_app.reset(admin, SEED)
+            lim = st.Limits()
+            actor = st.Actor("q", st.Handler("test", "framework", framework, frozenset({"SELECT 1"}), {},
+                                             serialize_tasks=True), {})
+            connect = sa.async_actor_connection_factory(target.conninfo(), lim, search_path=A.SCHEMA)
+            run = sa.AsyncRun([actor], connect, hz.async_monitor(target), limits=lim, run_id="quiesced")
+            trace, c = hz.corroborated(admin, run, user=target.user)
+        finally:
+            admin.close()
+        assert trace.actors["q"]["exception"] is None and trace.raw_results["q"] == "ok"
+        classes = [op.error_class for op in trace.records if op.outcome == "aborted"]
+        assert classes == ["cancelled_while_held"]  # never "cancelled" mid-statement
+        assert c["ok"], c["problems"]

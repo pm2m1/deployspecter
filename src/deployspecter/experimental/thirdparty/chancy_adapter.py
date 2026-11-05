@@ -133,10 +133,34 @@ async def produce(conn: AsyncSteppedConnection, *, count: int) -> dict[str, Any]
 
 
 async def stop_worker(worker: Any) -> bool:
-    """0.26.0's ``Worker.stop`` takes ``timeout``; 0.25.1's takes no arguments."""
-    if "timeout" in inspect.signature(worker.stop).parameters:
-        return await worker.stop(timeout=10)
-    return await worker.stop()
+    """Stop a worker without cancelling one of its tasks mid-statement.
+
+    Both releases' ``stop()`` cancel the worker's maintenance tasks (heartbeat, queue polling, updates). Cancelled
+    while a statement is on the wire, a task leaves its session in a state the trace can't vouch for, and the server
+    log then (correctly) refutes the run; that happened once in 0.25.1's heartbeat (``demo_full_3``). So, promptly:
+    wait until no job update is queued and the pool's one connection is back (no unit of work is under way), then,
+    in the same step, hold the worker's tasks before the gate and stop. 0.26.0's ``stop`` takes ``timeout``;
+    0.25.1's takes no arguments."""
+    import asyncio
+    import time
+
+    from ..stepping_async import _ACTING_FOR
+
+    def idle() -> bool:
+        stats = worker.chancy.pool.get_stats()
+        return worker.outgoing.empty() and not getattr(worker, "_pending_updates", None) and \
+            stats.get("pool_available", 0) == stats.get("pool_size", 1) and not stats.get("requests_waiting", 0)
+
+    until = time.monotonic() + 10
+    while not idle() and time.monotonic() < until:
+        await asyncio.sleep(0.02)
+    me = _ACTING_FOR.get()  # no await between the idle check and the hold
+    if me is None:
+        raise RuntimeError("stop_worker must run in a stepped actor's task")
+    async with me.run.quiesced(me):
+        if "timeout" in inspect.signature(worker.stop).parameters:
+            return await worker.stop(timeout=10)
+        return await worker.stop()
 
 
 # ------------------------------------------------------------------ the mixed-version pilot (NONBLIND), one phase each

@@ -173,11 +173,15 @@ class AsyncSteppedConnection(psycopg.AsyncConnection):
 class AsyncActor(Actor):
     task: asyncio.Task[Any] | None = None
     lock: asyncio.Lock | None = None  # serialize_tasks: the actor's tasks take turns on its connection
+    holding: bool = False  # inside AsyncRun.quiesced: the actor's pre-existing tasks wait before the gate
 
 
 # The actor a task acts for. Set in the actor's own task; a task it (or a framework on its behalf) creates inherits a
 # copy of the context, so it is recognized as acting for the same actor. Another actor's task carries its own.
 _ACTING_FOR: contextvars.ContextVar[AsyncActor | None] = contextvars.ContextVar("ds_acting_for", default=None)
+# Set by AsyncRun.quiesced in the task that stops a framework: it, and tasks created from it afterwards (a framework's
+# own stop task), keep reaching the gate while the actor's earlier tasks are held.
+_QUIESCE_EXEMPT: contextvars.ContextVar[bool] = contextvars.ContextVar("ds_quiesce_exempt", default=False)
 
 
 class AsyncRun:
@@ -236,6 +240,8 @@ class AsyncRun:
         current = asyncio.current_task()
         if current is not actor.task and _ACTING_FOR.get() is not actor:
             raise Refused(f"{actor.name}'s connection was used from another task")
+        if actor.holding and not aborting and not _QUIESCE_EXEMPT.get():
+            await self._held(actor, kind, text, params, current)
         if actor.handler.serialize_tasks and not aborting:
             assert actor.lock is not None
             async with actor.lock:  # this actor's other tasks wait here, outside the scheduler
@@ -243,6 +249,59 @@ class AsyncRun:
                                         current=current)
         return await self._gate(actor, kind, text, params, call, cursor=cursor, aborting=aborting, raw=raw,
                                 current=current)
+
+    async def _held(self, actor: AsyncActor, kind: str, text: str, params: Any,
+                    current: asyncio.Task[Any] | None) -> None:
+        """While the actor is quiesced, a pre-existing task's new operation waits here, before the actor's lock and
+        the scheduler, so it holds neither. Cancelled here (the framework stopping its tasks), it is recorded as
+        never executed. Transaction exits on a cancellation (``aborting``) are never held."""
+        assert self.cv is not None
+        async with self.cv:
+            try:
+                await self.cv.wait_for(lambda: not actor.holding or self.aborted)
+            except asyncio.CancelledError:
+                site, entry = call_sites()
+                self._append(OpRecord(
+                    seq=-1, actor=actor.name, kind=kind, sql=normal_sql(text), statement_id=statement_id(text),
+                    params=sanitize(params), outcome="aborted", error_class="cancelled_while_held",
+                    provenance={"actor": actor.name, "handler": actor.handler.name,
+                                "app_version": actor.handler.app_version, "invocation_id": actor.invocation_id,
+                                "task": current.get_name() if current else None, "call_site": site,
+                                "framework_entry": entry, "txn": None},
+                    requested_ms=self._ms(), completed_ms=self._ms()))
+                raise
+
+    @contextlib.asynccontextmanager
+    async def quiesced(self, actor: AsyncActor) -> AsyncIterator[None]:
+        """Stop a framework's own tasks without cancelling one mid-statement.
+
+        New operations from the actor's pre-existing tasks are held before the gate; the operation already in
+        flight (if any) completes; then the body runs, typically a framework's ``stop()``, which cancels the held
+        tasks where they wait. The calling task, and tasks created from it inside the body, are exempt. A task that
+        is cancelled while a statement is on the wire leaves the session's state unknown to the trace; this avoids
+        that, rather than recording it."""
+        assert self.cv is not None
+        if _ACTING_FOR.get() is not actor:
+            raise Refused("quiesced() must be entered by a task acting for the actor")
+        token = _QUIESCE_EXEMPT.set(True)
+        actor.holding = True
+        def settled() -> bool:  # the lock is released only after the gate's last notify, so this also polls
+            if self.aborted:
+                return True
+            lock_free = actor.lock is None or not actor.lock.locked()
+            return actor.request is None and lock_free and \
+                actor.state not in ("pending", "granted", "executing", "blocked")
+
+        try:
+            while not settled():
+                async with self.cv:
+                    with contextlib.suppress(TimeoutError):
+                        await asyncio.wait_for(self.cv.wait_for(settled), timeout=0.05)
+            yield
+        finally:
+            actor.holding = False
+            _QUIESCE_EXEMPT.reset(token)
+            await self._notify()
 
     async def _gate(self, actor: AsyncActor, kind: str, text: str, params: Any,
                     call: Callable[[], Awaitable[Any]], *, cursor: Any, aborting: bool, raw: bool,
