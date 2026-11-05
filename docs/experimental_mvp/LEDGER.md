@@ -140,3 +140,14 @@ Account balance was not checked through the API. The Responses API returns per-r
     - 17 earlier refusals are all kept and explained.
 
 **Meta usage in this increment:** none (0 requests, $0). A Muse question is recorded as a proposed future experiment.
+
+## Increment 8 (2026-11-05): historical-defect research
+
+48. **Engineering milestone record** `MILESTONE_simultaneous_1.md`. rc1 is untouched.
+49. **Amendment 003 review package v2** (`protocol/DECISIONS_003_v2.md`): recommended rulings, roles, qualifications and the evidence for each status, for #6–#9 and #14. All are PROPOSED, and no role is filled. Also recommendations for the other 13 issues, and two new issues (#19 compatibility contract, #20 training-data exposure).
+50. **Review-ready draft v3** (`protocol/AMENDMENT_003_DRAFT_v3.md`) with 10 `[PENDING]` markers. Not adopted.
+51. **Candidate record** (`historical/CANDIDATES.md`): BLIND_ELIGIBLE none; NONBLIND_DEVELOPMENT chancy, procrastinate, pgqueuer; INELIGIBLE dbos, saq, pgmq (NONE_BY_RULE) and the held-out applications. weblate and mlflow are NEEDS_PROTOCOL_RULING.
+52. **Historical case `chancy-2895c4a`** (`historical/chancy_2895c4a/`): frozen before any run. Commit-pinned trees of the fix and its parent, a single-version case runner, and 34/34 sound runs. The buggy parent and 0.25.1 violate the maintainer-sourced property; the fix commit and 0.26.0 hold it, under identical forced schedules. Seeded exploration: 9/10 vs 0/10.
+53. **Prospective Muse plan** (`protocol/PROSPECTIVE_MUSE_PLAN.md`): predeclared, not executed, and not ready for confirmatory execution.
+
+**Meta usage in this increment:** none (0 requests, $0).

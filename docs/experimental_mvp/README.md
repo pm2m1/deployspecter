@@ -23,6 +23,10 @@ This prototype runs real Python application handlers concurrently on psycopg 3, 
 - **Muse:** in the NONBLIND pilot comparison it matched the deterministic sources and found nothing they missed (`results/real_app_pilot_chancy_compare_1`).
 - **Protocol:** Amendment 003's five decisions are PROPOSED only (`protocol/DECISIONS_003.md`). Confirmatory research stays blocked. The independent-evaluation handoff package is in `handoff/`; no reviewer has been engaged.
 - **Isolation:** hostile-grade isolation is BLOCKED (`results/isolation_runtime_scan_2`).
+- **Historical defect reproduced (NONBLIND development case):** `historical/chancy_2895c4a/RESULTS.md`.
+  - **The defect:** Chancy's fix commit `2895c4a` and its parent, built from pinned trees and each run on its own schema. The parent lets a late completion overwrite a cancellation (3/3 forced, 9/10 explored); the fix commit doesn't (0/13).
+  - **The oracle:** maintainer-sourced (their regression test), developer-encoded.
+- **Amendment 003:** review-ready draft v3 and a recommended-rulings package. Every decision is PROPOSED, and no reviewer or curator exists. See `protocol/DECISIONS_003_v2.md`.
 - **Simultaneous mixed-version execution: LIVE-TESTED (NONBLIND).** Chancy 0.25.1 and 0.26.0 workers ran at the same time, in two restricted containers, with one coordinator granting every statement. See `simultaneous/RESULTS.md` (`research_tools/mvp_demo.sh OUT simultaneous`).
   - The released code never ran a job twice in 10 seeded schedules; the claim-lock mutant did, in 2 of 10.
   - A cancel was lost in every cell except 0.26.0-cancel with a 0.26.0 worker. That is a mixed-deployment hazard outside the documented upgrade procedure, not a defect.
