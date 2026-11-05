@@ -144,7 +144,7 @@ def protected_state() -> str:
 
 
 def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path, image: tuple[str, str],
-              mode: str = "smoke") -> dict[str, Any]:
+              mode: str = "smoke", pgq_variant: str = "adapter") -> dict[str, Any]:
     before = protected_state()
     work = Path(tempfile.mkdtemp(prefix="ds_iso_"))
     nonce = secrets.token_hex(4)
@@ -182,7 +182,7 @@ def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path
                 "DS_PG_HOST=ds-mvp-pg", "DS_PG_PORT=5432", f"DS_PG_USER={target.user}",
                 f"DS_PG_PASSWORD={target.password}", f"DS_PG_DB={target.dbname}",
                 f"DS_SCHEDULE={json.dumps(schedule)}", f"DS_VARIANT={variant}",
-                f"DS_MODE={INSIDE_MODE[mode]}", f"DS_SCHEMA={schema}"]) + "\n")
+                f"DS_MODE={INSIDE_MODE[mode]}", f"DS_SCHEMA={schema}", f"DS_PGQ_VARIANT={pgq_variant}"]) + "\n")
             envfile.chmod(0o600)
             admin.execute(f"SELECT '{start}'")
             started = time.monotonic()
@@ -234,7 +234,9 @@ def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path
                          host_gateway_unreachable=probes["host_gateway_55441"].startswith("refused"),
                          internet_tcp_unreachable=probes["internet_tcp"].startswith("refused"),
                          internet_dns_unresolved=probes["internet_dns"].startswith("unresolved"),
-                         disposable_pg_reachable=bool(trace["records"]),
+                         # the server log saw the container's session(s): a gated record isn't required (a
+                         # negative control may have none)
+                         disposable_pg_reachable=bool(trace["records"]) or bool(corr.get("sessions")),
                          pids_limited=probes["nproc_limit"] == "64",
                          memory_limited=probes["memory_limit"] == str(512 * 1024 * 1024))
         result.update(probes=probes, isolation_checks=isolation, isolation_ok=all(isolation.values()),
@@ -292,10 +294,17 @@ def pgqueuer_state(admin: Any, schema: str) -> dict[str, Any]:
         cur = admin.execute(q)
         names = [d.name for d in cur.description]
         return [dict(zip(names, r, strict=True)) for r in cur.fetchall()]
-    return {"queue": rows(f"SELECT id, entrypoint, status::text AS status FROM {schema}.pgqueuer ORDER BY id"),
-            "log": rows(f"SELECT job_id, status::text AS status, entrypoint FROM {schema}.pgqueuer_log ORDER BY id"),
+    def exists(table: str) -> bool:
+        return admin.execute("SELECT to_regclass(%s) IS NOT NULL", (f"{schema}.{table}",)).fetchone()[0]
+    present = {t: exists(t) for t in ("pgqueuer", "pgqueuer_log", "ds_pgq_results")}
+    return {"tables": [{"table": t, "present": v} for t, v in present.items()],
+            "queue": rows(f"SELECT id, entrypoint, status::text AS status FROM {schema}.pgqueuer ORDER BY id")
+            if present["pgqueuer"] else [],
+            "log": rows(f"SELECT job_id, status::text AS status, entrypoint FROM {schema}.pgqueuer_log ORDER BY id")
+            if present["pgqueuer_log"] else [],
             "results": [{"job_id": r["job_id"], "payload": bytes(r["payload"]).decode()}
-                        for r in rows(f"SELECT job_id, payload FROM {schema}.ds_pgq_results ORDER BY job_id")]}
+                        for r in rows(f"SELECT job_id, payload FROM {schema}.ds_pgq_results ORDER BY job_id")]
+            if present["ds_pgq_results"] else []}
 
 
 def pgqueuer_check(final: dict[str, Any], raw: dict[str, Any]) -> list[str]:
@@ -303,6 +312,9 @@ def pgqueuer_check(final: dict[str, Any], raw: dict[str, Any]) -> list[str]:
     Q1 every enqueued payload was handled exactly once, under its own job id; Q2 no job for the entrypoint is left in
     the queue; Q3 each job's log has exactly one 'successful' and no 'exception' or 'failed'."""
     out = []
+    missing = [t["table"] for t in final["tables"] if not t["present"]]
+    if missing:
+        return [f"Q0 the lifecycle's tables don't all exist: {missing}"]
     enqueued = (raw.get("enqueue") or {}).get("job_ids", [])
     want = sorted(zip(enqueued, ["alpha", "beta"], strict=False))
     got = sorted((r["job_id"], r["payload"]) for r in final["results"])
@@ -326,6 +338,8 @@ def main() -> int:
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--chancy-sdist", type=Path, help="the downloaded chancy-0.26.0.tar.gz (sha256 is re-verified)")
     ap.add_argument("--pgqueuer-sdist", type=Path, help="the downloaded pgqueuer-1.6.0.tar.gz (sha256 re-verified)")
+    ap.add_argument("--public-factory", action="store_true",
+                    help="pgqueuer negative control: PGQueuer's own driver, which the server log must refute")
     a = ap.parse_args()
     secret = Path(os.environ.get("DS_MVP_SECRET_FILE", os.path.expanduser("~/.ds_mvp_pg_password")))
     target = hz.Target("127.0.0.1", int(os.environ.get("DS_MVP_PORT", "55441")), "ds_mvp", secret.read_text().strip())
@@ -338,6 +352,18 @@ def main() -> int:
                             pgqueuer_sdist=a.pgqueuer_sdist if a.mode == "pgqueuer" else None)
     finally:
         shutil.rmtree(build_dir, ignore_errors=True)
+    if a.mode == "pgqueuer" and a.public_factory:
+        r = run_smoke(target, variant="pgqueuer_public_factory", schedule=[], out=a.out, image=image,
+                      mode="pgqueuer", pgq_variant="public_factory")
+        c = r.get("corroboration", {})
+        report = {"kind": "EXPERIMENTAL negative control: PGQueuer 1.6.0's own Queries.from_psycopg_connection on a "
+                         "stepped connection; its driver's directly built AsyncRawCursor bypasses the gate",
+                  "image": {"tag": image[0], "id": image[1]}, "run": r}
+        (a.out / "report.json").write_text(json.dumps(report, indent=1, default=str))
+        refuted = c.get("ok") is False and any("doesn't record" in p for p in c.get("problems", []))
+        print("isolation", r.get("isolation_ok"), "refuted by the server log", refuted, "problems",
+              (c.get("problems") or [])[:3], "teardown", r["teardown"])
+        return 0 if (r.get("isolation_ok") and refuted and all(r["teardown"].values())) else 1
     if a.mode == "pgqueuer":
         r = run_smoke(target, variant="pgqueuer_lifecycle", schedule=[], out=a.out, image=image, mode="pgqueuer")
         report = {"kind": "EXPERIMENTAL: PGQueuer 1.6.0's queue lifecycle through a version-pinned Driver adapter on "

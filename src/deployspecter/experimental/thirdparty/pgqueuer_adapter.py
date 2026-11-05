@@ -87,6 +87,16 @@ async def install(conn: Any) -> dict[str, Any]:
     return {"installed": True}
 
 
+async def install_through_public_factory(conn: Any) -> dict[str, Any]:
+    """Negative control: PGQueuer's own ``Queries.from_psycopg_connection`` on the same stepped connection. Its
+    ``PsycopgDriver`` builds plain ``AsyncRawCursor`` objects, so the install query reaches the server ungated; the
+    host's server-log corroboration must refute this run."""
+    verify_pinned()
+    from pgqueuer.queries import Queries
+    await Queries.from_psycopg_connection(conn).install()
+    return {"installed": True}
+
+
 async def enqueue(conn: Any, *, payloads: list[str]) -> dict[str, Any]:
     from pgqueuer.queries import Queries
     queries = Queries(stepped_driver(conn))

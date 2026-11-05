@@ -169,6 +169,8 @@ async def pgqueuer_lifecycle() -> dict:
     connect = async_actor_connection_factory(info, lim, search_path=os.environ["DS_SCHEMA"], autocommit=True)
     phases = [("install", pq.install, {}), ("enqueue", pq.enqueue, {"payloads": ["alpha", "beta"]}),
               ("work", pq.work, {})]
+    if os.environ.get("DS_PGQ_VARIANT") == "public_factory":  # the negative control: PGQueuer's own driver
+        phases = [("install", pq.install_through_public_factory, {})]
     runs = []
     for name, fn, args in phases:
         actor = Actor(name, CaptureHandler("pgqueuer-1.6.0", name, fn, frozenset(), {}, serialize_tasks=True), args)
