@@ -48,4 +48,8 @@ if [ "$MODE" = thirdparty ] || [ "$MODE" = full ]; then
     --out "$OUT/chancy_notifications_refuted" || exit 12
   $PY research_tools/isolated/run_isolated.py chancy-runtime --concurrent-workers --chancy-sdist "$CHANCY" \
     --out "$OUT/chancy_concurrent_workers" || exit 13
+  $PY research_tools/isolated/run_isolated.py chancy-runtime --concurrent-workers --mutant no_skip_locked_claim \
+    --chancy-sdist "$CHANCY" --out "$OUT/chancy_mutant_no_skip_locked_claim" || exit 14
+  $PY research_tools/isolated/run_isolated.py chancy-mixed --chancy-old-sdist "$SDISTS/chancy-0.25.1.tar.gz" \
+    --chancy-sdist "$CHANCY" --out "$OUT/chancy_mixed_version_pilot" || exit 15
 fi

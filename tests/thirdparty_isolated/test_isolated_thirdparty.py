@@ -72,3 +72,21 @@ def test_an_interrupted_run_still_tears_down(tmp_path):
     proc.communicate(timeout=120)
     assert proc.returncode != 0
     assert leftovers() == ("", "")  # the runner's finally removed the container and the network
+
+
+def test_the_mixed_version_rolling_deploy_runs_soundly_and_the_oracle_holds(tmp_path):
+    import json
+    proc = runner(tmp_path, "chancy-mixed", "--chancy-old-sdist", str(SDISTS / "chancy-0.25.1.tar.gz"),
+                  "--chancy-sdist", str(SDISTS / "chancy-0.26.0.tar.gz"))
+    assert proc.returncode == 0, proc.stdout[-2000:] + proc.stderr[-2000:]
+    report = json.loads((tmp_path / "out" / "report.json").read_text())
+    assert len(report["phases"]) == 4 and report["oracle_violations"] == []
+
+
+def test_the_claim_lock_mutant_is_distinguished_by_the_oracle(tmp_path):
+    import json
+    proc = runner(tmp_path, "chancy-runtime", "--concurrent-workers", "--mutant", "no_skip_locked_claim",
+                  "--chancy-sdist", str(SDISTS / "chancy-0.26.0.tar.gz"))
+    assert proc.returncode == 0, proc.stdout[-2000:] + proc.stderr[-2000:]  # the run itself is sound
+    report = json.loads((tmp_path / "out" / "report.json").read_text())
+    assert any(v.startswith("K2") for v in report["run"]["oracle_violations"])  # ...and the mutant is caught
