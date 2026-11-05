@@ -400,6 +400,44 @@ class TestQuiesced:
         assert classes == ["cancelled_while_held"]  # never "cancelled" mid-statement
         assert c["ok"], c["problems"]
 
+    def test_a_transaction_open_when_the_hold_starts_still_commits_and_only_new_work_is_held(self, target):
+        """Regression (simultaneous_scenarios_1/compete): the hold used to catch a framework task's COMMIT, leaving
+        its session idle in a transaction until the server ended it. Only work starting on an idle connection may
+        be held."""
+        async def framework(conn):
+            inside = asyncio.Event()
+
+            async def busy():
+                while True:
+                    async with conn.transaction():
+                        await conn.execute("SELECT 1")
+                        inside.set()
+                        await asyncio.sleep(0.3)  # a Python pause inside the transaction
+
+            loop = asyncio.create_task(busy())
+            await inside.wait()
+            async with conn._ds_actor.run.quiesced(conn._ds_actor):
+                await asyncio.sleep(0.6)  # the COMMIT goes through; the next BEGIN waits
+                loop.cancel()
+                await asyncio.gather(loop, return_exceptions=True)
+            return "ok"
+
+        admin = target.admin()
+        try:
+            sync_app.reset(admin, SEED)
+            lim = st.Limits()
+            actor = st.Actor("q", st.Handler("test", "framework", framework, frozenset({"SELECT 1"}), {},
+                                             serialize_tasks=True), {})
+            connect = sa.async_actor_connection_factory(target.conninfo(), lim, search_path=A.SCHEMA)
+            run = sa.AsyncRun([actor], connect, hz.async_monitor(target), limits=lim, run_id="quiesced_txn")
+            trace, c = hz.corroborated(admin, run, user=target.user)
+        finally:
+            admin.close()
+        held = [op for op in trace.records if op.error_class == "cancelled_while_held"]
+        assert [op.kind for op in held] == ["transaction_enter"]
+        assert trace.records[-1].kind != "cleanup_rollback"
+        assert c["ok"], c["problems"]
+
     def test_without_the_hold_the_same_stop_cancels_mid_statement_and_the_server_log_refuses(self, target,
                                                                                               monkeypatch):
         """Adversarial control for the test above: ``quiesced`` disabled. The busy task is cancelled while its

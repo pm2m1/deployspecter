@@ -240,7 +240,10 @@ class AsyncRun:
         current = asyncio.current_task()
         if current is not actor.task and _ACTING_FOR.get() is not actor:
             raise Refused(f"{actor.name}'s connection was used from another task")
-        if actor.holding and not aborting and not _QUIESCE_EXEMPT.get():
+        if actor.holding and not aborting and not _QUIESCE_EXEMPT.get() and actor.conn is not None and \
+                actor.conn.info.transaction_status == TX.IDLE:
+            # only new work is held: a statement inside an open transaction, and that transaction's exit, go on, so
+            # a held task never leaves its session idle in a transaction (the server would end it)
             await self._held(actor, kind, text, params, current)
         if actor.handler.serialize_tasks and not aborting:
             assert actor.lock is not None
@@ -252,9 +255,10 @@ class AsyncRun:
 
     async def _held(self, actor: AsyncActor, kind: str, text: str, params: Any,
                     current: asyncio.Task[Any] | None) -> None:
-        """While the actor is quiesced, a pre-existing task's new operation waits here, before the actor's lock and
-        the scheduler, so it holds neither. Cancelled here (the framework stopping its tasks), it is recorded as
-        never executed. Transaction exits on a cancellation (``aborting``) are never held."""
+        """While the actor is quiesced, a pre-existing task's new operation (one that would start work on an idle
+        connection) waits here, before the actor's lock and the scheduler, so it holds neither. Cancelled here (the
+        framework stopping its tasks), it is recorded as never executed. Statements inside an open transaction, its
+        exit, and exits on a cancellation (``aborting``) are never held."""
         assert self.cv is not None
         async with self.cv:
             try:

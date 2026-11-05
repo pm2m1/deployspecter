@@ -94,17 +94,16 @@ def scenario(name: str) -> dict[str, Any]:
                               "B": [B_W, {"actor": "new_push", "fn": "push", "args": {"ns": [2, 3],
                                                                                       "queue": "q_shared"}}]},
                 "gates": _window(["old_push", "new_push"], both), "covers": [0, 1, 2, 3], "consumer_of": {}}
-    if name == "retry_handoff":  # fails under 0.25.1, retried by 0.26.0 (the gates force that order)
+    if name == "retry_handoff":  # fails under 0.25.1; its first attempt is 0.25.1's (one short gate); the retry
+        # goes to whichever worker claims it first (either outcome is valid under P8)
         return {"processes": {"A": [A_W], "B": [B_W, {"actor": "new_push", "fn": "push", "args": {
-                    "ns": [0], "queue": "q_shared", "max_attempts": 3, "flaky_in": OLD}}]},
+                    "ns": [0], "queue": "q_shared", "max_attempts": 2, "flaky_in": OLD}}]},
                 "gates": _window(["new_push"], both) + [
                     {"actor": "new_worker", "match": "SKIP LOCKED",
                      "from": [{"actor": "new_push", "marker": "push", "count": 1}],
-                     "until": [{"actor": "old_worker", "marker": "claim", "count": 1}]},
-                    {"actor": "old_worker", "match": "SKIP LOCKED",
-                     "from": [{"actor": "old_worker", "marker": "claim", "count": 1}],
-                     "until": [{"actor": "new_worker", "marker": "claim", "count": 1}]}],
-                "covers": [0], "retry": [0], "consumer_of": {}}
+                     "until": [{"actor": "old_worker", "marker": "claim", "count": 1}]}],
+                "covers": [0], "or_count": {"key": "handled", "n": 0, "at_least": 2}, "retry": [0],
+                "consumer_of": {}}
     if name.startswith("cancel_"):  # cancel_<canceller>_<worker>: old|new each; the cancel lands between the
         _c, canceller, worker = name.split("_")  # worker's claim and its completion flush (gates)
         cv, wv = {"old": OLD, "new": NEW}[canceller], {"old": OLD, "new": NEW}[worker]
@@ -198,7 +197,9 @@ def simultaneous(target: hz.Target, images: dict[str, Any], spec: dict[str, Any]
                 "DS_CO_SPEC=" + json.dumps({"processes": sorted(spec["processes"]), "policy": policy,
                                             "gates": spec["gates"], "deadline_s": 170, "epoch_timeout_s": 60,
                                             "stall_s": 30,
-                                            "stop": {"key": "succeeded", "covers": spec["covers"], "after_s": 45}})]}
+                                            "stop": {"key": "succeeded", "covers": spec["covers"], "after_s": 45,
+                                                     **({"or_count": spec["or_count"]} if "or_count" in spec
+                                                        else {})}})]}
             for p, actors in spec["processes"].items():
                 envs[p] = ["DS_PG_HOST=ds-mvp-pg", "DS_PG_PORT=5432", f"DS_PG_USER={target.user}",
                            f"DS_PG_PASSWORD={target.password}", f"DS_PG_DB={target.dbname}",

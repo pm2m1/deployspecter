@@ -334,8 +334,9 @@ class Coordinator:
     ``{"actor": Y, "marker": M, "count": n}``. While every ``from`` cond holds and some ``until`` cond doesn't, X's
     pending statement (if it matches ``match``) isn't enabled. Gates order statements; they never write anything.
 
-    ``stop``: ``{"key": K, "covers": [...], "after_s": T}``. The ``stop`` signal goes to every process once the
-    union of the processes' ``report[K]`` lists covers ``covers``, or ``T`` seconds after the first grant.
+    ``stop``: ``{"key": K, "covers": [...], "or_count": {"key": K2, "n": x, "at_least": m}, "after_s": T}``. The
+    ``stop`` signal goes to every process once the union of the processes' ``report[K]`` lists covers ``covers`` (or
+    ``x`` appears ``m`` times across their ``report[K2]`` lists), or ``T`` seconds after the first grant.
     """
 
     def __init__(self, *, processes: Sequence[str], token: str, policy: dict[str, Any] | None = None,
@@ -490,10 +491,13 @@ class Coordinator:
             if self.stop and not stopped:
                 covers = set(self.stop.get("covers", []))
                 got = {x for r in reports.values() for x in r.get(self.stop["key"], [])}
+                count = self.stop.get("or_count")  # {"key": K, "n": x, "at_least": m}: x seen m times in all
+                counted = bool(count) and sum(list(r.get(count["key"], [])).count(count["n"])
+                                              for r in reports.values()) >= int(count["at_least"])
                 late = first_grant_at is not None and time.monotonic() - first_grant_at > self.stop.get("after_s", 1e9)
-                if covers <= got or late:
+                if covers <= got or counted or late:
                     stopped = True
-                    why = "covered" if covers <= got else "after_s"
+                    why = "covered" if (covers <= got or counted) else "after_s"
                     self.events.append({"event": "stop", "why": why, "at_grant": len(self.decisions),
                                         "t_ms": self._ms()})
                     await self._broadcast({"t": "signal", "name": "stop"}, live)
