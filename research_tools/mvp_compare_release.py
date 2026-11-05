@@ -115,7 +115,7 @@ def measure(target: hz.Target, source: str, items: list[tuple[str, Any, list[dic
             "outcomes": dict(outcomes), "executed": executed, "handlers_reached": sorted(handlers),
             "schedules_explored": schedules,
             "oracle_workloads_violating_per_build": kills,
-            "hypotheses": dict(hyp_tally), "hypothesis_workloads_distinguishing_per_build": hyp_kills,
+            "hypotheses": dict(hyp_tally), "accepted_hypotheses_violated_per_build": hyp_kills,
             "workloads": rows, "seconds": round(time.monotonic() - started, 1)}
 
 
@@ -171,7 +171,7 @@ def main() -> int:
     for r in report["sources"]:
         print(r["source"], {x: r[x] for x in ("documents", "outcomes", "executed", "handlers_reached",
                                               "schedules_explored", "oracle_workloads_violating_per_build",
-                                              "hypotheses", "hypothesis_workloads_distinguishing_per_build",
+                                              "hypotheses", "accepted_hypotheses_violated_per_build",
                                               "seconds")}, "rejected", len(r["rejected_before_chain"]))
     print("muse", cost)
     return 0

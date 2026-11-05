@@ -1,0 +1,573 @@
+[
+ [
+  "muse1#0",
+  {
+   "invariant_hypotheses": [
+    "reserved equals sum of reservation qty per event",
+    "reserved_v2 is null or equals reserved",
+    "0 <= reserved <= capacity"
+   ],
+   "invocations": [
+    {
+     "actor": "ruth",
+     "app_version": "v1",
+     "args": [
+      {
+       "int_value": 1,
+       "kind": "int",
+       "name": "event_id",
+       "str_value": null
+      },
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "bob"
+      },
+      {
+       "int_value": 5,
+       "kind": "int",
+       "name": "qty",
+       "str_value": null
+      }
+     ],
+     "handler": "reserve"
+    },
+    {
+     "actor": "backfill",
+     "app_version": "job",
+     "args": [
+      {
+       "int_value": 5,
+       "kind": "int",
+       "name": "batch",
+       "str_value": null
+      }
+     ],
+     "handler": "backfill_v2"
+    }
+   ],
+   "migration_phase": "expand",
+   "rationale": "v1 reserve does UPDATE reserved only, leaving reserved_v2 NULL via trigger no-op; concurrent backfill SELECTs stale reserved then UPDATEs reserved_v2 to stale value, leaving reserved != reserved_v2 and breaking dual-write invariant",
+   "schema_version": "ds-mvp-workload/1",
+   "seed_events": [
+    {
+     "capacity": 100,
+     "id": 1,
+     "reserved": 10,
+     "reserved_v2": null
+    }
+   ],
+   "seed_reservations": [
+    {
+     "event_id": 1,
+     "holder": "alice",
+     "id": 1,
+     "qty": 10
+    }
+   ]
+  }
+ ],
+ [
+  "muse1#1",
+  {
+   "invariant_hypotheses": [
+    "reserved equals sum of reservation qty per event",
+    "reserved_v2 is null or equals reserved",
+    "0 <= reserved <= capacity"
+   ],
+   "invocations": [
+    {
+     "actor": "sam",
+     "app_version": "v1",
+     "args": [
+      {
+       "int_value": 2,
+       "kind": "int",
+       "name": "reservation_id",
+       "str_value": null
+      }
+     ],
+     "handler": "release"
+    },
+    {
+     "actor": "backfill",
+     "app_version": "job",
+     "args": [
+      {
+       "int_value": 1,
+       "kind": "int",
+       "name": "batch",
+       "str_value": null
+      }
+     ],
+     "handler": "backfill_v2"
+    }
+   ],
+   "migration_phase": "expand",
+   "rationale": "v1 release decrements reserved only while reserved_v2 stays NULL; backfill that read pre-release reserved then writes stale reserved_v2 IS NULL copy creates permanent divergence reserved != reserved_v2 and violates sum invariant",
+   "schema_version": "ds-mvp-workload/1",
+   "seed_events": [
+    {
+     "capacity": 50,
+     "id": 2,
+     "reserved": 20,
+     "reserved_v2": null
+    }
+   ],
+   "seed_reservations": [
+    {
+     "event_id": 2,
+     "holder": "carol",
+     "id": 2,
+     "qty": 20
+    }
+   ]
+  }
+ ],
+ [
+  "muse1#2",
+  {
+   "invariant_hypotheses": [
+    "reserved equals sum of reservation qty per event",
+    "reserved_v2 is null or equals reserved",
+    "reserved <= capacity no oversell"
+   ],
+   "invocations": [
+    {
+     "actor": "tina",
+     "app_version": "v1",
+     "args": [
+      {
+       "int_value": 3,
+       "kind": "int",
+       "name": "event_id",
+       "str_value": null
+      },
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "dave"
+      },
+      {
+       "int_value": 6,
+       "kind": "int",
+       "name": "qty",
+       "str_value": null
+      }
+     ],
+     "handler": "reserve"
+    },
+    {
+     "actor": "uma",
+     "app_version": "v2",
+     "args": [
+      {
+       "int_value": 3,
+       "kind": "int",
+       "name": "event_id",
+       "str_value": null
+      },
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "erin"
+      },
+      {
+       "int_value": 6,
+       "kind": "int",
+       "name": "qty",
+       "str_value": null
+      }
+     ],
+     "handler": "reserve"
+    },
+    {
+     "actor": "backfill",
+     "app_version": "job",
+     "args": [
+      {
+       "int_value": 10,
+       "kind": "int",
+       "name": "batch",
+       "str_value": null
+      }
+     ],
+     "handler": "backfill_v2"
+    }
+   ],
+   "migration_phase": "expand",
+   "rationale": "mixed v1+v2 reserves on capacity-constrained NULL-v2 event plus backfill: tests capacity check serialization across versions and whether backfill stale copy plus v1 non-syncing write leaves reserved_v2 diverged while oversell 6+6>10 may slip if checks use different columns",
+   "schema_version": "ds-mvp-workload/1",
+   "seed_events": [
+    {
+     "capacity": 10,
+     "id": 3,
+     "reserved": 0,
+     "reserved_v2": null
+    }
+   ],
+   "seed_reservations": []
+  }
+ ],
+ [
+  "muse1#3",
+  {
+   "invariant_hypotheses": [
+    "reserved equals sum of reservation qty per event",
+    "reserved_v2 is null or equals reserved",
+    "0 <= reserved <= capacity"
+   ],
+   "invocations": [
+    {
+     "actor": "victor",
+     "app_version": "v1",
+     "args": [
+      {
+       "int_value": 4,
+       "kind": "int",
+       "name": "reservation_id",
+       "str_value": null
+      }
+     ],
+     "handler": "release"
+    },
+    {
+     "actor": "wendy",
+     "app_version": "v2",
+     "args": [
+      {
+       "int_value": 4,
+       "kind": "int",
+       "name": "reservation_id",
+       "str_value": null
+      }
+     ],
+     "handler": "release"
+    }
+   ],
+   "migration_phase": "expand",
+   "rationale": "concurrent v1 and v2 release of same reservation id tests double-decrement: DELETE plus SELECT FOR UPDATE plus UPDATE on events with different column sets and trigger sync path can interleave to decrement reserved twice while deleting once, breaking reserved==sum and reserved==reserved_v2",
+   "schema_version": "ds-mvp-workload/1",
+   "seed_events": [
+    {
+     "capacity": 100,
+     "id": 4,
+     "reserved": 30,
+     "reserved_v2": 30
+    }
+   ],
+   "seed_reservations": [
+    {
+     "event_id": 4,
+     "holder": "frank",
+     "id": 4,
+     "qty": 10
+    },
+    {
+     "event_id": 4,
+     "holder": "grace",
+     "id": 5,
+     "qty": 20
+    }
+   ]
+  }
+ ],
+ [
+  "muse2#0",
+  {
+   "invariant_hypotheses": [
+    "reserved equals sum of reservations qty for the event",
+    "reserved_v2 is null or equals reserved",
+    "reserved <= capacity"
+   ],
+   "invocations": [
+    {
+     "actor": "backfill",
+     "app_version": "job",
+     "args": [
+      {
+       "int_value": 10,
+       "kind": "int",
+       "name": "batch",
+       "str_value": null
+      }
+     ],
+     "handler": "backfill_v2"
+    },
+    {
+     "actor": "alice",
+     "app_version": "v1",
+     "args": [
+      {
+       "int_value": 1,
+       "kind": "int",
+       "name": "event_id",
+       "str_value": null
+      },
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "alice"
+      },
+      {
+       "int_value": 2,
+       "kind": "int",
+       "name": "qty",
+       "str_value": null
+      }
+     ],
+     "handler": "reserve"
+    }
+   ],
+   "migration_phase": "expand",
+   "rationale": "v1 reserve only writes reserved and relies on trigger to sync reserved_v2; backfill SELECTs reserved without lock then conditionally writes reserved_v2. Concurrent v1 increment between backfill read and write leaves trigger with OLD reserved_v2 NULL so no sync, then backfill installs stale value causing reserved != reserved_v2 permanently.",
+   "schema_version": "ds-mvp-workload/1",
+   "seed_events": [
+    {
+     "capacity": 10,
+     "id": 1,
+     "reserved": 5,
+     "reserved_v2": null
+    }
+   ],
+   "seed_reservations": [
+    {
+     "event_id": 1,
+     "holder": "seed_a",
+     "id": 101,
+     "qty": 2
+    },
+    {
+     "event_id": 1,
+     "holder": "seed_b",
+     "id": 102,
+     "qty": 3
+    }
+   ]
+  }
+ ],
+ [
+  "muse2#1",
+  {
+   "invariant_hypotheses": [
+    "reserved equals sum of reservations qty for the event",
+    "reserved_v2 is null or equals reserved",
+    "reserved <= capacity and reserved >= 0"
+   ],
+   "invocations": [
+    {
+     "actor": "backfill",
+     "app_version": "job",
+     "args": [
+      {
+       "int_value": 10,
+       "kind": "int",
+       "name": "batch",
+       "str_value": null
+      }
+     ],
+     "handler": "backfill_v2"
+    },
+    {
+     "actor": "bob",
+     "app_version": "v1",
+     "args": [
+      {
+       "int_value": 201,
+       "kind": "int",
+       "name": "reservation_id",
+       "str_value": null
+      }
+     ],
+     "handler": "release"
+    }
+   ],
+   "migration_phase": "expand",
+   "rationale": "v1 release decrements reserved while trigger only syncs if reserved_v2 already non-null. If release commits after backfill read but before backfill write, backfill overwrites with stale larger value. Final reserved reflects delete but reserved_v2 does not, exposing lost decrement and divergence between dual counters.",
+   "schema_version": "ds-mvp-workload/1",
+   "seed_events": [
+    {
+     "capacity": 10,
+     "id": 2,
+     "reserved": 6,
+     "reserved_v2": null
+    }
+   ],
+   "seed_reservations": [
+    {
+     "event_id": 2,
+     "holder": "seed_a",
+     "id": 201,
+     "qty": 3
+    },
+    {
+     "event_id": 2,
+     "holder": "seed_b",
+     "id": 202,
+     "qty": 3
+    }
+   ]
+  }
+ ],
+ [
+  "muse2#2",
+  {
+   "invariant_hypotheses": [
+    "reserved equals sum of reservations qty for the event",
+    "reserved_v2 equals reserved",
+    "reserved >= 0 and second release must not double-decrement"
+   ],
+   "invocations": [
+    {
+     "actor": "bob",
+     "app_version": "v1",
+     "args": [
+      {
+       "int_value": 301,
+       "kind": "int",
+       "name": "reservation_id",
+       "str_value": null
+      }
+     ],
+     "handler": "release"
+    },
+    {
+     "actor": "carol",
+     "app_version": "v2",
+     "args": [
+      {
+       "int_value": 301,
+       "kind": "int",
+       "name": "reservation_id",
+       "str_value": null
+      }
+     ],
+     "handler": "release"
+    }
+   ],
+   "migration_phase": "expand",
+   "rationale": "Two mixed-version releases of same reservation id race on DELETE plus read-modify-write of counters. v1 path updates reserved and relies on trigger for reserved_v2 while v2 path updates both explicitly. If neither checks DELETE rowcount, both decrement counters causing double-decrement, negative drift, and reserved != sum qty.",
+   "schema_version": "ds-mvp-workload/1",
+   "seed_events": [
+    {
+     "capacity": 10,
+     "id": 3,
+     "reserved": 6,
+     "reserved_v2": 6
+    }
+   ],
+   "seed_reservations": [
+    {
+     "event_id": 3,
+     "holder": "seed_a",
+     "id": 301,
+     "qty": 2
+    },
+    {
+     "event_id": 3,
+     "holder": "seed_b",
+     "id": 302,
+     "qty": 4
+    }
+   ]
+  }
+ ],
+ [
+  "muse2#3",
+  {
+   "invariant_hypotheses": [
+    "reserved <= capacity (no overbooking)",
+    "reserved equals sum of reservations qty",
+    "reserved_v2 is null or equals reserved"
+   ],
+   "invocations": [
+    {
+     "actor": "dave",
+     "app_version": "v1",
+     "args": [
+      {
+       "int_value": 4,
+       "kind": "int",
+       "name": "event_id",
+       "str_value": null
+      },
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "dave"
+      },
+      {
+       "int_value": 1,
+       "kind": "int",
+       "name": "qty",
+       "str_value": null
+      }
+     ],
+     "handler": "reserve"
+    },
+    {
+     "actor": "erin",
+     "app_version": "v2",
+     "args": [
+      {
+       "int_value": 4,
+       "kind": "int",
+       "name": "event_id",
+       "str_value": null
+      },
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "erin"
+      },
+      {
+       "int_value": 1,
+       "kind": "int",
+       "name": "qty",
+       "str_value": null
+      }
+     ],
+     "handler": "reserve"
+    },
+    {
+     "actor": "backfill",
+     "app_version": "job",
+     "args": [
+      {
+       "int_value": 10,
+       "kind": "int",
+       "name": "batch",
+       "str_value": null
+      }
+     ],
+     "handler": "backfill_v2"
+    }
+   ],
+   "migration_phase": "expand",
+   "rationale": "Event near capacity with reserved_v2 NULL tests mixed capacity checks plus backfill. v1 checks reserved while v2 may check reserved_v2 which is NULL and treat NULL as 0/allow, so concurrent v1+v2 reserves that together exceed capacity can both succeed. Backfill interleaving can also install stale counter making checks diverge and hide overbooking.",
+   "schema_version": "ds-mvp-workload/1",
+   "seed_events": [
+    {
+     "capacity": 5,
+     "id": 4,
+     "reserved": 4,
+     "reserved_v2": null
+    }
+   ],
+   "seed_reservations": [
+    {
+     "event_id": 4,
+     "holder": "seed_a",
+     "id": 401,
+     "qty": 4
+    }
+   ]
+  }
+ ]
+]
