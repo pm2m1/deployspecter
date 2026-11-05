@@ -58,7 +58,8 @@ PAYLOAD = ["deployspecter/__init__.py", "deployspecter/experimental/__init__.py"
            "deployspecter/experimental/apps/reservations_mixed.py",
            "deployspecter/experimental/apps/reservations_mixed_async.py",
            "deployspecter/experimental/thirdparty/__init__.py",
-           "deployspecter/experimental/thirdparty/pgqueuer_adapter.py"]
+           "deployspecter/experimental/thirdparty/pgqueuer_adapter.py",
+           "deployspecter/experimental/thirdparty/chancy_adapter.py"]
 LOCKED = ["psycopg", "psycopg-binary", "typing-extensions"]
 # The one third-party candidate whose migration path takes a caller-supplied connection (CORPUS_SHORTLIST.json v2).
 CHANCY_SDIST = "chancy-0.26.0.tar.gz"
@@ -70,8 +71,11 @@ CAPTURE_SCHEMA = "chancy_capture"
 PGQUEUER_SDIST = "pgqueuer-1.6.0.tar.gz"
 PGQUEUER_SDIST_SHA256 = "ed1306404f96e25c84c951f434e8b06b091e04e0177af0d5441505a7944f156e"
 PGQUEUER_REQUIREMENTS = Path(__file__).with_name("requirements.pgqueuer.txt")
-SCHEMAS = {"smoke": CAPTURE_SCHEMA, "chancy": CAPTURE_SCHEMA, "pgqueuer": "pgq_capture"}
-INSIDE_MODE = {"smoke": "smoke", "chancy": "chancy_migrate", "pgqueuer": "pgqueuer_lifecycle"}
+SCHEMAS = {"smoke": CAPTURE_SCHEMA, "chancy": CAPTURE_SCHEMA, "pgqueuer": "pgq_capture",
+           "chancy-runtime": CAPTURE_SCHEMA}
+INSIDE_MODE = {"smoke": "smoke", "chancy": "chancy_migrate", "pgqueuer": "pgqueuer_lifecycle",
+               "chancy-runtime": "chancy_runtime"}
+CAPTURE_MODES = ("chancy", "pgqueuer", "chancy-runtime")
 EXPECTED_PROBES = {"uid": 65534, "root_writable": False, "app_writable": False, "tmp_writable": True,
                    "ssh_dir_present": False, "secret_like_env": []}
 
@@ -144,7 +148,7 @@ def protected_state() -> str:
 
 
 def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path, image: tuple[str, str],
-              mode: str = "smoke", pgq_variant: str = "adapter") -> dict[str, Any]:
+              mode: str = "smoke", pgq_variant: str = "adapter", chancy_variant: str = "pool_only") -> dict[str, Any]:
     before = protected_state()
     work = Path(tempfile.mkdtemp(prefix="ds_iso_"))
     nonce = secrets.token_hex(4)
@@ -161,7 +165,7 @@ def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path
         admin = target.admin()
         try:
             schema = SCHEMAS[mode]
-            if mode in ("chancy", "pgqueuer"):
+            if mode in CAPTURE_MODES:
                 admin.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")
                 admin.execute(f"CREATE SCHEMA {schema}")
                 initial = {"catalog": catalog(admin, schema)}
@@ -182,13 +186,14 @@ def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path
                 "DS_PG_HOST=ds-mvp-pg", "DS_PG_PORT=5432", f"DS_PG_USER={target.user}",
                 f"DS_PG_PASSWORD={target.password}", f"DS_PG_DB={target.dbname}",
                 f"DS_SCHEDULE={json.dumps(schedule)}", f"DS_VARIANT={variant}",
-                f"DS_MODE={INSIDE_MODE[mode]}", f"DS_SCHEMA={schema}", f"DS_PGQ_VARIANT={pgq_variant}"]) + "\n")
+                f"DS_MODE={INSIDE_MODE[mode]}", f"DS_SCHEMA={schema}", f"DS_PGQ_VARIANT={pgq_variant}",
+                f"DS_CHANCY_VARIANT={chancy_variant}"]) + "\n")
             envfile.chmod(0o600)
             admin.execute(f"SELECT '{start}'")
             started = time.monotonic()
             try:
                 proc = docker("run", "--rm", "--name", name, "--network", net, *RUNTIME_FLAGS, "--env-file",
-                              str(envfile), tag, "/app/smoke_inside.py", timeout=120, check=False)
+                              str(envfile), tag, "/app/smoke_inside.py", timeout=240, check=False)
             except subprocess.TimeoutExpired:
                 docker("kill", name, check=False)
                 raise
@@ -221,9 +226,11 @@ def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path
                 final = {"catalog": catalog(admin, schema)}
             elif mode == "pgqueuer":
                 final = {"catalog": catalog(admin, schema), **pgqueuer_state(admin, schema)}
+            elif mode == "chancy-runtime":
+                final = {"catalog": catalog(admin, schema), **chancy_state(admin, schema)}
             else:
                 final = oracle.read_state(admin)
-            if mode in ("chancy", "pgqueuer"):
+            if mode in CAPTURE_MODES:
                 admin.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")
         finally:
             admin.close()
@@ -242,7 +249,8 @@ def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path
         result.update(probes=probes, isolation_checks=isolation, isolation_ok=all(isolation.values()),
                       initial_state_digest=digest, final_state=final, final_state_digest=oracle.digest(final),
                       oracle_violations=(None if mode == "chancy" else pgqueuer_check(final, inside["raw_results"])
-                                         if mode == "pgqueuer" else oracle.check(final, backfill_done=done)),
+                                         if mode == "pgqueuer" else chancy_check(final, inside["raw_results"])
+                                         if mode == "chancy-runtime" else oracle.check(final, backfill_done=done)),
                       pinned_sources=inside.get("pinned_sources"),
                       corroboration=corr,
                       trace_sha256=hashlib.sha256(json.dumps(trace, sort_keys=True, default=str).encode()).hexdigest(),
@@ -307,6 +315,32 @@ def pgqueuer_state(admin: Any, schema: str) -> dict[str, Any]:
             if present["ds_pgq_results"] else []}
 
 
+def chancy_state(admin: Any, schema: str) -> dict[str, Any]:
+    if not admin.execute("SELECT to_regclass(%s) IS NOT NULL", (f"{schema}.chancy_jobs",)).fetchone()[0]:
+        return {"jobs": []}
+    cur = admin.execute(f"SELECT id::text AS id, queue, func, state, attempts, kwargs::text AS kwargs, "
+                        f"completed_at IS NOT NULL AS completed FROM {schema}.chancy_jobs ORDER BY created_at")
+    names = [d.name for d in cur.description]
+    return {"jobs": [dict(zip(names, r, strict=True)) for r in cur.fetchall()]}
+
+
+def chancy_check(final: dict[str, Any], raw: dict[str, Any]) -> list[str]:
+    """Independent of the adapter and of Chancy's code, from its documented job states and the workload:
+    C1 exactly one job exists, the one pushed, on the declared queue; C2 it reached 'succeeded' with a completion time
+    after one attempt; C3 the trusted handler ran exactly once, with the pushed argument."""
+    out = []
+    result = raw.get("chancy") or {}
+    jobs = final["jobs"]
+    if len(jobs) != 1 or jobs[0]["id"] != result.get("job_id") or jobs[0]["queue"] != "ds_q":
+        out.append(f"C1 jobs {[(j['id'], j['queue']) for j in jobs]}, pushed {result.get('job_id')}")
+    elif jobs[0]["state"] != "succeeded" or not jobs[0]["completed"] or jobs[0]["attempts"] != 1:
+        out.append(f"C2 job state {jobs[0]['state']}, completed {jobs[0]['completed']}, "
+                   f"attempts {jobs[0]['attempts']}")
+    if result.get("handled") != [21]:
+        out.append(f"C3 handler ran with {result.get('handled')}, expected [21] once")
+    return out
+
+
 def pgqueuer_check(final: dict[str, Any], raw: dict[str, Any]) -> list[str]:
     """Independent of the adapter and of PGQueuer's code, from its documented lifecycle and the workload:
     Q1 every enqueued payload was handled exactly once, under its own job id; Q2 no job for the entrypoint is left in
@@ -334,12 +368,14 @@ def pgqueuer_check(final: dict[str, Any], raw: dict[str, Any]) -> list[str]:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("mode", choices=["smoke", "chancy", "pgqueuer"])
+    ap.add_argument("mode", choices=["smoke", "chancy", "pgqueuer", "chancy-runtime"])
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--chancy-sdist", type=Path, help="the downloaded chancy-0.26.0.tar.gz (sha256 is re-verified)")
     ap.add_argument("--pgqueuer-sdist", type=Path, help="the downloaded pgqueuer-1.6.0.tar.gz (sha256 re-verified)")
     ap.add_argument("--public-factory", action="store_true",
                     help="pgqueuer negative control: PGQueuer's own driver, which the server log must refute")
+    ap.add_argument("--with-notifications", action="store_true",
+                    help="chancy-runtime negative control: the worker's own LISTEN connection must be refuted")
     a = ap.parse_args()
     secret = Path(os.environ.get("DS_MVP_SECRET_FILE", os.path.expanduser("~/.ds_mvp_pg_password")))
     target = hz.Target("127.0.0.1", int(os.environ.get("DS_MVP_PORT", "55441")), "ds_mvp", secret.read_text().strip())
@@ -348,10 +384,43 @@ def main() -> int:
     race = ["j", "j", "a", "a", "a", "a", "a", "j", "j"]
     build_dir = Path(tempfile.mkdtemp(prefix="ds_iso_build_"))
     try:
-        image = build_image(build_dir, chancy_sdist=a.chancy_sdist if a.mode == "chancy" else None,
+        image = build_image(build_dir, chancy_sdist=a.chancy_sdist if a.mode in ("chancy", "chancy-runtime") else None,
                             pgqueuer_sdist=a.pgqueuer_sdist if a.mode == "pgqueuer" else None)
     finally:
         shutil.rmtree(build_dir, ignore_errors=True)
+    if a.mode == "chancy-runtime" and a.with_notifications:
+        r = run_smoke(target, variant="chancy_runtime_notifications", schedule=[], out=a.out, image=image,
+                      mode="chancy-runtime", chancy_variant="notifications")
+        c = r.get("corroboration", {})
+        report = {"kind": "EXPERIMENTAL negative control: Chancy 0.26.0 with notifications on; its worker opens its "
+                         "own LISTEN connection outside the stepped pool",
+                  "image": {"tag": image[0], "id": image[1]}, "run": r}
+        (a.out / "report.json").write_text(json.dumps(report, indent=1, default=str))
+        refuted = c.get("ok") is False and any("unexplained session" in p for p in c.get("problems", []))
+        print("isolation", r.get("isolation_ok"), "refuted by the server log", refuted, "problems",
+              (c.get("problems") or [])[:3], "teardown", r["teardown"])
+        return 0 if (r.get("isolation_ok") and refuted and all(r["teardown"].values())) else 1
+    if a.mode == "chancy-runtime":
+        r = run_smoke(target, variant="chancy_runtime", schedule=[], out=a.out, image=image, mode="chancy-runtime")
+        report = {"kind": "EXPERIMENTAL: Chancy 0.26.0's job runtime through a version-pinned one-connection pool "
+                         "adapter on the async stepping engine, in the isolated runner; a compatibility test, not a "
+                         "blind evaluation",
+                  "library": {"name": "chancy", "version": "0.26.0", "sdist_sha256": CHANCY_SDIST_SHA256,
+                              "tag_commit": "73fd582c0e5d2f8655316e09f189ba0c57d76ca7",
+                              "adapter": "deployspecter.experimental.thirdparty.chancy_adapter",
+                              "options": {"notifications": False, "no_default_plugins": True,
+                                          "executor": "AsyncExecutor", "pool": "one stepped connection"}},
+                  "image": {"tag": image[0], "id": image[1]}, "run": r}
+        (a.out / "report.json").write_text(json.dumps(report, indent=1, default=str))
+        c = r.get("corroboration", {})
+        print("isolation", r.get("isolation_ok"), "corroborated", c.get("ok"), "statements", c.get("matched"),
+              "values", c.get("params_compared"), "unchecked", c.get("params_unchecked"), "oracle",
+              r.get("oracle_violations"), "result", {k: v for k, v in (r.get("raw_results") or {}).get(
+                  "chancy", {}).items() if k != "pinned_sources"} if r.get("raw_results") else None,
+              "teardown", r["teardown"], "problems", (c.get("problems") or [])[:5],
+              "stderr", (r.get("stderr_tail") or "")[-600:])
+        return 0 if (r.get("isolation_ok") and c.get("ok") and r.get("oracle_violations") == []
+                     and all(r["teardown"].values())) else 1
     if a.mode == "pgqueuer" and a.public_factory:
         r = run_smoke(target, variant="pgqueuer_public_factory", schedule=[], out=a.out, image=image,
                       mode="pgqueuer", pgq_variant="public_factory")

@@ -183,12 +183,55 @@ async def pgqueuer_lifecycle() -> dict:
     return {"pinned_sources": pinned, "runs": runs}
 
 
+async def chancy_runtime() -> dict:
+    """Chancy 0.26.0's job runtime through the version-pinned adapter, as one stepped actor: migrate, declare a
+    queue, push a job, run a worker until it completes the job, stop it, close the pool. Capture mode: the SQL is
+    Chancy's own, so there is no allowlist; the host refuses the result unless the server log explains every row."""
+    import psycopg
+
+    from deployspecter.experimental.stepping import Actor, Handler, Limits
+    from deployspecter.experimental.stepping_async import AsyncRun, async_actor_connection_factory
+    from deployspecter.experimental.thirdparty import chancy_adapter as ca
+
+    class CaptureHandler(Handler):
+        def allows(self, text: str) -> bool:
+            return True
+
+    info = {"host": os.environ["DS_PG_HOST"], "port": int(os.environ["DS_PG_PORT"]),
+            "user": os.environ["DS_PG_USER"], "password": os.environ["DS_PG_PASSWORD"],
+            "dbname": os.environ["DS_PG_DB"]}
+
+    async def monitor() -> psycopg.AsyncConnection:
+        conn = await psycopg.AsyncConnection.connect(**info, autocommit=True, prepare_threshold=None,
+                                                     application_name="ds_mvp_admin")
+        cur = await conn.execute("SELECT current_setting('cluster_name'), current_database()")
+        if await cur.fetchone() != ("ds_mvp_disposable", "ds_mvp"):
+            await conn.close()
+            raise SystemExit("not the disposable database")
+        return conn
+
+    lim = Limits(statement_ms=20000, run_s=150, python_step_s=90)
+    connect = async_actor_connection_factory(info, lim, search_path=os.environ["DS_SCHEMA"], autocommit=False)
+    args: dict = {}
+    if os.environ.get("DS_CHANCY_VARIANT") == "notifications":  # negative control: Chancy's own LISTEN connection
+        args = {"notifications": True,
+                "dsn": f"postgresql://{info['user']}:{info['password']}@{info['host']}:{info['port']}/{info['dbname']}"
+                       "?application_name=ds_mvp_actor"}
+    actor = Actor("chancy", CaptureHandler("chancy-0.26.0", "runtime", ca.lifecycle, frozenset(), {},
+                                           serialize_tasks=True), args)
+    r = AsyncRun([actor], connect, monitor, limits=lim, run_id="isolated_chancy_runtime")
+    trace = await r.execute()
+    return {"monitor_pid": r.monitor_pid, "trace": trace.to_dict(), "raw_results": trace.raw_results}
+
+
 def main() -> int:
     out: dict = {"probes": probe()}
     if os.environ.get("DS_MODE") == "chancy_migrate":
         out.update(asyncio.run(chancy_migrate()))
     elif os.environ.get("DS_MODE") == "pgqueuer_lifecycle":
         out.update(asyncio.run(pgqueuer_lifecycle()))
+    elif os.environ.get("DS_MODE") == "chancy_runtime":
+        out.update(asyncio.run(chancy_runtime()))
     else:
         out.update(asyncio.run(run(json.loads(os.environ["DS_SCHEDULE"]), os.environ["DS_VARIANT"])))
     print(json.dumps(out, default=str))

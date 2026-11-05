@@ -1,0 +1,114 @@
+"""EXPERIMENTAL version-pinned adapter: Chancy 0.26.0's job runtime over one stepped psycopg ``AsyncConnection``.
+
+Runs only inside the isolated runner (it imports Chancy at module level). Never imported on the host.
+
+Where Chancy 0.26.0 gets connections (pinned sources below):
+
+* ``Chancy.pool``: a ``cached_property`` that builds ``psycopg_pool.AsyncConnectionPool(self.dsn, ...)``. There is no
+  connection-class or factory option, so ``SteppedChancy`` overrides that one property (subclassing, not patching):
+  it returns a one-connection pool whose ``connection_class`` hands over the actor's ``AsyncSteppedConnection``
+  exactly once. A second connect (a reconnect, a second slot) raises ``psycopg.OperationalError``: the pool can't
+  open an uninstrumented session.
+* ``Worker._maintain_notifications``: opens its own ``AsyncConnection.connect(self.chancy.dsn)`` for LISTEN. That is
+  an unavoidable extra, uninstrumented connection, so it is turned off with Chancy's public
+  ``notifications=False``; the worker then polls (``queue_change_poll_interval``, ``polling_interval``).
+* ``Chancy.sync_pool``: a separate synchronous pool, used only by the synchronous APIs (``sync_push`` and friends). The
+  DSN given to Chancy points nowhere, so any use of it fails loudly instead of connecting.
+* Default plugins are off (``no_default_plugins=True``) and the queue uses the in-process ``AsyncExecutor``: the
+  process executor would run jobs in child processes outside the scheduler.
+
+Every statement goes through the pool's single connection, so through the gate; Chancy's worker tasks (queues,
+updates, heartbeat, the job) take turns on it (``Handler.serialize_tasks``), as the one-connection pool makes them.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import inspect
+from functools import cached_property
+from pathlib import Path
+from typing import Any
+
+import psycopg
+from chancy import Chancy, Queue, Worker, job
+
+from ..stepping import Refused
+from ..stepping_async import AsyncSteppedConnection
+
+PINNED_SOURCES = {  # sha256 of the files in the verified sdist (chancy-0.26.0.tar.gz, ac98b9c5...)
+    "chancy/app.py": "403e471247c81e0b37560da70e64570b92aa9586ff31826c16316b61deb2cd14",
+    "chancy/worker.py": "0f541cbfd5ebce9abe75fd5f6365987333d847aaca352b4e7d8445c56575072a",
+    "chancy/migrate.py": "2f19e93779a146ef6b162edf76e2fe174a0405a028d9f38339793ee0213b240e",
+    "chancy/executors/asyncex.py": "f6495e78fb80973f1227a9060c9698ef61f984f15180d06f3e4f917aa4eae855",
+}
+NOWHERE_DSN = "postgresql://stepped-pool-only.invalid/none"  # only sync_pool would use it, and must fail
+QUEUE = "ds_q"
+HANDLED: list[int] = []
+
+
+def verify_pinned() -> dict[str, str]:
+    import chancy
+    root = Path(inspect.getsourcefile(chancy) or "").resolve().parent.parent
+    seen = {}
+    for rel, want in PINNED_SOURCES.items():
+        got = hashlib.sha256((root / rel).read_bytes()).hexdigest()
+        if got != want:
+            raise Refused(f"{rel} isn't the pinned source (sha256 {got[:12]})")
+        seen[rel] = got
+    return seen
+
+
+def stepped_pool(conn: AsyncSteppedConnection) -> Any:
+    from psycopg_pool import AsyncConnectionPool
+    if not isinstance(conn, AsyncSteppedConnection):
+        raise Refused("Chancy may only be given the actor's stepped connection")
+    handed: list[Any] = []
+
+    class ActorBoundConnection(AsyncSteppedConnection):
+        @classmethod
+        async def connect(cls, *_args: Any, **_kwargs: Any) -> Any:  # what the pool calls to open a slot
+            if handed:
+                raise psycopg.OperationalError("refused: the pool asked for a second connection; only the actor's "
+                                               "stepped connection exists")
+            handed.append(conn)
+            return conn
+
+    return AsyncConnectionPool("", connection_class=ActorBoundConnection, min_size=1, max_size=1, open=False,
+                               timeout=30, reconnect_timeout=10)
+
+
+def stepped_chancy(conn: AsyncSteppedConnection, *, notifications: bool = False, dsn: str = NOWHERE_DSN) -> Any:
+    """``notifications=True`` with a real ``dsn`` is the negative control: the worker then opens its own LISTEN
+    connection, which the server-log corroboration must refuse as an unexplained session."""
+    verify_pinned()
+
+    class SteppedChancy(Chancy):
+        @cached_property
+        def pool(self) -> Any:  # the one overridden member: Chancy's pool, over the stepped connection
+            return stepped_pool(conn)
+
+    return SteppedChancy(dsn, notifications=notifications, no_default_plugins=True, min_connection_pool_size=1,
+                         max_connection_pool_size=1)
+
+
+@job()
+async def ds_job(*, n: int) -> int:  # trusted, deterministic handler; module level so the worker can import it
+    HANDLED.append(n)
+    return n * 2
+
+
+async def lifecycle(conn: AsyncSteppedConnection, *, notifications: bool = False,
+                    dsn: str = NOWHERE_DSN) -> dict[str, Any]:
+    """Migrate, declare a queue, push one job, run a worker until the job completes, stop the worker, close."""
+    pinned = verify_pinned()
+    async with stepped_chancy(conn, notifications=notifications, dsn=dsn) as chancy:
+        await chancy.migrate()
+        await chancy.declare(Queue(QUEUE, concurrency=1, executor=Chancy.Executor.Async, polling_interval=1))
+        ref = await chancy.push(ds_job.job.with_kwargs(n=21).with_queue(QUEUE))
+        worker = Worker(chancy, register_signal_handlers=False, shutdown_timeout=5, queue_change_poll_interval=1,
+                        heartbeat_poll_interval=1)
+        await worker.start()
+        done = await chancy.wait_for_job(ref, interval=1, timeout=60)
+        stopped = await worker.stop(timeout=10)
+    return {"job_id": str(ref.identifier), "state": done.state.value if done else None, "handled": list(HANDLED),
+            "worker_stopped": stopped, "pinned_sources": pinned}
