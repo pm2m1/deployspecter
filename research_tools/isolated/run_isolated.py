@@ -1,0 +1,220 @@
+"""EXPERIMENTAL isolated runner (host side): run a payload in a restricted container against the disposable PostgreSQL.
+
+    python research_tools/isolated/run_isolated.py smoke --out DIR
+
+What the container gets, and nothing else:
+
+* an image built from a digest-pinned base, with Python dependencies installed only from hashes (``--require-hashes
+  --no-deps``) taken from ``uv.lock``, and the payload copied in (no volume or bind mount of the host);
+* a fresh ``--internal`` Docker network shared only with the disposable PostgreSQL container (no route to the
+  internet or the host, so neither the protected 55432 nor anything else on the host);
+* uid 65534, read-only root filesystem, a 64 MB noexec tmpfs, all capabilities dropped, ``no-new-privileges``,
+  64 PIDs, 512 MB memory and no swap, 1 CPU, 256 open files, a wall-clock limit enforced by the host (``docker
+  kill``);
+* environment: only the disposable database's connection settings and the run's schedule. No model credentials,
+  no SSH agent or keys, no production DSN.
+
+The container reports what it actually observed (``probes``); the host refuses the run as isolation evidence unless
+every probe matches. Reset, the initial-state check, the oracle and the server-log corroboration run on the host.
+
+This is **not** a hostile-code sandbox. Containers share the Docker Desktop VM's kernel; a kernel or runtime escape
+defeats every flag here; Docker's default seccomp profile is in force but no gVisor/Kata runtime is available. It is a
+containment layer for trusted fixtures and for pinned, statically reviewed public code, with complete teardown.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import secrets
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+import tomllib
+from pathlib import Path
+from types import SimpleNamespace
+from typing import Any
+
+REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "src"))
+
+from deployspecter.experimental import harness as hz  # noqa: E402
+from deployspecter.experimental import oracle  # noqa: E402
+from deployspecter.experimental.apps import reservations_mixed as app  # noqa: E402
+from deployspecter.experimental.corroborate import corroborate  # noqa: E402
+
+PG_CONTAINER = "deployspecter-mvp-pg"
+PROTECTED_CONTAINER = "deployspecter-pg"
+RUNTIME_FLAGS = ["--read-only", "--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=64m", "--cap-drop", "ALL",
+                 "--security-opt", "no-new-privileges", "--pids-limit", "64", "--memory", "512m", "--memory-swap",
+                 "512m", "--cpus", "1", "--ulimit", "nofile=256:256", "--user", "65534:65534"]
+PAYLOAD = ["deployspecter/__init__.py", "deployspecter/experimental/__init__.py",
+           "deployspecter/experimental/stepping.py", "deployspecter/experimental/stepping_async.py",
+           "deployspecter/experimental/oracle.py", "deployspecter/experimental/apps/__init__.py",
+           "deployspecter/experimental/apps/reservations_mixed.py",
+           "deployspecter/experimental/apps/reservations_mixed_async.py"]
+LOCKED = ["psycopg", "psycopg-binary", "typing-extensions"]
+EXPECTED_PROBES = {"uid": 65534, "root_writable": False, "app_writable": False, "tmp_writable": True,
+                   "ssh_dir_present": False, "secret_like_env": []}
+
+
+def docker(*args: str, timeout: float = 300, check: bool = True) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(["docker", *args], capture_output=True, text=True, timeout=timeout, check=check)
+
+
+def requirements_from_lock(names: list[str]) -> str:
+    lock = tomllib.loads((REPO / "uv.lock").read_text())
+    lines = []
+    for name in names:
+        pkg = next(p for p in lock["package"] if p["name"] == name)
+        hashes = [w["hash"] for w in pkg.get("wheels", [])] + ([pkg["sdist"]["hash"]] if "sdist" in pkg else [])
+        lines.append(f"{name}=={pkg['version']} " + " ".join(f"--hash={h}" for h in hashes))
+    return "\n".join(lines) + "\n"
+
+
+def build_image(work: Path) -> tuple[str, str]:
+    ctx = work / "context"
+    (ctx / "app" / "src").mkdir(parents=True)
+    for rel in PAYLOAD:
+        dst = ctx / "app" / "src" / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(REPO / "src" / rel, dst)
+    shutil.copyfile(Path(__file__).with_name("smoke_inside.py"), ctx / "app" / "smoke_inside.py")
+    shutil.copyfile(Path(__file__).with_name("Dockerfile.runner"), ctx / "Dockerfile")
+    (ctx / "requirements.txt").write_text(requirements_from_lock(LOCKED))
+    digest = hashlib.sha256()
+    for f in sorted(p for p in ctx.rglob("*") if p.is_file()):
+        digest.update(str(f.relative_to(ctx)).encode() + b"\0" + f.read_bytes())
+    tag = f"ds-mvp-iso:{digest.hexdigest()[:16]}"
+    docker("build", "-q", "-t", tag, str(ctx), timeout=900)
+    image_id = docker("image", "inspect", "-f", "{{.Id}}", tag).stdout.strip()
+    return tag, image_id
+
+
+def protected_state() -> str:
+    return docker("inspect", "-f", "{{.Id}} {{.State.StartedAt}} {{.State.Status}}", PROTECTED_CONTAINER,
+                  check=False).stdout.strip()
+
+
+def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path) -> dict[str, Any]:
+    before = protected_state()
+    work = Path(tempfile.mkdtemp(prefix="ds_iso_"))
+    nonce = secrets.token_hex(4)
+    net, name = f"ds-mvp-iso-{nonce}", f"ds-mvp-iso-run-{nonce}"
+    envfile = work / "env"
+    result: dict[str, Any] = {"variant": variant, "schedule": schedule, "network": net}
+    try:
+        tag, image_id = build_image(work)
+        result.update(image=tag, image_id=image_id, runtime_flags=RUNTIME_FLAGS)
+        docker("network", "create", "--internal", net)
+        docker("network", "connect", "--alias", "ds-mvp-pg", net, PG_CONTAINER)
+        result["network_internal"] = docker("network", "inspect", "-f", "{{.Internal}}", net).stdout.strip()
+        seed = {"events": [{"id": 1, "capacity": 5, "reserved": 0}]}
+        admin = target.admin()
+        try:
+            app.reset(admin, seed)
+            initial = oracle.read_state(admin)
+            digest = oracle.digest(initial)
+            if digest != oracle.digest(oracle.expected_initial(seed)):
+                raise RuntimeError("the initial state isn't the verified one")
+            from deployspecter.live.serverlog import ServerLog
+            log = ServerLog(lambda q, prm=None: admin.execute(q, prm).fetchone())
+            log.position()
+            start, end = f"ds_mvp_mark_start_{nonce}", f"ds_mvp_mark_end_{nonce}"
+            envfile.write_text("\n".join([
+                "DS_PG_HOST=ds-mvp-pg", "DS_PG_PORT=5432", f"DS_PG_USER={target.user}",
+                f"DS_PG_PASSWORD={target.password}", f"DS_PG_DB={target.dbname}",
+                f"DS_SCHEDULE={json.dumps(schedule)}", f"DS_VARIANT={variant}"]) + "\n")
+            envfile.chmod(0o600)
+            admin.execute(f"SELECT '{start}'")
+            started = time.monotonic()
+            try:
+                proc = docker("run", "--rm", "--name", name, "--network", net, *RUNTIME_FLAGS, "--env-file",
+                              str(envfile), tag, "/app/smoke_inside.py", timeout=120, check=False)
+            except subprocess.TimeoutExpired:
+                docker("kill", name, check=False)
+                raise
+            result["container_seconds"] = round(time.monotonic() - started, 2)
+            result["exit_code"] = proc.returncode
+            if proc.returncode != 0:
+                result["stderr_tail"] = proc.stderr[-2000:]
+                raise RuntimeError(f"the container exited {proc.returncode}")
+            inside = json.loads(proc.stdout.strip().splitlines()[-1])
+            trace = inside["trace"]
+            pids = [a["backend_pid"] for a in trace["actors"].values()] + [inside["monitor_pid"]]
+            gone = hz._wait_gone(admin, pids)
+            admin.execute(f"SELECT '{end}'")
+            until = time.monotonic() + 5
+            data = log.read()
+            while not (f"SELECT '{end}'".encode() in data and data.endswith(b"\n")) and time.monotonic() < until:
+                time.sleep(0.05)
+                data = log.read()
+            shaped = SimpleNamespace(actors=trace["actors"], records=[SimpleNamespace(**r) for r in trace["records"]])
+            corr = corroborate(data, start=start, end=end, trace=shaped,
+                               admin_pid={admin.info.backend_pid, inside["monitor_pid"]}, user=target.user,
+                               database=target.dbname).to_dict()
+            if not gone:
+                corr["ok"] = False
+                corr["problems"].append("a container session outlived the run")
+            final = oracle.read_state(admin)
+        finally:
+            admin.close()
+        done = any(isinstance(r, dict) and r.get("status") == "done" for r in inside["raw_results"].values())
+        probes = inside["probes"]
+        isolation = {k: (probes.get(k) == v) for k, v in EXPECTED_PROBES.items()}
+        isolation.update(host_55432_unreachable=probes["host_55432"].startswith("refused"),
+                         host_gateway_unreachable=probes["host_gateway_55441"].startswith("refused"),
+                         internet_tcp_unreachable=probes["internet_tcp"].startswith("refused"),
+                         internet_dns_unresolved=probes["internet_dns"].startswith("unresolved"),
+                         disposable_pg_reachable=bool(trace["records"]),
+                         pids_limited=probes["nproc_limit"] == "64",
+                         memory_limited=probes["memory_limit"] == str(512 * 1024 * 1024))
+        result.update(probes=probes, isolation_checks=isolation, isolation_ok=all(isolation.values()),
+                      initial_state_digest=digest, final_state=final, final_state_digest=oracle.digest(final),
+                      oracle_violations=oracle.check(final, backfill_done=done), corroboration=corr,
+                      trace_sha256=hashlib.sha256(json.dumps(trace, sort_keys=True, default=str).encode()).hexdigest(),
+                      raw_results=inside["raw_results"], code_revision=hz.code_revision(),
+                      payload_sha256={rel: hashlib.sha256((REPO / "src" / rel).read_bytes()).hexdigest()
+                                      for rel in PAYLOAD})
+        (out / f"{variant}.trace.json").write_text(json.dumps(trace, indent=1, default=str))
+    finally:
+        docker("rm", "-f", name, check=False)
+        docker("network", "disconnect", "-f", net, PG_CONTAINER, check=False)
+        docker("network", "rm", net, check=False)
+        shutil.rmtree(work, ignore_errors=True)
+        leftovers = docker("ps", "-a", "--filter", f"name={name}", "-q", check=False).stdout.strip()
+        nets = docker("network", "ls", "--filter", f"name={net}", "-q", check=False).stdout.strip()
+        result["teardown"] = {"container_removed": not leftovers, "network_removed": not nets,
+                              "workdir_removed": not work.exists(), "protected_unchanged": protected_state() == before}
+    return result
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("mode", choices=["smoke"])
+    ap.add_argument("--out", type=Path, required=True)
+    a = ap.parse_args()
+    secret = Path(os.environ.get("DS_MVP_SECRET_FILE", os.path.expanduser("~/.ds_mvp_pg_password")))
+    target = hz.Target("127.0.0.1", int(os.environ.get("DS_MVP_PORT", "55441")), "ds_mvp", secret.read_text().strip())
+    target.conninfo()  # refuses anything but the disposable database
+    a.out.mkdir(parents=True, exist_ok=False)
+    race = ["j", "j", "a", "a", "a", "a", "a", "j", "j"]
+    report = {"kind": "EXPERIMENTAL isolated-runner smoke test on a trusted fixture; not a hostile-code sandbox",
+              "runs": {v: run_smoke(target, variant=v, schedule=race, out=a.out) for v in ("buggy", "fixed")}}
+    (a.out / "report.json").write_text(json.dumps(report, indent=1, default=str))
+    ok = True
+    for v, r in report["runs"].items():
+        good = (r.get("isolation_ok") and r.get("corroboration", {}).get("ok") and all(r["teardown"].values())
+                and bool(r.get("oracle_violations")) == (v == "buggy"))
+        ok &= bool(good)
+        print(v, "isolation", r.get("isolation_ok"), "corroborated", r.get("corroboration", {}).get("ok"),
+              "oracle", r.get("oracle_violations"), "teardown", r["teardown"])
+    return 0 if ok else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
