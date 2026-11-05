@@ -397,7 +397,8 @@ class Run:
             op.outcome = "ok"
             if cursor is not None and cursor.description is not None:
                 rows = cursor.fetchall()
-                cursor.scroll(0, mode="absolute")  # the handler reads the same rows itself
+                if rows:  # psycopg refuses to scroll an empty result; an empty one is already at its end
+                    cursor.scroll(0, mode="absolute")  # the handler reads the same rows itself
                 # a dict_row (or any mapping) row keeps its column names; list(mapping) would give only the keys
                 op.rows = [sanitize(dict(r)) if isinstance(r, Mapping) else sanitize(list(r)) for r in rows]
             if cursor is not None:

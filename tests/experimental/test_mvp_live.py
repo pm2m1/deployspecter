@@ -324,3 +324,19 @@ class TestServerLogCorroboration:
                     pass
         _t, c = corroborated_handlers(target, ("a", nested, [INS, "SELECT 1"]))
         assert c["ok"], c["problems"]
+
+
+class TestEmptyResults:
+    def test_a_select_that_returns_no_rows_reaches_the_handler_as_empty(self, target):
+        """Regression: the gate rewound every prefetched result with scroll(0), which psycopg refuses on an empty
+        one, so a zero-row SELECT used to fail the handler with IndexError."""
+        def none_found(conn):
+            row = conn.execute("SELECT id FROM events WHERE id = %s", (999,)).fetchone()
+            rows = conn.execute("SELECT id FROM events WHERE id = %s", (998,)).fetchall()
+            return {"row": row, "rows": rows}
+
+        trace, c = corroborated_handlers(target, ("a", none_found, ["SELECT id FROM events WHERE id = %s"]))
+        assert trace.actors["a"]["exception"] is None
+        assert trace.raw_results["a"] == {"row": None, "rows": []}
+        assert [op.rows for op in trace.records if op.kind == "execute"] == [[], []]
+        assert c["ok"], c["problems"]
