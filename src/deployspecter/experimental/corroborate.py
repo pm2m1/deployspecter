@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
 from dataclasses import dataclass, field
 from typing import Any
@@ -108,29 +109,87 @@ def _expected(op: Any) -> list[tuple[str, list[Any] | None]]:
 
 
 def _array_elements(text: str) -> list[str | None] | None:
-    """A one-dimensional PostgreSQL array literal's elements (None for an unquoted NULL); None if not one."""
-    if not (text.startswith("{") and text.endswith("}")) or "{" in text[1:-1]:
+    """A one-dimensional PostgreSQL array literal's elements (None for an unquoted NULL), tokenized by its quoting
+    rules: a quoted element may contain anything, with backslash escapes; an unquoted one may not contain a quote, a
+    brace or a backslash. None if the text isn't exactly such a literal (a nested array, a dimension decoration, or
+    anything malformed is never guessed at)."""
+    if not (text.startswith("{") and text.endswith("}")):
         return None
-    body, out, i = text[1:-1], [], 0
+    body, out, i, n = text[1:-1], [], 0, len(text) - 2
     if not body:
         return []
-    while i <= len(body):
-        if i < len(body) and body[i] == '"':
+    while True:
+        if i < n and body[i] == '"':
             j, buf = i + 1, []
-            while j < len(body) and body[j] != '"':
-                if body[j] == "\\" and j + 1 < len(body):
+            while j < n and body[j] != '"':
+                if body[j] == "\\":
                     j += 1
+                    if j >= n:
+                        return None
                 buf.append(body[j])
                 j += 1
+            if j >= n:
+                return None  # an unterminated quote
             out.append("".join(buf))
-            i = j + 2  # past the closing quote and the comma
+            j += 1
         else:
-            j = body.find(",", i)
-            j = len(body) if j < 0 else j
+            j = i
+            while j < n and body[j] != ",":
+                if body[j] in '"{}\\':
+                    return None  # a nested array or a stray quote: not a 1-D literal we can read exactly
+                j += 1
             item = body[i:j]
+            if item == "":
+                return None
             out.append(None if item == "NULL" else item)
-            i = j + 1
-    return out
+        if j == n:
+            return out
+        if body[j] != ",":
+            return None
+        i = j + 1
+
+
+def _record_fields(text: str) -> list[str | None] | None:
+    """A PostgreSQL record (composite) literal's fields, by record_in's rules: an empty unquoted field is NULL, a
+    quoted field may contain anything (a doubled quote or a backslash escapes the next character), and an unquoted
+    field is taken literally (so an unquoted NULL is the four-character string). None if the text isn't exactly
+    such a literal."""
+    if not (text.startswith("(") and text.endswith(")")):
+        return None
+    body, out, i, n = text[1:-1], [], 0, len(text) - 2
+    while True:
+        buf: list[str] = []
+        quoted_any = False
+        j = i
+        while j < n and body[j] != ",":
+            if body[j] == '"':
+                quoted_any = True
+                j += 1
+                while True:
+                    if j >= n:
+                        return None  # an unterminated quote
+                    if body[j] == '"':
+                        if j + 1 < n and body[j + 1] == '"':
+                            buf.append('"')
+                            j += 2
+                            continue
+                        j += 1
+                        break
+                    if body[j] == "\\":
+                        j += 1
+                        if j >= n:
+                            return None
+                    buf.append(body[j])
+                    j += 1
+            elif body[j] in "()\\":
+                return None  # an unquoted parenthesis or backslash: never guessed at
+            else:
+                buf.append(body[j])
+                j += 1
+        out.append("".join(buf) if (buf or quoted_any) else None)
+        if j >= n:
+            return out
+        i = j + 1
 
 
 _UUID_TEXT = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
@@ -221,6 +280,21 @@ def _value_matches(logged: str, want: Any) -> bool | None:
         items = _array_elements(text) if text is not None else None
         if items is None or len(items) != len(want):
             return None if items is None else False
+        if want and all(isinstance(w, list) for w in want):
+            # an array of records (psycopg adapts a list of tuples so; e.g. procrastinate's defer_jobs argument):
+            # each element is a record literal, compared field by field with the scalar rules
+            verdicts = []
+            for item, w in zip(items, want, strict=True):
+                fields = _record_fields(item) if item is not None else None
+                if fields is None:
+                    return None
+                if len(fields) != len(w):
+                    return False
+                verdicts += [_value_matches("NULL" if f is None else "'" + f.replace("'", "''") + "'", fw)
+                             for f, fw in zip(fields, w, strict=True)]
+            return None if None in verdicts else all(verdicts)
+        if any(isinstance(w, list) for w in want):
+            return None  # a mixture, or nested arrays: not compared
         verdicts = [(_value_matches("NULL", w) if item is None else _value_matches("'" + item.replace("'", "''")
                                                                                    + "'", w)) for item, w in
                     zip(items, want, strict=True)]
@@ -231,6 +305,19 @@ def _value_matches(logged: str, want: Any) -> bool | None:
         return logged == ("'t'" if want else "'f'")
     if isinstance(want, int):
         return logged == f"'{want}'"
+    if isinstance(want, float):
+        # float8 is logged by the server's shortest round-trip output ('30', '0.1', '1e-300', '-0', 'NaN',
+        # 'Infinity'), or as sent: either way the logged text parses to a double, compared bit for bit (the sign of
+        # zero included). A value that doesn't parse is a mismatch.
+        if logged == "NULL" or not logged.startswith("'"):
+            return False
+        try:
+            got = float(logged[1:-1])
+        except ValueError:
+            return False
+        if math.isnan(want) or math.isnan(got):
+            return math.isnan(want) and math.isnan(got)
+        return got == want and math.copysign(1.0, got) == math.copysign(1.0, want)
     if isinstance(want, dict) and "bytes" in want:  # bytea is logged as '\x<hex>'
         text = logged[1:-1] if logged.startswith("'") else ""
         if not text.startswith("\\x"):
