@@ -167,3 +167,16 @@ Account balance was not checked through the API. The Responses API returns per-r
 58. **Ready-to-send curator and oracle-review packages** (`handoff/send/`), not sent. Amendment 003 addendum (#21). All decisions still PROPOSED; confirmatory evaluation BLOCKED.
 
 **Meta usage in this increment:** 1 request, an estimated $0.016684 (cap $10).
+
+## Increment 10 (2026-11-06): research freeze and independent-evaluation preparation
+
+59. **Typed-parameter audit.** procrastinate's 20 unchecked values per run were record arrays (15) and float8 (5).
+    - Their logged forms were probed live on PostgreSQL 16 and captured verbatim (`tests/experimental/fixtures/pg16_typed_params.json`).
+    - They are now compared exactly: record arrays by `record_in` rules, float8 bit-exact. 26 adversarial tests.
+    - Fresh runs (`rolling_upgrade/…/runs_typed_verification`): 0 unchecked, 0 mismatched. The originals are unchanged.
+60. **Amendment 003.** Complete decision register v3 (all PROPOSED, with #22 new) and an exact adoption candidate (sha256 `ad5ea331…`). Unsigned approval forms and the adoption checklist. Nothing is accepted or registered.
+61. **Sealed corpus intake** (`research_tools/corpus_intake.py`): opaque R1/R2 revision pairs, sealed labels, hash-chained split registries with a freeze, and immutable run ids. 13 offline tests on synthetic cases. No real case has been submitted.
+62. **Concise v2 curator and oracle-reviewer packages** with acceptance checklists (not sent).
+63. **Research-paper outline**, with evidence classes ([IND] vs [DEV]).
+
+**Meta usage in this increment:** none ($0).
