@@ -108,3 +108,21 @@ def test_old_and_new_workers_run_at_the_same_time_under_one_coordinator(tmp_path
     assert set(summary["window"]["by_version"]) == {"0.25.1", "0.26.0"} and summary["window"]["version_switches"] > 0
     assert set(summary["sessions"].values()) == {"old_worker", "new_worker", "new_push"}
     assert all(sim["teardown"].values())
+
+
+@pytest.mark.parametrize("tree, expected", [("chancy-git-80f570f.tar", "VIOLATED"),
+                                            ("chancy-git-2895c4a.tar", "HOLDS")],
+                         ids=["buggy_parent_violates", "fix_commit_holds"])
+def test_historical_case_chancy_2895c4a_on_the_forced_schedule(tmp_path, tree, expected):
+    """The historical case (docs/experimental_mvp/historical/chancy_2895c4a): the fix's parent lets a late completion
+    overwrite a cancellation; the fix commit doesn't. Needs `fetch_pinned.sh DIR --with-git`."""
+    import json
+    if not (SDISTS / tree).exists():
+        pytest.skip(f"{tree} not fetched (fetch_pinned.sh DIR --with-git)")
+    env = {k: v for k, v in os.environ.items() if k not in ("MODEL_API_KEY", "DATABASE_URL")}
+    proc = subprocess.run([sys.executable, str(REPO / "research_tools/isolated/run_historical.py"), "--source",
+                           str(SDISTS / tree), "--schedule", "forced", "--out", str(tmp_path / "out")],
+                          capture_output=True, text=True, timeout=900, env=env)
+    assert proc.returncode == 0, proc.stdout[-2000:] + proc.stderr[-2000:]
+    row = json.loads((tmp_path / "out" / "summary.json").read_text())[0]
+    assert row["verdict"] == "SOUND" and row["case_verdict"] == expected
