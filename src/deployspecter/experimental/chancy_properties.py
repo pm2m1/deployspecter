@@ -16,7 +16,7 @@ from typing import Any
 CLASSES = {"P1": "H", "P2": "H", "P3": "H", "P4": "H", "P5": "X", "P6": "H", "P7": "G|X", "P8": "H"}
 JOBS_DETAIL_SQL = ("SELECT id::text AS id, queue, state, attempts, max_attempts, (kwargs->>'n')::int AS n, "
                    "{claim} AS has_claim_id, completed_at IS NOT NULL AS completed, "
-                   "json_array_length(errors) AS errors, taken_by IS NOT NULL AS taken FROM {schema}.chancy_jobs "
+                   "json_array_length(errors::json) AS errors, taken_by IS NOT NULL AS taken FROM {schema}.chancy_jobs "
                    "ORDER BY (kwargs->>'n')::int, id")
 
 

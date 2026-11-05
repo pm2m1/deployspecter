@@ -53,3 +53,11 @@ Classification key:
 - written by this developer;
 - K2 is the concurrent-worker form of P2;
 - M2 and M3 are the sequential pilot's forms of P3 and P2.
+
+## Amendments (before the first simultaneous execution)
+
+1. **The checker's read query.** `JOBS_DETAIL_SQL` now reads `json_array_length(errors::json)` instead of `json_array_length(errors)`.
+   - **Why:** after the migrations, `errors` is `jsonb`, and the first bring-up attempt failed reading the initial state.
+   - **When:** before the window's start marker, so no simultaneous statement had run.
+   - **Effect:** no property's definition or logic changed.
+   - **Record:** amended in its own commit; the original freeze is `03967c4`.
