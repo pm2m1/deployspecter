@@ -29,7 +29,8 @@ from .stepping import normal_sql
 PID, SESSION, LINE, SEVERITY, SQLSTATE, MESSAGE, DETAIL, APP, BACKEND, USER, DB = 3, 5, 6, 11, 12, 13, 14, 22, 23, 1, 2
 PARAM = re.compile(r"\$(\d+) = (NULL|'(?:[^']|'')*')")
 ADMIN_ALLOWED = (re.compile(r"^SELECT pg_blocking_pids\(\$1\)$"), re.compile(r"^SELECT pg_cancel_backend\(\$1\)$"),
-                 re.compile(r"^SELECT count\(\*\) FROM pg_stat_activity WHERE pid = ANY\(\$1\)$"))
+                 re.compile(r"^SELECT count\(\*\) FROM pg_stat_activity WHERE pid = ANY\(\$1\)$"),
+                 re.compile(r"^SELECT current_setting\('cluster_name'\), current_database\(\)$"))  # async monitor
 BACKGROUND = {"checkpointer": re.compile(r"^checkpoint (starting|complete)")}
 
 
@@ -112,9 +113,11 @@ def _value_matches(logged: str, want: Any) -> bool | None:
     return None
 
 
-def corroborate(log: bytes, *, start: str, end: str, trace: Any, admin_pid: int, user: str, database: str,
-                application: str = "ds_mvp_actor") -> Corroboration:
+def corroborate(log: bytes, *, start: str, end: str, trace: Any, admin_pid: int | set[int], user: str,
+                database: str, application: str = "ds_mvp_actor") -> Corroboration:
+    """``admin_pid`` is the harness's admin session, or a set of them (the async engine polls on its own monitor)."""
     out = Corroboration()
+    admin_pids = {str(p) for p in (admin_pid if isinstance(admin_pid, set) else {admin_pid})}
     rows = parse_log(log)
     try:
         a = next(i for i, r in enumerate(rows) if r.message == f"statement: SELECT '{start}'")
@@ -129,15 +132,18 @@ def corroborate(log: bytes, *, start: str, end: str, trace: Any, admin_pid: int,
     for op in granted:
         pid = str(trace.actors[op.actor]["backend_pid"])
         expected[pid] += [(text, params, op.grant, op) for text, params in _expected(op)]
-    for op in trace.records:  # the harness's recorded cleanup after a failed handler: last on its session
-        if op.kind == "cleanup_rollback" and op.outcome == "ok":
+    for op in trace.records:
+        # Operations that ran without a grant: a transaction's exit while the run was being halted, and the
+        # harness's recorded cleanup after a failed handler. Last on their session, outside the grant order.
+        if op.grant is None and op.outcome == "ok":
             pid = str(trace.actors[op.actor]["backend_pid"])
-            expected[pid].append(("ROLLBACK", None, None, op))  # no grant: outside the scheduler's order
+            items = [("ROLLBACK", None)] if op.kind == "cleanup_rollback" else _expected(op)
+            expected[pid] += [(text, params, None, op) for text, params in items]
     cursor = dict.fromkeys(actors, 0)
     order: list[int] = []
     for r in window:
         pid = r[PID]
-        if pid == str(admin_pid):
+        if pid in admin_pids:
             parsed = statement(r)
             if parsed and not any(p.match(parsed[1]) for p in ADMIN_ALLOWED):
                 out.problems.append(f"admin sent an unallowlisted statement: {parsed[1][:60]}")

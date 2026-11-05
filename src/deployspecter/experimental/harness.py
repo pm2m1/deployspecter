@@ -6,6 +6,7 @@ has the expected digest; run the actors under the schedule; read the final state
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import os
@@ -160,8 +161,11 @@ def corroborated(admin: Any, run: Any, *, user: str) -> tuple[Trace, dict[str, A
     nonce = secrets.token_hex(6)
     start, end = f"ds_mvp_mark_start_{nonce}", f"ds_mvp_mark_end_{nonce}"
     admin.execute(f"SELECT '{start}'")
-    trace = run.execute()
-    gone = _wait_gone(admin, [a["backend_pid"] for a in trace.actors.values()])
+    is_async = hasattr(run, "monitor_factory")
+    trace = asyncio.run(run.execute()) if is_async else run.execute()
+    admin_pids = {admin.info.backend_pid} | ({run.monitor_pid} if is_async and run.monitor_pid else set())
+    gone = _wait_gone(admin, [a["backend_pid"] for a in trace.actors.values()] + sorted(admin_pids - {
+        admin.info.backend_pid}))
     admin.execute(f"SELECT '{end}'")
     until = time.monotonic() + 5.0
     while True:
@@ -171,7 +175,7 @@ def corroborated(admin: Any, run: Any, *, user: str) -> tuple[Trace, dict[str, A
         if time.monotonic() > until:
             return trace, {"ok": False, "problems": ["the end marker never reached the log"]}
         time.sleep(0.02)
-    result = corroborate(data, start=start, end=end, trace=trace, admin_pid=admin.info.backend_pid, user=user,
+    result = corroborate(data, start=start, end=end, trace=trace, admin_pid=admin_pids, user=user,
                          database=DATABASE).to_dict()
     if not gone:
         result["ok"] = False
@@ -218,6 +222,20 @@ def run_once(target: Target, w: Workload, *, variant: str, schedule: list[str], 
                      corroboration)
 
 
+def async_monitor(target: Target) -> Any:
+    """The async engine's lock-wait monitor: a plain AsyncConnection with the same identity check as ``admin``."""
+    async def connect() -> psycopg.AsyncConnection:
+        conn = await psycopg.AsyncConnection.connect(**target.conninfo(), autocommit=True, prepare_threshold=None,
+                                                     application_name="ds_mvp_admin")
+        cur = await conn.execute("SELECT current_setting('cluster_name'), current_database()")
+        name = await cur.fetchone()
+        if name != (CLUSTER_NAME, DATABASE):
+            await conn.close()
+            raise TargetRefused(f"unexpected database identity {name}; stopping")
+        return conn
+    return connect
+
+
 def run_app(target: Target, app_module: Any, invocations: list[dict[str, Any]], seed: Any, *, variant: str,
             schedule: list[str], label: str, strict: bool = False, limits: Limits | None = None,
             corroborate: bool = False, autocommit: bool | None = None, registry_kw: dict[str, Any] | None = None,
@@ -252,14 +270,22 @@ def run_app(target: Target, app_module: Any, invocations: list[dict[str, Any]], 
             actors.append(Actor(inv["actor"], h, dict(inv["args"])))
         if autocommit is None:
             autocommit = getattr(app_module, "AUTOCOMMIT", True)  # the fixture says which DBAPI mode it expects
-        connect = actor_connection_factory(target.conninfo(), limits, search_path=app_module.SCHEMA,
-                                           autocommit=autocommit)
-        run = Run(actors, connect, admin, schedule=schedule, strict=strict, limits=limits, run_id=run_id)
+        run: Any
+        if getattr(app_module, "ASYNC", False):
+            from .stepping_async import AsyncRun, async_actor_connection_factory
+            connect_async = async_actor_connection_factory(target.conninfo(), limits, search_path=app_module.SCHEMA,
+                                                           autocommit=autocommit)
+            run = AsyncRun(actors, connect_async, async_monitor(target), schedule=schedule, strict=strict,
+                           limits=limits, run_id=run_id)
+        else:
+            connect = actor_connection_factory(target.conninfo(), limits, search_path=app_module.SCHEMA,
+                                               autocommit=autocommit)
+            run = Run(actors, connect, admin, schedule=schedule, strict=strict, limits=limits, run_id=run_id)
         corroboration = None
         if corroborate:
             trace, corroboration = corroborated(admin, run, user=target.user)
         else:
-            trace = run.execute()
+            trace = asyncio.run(run.execute()) if hasattr(run, "monitor_factory") else run.execute()
         final = app_module.read_state(admin)
         if hasattr(app_module, "check_run"):
             violations = app_module.check_run(initial, final, trace.raw_results)
