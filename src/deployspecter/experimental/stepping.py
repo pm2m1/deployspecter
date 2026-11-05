@@ -34,7 +34,7 @@ import re
 import sys
 import threading
 import time
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
@@ -398,7 +398,8 @@ class Run:
             if cursor is not None and cursor.description is not None:
                 rows = cursor.fetchall()
                 cursor.scroll(0, mode="absolute")  # the handler reads the same rows itself
-                op.rows = [sanitize(list(r)) for r in rows]
+                # a dict_row (or any mapping) row keeps its column names; list(mapping) would give only the keys
+                op.rows = [sanitize(dict(r)) if isinstance(r, Mapping) else sanitize(list(r)) for r in rows]
             if cursor is not None:
                 op.rowcount = cursor.rowcount
             return out

@@ -85,3 +85,42 @@ def test_the_largest_int4_is_inserted_and_read_back_exactly(target):
         assert fx.read_state(admin)["events"] == [{"id": 1, "capacity": 2147483647, "reserved": 0}]
     finally:
         admin.close()
+
+
+def test_dict_row_reads_are_traced_with_their_values(target):
+    """release_seats reads through a dict_row cursor; the trace must hold the values, not the column names."""
+    d = copy.deepcopy(sc.DOCUMENT)
+    d["actors"] = [{"name": "a", "entrypoint": "release_seats", "application_version": "v1", "role": "request",
+                    "arguments": [{"name": "holder", "value": {"type": "str", "value": "carol"}}]},
+                   {"name": "b", "entrypoint": "reserve_seats", "application_version": "v1", "role": "request",
+                    "arguments": d["actors"][1]["arguments"]}]
+    d["state_goals"][0]["constraints"][2]["value"] = {"type": "int", "value": 1}
+    d["state_goals"].append({"entity": "reservation", "label": "held", "count": 1, "constraints": [
+        {"field": "event_id", "op": "eq", "value": {"type": "int", "value": 1}},
+        {"field": "holder", "op": "eq", "value": {"type": "str", "value": "carol"}},
+        {"field": "qty", "op": "eq", "value": {"type": "int", "value": 1}}]})
+    _p, r, _d = pa.run_planned(target, d, variant="fixed", schedule=["a"] * 6 + ["b"] * 6)
+    reads = [op.rows for op in r.trace.records if op.actor == "a" and op.sql.startswith("SELECT")]
+    assert reads[0] == [{"id": 1, "event_id": 1, "qty": 1}] and reads[1] == [{"reserved": 1}]
+
+
+def test_the_fixed_build_still_double_releases_one_reservation(target):
+    """Found by a Muse-proposed WorkloadSpec document (apps_compare_2, muse_planner_1#4): lock_row locks the event,
+    not the reservation, so two releases by one holder can both pick the same reservation and both decrement.
+    The fixed build is therefore not a valid negative control for release_seats."""
+    d = copy.deepcopy(sc.DOCUMENT)
+    release = {"entrypoint": "release_seats", "application_version": "v1", "role": "request",
+               "arguments": [{"name": "holder", "value": {"type": "str", "value": "jack"}}]}
+    d["actors"] = [{"name": "a", **release}, {"name": "b", **release}]
+    d["state_goals"][0]["constraints"][1:] = [{"field": "capacity", "op": "eq", "value": {"type": "int", "value": 8}},
+                                              {"field": "reserved", "op": "eq", "value": {"type": "int", "value": 8}}]
+    d["state_goals"].append({"entity": "reservation", "label": "held", "count": 2, "constraints": [
+        {"field": "event_id", "op": "eq", "value": {"type": "int", "value": 1}},
+        {"field": "holder", "op": "eq", "value": {"type": "str", "value": "jack"}},
+        {"field": "qty", "op": "eq", "value": {"type": "int", "value": 4}}]})
+    both_read_first = ["a", "b", "a", "a", "a", "a", "b", "b", "b", "b"]
+    p, r, _d = pa.run_planned(target, d, variant="fixed", schedule=both_read_first, corroborate=True)
+    assert p.outcome == "bridged" and r.corroboration["ok"], r.corroboration["problems"]
+    assert r.violations == ["R1 event 1: reserved=0 but reservations hold 4"]
+    deletes = [op.rowcount for op in r.trace.records if op.sql.startswith("DELETE")]
+    assert sorted(deletes) == [0, 1]  # the second release deleted nothing, yet decremented
