@@ -19,7 +19,7 @@ start)
     --memory 1g --cpus 2 --pids-limit 256 -e POSTGRES_USER=ds_mvp -e POSTGRES_DB=ds_mvp \
     -e POSTGRES_PASSWORD="$(cat "$SECRET")" "$IMAGE" -c cluster_name=ds_mvp_disposable -c log_statement=all \
     -c log_connections=on -c log_disconnections=on -c logging_collector=on -c log_destination=csvlog \
-    -c log_directory=log -c log_filename=mvp.log -c autovacuum=off -c max_connections=50 >/dev/null \
+    -c log_directory=log -c log_filename=mvp.log -c autovacuum=off -c max_connections=50 -c max_wal_size=64MB -c min_wal_size=32MB >/dev/null \
     || { rm -f "$SECRET"; die "docker run failed"; }
   for i in $(seq 1 60); do
     if docker exec "$NAME" pg_isready -h 127.0.0.1 -p 5432 -U ds_mvp -d ds_mvp >/dev/null 2>&1 \
