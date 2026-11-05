@@ -223,8 +223,8 @@ def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path
     return result
 
 
-def catalog(admin: Any) -> list[list[Any]]:
-    return [list(r) for r in admin.execute(
+def catalog(admin: Any) -> list[dict[str, Any]]:
+    return [dict(zip(("table", "column", "type", "nullable"), r, strict=True)) for r in admin.execute(
         "SELECT table_name, column_name, data_type, is_nullable FROM information_schema.columns "
         "WHERE table_schema = %s ORDER BY table_name, ordinal_position", (CAPTURE_SCHEMA,)).fetchall()]
 
@@ -257,8 +257,8 @@ def main() -> int:
         (a.out / "report.json").write_text(json.dumps(report, indent=1, default=str))
         print("isolation", r.get("isolation_ok"), "corroborated", r.get("corroboration", {}).get("ok"),
               "statements", r.get("corroboration", {}).get("matched"), "tables",
-              len({row[0] for row in r.get("final_state", {}).get("catalog", [])}), "result", r.get("raw_results"),
-              "teardown", r["teardown"])
+              len({row["table"] for row in r.get("final_state", {}).get("catalog", [])}), "result",
+              r.get("raw_results"), "teardown", r["teardown"])
         return 0 if (r.get("isolation_ok") and r.get("corroboration", {}).get("ok")
                      and all(r["teardown"].values())) else 1
     report = {"kind": "EXPERIMENTAL isolated-runner smoke test on a trusted fixture; not a hostile-code sandbox",
