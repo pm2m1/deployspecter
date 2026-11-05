@@ -213,6 +213,23 @@ async def chancy_runtime() -> dict:
 
     lim = Limits(statement_ms=20000, run_s=150, python_step_s=90)
     connect = async_actor_connection_factory(info, lim, search_path=os.environ["DS_SCHEMA"], autocommit=False)
+    if os.environ.get("DS_CHANCY_VARIANT") == "concurrent":  # connection per actor: a producer, then two workers
+        runs = []
+        produce = Actor("produce", CaptureHandler("chancy-0.26.0", "produce", ca.produce, frozenset(), {},
+                                                  serialize_tasks=True), {"count": 4})
+        r = AsyncRun([produce], connect, monitor, limits=lim, run_id="isolated_chancy_produce")
+        trace = await r.execute()
+        runs.append({"phase": "produce", "monitor_pid": r.monitor_pid, "trace": trace.to_dict(),
+                     "raw_results": trace.raw_results})
+        if not trace.actors["produce"]["exception"]:
+            workers = [Actor(name, CaptureHandler("chancy-0.26.0", "worker", ca.work_until, frozenset(), {},
+                                                  serialize_tasks=True), {"count": 4}) for name in ("w1", "w2")]
+            r = AsyncRun(workers, connect, monitor, schedule=["w1", "w2"] * 200, limits=lim,
+                         run_id="isolated_chancy_workers")
+            trace = await r.execute()
+            runs.append({"phase": "workers", "monitor_pid": r.monitor_pid, "trace": trace.to_dict(),
+                         "raw_results": trace.raw_results})
+        return {"pinned_sources": ca.verify_pinned(), "runs": runs}
     args: dict = {}
     if os.environ.get("DS_CHANCY_VARIANT") == "notifications":  # negative control: Chancy's own LISTEN connection
         args = {"notifications": True,

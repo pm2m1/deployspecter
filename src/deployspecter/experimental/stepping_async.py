@@ -272,7 +272,19 @@ class AsyncRun:
             async with self.cv:
                 actor.state, actor.request = "pending", op
                 self.cv.notify_all()
-                await self.cv.wait_for(lambda: actor.granted or self.aborted)
+                try:
+                    await self.cv.wait_for(lambda: actor.granted or self.aborted)
+                except asyncio.CancelledError:
+                    # the task was cancelled while waiting (a framework stopping its own tasks): the actor is no
+                    # longer waiting, and an already issued grant is consumed unused; recorded, never executed
+                    actor.granted, actor.request = False, None
+                    if actor.state in ("pending", "granted"):
+                        actor.state = "running"
+                    op.outcome, op.error_class = "aborted", "cancelled_while_waiting"
+                    op.completed_ms = self._ms()
+                    self._append(op)
+                    self.cv.notify_all()
+                    raise
                 if not actor.granted:
                     actor.request = None
                     op.outcome = "aborted"

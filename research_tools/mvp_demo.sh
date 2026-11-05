@@ -46,4 +46,6 @@ if [ "$MODE" = thirdparty ] || [ "$MODE" = full ]; then
   $PY research_tools/isolated/run_isolated.py chancy-runtime --chancy-sdist "$CHANCY" --out "$OUT/chancy_runtime" || exit 11
   $PY research_tools/isolated/run_isolated.py chancy-runtime --with-notifications --chancy-sdist "$CHANCY" \
     --out "$OUT/chancy_notifications_refuted" || exit 12
+  $PY research_tools/isolated/run_isolated.py chancy-runtime --concurrent-workers --chancy-sdist "$CHANCY" \
+    --out "$OUT/chancy_concurrent_workers" || exit 13
 fi

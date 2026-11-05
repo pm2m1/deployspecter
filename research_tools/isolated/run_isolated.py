@@ -254,7 +254,9 @@ def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path
                       initial_state_digest=digest, final_state=final, final_state_digest=oracle.digest(final),
                       oracle_violations=(None if mode == "chancy" else pgqueuer_check(
                                              final, inside["raw_results"], pgq_workload or PGQ_DEFAULT_WORKLOAD)
-                                         if mode == "pgqueuer" else chancy_check(final, inside["raw_results"])
+                                         if mode == "pgqueuer" else (chancy_concurrent_check if chancy_variant ==
+                                                                     "concurrent" else chancy_check)(
+                                             final, inside["raw_results"])
                                          if mode == "chancy-runtime" else oracle.check(final, backfill_done=done)),
                       pinned_sources=inside.get("pinned_sources"),
                       corroboration=corr,
@@ -298,7 +300,8 @@ def merge_runs(inside: dict[str, Any]) -> dict[str, Any]:
     return {"probes": inside["probes"], "pinned_sources": inside.get("pinned_sources"),
             "monitor_pids": [run["monitor_pid"] for run in inside["runs"]],
             "phases": [{"phase": run["phase"], "outcome": run["trace"]["outcome"],
-                        "exception": run["trace"]["actors"][run["phase"]]["exception"]} for run in inside["runs"]],
+                        "exceptions": {n: a["exception"] for n, a in run["trace"]["actors"].items()}}
+                       for run in inside["runs"]],
             "trace": {"actors": actors, "records": records}, "raw_results": raw}
 
 
@@ -327,6 +330,24 @@ def chancy_state(admin: Any, schema: str) -> dict[str, Any]:
                         f"completed_at IS NOT NULL AS completed FROM {schema}.chancy_jobs ORDER BY created_at")
     names = [d.name for d in cur.description]
     return {"jobs": [dict(zip(names, r, strict=True)) for r in cur.fetchall()]}
+
+
+def chancy_concurrent_check(final: dict[str, Any], raw: dict[str, Any]) -> list[str]:
+    """Independent of the adapter: K1 exactly the pushed jobs exist and every one 'succeeded' after one attempt;
+    K2 the workers together handled every job exactly once (no job ran twice, none was lost)."""
+    out = []
+    pushed = sorted((raw.get("produce") or {}).get("job_ids", []))
+    jobs = final["jobs"]
+    if sorted(j["id"] for j in jobs) != pushed or not pushed:
+        out.append(f"K1 jobs {sorted(j['id'] for j in jobs)}, pushed {pushed}")
+    bad = [(j["id"], j["state"], j["attempts"]) for j in jobs if j["state"] != "succeeded" or j["attempts"] != 1
+           or not j["completed"]]
+    if bad:
+        out.append(f"K1 not succeeded once: {bad}")
+    handled = sorted(n for w in ("w1", "w2") for n in (raw.get(w) or {}).get("handled_here", []))
+    if handled != list(range(len(pushed))):
+        out.append(f"K2 the workers handled {handled}, expected each of 0..{len(pushed) - 1} once")
+    return out
 
 
 def chancy_check(final: dict[str, Any], raw: dict[str, Any]) -> list[str]:
@@ -403,6 +424,8 @@ def main() -> int:
     ap.add_argument("--pgqueuer-sdist", type=Path, help="the downloaded pgqueuer-1.6.0.tar.gz (sha256 re-verified)")
     ap.add_argument("--public-factory", action="store_true",
                     help="pgqueuer negative control: PGQueuer's own driver, which the server log must refute")
+    ap.add_argument("--concurrent-workers", action="store_true",
+                    help="chancy-runtime: a producer, then two workers, each its own actor and stepped connection")
     ap.add_argument("--with-notifications", action="store_true",
                     help="chancy-runtime negative control: the worker's own LISTEN connection must be refuted")
     a = ap.parse_args()
@@ -417,6 +440,23 @@ def main() -> int:
                             pgqueuer_sdist=a.pgqueuer_sdist if a.mode == "pgqueuer" else None)
     finally:
         shutil.rmtree(build_dir, ignore_errors=True)
+    if a.mode == "chancy-runtime" and a.concurrent_workers:
+        r = run_smoke(target, variant="chancy_concurrent", schedule=[], out=a.out, image=image, mode="chancy-runtime",
+                      chancy_variant="concurrent")
+        c = r.get("corroboration", {})
+        report = {"kind": "EXPERIMENTAL: Chancy 0.26.0, two workers as two actors (each its own Chancy instance and "
+                         "stepped connection) draining four jobs concurrently, in the isolated runner",
+                  "image": {"tag": image[0], "id": image[1]}, "run": r}
+        (a.out / "report.json").write_text(json.dumps(report, indent=1, default=str))
+        raw = r.get("raw_results") or {}
+        print("isolation", r.get("isolation_ok"), "corroborated", c.get("ok"), "statements", c.get("matched"),
+              "compared", c.get("params_compared"), "mismatched", c.get("params_mismatched"), "unchecked",
+              c.get("params_unchecked"), "oracle", r.get("oracle_violations"), "w1", (raw.get("w1") or {}).get(
+                  "handled_here"), "w2", (raw.get("w2") or {}).get("handled_here"), "sessions", c.get("sessions"),
+              "teardown", r["teardown"], "problems", (c.get("problems") or [])[:4],
+              "stderr", (r.get("stderr_tail") or "")[-500:])
+        return 0 if (r.get("isolation_ok") and c.get("ok") and r.get("oracle_violations") == []
+                     and all(r["teardown"].values())) else 1
     if a.mode == "chancy-runtime" and a.with_notifications:
         r = run_smoke(target, variant="chancy_runtime_notifications", schedule=[], out=a.out, image=image,
                       mode="chancy-runtime", chancy_variant="notifications")

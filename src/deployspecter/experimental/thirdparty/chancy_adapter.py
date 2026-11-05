@@ -91,10 +91,46 @@ def stepped_chancy(conn: AsyncSteppedConnection, *, notifications: bool = False,
                          max_connection_pool_size=1)
 
 
+HANDLED_BY: list[tuple[int, str]] = []  # (n, the actor whose worker ran it), for the concurrent mode
+
+
 @job()
 async def ds_job(*, n: int) -> int:  # trusted, deterministic handler; module level so the worker can import it
+    from ..stepping_async import _ACTING_FOR
     HANDLED.append(n)
+    actor = _ACTING_FOR.get()
+    HANDLED_BY.append((n, actor.name if actor is not None else "?"))
     return n * 2
+
+
+async def produce(conn: AsyncSteppedConnection, *, count: int) -> dict[str, Any]:
+    """Concurrent mode, phase 1 (its own actor and connection): migrate, declare the queue, push ``count`` jobs."""
+    verify_pinned()
+    async with stepped_chancy(conn) as chancy:
+        await chancy.migrate()
+        await chancy.declare(Queue(QUEUE, concurrency=1, executor=Chancy.Executor.Async, polling_interval=1))
+        refs = [await chancy.push(ds_job.job.with_kwargs(n=i).with_queue(QUEUE)) for i in range(count)]
+    return {"job_ids": [str(r.identifier) for r in refs]}
+
+
+async def work_until(conn: AsyncSteppedConnection, *, count: int, timeout_s: float = 60) -> dict[str, Any]:
+    """Concurrent mode, phase 2: one of several workers, each its own actor with its own Chancy instance and its own
+    stepped connection. Runs until ``count`` jobs have been handled in this process, by any worker, then stops."""
+    import asyncio
+    import time
+    verify_pinned()
+    async with stepped_chancy(conn) as chancy:
+        worker = Worker(chancy, register_signal_handlers=False, shutdown_timeout=5, queue_change_poll_interval=1,
+                        heartbeat_poll_interval=1)
+        await worker.start()
+        until = time.monotonic() + timeout_s
+        while len(HANDLED) < count and time.monotonic() < until:
+            await asyncio.sleep(0.2)
+        stopped = await worker.stop(timeout=10)
+    from ..stepping_async import _ACTING_FOR
+    me = _ACTING_FOR.get()
+    return {"handled_here": sorted(n for n, who in HANDLED_BY if me is not None and who == me.name),
+            "handled_total": len(HANDLED), "worker_stopped": stopped}
 
 
 async def lifecycle(conn: AsyncSteppedConnection, *, notifications: bool = False,

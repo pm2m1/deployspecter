@@ -322,3 +322,41 @@ class TestTypedParameters:
         assert trace.actors["a"]["exception"] is None
         assert c["ok"], c["problems"]
         assert (c["params_compared"], c["params_mismatched"], c["params_unchecked"]) == (12, 0, 0)
+
+
+class TestCancelledWhileWaiting:
+    def test_a_task_cancelled_at_the_gate_leaves_the_actor_usable(self, target):
+        """Regression: a framework that cancels its own task while it waits for a grant (Chancy's Worker.stop) used
+        to leave the actor marked pending, so the actor's next operation was refused as concurrent use."""
+        async def framework(conn):
+            await conn.execute("SELECT 1")
+            waiting = asyncio.create_task(conn.execute("SELECT 1"))  # parks at the gate (serialize_tasks)
+            await asyncio.sleep(0.3)
+            waiting.cancel()
+            await asyncio.gather(waiting, return_exceptions=True)
+            await conn.execute("SELECT 1")  # the actor must still work
+            return "ok"
+
+        admin = target.admin()
+        try:
+            sync_app.reset(admin, SEED)
+            lim = st.Limits()
+            actor = st.Actor("q", st.Handler("test", "framework", framework, frozenset({"SELECT 1"}), {},
+                                             serialize_tasks=True), {})
+            other = st.Actor("o", st.Handler("test", "idle", idle_long, frozenset({"SELECT 1"}), {}), {})
+            connect = sa.async_actor_connection_factory(target.conninfo(), lim, search_path=A.SCHEMA)
+            run = sa.AsyncRun([actor, other], connect, hz.async_monitor(target), schedule=["q", "o", "q", "q"],
+                              limits=lim, run_id="cancel_wait")
+            trace, c = hz.corroborated(admin, run, user=target.user)
+        finally:
+            admin.close()
+        assert trace.actors["q"]["exception"] is None and trace.raw_results["q"] == "ok"
+        cancelled = [op for op in trace.records if op.error_class == "cancelled_while_waiting"]
+        assert len(cancelled) == 1 and cancelled[0].grant is None
+        assert c["ok"], c["problems"]  # the cancelled operation never reached the server
+
+
+async def idle_long(conn):
+    await conn.execute("SELECT 1")
+    await asyncio.sleep(0.6)  # keeps the controller busy so q's second request waits at the gate
+    return "idle"

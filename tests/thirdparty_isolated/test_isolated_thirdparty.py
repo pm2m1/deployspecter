@@ -32,7 +32,9 @@ def runner(tmp_path: Path, *args: str) -> subprocess.CompletedProcess[str]:
     ["pgqueuer", "--public-factory", "--pgqueuer-sdist", "{pgq}"],  # must be refuted by the server log
     ["chancy-runtime", "--chancy-sdist", "{chancy}"],
     ["chancy-runtime", "--with-notifications", "--chancy-sdist", "{chancy}"],  # must be refuted
-], ids=["pgqueuer_lifecycle", "pgqueuer_public_factory_refuted", "chancy_runtime", "chancy_notifications_refuted"])
+    ["chancy-runtime", "--concurrent-workers", "--chancy-sdist", "{chancy}"],  # two workers, two actors
+], ids=["pgqueuer_lifecycle", "pgqueuer_public_factory_refuted", "chancy_runtime", "chancy_notifications_refuted",
+        "chancy_concurrent_workers"])
 def test_third_party_path_gives_its_expected_verdict(tmp_path, args):
     args = [a.format(pgq=SDISTS / "pgqueuer-1.6.0.tar.gz", chancy=SDISTS / "chancy-0.26.0.tar.gz") for a in args]
     proc = runner(tmp_path, *args)
