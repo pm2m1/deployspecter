@@ -354,6 +354,7 @@ class Coordinator:
         self.peers: dict[str, dict[str, Any]] = {}
         self.writers: dict[str, asyncio.StreamWriter] = {}
         self.decisions: list[dict[str, Any]] = []
+        self.statements: dict[str, str] = {}  # statement_id -> its (normalized) text, once each
         self.events: list[dict[str, Any]] = []
         self.t0 = time.monotonic()
         self._pending_conns: list[asyncio.Task[Any]] = []
@@ -381,7 +382,8 @@ class Coordinator:
     def _report(self, outcome: str, reason: str | None = None) -> dict[str, Any]:
         return {"protocol": PROTOCOL, "outcome": outcome, "reason": reason, "policy": self.policy_spec,
                 "gates": [{k: v for k, v in g.items() if k != "_rx"} for g in self.gates], "stop": self.stop,
-                "processes": self.peers, "decisions": self.decisions, "events": self.events,
+                "processes": self.peers, "decisions": self.decisions, "statements": self.statements,
+                "events": self.events,
                 "grants": len(self.decisions), "elapsed_ms": self._ms()}
 
     async def serve(self, host: str = "0.0.0.0", port: int = 7777) -> dict[str, Any]:
@@ -526,6 +528,7 @@ class Coordinator:
             else:
                 proc, name, source = self.policy.choose(enabled)
             req = snaps[proc]["actors"][name]["request"]
+            self.statements.setdefault(req["statement_id"], req["sql"])
             grant = len(self.decisions)
             epoch += 1
             now = time.monotonic()

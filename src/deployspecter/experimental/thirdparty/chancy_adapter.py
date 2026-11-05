@@ -113,12 +113,26 @@ def stepped_chancy(conn: AsyncSteppedConnection, *, notifications: bool = False,
 HANDLED_BY: list[tuple[int, str]] = []  # (n, the actor whose worker ran it), for the concurrent mode
 
 
+SUCCEEDED: list[int] = []  # n of every handler execution that returned without error, in this process
+
+
 @job()
 async def ds_job(*, n: int) -> int:  # trusted, deterministic handler; module level so the worker can import it
     from ..stepping_async import _ACTING_FOR
     HANDLED.append(n)
     actor = _ACTING_FOR.get()
     HANDLED_BY.append((n, actor.name if actor is not None else "?"))
+    SUCCEEDED.append(n)
+    return n * 2
+
+
+@job()
+async def ds_flaky(*, n: int, fail_in: str) -> int:
+    """Trusted handler for the retry scenario: fails when run by the release named in ``fail_in``."""
+    HANDLED.append(n)
+    if installed_version().split("+")[0] == fail_in:
+        raise RuntimeError(f"ds_flaky: planned failure under {fail_in}")
+    SUCCEEDED.append(n)
     return n * 2
 
 
@@ -251,3 +265,72 @@ async def lifecycle(conn: AsyncSteppedConnection, *, notifications: bool = False
         stopped = await stop_worker(worker)
     return {"job_id": str(ref.identifier), "state": done.state.value if done else None, "handled": list(HANDLED),
             "worker_stopped": stopped, "pinned_sources": pinned}
+
+
+# ------------------------------------------------------- simultaneous mixed-version execution (NONBLIND), ds-coord/1
+# Three queues, through the public Queue/Worker tag API: q_old is run only by workers tagged ds=old (0.25.1), q_new
+# only by ds=new (0.26.0), q_shared by both. Tags are regular expressions matched against worker tags.
+CO_QUEUES = {"q_old": {"^ds=old$"}, "q_new": {"^ds=new$"}, "q_shared": {".*"}}
+
+
+def worker_tag() -> str:
+    return "ds=old" if installed_version().startswith("0.25.1") else "ds=new"
+
+
+async def co_setup(conn: AsyncSteppedConnection) -> dict[str, Any]:
+    """Old code's setup: migrate to its own latest schema, declare the three queues."""
+    async with stepped_chancy(conn) as chancy:
+        await chancy.migrate()
+        for name, tags in CO_QUEUES.items():
+            await chancy.declare(Queue(name, concurrency=1, executor=Chancy.Executor.Async, polling_interval=1,
+                                       tags=set(tags)))
+    return {"version": installed_version(), "queues": sorted(CO_QUEUES)}
+
+
+async def co_work(conn: AsyncSteppedConnection, *, timeout_s: float = 60) -> dict[str, Any]:
+    """A worker of this container's release, tagged by its version. Runs until the coordinator's ``stop`` signal
+    (or ``timeout_s``), then stops at a safe point (``stop_worker``: inside ``quiesced``)."""
+    import asyncio
+
+    from ..stepping_async import _ACTING_FOR
+    me = _ACTING_FOR.get()
+    if me is None or not hasattr(me.run, "signal"):
+        raise Refused("co_work runs only under a coordinated run")
+    stop = me.run.signal("stop")
+    async with stepped_chancy(conn) as chancy:
+        worker = Worker(chancy, register_signal_handlers=False, shutdown_timeout=5, queue_change_poll_interval=1,
+                        heartbeat_poll_interval=1, tags={worker_tag()})
+        await worker.start()
+        try:
+            await asyncio.wait_for(stop.wait(), timeout=timeout_s)
+            why = "signal"
+        except TimeoutError:
+            why = "timeout"
+        stopped = await stop_worker(worker)
+    return {"version": installed_version(), "worker_id": str(worker.worker_id), "tag": worker_tag(),
+            "handled": list(HANDLED), "succeeded": list(SUCCEEDED), "worker_stopped": stopped, "stopped_by": why}
+
+
+async def co_push(conn: AsyncSteppedConnection, *, ns: list[int], queue: str, max_attempts: int = 1,
+                  flaky_in: str | None = None, cancel: list[int] | None = None) -> dict[str, Any]:
+    """Push jobs (``ds_job``, or ``ds_flaky`` failing under ``flaky_in``) with this release's public ``push``;
+    then cancel the listed ones with its public ``cancel_job``. When the cancel runs relative to the worker's claim
+    and completion is the coordinator's schedule, not this function's."""
+    from ..stepping_async import _ACTING_FOR
+    if queue not in CO_QUEUES:
+        raise Refused(f"unknown queue {queue!r}")
+    version = installed_version()
+    pushed, refs = [], {}
+    async with stepped_chancy(conn) as chancy:
+        for n in ns:
+            j = ds_flaky.job.with_kwargs(n=n, fail_in=flaky_in) if flaky_in else ds_job.job.with_kwargs(n=n)
+            ref = await chancy.push(j.with_queue(queue).with_max_attempts(max_attempts))
+            refs[n] = ref
+            pushed.append({"n": n, "id": str(ref.identifier), "queue": queue, "version": version})
+        cancelled = []
+        me = _ACTING_FOR.get()
+        for n in cancel or []:
+            await chancy.cancel_job(refs[n])
+            ups = [op for op in me.run.records if op.actor == me.name and "SET state = 'failed'" in op.sql]
+            cancelled.append({"n": n, "rowcount": ups[-1].rowcount if ups else None})
+    return {"version": version, "pushed": pushed, "cancelled": cancelled}

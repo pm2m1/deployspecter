@@ -252,7 +252,8 @@ async def chancy_plan() -> dict:
     from deployspecter.experimental.stepping_async import AsyncRun, async_actor_connection_factory
     from deployspecter.experimental.thirdparty import chancy_adapter as ca
 
-    functions = {"setup": ca.phase_setup, "migrate": ca.phase_migrate, "push": ca.phase_push, "work": ca.phase_work}
+    functions = {"setup": ca.phase_setup, "migrate": ca.phase_migrate, "push": ca.phase_push, "work": ca.phase_work,
+                 "co_setup": ca.co_setup}
 
     class CaptureHandler(Handler):
         def allows(self, text: str) -> bool:
@@ -296,6 +297,64 @@ async def chancy_plan() -> dict:
     return {"pinned_sources": ca.verify_pinned(), "runs": runs}
 
 
+async def chancy_coordinated() -> dict:
+    """One process of a simultaneous mixed-version run: this image's pinned Chancy release, its actors (whitelisted
+    adapter functions), its own connections and monitor; every statement grant comes from the coordinator."""
+    import psycopg
+
+    from deployspecter.experimental.coordinated import RemoteAsyncRun
+    from deployspecter.experimental.stepping import Actor, Handler, Limits
+    from deployspecter.experimental.stepping_async import async_actor_connection_factory
+    from deployspecter.experimental.thirdparty import chancy_adapter as ca
+
+    functions = {"work": ca.co_work, "push": ca.co_push}
+
+    class CaptureHandler(Handler):
+        def allows(self, text: str) -> bool:
+            return True
+
+    info = {"host": os.environ["DS_PG_HOST"], "port": int(os.environ["DS_PG_PORT"]),
+            "user": os.environ["DS_PG_USER"], "password": os.environ["DS_PG_PASSWORD"],
+            "dbname": os.environ["DS_PG_DB"]}
+
+    async def monitor() -> psycopg.AsyncConnection:
+        conn = await psycopg.AsyncConnection.connect(**info, autocommit=True, prepare_threshold=None,
+                                                     application_name="ds_mvp_admin")
+        cur = await conn.execute("SELECT current_setting('cluster_name'), current_database()")
+        if await cur.fetchone() != ("ds_mvp_disposable", "ds_mvp"):
+            await conn.close()
+            raise SystemExit("not the disposable database")
+        return conn
+
+    plan = json.loads(os.environ["DS_CO_PLAN"])
+    version = ca.installed_version()
+    lim = Limits(statement_ms=20000, run_s=float(plan.get("run_s", 150)), python_step_s=90)
+    connect = async_actor_connection_factory(info, lim, search_path=os.environ["DS_SCHEMA"], autocommit=False)
+    actors = [Actor(a["actor"], CaptureHandler(f"chancy-{version}", a["fn"], functions[a["fn"]], frozenset(), {},
+                                               serialize_tasks=True), dict(a.get("args", {})))
+              for a in plan["actors"]]
+    host, port = plan["coordinator"]
+    r = RemoteAsyncRun(actors, connect, monitor, process=plan["process"], version=version, endpoint=(host, port),
+                       token=os.environ["DS_CO_NONCE"], markers=plan.get("markers", {}),
+                       report=lambda: {"handled": list(ca.HANDLED), "succeeded": list(ca.SUCCEEDED)},
+                       limits=lim, run_id=f"coordinated_{plan['process']}")
+    trace = await r.execute()
+    return {"pinned_sources": ca.verify_pinned(), "process": plan["process"], "version": version,
+            "monitor_pid": r.monitor_pid, "trace": trace.to_dict(), "raw_results": trace.raw_results,
+            "received": r.received}
+
+
+async def coordinator() -> dict:
+    """The coordinator container: no database credentials, no application code; it only decides grants."""
+    from deployspecter.experimental.coordinated import Coordinator
+    spec = json.loads(os.environ["DS_CO_SPEC"])
+    c = Coordinator(processes=spec["processes"], token=os.environ["DS_CO_NONCE"], policy=spec.get("policy"),
+                    gates=spec.get("gates", []), stop=spec.get("stop"), deadline_s=float(spec.get("deadline_s", 150)),
+                    epoch_timeout_s=float(spec.get("epoch_timeout_s", 60)),
+                    hello_timeout_s=float(spec.get("hello_timeout_s", 90)), stall_s=float(spec.get("stall_s", 30)))
+    return {"coordinator": await c.serve("0.0.0.0", 7777)}
+
+
 def main() -> int:
     out: dict = {"probes": probe()}
     if os.environ.get("DS_MODE") == "chancy_migrate":
@@ -306,6 +365,10 @@ def main() -> int:
         out.update(asyncio.run(chancy_runtime()))
     elif os.environ.get("DS_MODE") == "chancy_plan":
         out.update(asyncio.run(chancy_plan()))
+    elif os.environ.get("DS_MODE") == "chancy_coordinated":
+        out.update(asyncio.run(chancy_coordinated()))
+    elif os.environ.get("DS_MODE") == "coordinator":
+        out.update(asyncio.run(coordinator()))
     else:
         out.update(asyncio.run(run(json.loads(os.environ["DS_SCHEDULE"]), os.environ["DS_VARIANT"])))
     print(json.dumps(out, default=str))

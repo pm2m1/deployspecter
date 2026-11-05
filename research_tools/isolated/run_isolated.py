@@ -59,7 +59,8 @@ PAYLOAD = ["deployspecter/__init__.py", "deployspecter/experimental/__init__.py"
            "deployspecter/experimental/apps/reservations_mixed_async.py",
            "deployspecter/experimental/thirdparty/__init__.py",
            "deployspecter/experimental/thirdparty/pgqueuer_adapter.py",
-           "deployspecter/experimental/thirdparty/chancy_adapter.py"]
+           "deployspecter/experimental/thirdparty/chancy_adapter.py",
+           "deployspecter/experimental/coordinated.py"]
 LOCKED = ["psycopg", "psycopg-binary", "typing-extensions"]
 # The one third-party candidate whose migration path takes a caller-supplied connection (CORPUS_SHORTLIST.json v2).
 CHANCY_SDIST = "chancy-0.26.0.tar.gz"
