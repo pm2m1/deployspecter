@@ -75,10 +75,12 @@ class Corroboration:
     problems: list[str] = field(default_factory=list)
     unchecked_kinds: dict[str, int] = field(default_factory=dict)
     params_mismatched: int = 0
+    client_texts_matched: int = 0  # client-side binding: the whole merged statement text, by digest
 
     def to_dict(self) -> dict[str, Any]:
         return {"ok": self.ok, "matched": self.matched, "params_compared": self.params_compared,
                 "params_mismatched": self.params_mismatched, "params_unchecked": self.params_unchecked,
+                "client_texts_matched": self.client_texts_matched,
                 "unchecked_kinds": self.unchecked_kinds, "sessions": self.sessions, "problems": self.problems}
 
 
@@ -88,7 +90,9 @@ def _expected(op: Any) -> list[tuple[str, list[Any] | None]]:
     if op.implicit_begin:
         out.append(("BEGIN", None))
     native = (op.provenance or {}).get("placeholders") == "native"  # a raw cursor: the text is sent as written
-    if op.kind == "execute":
+    if op.kind == "execute" and (op.provenance or {}).get("placeholders") == "client":
+        out.append(("sha:" + op.provenance["client_text_sha256"], None))  # the exact merged text, by digest
+    elif op.kind == "execute":
         out.append((op.sql, list(op.params or [])) if native else bind(op.sql, op.params))
     elif op.kind == "executemany":
         out += [(op.sql, list(p)) if native else bind(op.sql, p) for p in op.params]
@@ -304,13 +308,18 @@ def corroborate(log: bytes, *, start: str, end: str, trace: Any, admin_pid: int 
             continue
         want, values, grant, _op = expected[pid][cursor[pid]]
         text = normal_sql(text)  # the trace keeps statement text whitespace-normalized; values are compared apart
-        hit = re.match(want[3:], text) if want.startswith("re:") else text == want
+        if want.startswith("sha:"):
+            hit = hashlib.sha256(text.encode()).hexdigest() == want[4:]
+        else:
+            hit = re.match(want[3:], text) if want.startswith("re:") else text == want
         if not hit:
             out.problems.append(f"{actors[pid]}: logged {text[:50]!r}, the trace expects {want[:50]!r}")
             cursor[pid] += 1
             continue
         cursor[pid] += 1
         out.matched += 1
+        if want.startswith("sha:"):
+            out.client_texts_matched += 1
         if grant is not None:
             order.append(grant)
         if values:

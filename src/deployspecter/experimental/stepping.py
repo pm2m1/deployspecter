@@ -52,7 +52,7 @@ def _package_dir(name: str) -> str | None:
 
 
 # Frameworks the call site looks through, to the application line that called them. Not imported here.
-FRAMEWORK_DIRS = {n: d for n in ("sqlalchemy",) if (d := _package_dir(n))}
+FRAMEWORK_DIRS = {n: d for n in ("sqlalchemy", "django") if (d := _package_dir(n))}
 TX = psycopg.pq.TransactionStatus
 BUSY = ("running", "granted", "executing")  # states in which an actor will act without a new grant
 
@@ -230,6 +230,37 @@ class SteppedCursor(psycopg.Cursor):
         raise Refused("streaming cursors aren't supported by the stepping prototype")
 
 
+class SteppedClientCursor(psycopg.ClientCursor):
+    """``ClientCursor`` (client-side binding: psycopg merges the values into the statement text and sends no
+    parameters), gated like ``SteppedCursor``. The trace keeps the template and the sanitized values, plus a digest of
+    the exact text sent (``mogrify``), which the server-log corroboration compares; the literal text, which may hold
+    application strings, is never stored."""
+
+    def _actor(self) -> Actor:
+        return self.connection._ds_actor  # type: ignore[attr-defined]
+
+    def execute(self, query: Any, params: Any = None, *, prepare: bool | None = None, binary: bool | None = None):
+        text = query if isinstance(query, str) else query.as_string(self.connection)
+        sent = self.mogrify(query, params) if params is not None else text
+        actor = self._actor()
+
+        def run() -> Any:
+            psycopg.ClientCursor.execute(self, query, params, prepare=prepare, binary=binary)
+            return self
+
+        actor.run.gate(actor, "execute", text, params, run, cursor=self, client_text=sent)
+        return self
+
+    def executemany(self, query: Any, params_seq: Any, *, returning: bool = False):
+        raise Refused("executemany on a client-binding cursor isn't supported by the stepping prototype")
+
+    def copy(self, *_a: Any, **_k: Any):
+        raise Refused("COPY isn't supported by the stepping prototype")
+
+    def stream(self, *_a: Any, **_k: Any):
+        raise Refused("streaming cursors aren't supported by the stepping prototype")
+
+
 class SteppedConnection(psycopg.Connection):
     """A psycopg 3 Connection whose every supported database operation passes the actor's gate."""
 
@@ -391,7 +422,7 @@ class Run:
     # -- the gate, in the actor's thread
 
     def gate(self, actor: Actor, kind: str, text: str, params: Any, call: Callable[[], Any], *, cursor: Any = None,
-             aborting: bool = False) -> Any:
+             aborting: bool = False, client_text: str | None = None) -> Any:
         if threading.current_thread() is not actor.thread:
             raise Refused(f"{actor.name}'s connection was used from another thread")
         if self.aborted and not aborting:
@@ -402,6 +433,9 @@ class Run:
                 "logical_op": actor.ops, "session": {"backend_pid": actor.backend_pid},
                 "thread": threading.current_thread().name, "call_site": site, "framework_entry": entry,
                 "txn": None}
+        if client_text is not None:  # client-side binding: what reached the server, as a digest only
+            prov["placeholders"] = "client"
+            prov["client_text_sha256"] = hashlib.sha256(normal_sql(client_text).encode()).hexdigest()
         op = OpRecord(seq=-1, actor=actor.name, kind=kind, sql=normal_sql(text), statement_id=statement_id(text),
                       params=sanitize(params), provenance=prov, requested_ms=self._ms())
         actor.ops += 1
@@ -639,7 +673,8 @@ class Run:
 
 
 def actor_connection_factory(conninfo: dict[str, Any], limits: Limits, *, search_path: str = "public",
-                             autocommit: bool = True) -> Callable[[], SteppedConnection]:
+                             autocommit: bool = True, cursor_factory: type = SteppedCursor,
+                             context: Any = None) -> Callable[[], SteppedConnection]:
     """Fresh SteppedConnections with explicit limits. Autocommit by default, so every transaction boundary is a gated
     call; ``autocommit=False`` is the DBAPI default a framework such as SQLAlchemy expects, and its implicit BEGIN is
     part of the first gated execute of each transaction."""
@@ -650,9 +685,12 @@ def actor_connection_factory(conninfo: dict[str, Any], limits: Limits, *, search
                f"-c idle_in_transaction_session_timeout={limits.idle_in_transaction_ms} -c search_path={search_path}")
 
     def connect() -> SteppedConnection:
+        if not (isinstance(cursor_factory, type) and issubclass(cursor_factory, (SteppedCursor, SteppedClientCursor))):
+            raise Refused("an actor connection's cursors must be gated")
+        extra = {"context": context} if context is not None else {}
         conn = SteppedConnection.connect(**conninfo, autocommit=autocommit, prepare_threshold=None,
-                                         cursor_factory=SteppedCursor, options=options,
-                                         application_name="ds_mvp_actor")
+                                         cursor_factory=cursor_factory, options=options,
+                                         application_name="ds_mvp_actor", **extra)
         return conn
 
     return connect
@@ -686,5 +724,6 @@ def explore(run_with: Callable[[list[str]], Trace], *, max_runs: int) -> tuple[l
     return traces, not frontier
 
 
-__all__ = ["Actor", "Decision", "Handler", "Limits", "OpRecord", "Refused", "Run", "RunAborted", "SteppedConnection",
-           "SteppedCursor", "Trace", "actor_connection_factory", "explore", "normal_sql", "sanitize", "statement_id"]
+__all__ = ["Actor", "Decision", "Handler", "Limits", "OpRecord", "Refused", "Run", "RunAborted",
+           "SteppedClientCursor", "SteppedConnection", "SteppedCursor", "Trace", "actor_connection_factory", "explore",
+           "normal_sql", "sanitize", "statement_id"]

@@ -279,8 +279,10 @@ def run_app(target: Target, app_module: Any, invocations: list[dict[str, Any]], 
             run = AsyncRun(actors, connect_async, async_monitor(target), schedule=schedule, strict=strict,
                            limits=limits, run_id=run_id)
         else:
+            extra = (app_module.connection_options(**(registry_kw or {}))
+                     if hasattr(app_module, "connection_options") else {})  # e.g. Django's cursor class and adapters
             connect = actor_connection_factory(target.conninfo(), limits, search_path=app_module.SCHEMA,
-                                               autocommit=autocommit)
+                                               autocommit=autocommit, **extra)
             run = Run(actors, connect, admin, schedule=schedule, strict=strict, limits=limits, run_id=run_id)
         corroboration = None
         if corroborate:

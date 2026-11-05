@@ -24,7 +24,8 @@ SECRET = Path(os.environ.get("DS_MVP_SECRET_FILE", os.path.expanduser("~/.ds_mvp
 PORT = int(os.environ.get("DS_MVP_PORT", "55441"))
 pytestmark = pytest.mark.skipif(not SECRET.exists(), reason="the disposable MVP PostgreSQL isn't running")
 BOTH_READ_FIRST = ["a", "b"] * 6
-OTHER_SCHEMAS = ("mvp_app", "mvp_orm", "chancy_capture")  # other fixtures' schemas in the same disposable database
+OTHER_SCHEMAS = ("mvp_app", "mvp_orm", "chancy_capture", "mvp_django",
+                 "pgq_capture")  # other fixtures' schemas in the same disposable database
 
 
 @pytest.fixture

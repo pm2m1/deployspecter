@@ -1,4 +1,5 @@
-"""EXPERIMENTAL integrated demo: the SQLAlchemy ledger and the planned Gate 2A reservations app, buggy and fixed.
+"""EXPERIMENTAL integrated demo: the SQLAlchemy ledger, the Django ledger (both binding modes) and the planned Gate 2A
+reservations app, buggy and fixed.
 
     DS_MVP_PORT=55441 python -m deployspecter.experimental.demo_integrated --out DIR
 
@@ -61,6 +62,18 @@ def main() -> int:
         r = hz.run_app(target, L, LEDGER_INV, LEDGER_SEED, variant=variant, schedule=INTERLEAVE,
                        label="two withdrawals", corroborate=True)
         verdicts.setdefault("sqlalchemy_ledger", {})[variant] = show("sqlalchemy_ledger", variant, r, a.out)
+    from .apps import django_fixture
+    django_fixture.configure(target)
+    mtrace, mcorr = django_fixture.migrate_through_stepping(target)
+    print(f"\nDjango migrate through the gate: {mtrace.outcome}, server log "
+          f"{'corroborates' if mcorr['ok'] else 'REFUTES'} ({mcorr['matched']} statements)")
+    ok_migrate = mcorr["ok"] and mtrace.actors["migrate"]["exception"] is None
+    for binding in ("server", "client"):
+        for variant in ("buggy", "fixed"):
+            r = hz.run_app(target, django_fixture, LEDGER_INV, LEDGER_SEED, variant=variant, schedule=INTERLEAVE,
+                           label="django two withdrawals", corroborate=True, registry_kw={"binding": binding})
+            verdicts.setdefault(f"django_ledger_{binding}_binding", {})[variant] = show(
+                f"django_ledger_{binding}_binding", variant, r, a.out)
     p = pa.plan(sc.DOCUMENT)
     print(f"\nWorkloadSpec v2 {sc.DOCUMENT['name']!r}: {p.outcome} at {p.stage}; typed rows {pa.typed_rows(p)}")
     for variant in ("buggy", "fixed"):
@@ -74,7 +87,7 @@ def main() -> int:
         ok &= good
         print(f"{case}: buggy violates {v['buggy'][0]}, fixed holds {not v['fixed'][0]}, both corroborated "
               f"{v['buggy'][1] and v['fixed'][1]}, same initial state {v['buggy'][2] == v['fixed'][2]}")
-    return 0 if ok else 1
+    return 0 if ok and ok_migrate else 1
 
 
 if __name__ == "__main__":
