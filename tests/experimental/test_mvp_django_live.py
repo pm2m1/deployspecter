@@ -240,3 +240,9 @@ class TestDjangoBoundary:
         trace, c = run_custom(target, raw_bypass, [D.GET])
         assert trace.raw_results["a"] == "bypassed" and not c["ok"]
         assert any("doesn't record" in p for p in c["problems"])
+
+
+def test_the_two_binding_modes_have_distinct_run_identities(target):
+    server = run(target, "buggy", "server")
+    client = run(target, "buggy", "client")
+    assert server.run_id != client.run_id and server.workload_sha256 != client.workload_sha256
