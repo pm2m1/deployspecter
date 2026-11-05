@@ -1,0 +1,6523 @@
+{
+ "actors": {
+  "produce": {
+   "handler": "chancy-0.26.0.produce",
+   "args": {
+    "count": 4
+   },
+   "state": "finished",
+   "result": {
+    "job_ids": [
+     {
+      "str": 36,
+      "sha256": "2d62b42dd33e"
+     },
+     {
+      "str": 36,
+      "sha256": "0343ef635a6c"
+     },
+     {
+      "str": 36,
+      "sha256": "57ea64d8f72c"
+     },
+     {
+      "str": 36,
+      "sha256": "d66a604d4aa1"
+     }
+    ]
+   },
+   "exception": null,
+   "exception_class": null,
+   "backend_pid": 24843,
+   "transactions": 6
+  },
+  "w1": {
+   "handler": "chancy-0.26.0.worker",
+   "args": {
+    "count": 4
+   },
+   "state": "finished",
+   "result": {
+    "handled_here": [
+     0,
+     2
+    ],
+    "handled_total": 4,
+    "worker_stopped": true
+   },
+   "exception": null,
+   "exception_class": null,
+   "backend_pid": 24845,
+   "transactions": 11
+  },
+  "w2": {
+   "handler": "chancy-0.26.0.worker",
+   "args": {
+    "count": 4
+   },
+   "state": "finished",
+   "result": {
+    "handled_here": [
+     1,
+     3
+    ],
+    "handled_total": 4,
+    "worker_stopped": true
+   },
+   "exception": null,
+   "exception_class": null,
+   "backend_pid": 24846,
+   "transactions": 12
+  }
+ },
+ "records": [
+  {
+   "seq": 0,
+   "actor": "produce",
+   "kind": "transaction_enter",
+   "sql": "BEGIN",
+   "statement_id": "a8402858d4f1",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 0,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:119:migrate",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 0,
+   "decision": 0,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 10.0,
+   "completed_ms": 10.18
+  },
+  {
+   "seq": 1,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "CREATE TABLE IF NOT EXISTS \"chancy_schema_version\" ( version_of VARCHAR(255) PRIMARY KEY, version INT )",
+   "statement_id": "920b81e0ec32",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 1,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:156:upsert_version_table",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 1,
+   "decision": 1,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 10.24,
+   "completed_ms": 10.95
+  },
+  {
+   "seq": 2,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "SELECT version FROM \"chancy_schema_version\" WHERE version_of = %s",
+   "statement_id": "82d080aaa5ab",
+   "params": [
+    {
+     "str": 6,
+     "sha256": "5d607b5ef9ee"
+    }
+   ],
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 2,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:172:get_current_version",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 2,
+   "decision": 2,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 0,
+   "rows": [],
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 10.99,
+   "completed_ms": 11.33
+  },
+  {
+   "seq": 3,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "CREATE TABLE \"chancy_jobs\" ( id UUID PRIMARY KEY, queue TEXT NOT NULL, func TEXT NOT NULL, kwargs JSON NOT NULL DEFAULT '{}', limits JSON NOT NULL DEFAULT '[]', meta JSON NOT NULL DEFAULT '{}', state VARCHAR (25) NOT NULL DEFAULT 'pending', priority INTEGER DEFAULT 0, attempts INTEGER DEFAULT 0, max_attempts INTEGER DEFAULT 1, taken_by TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), started_at TIMESTAMPTZ, completed_at TIMESTAMPTZ, scheduled_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), unique_key TEXT, errors JSON NOT NULL DEFAULT '[]' )",
+   "statement_id": "613f7ff16e4f",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 3,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrations/v1.py:12:up",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 3,
+   "decision": 3,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 11.38,
+   "completed_ms": 11.99
+  },
+  {
+   "seq": 4,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "CREATE UNIQUE INDEX \"chancy_jobs_unique_key\" ON \"chancy_jobs\" (unique_key) WHERE unique_key IS NOT NULL AND state NOT IN ('succeeded', 'failed');",
+   "statement_id": "a2afdc04b3b8",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 4,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrations/v1.py:37:up",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 4,
+   "decision": 4,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 12.02,
+   "completed_ms": 12.29
+  },
+  {
+   "seq": 5,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "CREATE UNLOGGED TABLE \"chancy_leader\" ( id BIGSERIAL PRIMARY KEY, worker_id TEXT NOT NULL, first_seen TIMESTAMPTZ NOT NULL DEFAULT NOW(), expires_at TIMESTAMPTZ NOT NULL ); ALTER TABLE \"chancy_leader\" ADD CONSTRAINT \"chancy_leader_worker_id_unique\" UNIQUE (worker_id);",
+   "statement_id": "aaf47e53821c",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 5,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrations/v1.py:53:up",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 5,
+   "decision": 5,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 12.32,
+   "completed_ms": 13.03
+  },
+  {
+   "seq": 6,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "CREATE UNLOGGED TABLE \"chancy_workers\" ( -- The UUID of the worker. worker_id TEXT NOT NULL PRIMARY KEY, -- The tags associated with this worker. tags TEXT[], -- The queues this worker is currently processing. queues TEXT[], last_seen TIMESTAMPTZ NOT NULL DEFAULT NOW(), expires_at TIMESTAMPTZ NOT NULL );",
+   "statement_id": "6c9c6e1bd3ab",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 6,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrations/v1.py:74:up",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 6,
+   "decision": 6,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 13.05,
+   "completed_ms": 13.48
+  },
+  {
+   "seq": 7,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "CREATE UNLOGGED TABLE \"chancy_queue_rate_limits\" ( queue VARCHAR(255) PRIMARY KEY, window_start INTEGER NOT NULL, count INTEGER NOT NULL DEFAULT 0 );",
+   "statement_id": "dc5bf7280884",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 7,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrations/v1.py:91:up",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 7,
+   "decision": 7,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 13.5,
+   "completed_ms": 13.73
+  },
+  {
+   "seq": 8,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "CREATE TABLE \"chancy_queues\" ( -- A unique name for the queue. name TEXT PRIMARY KEY, -- The state of the queue. This can be used to pause -- processing of jobs in the queue. state TEXT NOT NULL DEFAULT 'active', -- The number of jobs that can be processed concurrently -- per worker. concurrency INTEGER DEFAULT 1, -- Only worker's matching these tags will be able to -- process jobs from this queue, or None for all workers. tags TEXT[], -- The executor to use for processing jobs in this queue. executor TEXT NOT NULL DEFAULT 'chancy.executors.process.ProcessExecutor', -- Options to pass to the executor. executor_options JSON, -- The interval at which the queue should be polled for -- jobs. polling_interval INTEGER DEFAULT 1, -- The time at which the queue was first declared. created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), -- The number of jobs that can be processed per period. rate_limit INTEGER, -- The period of time over which the rate limit applies. rate_limit_window INTEGER );",
+   "statement_id": "9defa5fb48f4",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 8,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrations/v1.py:105:up",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 8,
+   "decision": 8,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 13.76,
+   "completed_ms": 14.1
+  },
+  {
+   "seq": 9,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "CREATE TABLE IF NOT EXISTS \"chancy_schema_version\" ( version_of VARCHAR(255) PRIMARY KEY, version INT )",
+   "statement_id": "920b81e0ec32",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 9,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:156:upsert_version_table",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 9,
+   "decision": 9,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 14.12,
+   "completed_ms": 14.23
+  },
+  {
+   "seq": 10,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "INSERT INTO \"chancy_schema_version\" (version_of, version) VALUES (%s, %s) ON CONFLICT (version_of) DO UPDATE SET version = EXCLUDED.version",
+   "statement_id": "749948e0ba18",
+   "params": [
+    {
+     "str": 6,
+     "sha256": "5d607b5ef9ee"
+    },
+    1
+   ],
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 10,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:193:set_current_version",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 10,
+   "decision": 10,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 14.26,
+   "completed_ms": 14.46
+  },
+  {
+   "seq": 11,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "CREATE INDEX IF NOT EXISTS \"chancy_idx_jobs_queue_state\" ON \"chancy_jobs\" (queue, state);",
+   "statement_id": "9085c675de41",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 11,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrations/v2.py:12:up",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 11,
+   "decision": 11,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 14.48,
+   "completed_ms": 14.64
+  },
+  {
+   "seq": 12,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "CREATE INDEX IF NOT EXISTS \"chancy_idx_jobs_fetch_prune\" ON \"chancy_jobs\" (queue, state, attempts, scheduled_at, priority DESC, id DESC) WHERE state IN ('pending', 'retrying');",
+   "statement_id": "e7d56552c6d1",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 12,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrations/v2.py:26:up",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 12,
+   "decision": 12,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 14.67,
+   "completed_ms": 14.92
+  },
+  {
+   "seq": 13,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "CREATE TABLE IF NOT EXISTS \"chancy_schema_version\" ( version_of VARCHAR(255) PRIMARY KEY, version INT )",
+   "statement_id": "920b81e0ec32",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 13,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:156:upsert_version_table",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 13,
+   "decision": 13,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 14.95,
+   "completed_ms": 15.08
+  },
+  {
+   "seq": 14,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "INSERT INTO \"chancy_schema_version\" (version_of, version) VALUES (%s, %s) ON CONFLICT (version_of) DO UPDATE SET version = EXCLUDED.version",
+   "statement_id": "749948e0ba18",
+   "params": [
+    {
+     "str": 6,
+     "sha256": "5d607b5ef9ee"
+    },
+    2
+   ],
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 14,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:193:set_current_version",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 14,
+   "decision": 14,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 15.12,
+   "completed_ms": 15.27
+  },
+  {
+   "seq": 15,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "UPDATE \"chancy_jobs\" SET max_attempts = 1 WHERE max_attempts IS NULL",
+   "statement_id": "e4a7280ae712",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 15,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrations/v3.py:14:up",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 15,
+   "decision": 15,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 0,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 15.3,
+   "completed_ms": 15.48
+  },
+  {
+   "seq": 16,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "ALTER TABLE \"chancy_jobs\" ALTER COLUMN max_attempts SET NOT NULL, ALTER COLUMN max_attempts SET DEFAULT 1",
+   "statement_id": "69cf7e73bfa3",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 16,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrations/v3.py:25:up",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 16,
+   "decision": 16,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 15.5,
+   "completed_ms": 15.7
+  },
+  {
+   "seq": 17,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "CREATE TABLE IF NOT EXISTS \"chancy_schema_version\" ( version_of VARCHAR(255) PRIMARY KEY, version INT )",
+   "statement_id": "920b81e0ec32",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 17,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:156:upsert_version_table",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 17,
+   "decision": 17,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 15.72,
+   "completed_ms": 15.81
+  },
+  {
+   "seq": 18,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "INSERT INTO \"chancy_schema_version\" (version_of, version) VALUES (%s, %s) ON CONFLICT (version_of) DO UPDATE SET version = EXCLUDED.version",
+   "statement_id": "749948e0ba18",
+   "params": [
+    {
+     "str": 6,
+     "sha256": "5d607b5ef9ee"
+    },
+    3
+   ],
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 18,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:193:set_current_version",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 18,
+   "decision": 18,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 15.84,
+   "completed_ms": 15.94
+  },
+  {
+   "seq": 19,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "ALTER TABLE \"chancy_queues\" ADD COLUMN resume_at TIMESTAMP WITH TIME ZONE",
+   "statement_id": "1a56f11fb98d",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 19,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrations/v4.py:12:up",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 19,
+   "decision": 19,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 15.96,
+   "completed_ms": 16.08
+  },
+  {
+   "seq": 20,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "CREATE TABLE IF NOT EXISTS \"chancy_schema_version\" ( version_of VARCHAR(255) PRIMARY KEY, version INT )",
+   "statement_id": "920b81e0ec32",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 20,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:156:upsert_version_table",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 20,
+   "decision": 20,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 16.09,
+   "completed_ms": 16.18
+  },
+  {
+   "seq": 21,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "INSERT INTO \"chancy_schema_version\" (version_of, version) VALUES (%s, %s) ON CONFLICT (version_of) DO UPDATE SET version = EXCLUDED.version",
+   "statement_id": "749948e0ba18",
+   "params": [
+    {
+     "str": 6,
+     "sha256": "5d607b5ef9ee"
+    },
+    4
+   ],
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 21,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:193:set_current_version",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 21,
+   "decision": 21,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 16.21,
+   "completed_ms": 16.3
+  },
+  {
+   "seq": 22,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "ALTER TABLE \"chancy_jobs\" ALTER COLUMN kwargs TYPE JSONB USING kwargs::JSONB, ALTER COLUMN limits TYPE JSONB USING limits::JSONB, ALTER COLUMN meta TYPE JSONB USING meta::JSONB, ALTER COLUMN errors TYPE JSONB USING errors::JSONB",
+   "statement_id": "b4924a95aa93",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 22,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrations/v5.py:18:up",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 22,
+   "decision": 22,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 16.32,
+   "completed_ms": 17.16
+  },
+  {
+   "seq": 23,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "ALTER TABLE \"chancy_queues\" ALTER COLUMN executor_options TYPE JSONB USING CASE WHEN executor_options IS NULL THEN NULL ELSE executor_options::JSONB END",
+   "statement_id": "c03ceec35bd1",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 23,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrations/v5.py:31:up",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 23,
+   "decision": 23,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 17.18,
+   "completed_ms": 17.57
+  },
+  {
+   "seq": 24,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "CREATE TABLE IF NOT EXISTS \"chancy_schema_version\" ( version_of VARCHAR(255) PRIMARY KEY, version INT )",
+   "statement_id": "920b81e0ec32",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 24,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:156:upsert_version_table",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 24,
+   "decision": 24,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 17.6,
+   "completed_ms": 17.69
+  },
+  {
+   "seq": 25,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "INSERT INTO \"chancy_schema_version\" (version_of, version) VALUES (%s, %s) ON CONFLICT (version_of) DO UPDATE SET version = EXCLUDED.version",
+   "statement_id": "749948e0ba18",
+   "params": [
+    {
+     "str": 6,
+     "sha256": "5d607b5ef9ee"
+    },
+    5
+   ],
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 25,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:193:set_current_version",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 25,
+   "decision": 25,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 17.72,
+   "completed_ms": 17.81
+  },
+  {
+   "seq": 26,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "ALTER TABLE \"chancy_queues\" ADD COLUMN IF NOT EXISTS eager_polling BOOLEAN NOT NULL DEFAULT FALSE",
+   "statement_id": "e130377b067d",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 26,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrations/v6.py:12:up",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 26,
+   "decision": 26,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 17.84,
+   "completed_ms": 17.97
+  },
+  {
+   "seq": 27,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "CREATE TABLE IF NOT EXISTS \"chancy_schema_version\" ( version_of VARCHAR(255) PRIMARY KEY, version INT )",
+   "statement_id": "920b81e0ec32",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 27,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:156:upsert_version_table",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 27,
+   "decision": 27,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 17.99,
+   "completed_ms": 18.08
+  },
+  {
+   "seq": 28,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "INSERT INTO \"chancy_schema_version\" (version_of, version) VALUES (%s, %s) ON CONFLICT (version_of) DO UPDATE SET version = EXCLUDED.version",
+   "statement_id": "749948e0ba18",
+   "params": [
+    {
+     "str": 6,
+     "sha256": "5d607b5ef9ee"
+    },
+    6
+   ],
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 28,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:193:set_current_version",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 28,
+   "decision": 28,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 18.1,
+   "completed_ms": 18.19
+  },
+  {
+   "seq": 29,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "SELECT 1 FROM pg_constraint c JOIN pg_class t ON t.oid = c.conrelid WHERE c.conname = %s AND t.relname = %s",
+   "statement_id": "56e630e79cc6",
+   "params": [
+    {
+     "str": 23,
+     "sha256": "552aa749d39c"
+    },
+    {
+     "str": 13,
+     "sha256": "f6fb4c35d69f"
+    }
+   ],
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 29,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrations/v7.py:22:up",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 29,
+   "decision": 29,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 0,
+   "rows": [],
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 18.21,
+   "completed_ms": 18.53
+  },
+  {
+   "seq": 30,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "CREATE TABLE IF NOT EXISTS \"chancy_schema_version\" ( version_of VARCHAR(255) PRIMARY KEY, version INT )",
+   "statement_id": "920b81e0ec32",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 30,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:156:upsert_version_table",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 30,
+   "decision": 30,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 18.55,
+   "completed_ms": 18.63
+  },
+  {
+   "seq": 31,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "INSERT INTO \"chancy_schema_version\" (version_of, version) VALUES (%s, %s) ON CONFLICT (version_of) DO UPDATE SET version = EXCLUDED.version",
+   "statement_id": "749948e0ba18",
+   "params": [
+    {
+     "str": 6,
+     "sha256": "5d607b5ef9ee"
+    },
+    7
+   ],
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 31,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:193:set_current_version",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 31,
+   "decision": 31,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 18.65,
+   "completed_ms": 18.75
+  },
+  {
+   "seq": 32,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "ALTER TABLE \"chancy_jobs\" ADD COLUMN claim_id UUID",
+   "statement_id": "bff3311d6ec8",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 32,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrations/v8.py:10:up",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 32,
+   "decision": 32,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 18.77,
+   "completed_ms": 18.9
+  },
+  {
+   "seq": 33,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "CREATE TABLE IF NOT EXISTS \"chancy_schema_version\" ( version_of VARCHAR(255) PRIMARY KEY, version INT )",
+   "statement_id": "920b81e0ec32",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 33,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:156:upsert_version_table",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 33,
+   "decision": 33,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 18.92,
+   "completed_ms": 19.03
+  },
+  {
+   "seq": 34,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "INSERT INTO \"chancy_schema_version\" (version_of, version) VALUES (%s, %s) ON CONFLICT (version_of) DO UPDATE SET version = EXCLUDED.version",
+   "statement_id": "749948e0ba18",
+   "params": [
+    {
+     "str": 6,
+     "sha256": "5d607b5ef9ee"
+    },
+    8
+   ],
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 34,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:193:set_current_version",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 34,
+   "decision": 34,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 19.05,
+   "completed_ms": 19.15
+  },
+  {
+   "seq": 35,
+   "actor": "produce",
+   "kind": "transaction_exit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 35,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:119:migrate",
+    "framework_entry": null,
+    "txn": "produce:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 35,
+   "decision": 35,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 19.17,
+   "completed_ms": 19.57
+  },
+  {
+   "seq": 36,
+   "actor": "produce",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 36,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/app.py:333:migrate",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 36,
+   "decision": 36,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 19.59,
+   "completed_ms": 19.61
+  },
+  {
+   "seq": 37,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "INSERT INTO \"chancy_queues\" ( name, state, concurrency, tags, executor, executor_options, polling_interval, rate_limit, rate_limit_window, resume_at, eager_polling ) VALUES ( %(name)s, %(state)s, %(concurrency)s, %(tags)s, %(executor)s, %(executor_options)s, %(polling_interval)s, %(rate_limit)s, %(rate_limit_window)s, %(resume_at)s, %(eager_polling)s ) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING state, concurrency, tags, polling_interval, executor, executor_options, rate_limit, rate_limit_window, resume_at, eager_polling",
+   "statement_id": "f1e1c0d1d19a",
+   "params": {
+    "name": {
+     "str": 4,
+     "sha256": "b40779fda6ff"
+    },
+    "state": {
+     "str": 6,
+     "sha256": "96879611650f"
+    },
+    "concurrency": 1,
+    "tags": [
+     {
+      "str": 2,
+      "sha256": "12aca9f6a2a2"
+     }
+    ],
+    "executor": {
+     "str": 38,
+     "sha256": "f84d9698957a"
+    },
+    "executor_options": {
+     "json_sha256": "44136fa355b3"
+    },
+    "polling_interval": 1,
+    "rate_limit": null,
+    "rate_limit_window": null,
+    "resume_at": null,
+    "eager_polling": false
+   },
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 37,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/app.py:452:declare_ex",
+    "framework_entry": null,
+    "txn": "produce:2",
+    "placeholders": "psycopg"
+   },
+   "grant": 37,
+   "decision": 37,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    {
+     "state": {
+      "str": 6,
+      "sha256": "96879611650f"
+     },
+     "concurrency": 1,
+     "tags": [
+      {
+       "str": 2,
+       "sha256": "12aca9f6a2a2"
+      }
+     ],
+     "polling_interval": 1,
+     "executor": {
+      "str": 38,
+      "sha256": "f84d9698957a"
+     },
+     "executor_options": {},
+     "rate_limit": null,
+     "rate_limit_window": null,
+     "resume_at": null,
+     "eager_polling": false
+    }
+   ],
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": true,
+   "blocked_by": [],
+   "requested_ms": 19.69,
+   "completed_ms": 20.18
+  },
+  {
+   "seq": 38,
+   "actor": "produce",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 38,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/app.py:398:declare",
+    "framework_entry": null,
+    "txn": "produce:2",
+    "placeholders": "psycopg"
+   },
+   "grant": 38,
+   "decision": 38,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 20.21,
+   "completed_ms": 20.3
+  },
+  {
+   "seq": 39,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "INSERT INTO \"chancy_jobs\" ( id, queue, func, kwargs, limits, meta, priority, max_attempts, scheduled_at, unique_key ) VALUES ( %(id)s, %(queue)s, %(func)s, %(kwargs)s, %(limits)s, %(meta)s, %(priority)s, %(max_attempts)s, %(scheduled_at)s, %(unique_key)s ) ON CONFLICT (unique_key) WHERE unique_key IS NOT NULL AND state NOT IN ('succeeded', 'failed') DO UPDATE SET state = \"chancy_jobs\".state RETURNING id;",
+   "statement_id": "4c84553c03d4",
+   "params": {
+    "id": {
+     "uuid_sha256": "2d62b42dd33e"
+    },
+    "queue": {
+     "str": 4,
+     "sha256": "b40779fda6ff"
+    },
+    "func": {
+     "str": 59,
+     "sha256": "80e025e28c96"
+    },
+    "kwargs": {
+     "json_sha256": "f3013f933b9f"
+    },
+    "limits": {
+     "json_sha256": "4f53cda18c2b"
+    },
+    "meta": {
+     "json_sha256": "44136fa355b3"
+    },
+    "priority": 0,
+    "max_attempts": 1,
+    "scheduled_at": {
+     "timestamptz_us": 1793880407848836
+    },
+    "unique_key": null
+   },
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 39,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/app.py:700:push_many_ex",
+    "framework_entry": null,
+    "txn": "produce:3",
+    "placeholders": "psycopg"
+   },
+   "grant": 39,
+   "decision": 39,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    {
+     "id": {
+      "uuid_sha256": "2d62b42dd33e"
+     }
+    }
+   ],
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": true,
+   "blocked_by": [],
+   "requested_ms": 20.41,
+   "completed_ms": 20.9
+  },
+  {
+   "seq": 40,
+   "actor": "produce",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 40,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/app.py:550:push",
+    "framework_entry": null,
+    "txn": "produce:3",
+    "placeholders": "psycopg"
+   },
+   "grant": 40,
+   "decision": 40,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 20.92,
+   "completed_ms": 21.01
+  },
+  {
+   "seq": 41,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "INSERT INTO \"chancy_jobs\" ( id, queue, func, kwargs, limits, meta, priority, max_attempts, scheduled_at, unique_key ) VALUES ( %(id)s, %(queue)s, %(func)s, %(kwargs)s, %(limits)s, %(meta)s, %(priority)s, %(max_attempts)s, %(scheduled_at)s, %(unique_key)s ) ON CONFLICT (unique_key) WHERE unique_key IS NOT NULL AND state NOT IN ('succeeded', 'failed') DO UPDATE SET state = \"chancy_jobs\".state RETURNING id;",
+   "statement_id": "4c84553c03d4",
+   "params": {
+    "id": {
+     "uuid_sha256": "0343ef635a6c"
+    },
+    "queue": {
+     "str": 4,
+     "sha256": "b40779fda6ff"
+    },
+    "func": {
+     "str": 59,
+     "sha256": "80e025e28c96"
+    },
+    "kwargs": {
+     "json_sha256": "2bfd14f43d17"
+    },
+    "limits": {
+     "json_sha256": "4f53cda18c2b"
+    },
+    "meta": {
+     "json_sha256": "44136fa355b3"
+    },
+    "priority": 0,
+    "max_attempts": 1,
+    "scheduled_at": {
+     "timestamptz_us": 1793880407848836
+    },
+    "unique_key": null
+   },
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 41,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/app.py:700:push_many_ex",
+    "framework_entry": null,
+    "txn": "produce:4",
+    "placeholders": "psycopg"
+   },
+   "grant": 41,
+   "decision": 41,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    {
+     "id": {
+      "uuid_sha256": "0343ef635a6c"
+     }
+    }
+   ],
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": true,
+   "blocked_by": [],
+   "requested_ms": 21.08,
+   "completed_ms": 21.67
+  },
+  {
+   "seq": 42,
+   "actor": "produce",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 42,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/app.py:550:push",
+    "framework_entry": null,
+    "txn": "produce:4",
+    "placeholders": "psycopg"
+   },
+   "grant": 42,
+   "decision": 42,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 21.69,
+   "completed_ms": 21.78
+  },
+  {
+   "seq": 43,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "INSERT INTO \"chancy_jobs\" ( id, queue, func, kwargs, limits, meta, priority, max_attempts, scheduled_at, unique_key ) VALUES ( %(id)s, %(queue)s, %(func)s, %(kwargs)s, %(limits)s, %(meta)s, %(priority)s, %(max_attempts)s, %(scheduled_at)s, %(unique_key)s ) ON CONFLICT (unique_key) WHERE unique_key IS NOT NULL AND state NOT IN ('succeeded', 'failed') DO UPDATE SET state = \"chancy_jobs\".state RETURNING id;",
+   "statement_id": "4c84553c03d4",
+   "params": {
+    "id": {
+     "uuid_sha256": "57ea64d8f72c"
+    },
+    "queue": {
+     "str": 4,
+     "sha256": "b40779fda6ff"
+    },
+    "func": {
+     "str": 59,
+     "sha256": "80e025e28c96"
+    },
+    "kwargs": {
+     "json_sha256": "363379742f80"
+    },
+    "limits": {
+     "json_sha256": "4f53cda18c2b"
+    },
+    "meta": {
+     "json_sha256": "44136fa355b3"
+    },
+    "priority": 0,
+    "max_attempts": 1,
+    "scheduled_at": {
+     "timestamptz_us": 1793880407848836
+    },
+    "unique_key": null
+   },
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 43,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/app.py:700:push_many_ex",
+    "framework_entry": null,
+    "txn": "produce:5",
+    "placeholders": "psycopg"
+   },
+   "grant": 43,
+   "decision": 43,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    {
+     "id": {
+      "uuid_sha256": "57ea64d8f72c"
+     }
+    }
+   ],
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": true,
+   "blocked_by": [],
+   "requested_ms": 21.83,
+   "completed_ms": 22.05
+  },
+  {
+   "seq": 44,
+   "actor": "produce",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 44,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/app.py:550:push",
+    "framework_entry": null,
+    "txn": "produce:5",
+    "placeholders": "psycopg"
+   },
+   "grant": 44,
+   "decision": 44,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 22.07,
+   "completed_ms": 22.15
+  },
+  {
+   "seq": 45,
+   "actor": "produce",
+   "kind": "execute",
+   "sql": "INSERT INTO \"chancy_jobs\" ( id, queue, func, kwargs, limits, meta, priority, max_attempts, scheduled_at, unique_key ) VALUES ( %(id)s, %(queue)s, %(func)s, %(kwargs)s, %(limits)s, %(meta)s, %(priority)s, %(max_attempts)s, %(scheduled_at)s, %(unique_key)s ) ON CONFLICT (unique_key) WHERE unique_key IS NOT NULL AND state NOT IN ('succeeded', 'failed') DO UPDATE SET state = \"chancy_jobs\".state RETURNING id;",
+   "statement_id": "4c84553c03d4",
+   "params": {
+    "id": {
+     "uuid_sha256": "d66a604d4aa1"
+    },
+    "queue": {
+     "str": 4,
+     "sha256": "b40779fda6ff"
+    },
+    "func": {
+     "str": 59,
+     "sha256": "80e025e28c96"
+    },
+    "kwargs": {
+     "json_sha256": "215ddd5567ca"
+    },
+    "limits": {
+     "json_sha256": "4f53cda18c2b"
+    },
+    "meta": {
+     "json_sha256": "44136fa355b3"
+    },
+    "priority": 0,
+    "max_attempts": 1,
+    "scheduled_at": {
+     "timestamptz_us": 1793880407848836
+    },
+    "unique_key": null
+   },
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 45,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/app.py:700:push_many_ex",
+    "framework_entry": null,
+    "txn": "produce:6",
+    "placeholders": "psycopg"
+   },
+   "grant": 45,
+   "decision": 45,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    {
+     "id": {
+      "uuid_sha256": "d66a604d4aa1"
+     }
+    }
+   ],
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": true,
+   "blocked_by": [],
+   "requested_ms": 22.2,
+   "completed_ms": 22.45
+  },
+  {
+   "seq": 46,
+   "actor": "produce",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "produce",
+    "handler": "produce",
+    "invocation_id": "isolated_chancy_produce:produce",
+    "migration_phase": "",
+    "logical_op": 46,
+    "session": {
+     "backend_pid": 24843
+    },
+    "task": "ds-actor-produce",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/app.py:550:push",
+    "framework_entry": null,
+    "txn": "produce:6",
+    "placeholders": "psycopg"
+   },
+   "grant": 46,
+   "decision": 46,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 22.46,
+   "completed_ms": 22.54
+  },
+  {
+   "seq": 0,
+   "actor": "w1",
+   "kind": "execute",
+   "sql": "CREATE TABLE IF NOT EXISTS \"chancy_schema_version\" ( version_of VARCHAR(255) PRIMARY KEY, version INT )",
+   "statement_id": "920b81e0ec32",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 0,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "ds-actor-w1",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:156:upsert_version_table",
+    "framework_entry": null,
+    "txn": "w1:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000000,
+   "decision": 0,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": true,
+   "blocked_by": [],
+   "requested_ms": 8.54,
+   "completed_ms": 8.81
+  },
+  {
+   "seq": 1,
+   "actor": "w2",
+   "kind": "execute",
+   "sql": "CREATE TABLE IF NOT EXISTS \"chancy_schema_version\" ( version_of VARCHAR(255) PRIMARY KEY, version INT )",
+   "statement_id": "920b81e0ec32",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 0,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "ds-actor-w2",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:156:upsert_version_table",
+    "framework_entry": null,
+    "txn": "w2:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000001,
+   "decision": 1,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": true,
+   "blocked_by": [],
+   "requested_ms": 8.57,
+   "completed_ms": 9.06
+  },
+  {
+   "seq": 2,
+   "actor": "w1",
+   "kind": "execute",
+   "sql": "CREATE TABLE IF NOT EXISTS \"chancy_schema_version\" ( version_of VARCHAR(255) PRIMARY KEY, version INT )",
+   "statement_id": "920b81e0ec32",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 1,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "ds-actor-w1",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:156:upsert_version_table",
+    "framework_entry": null,
+    "txn": "w1:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000002,
+   "decision": 2,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 8.84,
+   "completed_ms": 9.18
+  },
+  {
+   "seq": 3,
+   "actor": "w2",
+   "kind": "execute",
+   "sql": "CREATE TABLE IF NOT EXISTS \"chancy_schema_version\" ( version_of VARCHAR(255) PRIMARY KEY, version INT )",
+   "statement_id": "920b81e0ec32",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 1,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "ds-actor-w2",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:156:upsert_version_table",
+    "framework_entry": null,
+    "txn": "w2:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000003,
+   "decision": 3,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 9.08,
+   "completed_ms": 9.3
+  },
+  {
+   "seq": 4,
+   "actor": "w1",
+   "kind": "execute",
+   "sql": "SELECT version FROM \"chancy_schema_version\" WHERE version_of = %s",
+   "statement_id": "82d080aaa5ab",
+   "params": [
+    {
+     "str": 6,
+     "sha256": "5d607b5ef9ee"
+    }
+   ],
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 2,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "ds-actor-w1",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:172:get_current_version",
+    "framework_entry": null,
+    "txn": "w1:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000004,
+   "decision": 4,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    {
+     "version": 8
+    }
+   ],
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 9.21,
+   "completed_ms": 9.68
+  },
+  {
+   "seq": 5,
+   "actor": "w2",
+   "kind": "execute",
+   "sql": "SELECT version FROM \"chancy_schema_version\" WHERE version_of = %s",
+   "statement_id": "82d080aaa5ab",
+   "params": [
+    {
+     "str": 6,
+     "sha256": "5d607b5ef9ee"
+    }
+   ],
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 2,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "ds-actor-w2",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/migrate.py:172:get_current_version",
+    "framework_entry": null,
+    "txn": "w2:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000005,
+   "decision": 5,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    {
+     "version": 8
+    }
+   ],
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 9.32,
+   "completed_ms": 10.13
+  },
+  {
+   "seq": 6,
+   "actor": "w1",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 3,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "ds-actor-w1",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/app.py:349:is_up_to_date",
+    "framework_entry": null,
+    "txn": "w1:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000006,
+   "decision": 6,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 9.81,
+   "completed_ms": 10.29
+  },
+  {
+   "seq": 7,
+   "actor": "w2",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 3,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "ds-actor-w2",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/app.py:349:is_up_to_date",
+    "framework_entry": null,
+    "txn": "w2:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000007,
+   "decision": 7,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 10.2,
+   "completed_ms": 10.54
+  },
+  {
+   "seq": 8,
+   "actor": "w1",
+   "kind": "execute",
+   "sql": "INSERT INTO \"chancy_queues\" ( name, state, concurrency, tags, executor, executor_options, polling_interval, rate_limit, rate_limit_window, resume_at, eager_polling ) VALUES ( %(name)s, %(state)s, %(concurrency)s, %(tags)s, %(executor)s, %(executor_options)s, %(polling_interval)s, %(rate_limit)s, %(rate_limit_window)s, %(resume_at)s, %(eager_polling)s ) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING state, concurrency, tags, polling_interval, executor, executor_options, rate_limit, rate_limit_window, resume_at, eager_polling",
+   "statement_id": "f1e1c0d1d19a",
+   "params": {
+    "name": {
+     "str": 7,
+     "sha256": "37a8eec1ce19"
+    },
+    "state": {
+     "str": 6,
+     "sha256": "96879611650f"
+    },
+    "concurrency": null,
+    "tags": [
+     {
+      "str": 2,
+      "sha256": "12aca9f6a2a2"
+     }
+    ],
+    "executor": {
+     "str": 40,
+     "sha256": "5b17a86ede52"
+    },
+    "executor_options": {
+     "json_sha256": "44136fa355b3"
+    },
+    "polling_interval": 5,
+    "rate_limit": null,
+    "rate_limit_window": null,
+    "resume_at": null,
+    "eager_polling": false
+   },
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 4,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "ds-actor-w1",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/app.py:452:declare_ex",
+    "framework_entry": null,
+    "txn": "w1:2",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000008,
+   "decision": 8,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    {
+     "state": {
+      "str": 6,
+      "sha256": "96879611650f"
+     },
+     "concurrency": null,
+     "tags": [
+      {
+       "str": 2,
+       "sha256": "12aca9f6a2a2"
+      }
+     ],
+     "polling_interval": 5,
+     "executor": {
+      "str": 40,
+      "sha256": "5b17a86ede52"
+     },
+     "executor_options": {},
+     "rate_limit": null,
+     "rate_limit_window": null,
+     "resume_at": null,
+     "eager_polling": false
+    }
+   ],
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": true,
+   "blocked_by": [],
+   "requested_ms": 10.36,
+   "completed_ms": 11.06
+  },
+  {
+   "seq": 9,
+   "actor": "w1",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 5,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "ds-actor-w1",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/app.py:398:declare",
+    "framework_entry": null,
+    "txn": "w1:2",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000010,
+   "decision": 10,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 11.09,
+   "completed_ms": 62.07
+  },
+  {
+   "seq": 10,
+   "actor": "w2",
+   "kind": "execute",
+   "sql": "INSERT INTO \"chancy_queues\" ( name, state, concurrency, tags, executor, executor_options, polling_interval, rate_limit, rate_limit_window, resume_at, eager_polling ) VALUES ( %(name)s, %(state)s, %(concurrency)s, %(tags)s, %(executor)s, %(executor_options)s, %(polling_interval)s, %(rate_limit)s, %(rate_limit_window)s, %(resume_at)s, %(eager_polling)s ) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING state, concurrency, tags, polling_interval, executor, executor_options, rate_limit, rate_limit_window, resume_at, eager_polling",
+   "statement_id": "f1e1c0d1d19a",
+   "params": {
+    "name": {
+     "str": 7,
+     "sha256": "37a8eec1ce19"
+    },
+    "state": {
+     "str": 6,
+     "sha256": "96879611650f"
+    },
+    "concurrency": null,
+    "tags": [
+     {
+      "str": 2,
+      "sha256": "12aca9f6a2a2"
+     }
+    ],
+    "executor": {
+     "str": 40,
+     "sha256": "5b17a86ede52"
+    },
+    "executor_options": {
+     "json_sha256": "44136fa355b3"
+    },
+    "polling_interval": 5,
+    "rate_limit": null,
+    "rate_limit_window": null,
+    "resume_at": null,
+    "eager_polling": false
+   },
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 4,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "ds-actor-w2",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/app.py:452:declare_ex",
+    "framework_entry": null,
+    "txn": "w2:2",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000009,
+   "decision": 9,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    {
+     "state": {
+      "str": 6,
+      "sha256": "96879611650f"
+     },
+     "concurrency": null,
+     "tags": [
+      {
+       "str": 2,
+       "sha256": "12aca9f6a2a2"
+      }
+     ],
+     "polling_interval": 5,
+     "executor": {
+      "str": 40,
+      "sha256": "5b17a86ede52"
+     },
+     "executor_options": {},
+     "rate_limit": null,
+     "rate_limit_window": null,
+     "resume_at": null,
+     "eager_polling": false
+    }
+   ],
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": true,
+   "blocked_by": [],
+   "requested_ms": 10.59,
+   "completed_ms": 62.24
+  },
+  {
+   "seq": 11,
+   "actor": "w2",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 5,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "ds-actor-w2",
+    "on_behalf_of": null,
+    "call_site": "../app/src/chancy/app.py:398:declare",
+    "framework_entry": null,
+    "txn": "w2:2",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000011,
+   "decision": 11,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 62.27,
+   "completed_ms": 62.4
+  },
+  {
+   "seq": 12,
+   "actor": "w1",
+   "kind": "execute",
+   "sql": "SELECT * FROM \"chancy_queues\"",
+   "statement_id": "0a55b8b9d368",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 6,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "queues",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/app.py:904:get_all_queues",
+    "framework_entry": null,
+    "txn": "w1:3",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000012,
+   "decision": 12,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 2,
+   "rows": [
+    {
+     "name": {
+      "str": 4,
+      "sha256": "b40779fda6ff"
+     },
+     "state": {
+      "str": 6,
+      "sha256": "96879611650f"
+     },
+     "concurrency": 1,
+     "tags": [
+      {
+       "str": 2,
+       "sha256": "12aca9f6a2a2"
+      }
+     ],
+     "executor": {
+      "str": 38,
+      "sha256": "f84d9698957a"
+     },
+     "executor_options": {},
+     "polling_interval": 1,
+     "created_at": {
+      "timestamptz_us": 1793880407868638
+     },
+     "rate_limit": null,
+     "rate_limit_window": null,
+     "resume_at": null,
+     "eager_polling": false
+    },
+    {
+     "name": {
+      "str": 7,
+      "sha256": "37a8eec1ce19"
+     },
+     "state": {
+      "str": 6,
+      "sha256": "96879611650f"
+     },
+     "concurrency": null,
+     "tags": [
+      {
+       "str": 2,
+       "sha256": "12aca9f6a2a2"
+      }
+     ],
+     "executor": {
+      "str": 40,
+      "sha256": "5b17a86ede52"
+     },
+     "executor_options": {},
+     "polling_interval": 5,
+     "created_at": {
+      "timestamptz_us": 1793880407883023
+     },
+     "rate_limit": null,
+     "rate_limit_window": null,
+     "resume_at": null,
+     "eager_polling": false
+    }
+   ],
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": true,
+   "blocked_by": [],
+   "requested_ms": 62.15,
+   "completed_ms": 62.73
+  },
+  {
+   "seq": 13,
+   "actor": "w2",
+   "kind": "execute",
+   "sql": "SELECT * FROM \"chancy_queues\"",
+   "statement_id": "0a55b8b9d368",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 6,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "queues",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/app.py:904:get_all_queues",
+    "framework_entry": null,
+    "txn": "w2:3",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000013,
+   "decision": 13,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 2,
+   "rows": [
+    {
+     "name": {
+      "str": 4,
+      "sha256": "b40779fda6ff"
+     },
+     "state": {
+      "str": 6,
+      "sha256": "96879611650f"
+     },
+     "concurrency": 1,
+     "tags": [
+      {
+       "str": 2,
+       "sha256": "12aca9f6a2a2"
+      }
+     ],
+     "executor": {
+      "str": 38,
+      "sha256": "f84d9698957a"
+     },
+     "executor_options": {},
+     "polling_interval": 1,
+     "created_at": {
+      "timestamptz_us": 1793880407868638
+     },
+     "rate_limit": null,
+     "rate_limit_window": null,
+     "resume_at": null,
+     "eager_polling": false
+    },
+    {
+     "name": {
+      "str": 7,
+      "sha256": "37a8eec1ce19"
+     },
+     "state": {
+      "str": 6,
+      "sha256": "96879611650f"
+     },
+     "concurrency": null,
+     "tags": [
+      {
+       "str": 2,
+       "sha256": "12aca9f6a2a2"
+      }
+     ],
+     "executor": {
+      "str": 40,
+      "sha256": "5b17a86ede52"
+     },
+     "executor_options": {},
+     "polling_interval": 5,
+     "created_at": {
+      "timestamptz_us": 1793880407883023
+     },
+     "rate_limit": null,
+     "rate_limit_window": null,
+     "resume_at": null,
+     "eager_polling": false
+    }
+   ],
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": true,
+   "blocked_by": [],
+   "requested_ms": 62.46,
+   "completed_ms": 63.01
+  },
+  {
+   "seq": 14,
+   "actor": "w1",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 7,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "queues",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/app.py:901:get_all_queues",
+    "framework_entry": null,
+    "txn": "w1:3",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000014,
+   "decision": 14,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 62.77,
+   "completed_ms": 63.15
+  },
+  {
+   "seq": 15,
+   "actor": "w2",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 7,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "queues",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/app.py:901:get_all_queues",
+    "framework_entry": null,
+    "txn": "w2:3",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000015,
+   "decision": 15,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 63.05,
+   "completed_ms": 317.4
+  },
+  {
+   "seq": 16,
+   "actor": "w1",
+   "kind": "transaction_enter",
+   "sql": "BEGIN",
+   "statement_id": "a8402858d4f1",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 8,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "heartbeat",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:534:_maintain_heartbeat",
+    "framework_entry": null,
+    "txn": "w1:4",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000016,
+   "decision": 16,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 63.35,
+   "completed_ms": 476.13
+  },
+  {
+   "seq": 17,
+   "actor": "w2",
+   "kind": "transaction_enter",
+   "sql": "BEGIN",
+   "statement_id": "a8402858d4f1",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 8,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "heartbeat",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:534:_maintain_heartbeat",
+    "framework_entry": null,
+    "txn": "w2:4",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000017,
+   "decision": 17,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 317.53,
+   "completed_ms": 476.3
+  },
+  {
+   "seq": 18,
+   "actor": "w1",
+   "kind": "transaction_enter",
+   "sql": "SAVEPOINT <auto>",
+   "statement_id": "19bfe31bf081",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 9,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "heartbeat",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:754:announce_worker",
+    "framework_entry": null,
+    "txn": "w1:4",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000018,
+   "decision": 18,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 476.18,
+   "completed_ms": 476.45
+  },
+  {
+   "seq": 19,
+   "actor": "w2",
+   "kind": "transaction_enter",
+   "sql": "SAVEPOINT <auto>",
+   "statement_id": "19bfe31bf081",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 9,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "heartbeat",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:754:announce_worker",
+    "framework_entry": null,
+    "txn": "w2:4",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000019,
+   "decision": 19,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 476.33,
+   "completed_ms": 476.58
+  },
+  {
+   "seq": 20,
+   "actor": "w1",
+   "kind": "execute",
+   "sql": "DELETE FROM \"chancy_workers\" WHERE expires_at < NOW()",
+   "statement_id": "fef58a7d9dfb",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 10,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "heartbeat",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:755:announce_worker",
+    "framework_entry": null,
+    "txn": "w1:4",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000020,
+   "decision": 20,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 0,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 476.48,
+   "completed_ms": 476.92
+  },
+  {
+   "seq": 21,
+   "actor": "w2",
+   "kind": "execute",
+   "sql": "DELETE FROM \"chancy_workers\" WHERE expires_at < NOW()",
+   "statement_id": "fef58a7d9dfb",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 10,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "heartbeat",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:755:announce_worker",
+    "framework_entry": null,
+    "txn": "w2:4",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000021,
+   "decision": 21,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 0,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 476.61,
+   "completed_ms": 477.16
+  },
+  {
+   "seq": 22,
+   "actor": "w1",
+   "kind": "execute",
+   "sql": "INSERT INTO \"chancy_workers\" (worker_id, last_seen, expires_at, tags, queues) VALUES ( %(worker_id)s, NOW(), NOW() + INTERVAL '90 seconds', %(tags)s, %(queues)s ) ON CONFLICT (worker_id) DO UPDATE SET last_seen = NOW(), expires_at = NOW() + INTERVAL '90 seconds', tags = EXCLUDED.tags, queues = EXCLUDED.queues",
+   "statement_id": "da40f1173bfd",
+   "params": {
+    "worker_id": {
+     "str": 36,
+     "sha256": "5afa29d95aa7"
+    },
+    "tags": [
+     {
+      "str": 21,
+      "sha256": "0e359371094a"
+     },
+     {
+      "str": 46,
+      "sha256": "33f667ee1b34"
+     },
+     {
+      "str": 12,
+      "sha256": "8eab980581cc"
+     },
+     {
+      "str": 8,
+      "sha256": "253955739601"
+     },
+     {
+      "str": 14,
+      "sha256": "2741758d2769"
+     },
+     {
+      "str": 1,
+      "sha256": "684888c0ebb1"
+     }
+    ],
+    "queues": [
+     {
+      "str": 4,
+      "sha256": "b40779fda6ff"
+     },
+     {
+      "str": 7,
+      "sha256": "37a8eec1ce19"
+     }
+    ]
+   },
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 11,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "heartbeat",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:763:announce_worker",
+    "framework_entry": null,
+    "txn": "w1:4",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000022,
+   "decision": 22,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 476.99,
+   "completed_ms": 477.48
+  },
+  {
+   "seq": 23,
+   "actor": "w2",
+   "kind": "execute",
+   "sql": "INSERT INTO \"chancy_workers\" (worker_id, last_seen, expires_at, tags, queues) VALUES ( %(worker_id)s, NOW(), NOW() + INTERVAL '90 seconds', %(tags)s, %(queues)s ) ON CONFLICT (worker_id) DO UPDATE SET last_seen = NOW(), expires_at = NOW() + INTERVAL '90 seconds', tags = EXCLUDED.tags, queues = EXCLUDED.queues",
+   "statement_id": "da40f1173bfd",
+   "params": {
+    "worker_id": {
+     "str": 36,
+     "sha256": "9552b0d1e07f"
+    },
+    "tags": [
+     {
+      "str": 21,
+      "sha256": "0e359371094a"
+     },
+     {
+      "str": 46,
+      "sha256": "5e37795e2f7d"
+     },
+     {
+      "str": 12,
+      "sha256": "8eab980581cc"
+     },
+     {
+      "str": 8,
+      "sha256": "253955739601"
+     },
+     {
+      "str": 14,
+      "sha256": "2741758d2769"
+     },
+     {
+      "str": 1,
+      "sha256": "684888c0ebb1"
+     }
+    ],
+    "queues": [
+     {
+      "str": 4,
+      "sha256": "b40779fda6ff"
+     },
+     {
+      "str": 7,
+      "sha256": "37a8eec1ce19"
+     }
+    ]
+   },
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 11,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "heartbeat",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:763:announce_worker",
+    "framework_entry": null,
+    "txn": "w2:4",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000023,
+   "decision": 23,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 477.2,
+   "completed_ms": 477.67
+  },
+  {
+   "seq": 24,
+   "actor": "w1",
+   "kind": "transaction_exit",
+   "sql": "RELEASE SAVEPOINT",
+   "statement_id": "ad0e5ae50049",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 12,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "heartbeat",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:754:announce_worker",
+    "framework_entry": null,
+    "txn": "w1:4",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000024,
+   "decision": 24,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 477.5,
+   "completed_ms": 477.78
+  },
+  {
+   "seq": 25,
+   "actor": "w2",
+   "kind": "transaction_exit",
+   "sql": "RELEASE SAVEPOINT",
+   "statement_id": "ad0e5ae50049",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 12,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "heartbeat",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:754:announce_worker",
+    "framework_entry": null,
+    "txn": "w2:4",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000025,
+   "decision": 25,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 477.69,
+   "completed_ms": 477.91
+  },
+  {
+   "seq": 26,
+   "actor": "w1",
+   "kind": "transaction_exit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 13,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "heartbeat",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:534:_maintain_heartbeat",
+    "framework_entry": null,
+    "txn": "w1:4",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000026,
+   "decision": 26,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 477.8,
+   "completed_ms": 478.06
+  },
+  {
+   "seq": 27,
+   "actor": "w2",
+   "kind": "transaction_exit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 13,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "heartbeat",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:534:_maintain_heartbeat",
+    "framework_entry": null,
+    "txn": "w2:4",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000027,
+   "decision": 27,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 477.94,
+   "completed_ms": 478.15
+  },
+  {
+   "seq": 28,
+   "actor": "w1",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 14,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "heartbeat",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:533:_maintain_heartbeat",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 1000028,
+   "decision": 28,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 478.08,
+   "completed_ms": 478.19
+  },
+  {
+   "seq": 29,
+   "actor": "w2",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 14,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "heartbeat",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:533:_maintain_heartbeat",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 1000029,
+   "decision": 29,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 478.17,
+   "completed_ms": 478.24
+  },
+  {
+   "seq": 30,
+   "actor": "w1",
+   "kind": "transaction_enter",
+   "sql": "BEGIN",
+   "statement_id": "a8402858d4f1",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 15,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "queue_ds_q",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:861:fetch_jobs",
+    "framework_entry": null,
+    "txn": "w1:5",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000030,
+   "decision": 30,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 478.22,
+   "completed_ms": 478.34
+  },
+  {
+   "seq": 31,
+   "actor": "w2",
+   "kind": "transaction_enter",
+   "sql": "BEGIN",
+   "statement_id": "a8402858d4f1",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 15,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "queue_ds_q",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:861:fetch_jobs",
+    "framework_entry": null,
+    "txn": "w2:5",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000031,
+   "decision": 31,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 478.27,
+   "completed_ms": 478.45
+  },
+  {
+   "seq": 32,
+   "actor": "w1",
+   "kind": "execute",
+   "sql": "WITH selected_jobs AS ( SELECT id FROM \"chancy_jobs\" WHERE queue = %(queue)s AND (state = 'pending' OR state = 'retrying') AND attempts < max_attempts AND (scheduled_at IS NULL OR scheduled_at <= NOW()) ORDER BY priority DESC, id ASC LIMIT %(maximum_jobs_to_fetch)s FOR UPDATE OF \"chancy_jobs\" SKIP LOCKED ) UPDATE \"chancy_jobs\" SET started_at = NOW(), state = 'running', claim_id = gen_random_uuid(), taken_by = %(worker_id)s FROM selected_jobs WHERE \"chancy_jobs\".id = selected_jobs.id RETURNING \"chancy_jobs\".*",
+   "statement_id": "a8d0f543fd4d",
+   "params": {
+    "queue": {
+     "str": 4,
+     "sha256": "b40779fda6ff"
+    },
+    "maximum_jobs_to_fetch": 1,
+    "worker_id": {
+     "str": 36,
+     "sha256": "5afa29d95aa7"
+    }
+   },
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 16,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "queue_ds_q",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:905:fetch_jobs",
+    "framework_entry": null,
+    "txn": "w1:5",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000032,
+   "decision": 32,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    {
+     "id": {
+      "uuid_sha256": "2d62b42dd33e"
+     },
+     "queue": {
+      "str": 4,
+      "sha256": "b40779fda6ff"
+     },
+     "func": {
+      "str": 59,
+      "sha256": "80e025e28c96"
+     },
+     "kwargs": {
+      "n": 0
+     },
+     "limits": [],
+     "meta": {},
+     "state": {
+      "str": 7,
+      "sha256": "c071cf5f5ed6"
+     },
+     "priority": 0,
+     "attempts": 0,
+     "max_attempts": 1,
+     "taken_by": {
+      "str": 36,
+      "sha256": "5afa29d95aa7"
+     },
+     "created_at": {
+      "timestamptz_us": 1793880407869372
+     },
+     "started_at": {
+      "timestamptz_us": 1793880408350697
+     },
+     "completed_at": null,
+     "scheduled_at": {
+      "timestamptz_us": 1793880407848836
+     },
+     "unique_key": null,
+     "errors": [],
+     "claim_id": {
+      "uuid_sha256": "58d5ee51a1cb"
+     }
+    }
+   ],
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 478.37,
+   "completed_ms": 479.18
+  },
+  {
+   "seq": 33,
+   "actor": "w2",
+   "kind": "execute",
+   "sql": "WITH selected_jobs AS ( SELECT id FROM \"chancy_jobs\" WHERE queue = %(queue)s AND (state = 'pending' OR state = 'retrying') AND attempts < max_attempts AND (scheduled_at IS NULL OR scheduled_at <= NOW()) ORDER BY priority DESC, id ASC LIMIT %(maximum_jobs_to_fetch)s FOR UPDATE OF \"chancy_jobs\" SKIP LOCKED ) UPDATE \"chancy_jobs\" SET started_at = NOW(), state = 'running', claim_id = gen_random_uuid(), taken_by = %(worker_id)s FROM selected_jobs WHERE \"chancy_jobs\".id = selected_jobs.id RETURNING \"chancy_jobs\".*",
+   "statement_id": "a8d0f543fd4d",
+   "params": {
+    "queue": {
+     "str": 4,
+     "sha256": "b40779fda6ff"
+    },
+    "maximum_jobs_to_fetch": 1,
+    "worker_id": {
+     "str": 36,
+     "sha256": "9552b0d1e07f"
+    }
+   },
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 16,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "queue_ds_q",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:905:fetch_jobs",
+    "framework_entry": null,
+    "txn": "w2:5",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000033,
+   "decision": 33,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    {
+     "id": {
+      "uuid_sha256": "0343ef635a6c"
+     },
+     "queue": {
+      "str": 4,
+      "sha256": "b40779fda6ff"
+     },
+     "func": {
+      "str": 59,
+      "sha256": "80e025e28c96"
+     },
+     "kwargs": {
+      "n": 1
+     },
+     "limits": [],
+     "meta": {},
+     "state": {
+      "str": 7,
+      "sha256": "c071cf5f5ed6"
+     },
+     "priority": 0,
+     "attempts": 0,
+     "max_attempts": 1,
+     "taken_by": {
+      "str": 36,
+      "sha256": "9552b0d1e07f"
+     },
+     "created_at": {
+      "timestamptz_us": 1793880407870035
+     },
+     "started_at": {
+      "timestamptz_us": 1793880408350806
+     },
+     "completed_at": null,
+     "scheduled_at": {
+      "timestamptz_us": 1793880407848836
+     },
+     "unique_key": null,
+     "errors": [],
+     "claim_id": {
+      "uuid_sha256": "118e05320242"
+     }
+    }
+   ],
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 478.48,
+   "completed_ms": 479.7
+  },
+  {
+   "seq": 34,
+   "actor": "w1",
+   "kind": "transaction_exit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 17,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "queue_ds_q",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:861:fetch_jobs",
+    "framework_entry": null,
+    "txn": "w1:5",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000034,
+   "decision": 34,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 479.22,
+   "completed_ms": 479.83
+  },
+  {
+   "seq": 35,
+   "actor": "w2",
+   "kind": "transaction_exit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 17,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "queue_ds_q",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:861:fetch_jobs",
+    "framework_entry": null,
+    "txn": "w2:5",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000035,
+   "decision": 35,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 479.73,
+   "completed_ms": 479.98
+  },
+  {
+   "seq": 36,
+   "actor": "w1",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 18,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "queue_ds_q",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:505:_maintain_queue",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 1000036,
+   "decision": 36,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 479.86,
+   "completed_ms": 480.03
+  },
+  {
+   "seq": 37,
+   "actor": "w2",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 18,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "queue_ds_q",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:505:_maintain_queue",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 1000037,
+   "decision": 37,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 480.01,
+   "completed_ms": 480.22
+  },
+  {
+   "seq": 38,
+   "actor": "w1",
+   "kind": "transaction_enter",
+   "sql": "BEGIN",
+   "statement_id": "a8402858d4f1",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 19,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "queue_default",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:861:fetch_jobs",
+    "framework_entry": null,
+    "txn": "w1:6",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000038,
+   "decision": 38,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 480.12,
+   "completed_ms": 480.42
+  },
+  {
+   "seq": 39,
+   "actor": "w2",
+   "kind": "transaction_enter",
+   "sql": "BEGIN",
+   "statement_id": "a8402858d4f1",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 19,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "queue_default",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:861:fetch_jobs",
+    "framework_entry": null,
+    "txn": "w2:6",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000039,
+   "decision": 39,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 480.27,
+   "completed_ms": 480.58
+  },
+  {
+   "seq": 40,
+   "actor": "w1",
+   "kind": "execute",
+   "sql": "WITH selected_jobs AS ( SELECT id FROM \"chancy_jobs\" WHERE queue = %(queue)s AND (state = 'pending' OR state = 'retrying') AND attempts < max_attempts AND (scheduled_at IS NULL OR scheduled_at <= NOW()) ORDER BY priority DESC, id ASC LIMIT %(maximum_jobs_to_fetch)s FOR UPDATE OF \"chancy_jobs\" SKIP LOCKED ) UPDATE \"chancy_jobs\" SET started_at = NOW(), state = 'running', claim_id = gen_random_uuid(), taken_by = %(worker_id)s FROM selected_jobs WHERE \"chancy_jobs\".id = selected_jobs.id RETURNING \"chancy_jobs\".*",
+   "statement_id": "a8d0f543fd4d",
+   "params": {
+    "queue": {
+     "str": 7,
+     "sha256": "37a8eec1ce19"
+    },
+    "maximum_jobs_to_fetch": 15,
+    "worker_id": {
+     "str": 36,
+     "sha256": "5afa29d95aa7"
+    }
+   },
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 20,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "queue_default",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:905:fetch_jobs",
+    "framework_entry": null,
+    "txn": "w1:6",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000040,
+   "decision": 40,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 0,
+   "rows": [],
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 480.47,
+   "completed_ms": 480.88
+  },
+  {
+   "seq": 41,
+   "actor": "w2",
+   "kind": "execute",
+   "sql": "WITH selected_jobs AS ( SELECT id FROM \"chancy_jobs\" WHERE queue = %(queue)s AND (state = 'pending' OR state = 'retrying') AND attempts < max_attempts AND (scheduled_at IS NULL OR scheduled_at <= NOW()) ORDER BY priority DESC, id ASC LIMIT %(maximum_jobs_to_fetch)s FOR UPDATE OF \"chancy_jobs\" SKIP LOCKED ) UPDATE \"chancy_jobs\" SET started_at = NOW(), state = 'running', claim_id = gen_random_uuid(), taken_by = %(worker_id)s FROM selected_jobs WHERE \"chancy_jobs\".id = selected_jobs.id RETURNING \"chancy_jobs\".*",
+   "statement_id": "a8d0f543fd4d",
+   "params": {
+    "queue": {
+     "str": 7,
+     "sha256": "37a8eec1ce19"
+    },
+    "maximum_jobs_to_fetch": 15,
+    "worker_id": {
+     "str": 36,
+     "sha256": "9552b0d1e07f"
+    }
+   },
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 20,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "queue_default",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:905:fetch_jobs",
+    "framework_entry": null,
+    "txn": "w2:6",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000041,
+   "decision": 41,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 0,
+   "rows": [],
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 480.61,
+   "completed_ms": 481.14
+  },
+  {
+   "seq": 42,
+   "actor": "w1",
+   "kind": "transaction_exit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 21,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "queue_default",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:861:fetch_jobs",
+    "framework_entry": null,
+    "txn": "w1:6",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000042,
+   "decision": 42,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 480.9,
+   "completed_ms": 481.23
+  },
+  {
+   "seq": 43,
+   "actor": "w2",
+   "kind": "transaction_exit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 21,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "queue_default",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:861:fetch_jobs",
+    "framework_entry": null,
+    "txn": "w2:6",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000043,
+   "decision": 43,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 481.15,
+   "completed_ms": 481.33
+  },
+  {
+   "seq": 44,
+   "actor": "w1",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 22,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "queue_default",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:505:_maintain_queue",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 1000044,
+   "decision": 44,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 481.25,
+   "completed_ms": 481.36
+  },
+  {
+   "seq": 45,
+   "actor": "w2",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 22,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "queue_default",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:505:_maintain_queue",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 1000045,
+   "decision": 45,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 481.35,
+   "completed_ms": 1015.99
+  },
+  {
+   "seq": 46,
+   "actor": "w1",
+   "kind": "transaction_enter",
+   "sql": "BEGIN",
+   "statement_id": "a8402858d4f1",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 23,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "updates",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:679:flush",
+    "framework_entry": null,
+    "txn": "w1:7",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000046,
+   "decision": 46,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1015.61,
+   "completed_ms": 1016.98
+  },
+  {
+   "seq": 47,
+   "actor": "w2",
+   "kind": "transaction_enter",
+   "sql": "BEGIN",
+   "statement_id": "a8402858d4f1",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 23,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "updates",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:679:flush",
+    "framework_entry": null,
+    "txn": "w2:7",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000047,
+   "decision": 47,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1016.21,
+   "completed_ms": 1017.57
+  },
+  {
+   "seq": 48,
+   "actor": "w1",
+   "kind": "executemany",
+   "sql": "UPDATE \"chancy_jobs\" SET state = %(state)s, started_at = %(started_at)s, completed_at = %(completed_at)s, scheduled_at = %(scheduled_at)s, attempts = %(attempts)s, errors = %(errors)s, meta = %(meta)s, max_attempts = %(max_attempts)s WHERE id = %(id)s AND claim_id IS NOT DISTINCT FROM %(claim_id)s RETURNING id",
+   "statement_id": "9f175fccc789",
+   "params": [
+    {
+     "id": {
+      "uuid_sha256": "2d62b42dd33e"
+     },
+     "claim_id": {
+      "uuid_sha256": "58d5ee51a1cb"
+     },
+     "state": {
+      "str": 9,
+      "sha256": "5dceaeceb6d8"
+     },
+     "started_at": {
+      "timestamptz_us": 1793880408350697
+     },
+     "completed_at": {
+      "timestamptz_us": 1793880408352576
+     },
+     "scheduled_at": {
+      "timestamptz_us": 1793880407848836
+     },
+     "attempts": 1,
+     "errors": {
+      "json_sha256": "4f53cda18c2b"
+     },
+     "meta": {
+      "json_sha256": "44136fa355b3"
+     },
+     "max_attempts": 1
+    }
+   ],
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 24,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "updates",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:681:flush",
+    "framework_entry": null,
+    "txn": "w1:7",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000048,
+   "decision": 48,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1017.23,
+   "completed_ms": 1019.3
+  },
+  {
+   "seq": 49,
+   "actor": "w2",
+   "kind": "executemany",
+   "sql": "UPDATE \"chancy_jobs\" SET state = %(state)s, started_at = %(started_at)s, completed_at = %(completed_at)s, scheduled_at = %(scheduled_at)s, attempts = %(attempts)s, errors = %(errors)s, meta = %(meta)s, max_attempts = %(max_attempts)s WHERE id = %(id)s AND claim_id IS NOT DISTINCT FROM %(claim_id)s RETURNING id",
+   "statement_id": "9f175fccc789",
+   "params": [
+    {
+     "id": {
+      "uuid_sha256": "0343ef635a6c"
+     },
+     "claim_id": {
+      "uuid_sha256": "118e05320242"
+     },
+     "state": {
+      "str": 9,
+      "sha256": "5dceaeceb6d8"
+     },
+     "started_at": {
+      "timestamptz_us": 1793880408350806
+     },
+     "completed_at": {
+      "timestamptz_us": 1793880408352694
+     },
+     "scheduled_at": {
+      "timestamptz_us": 1793880407848836
+     },
+     "attempts": 1,
+     "errors": {
+      "json_sha256": "4f53cda18c2b"
+     },
+     "meta": {
+      "json_sha256": "44136fa355b3"
+     },
+     "max_attempts": 1
+    }
+   ],
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 24,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "updates",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:681:flush",
+    "framework_entry": null,
+    "txn": "w2:7",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000049,
+   "decision": 49,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1017.73,
+   "completed_ms": 1020.36
+  },
+  {
+   "seq": 50,
+   "actor": "w1",
+   "kind": "transaction_exit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 25,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "updates",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:679:flush",
+    "framework_entry": null,
+    "txn": "w1:7",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000050,
+   "decision": 50,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1019.4,
+   "completed_ms": 1020.79
+  },
+  {
+   "seq": 51,
+   "actor": "w2",
+   "kind": "transaction_exit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 25,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "updates",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:679:flush",
+    "framework_entry": null,
+    "txn": "w2:7",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000051,
+   "decision": 51,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1020.45,
+   "completed_ms": 1021.12
+  },
+  {
+   "seq": 52,
+   "actor": "w1",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 26,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "updates",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:677:flush",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 1000052,
+   "decision": 52,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1020.87,
+   "completed_ms": 1021.2
+  },
+  {
+   "seq": 53,
+   "actor": "w2",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 26,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "updates",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:677:flush",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 1000053,
+   "decision": 53,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1021.16,
+   "completed_ms": 1066.65
+  },
+  {
+   "seq": 54,
+   "actor": "w1",
+   "kind": "execute",
+   "sql": "SELECT * FROM \"chancy_queues\"",
+   "statement_id": "0a55b8b9d368",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 27,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "queues",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/app.py:904:get_all_queues",
+    "framework_entry": null,
+    "txn": "w1:8",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000054,
+   "decision": 54,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 2,
+   "rows": [
+    {
+     "name": {
+      "str": 4,
+      "sha256": "b40779fda6ff"
+     },
+     "state": {
+      "str": 6,
+      "sha256": "96879611650f"
+     },
+     "concurrency": 1,
+     "tags": [
+      {
+       "str": 2,
+       "sha256": "12aca9f6a2a2"
+      }
+     ],
+     "executor": {
+      "str": 38,
+      "sha256": "f84d9698957a"
+     },
+     "executor_options": {},
+     "polling_interval": 1,
+     "created_at": {
+      "timestamptz_us": 1793880407868638
+     },
+     "rate_limit": null,
+     "rate_limit_window": null,
+     "resume_at": null,
+     "eager_polling": false
+    },
+    {
+     "name": {
+      "str": 7,
+      "sha256": "37a8eec1ce19"
+     },
+     "state": {
+      "str": 6,
+      "sha256": "96879611650f"
+     },
+     "concurrency": null,
+     "tags": [
+      {
+       "str": 2,
+       "sha256": "12aca9f6a2a2"
+      }
+     ],
+     "executor": {
+      "str": 40,
+      "sha256": "5b17a86ede52"
+     },
+     "executor_options": {},
+     "polling_interval": 5,
+     "created_at": {
+      "timestamptz_us": 1793880407883023
+     },
+     "rate_limit": null,
+     "rate_limit_window": null,
+     "resume_at": null,
+     "eager_polling": false
+    }
+   ],
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": true,
+   "blocked_by": [],
+   "requested_ms": 1066.44,
+   "completed_ms": 1321.96
+  },
+  {
+   "seq": 55,
+   "actor": "w2",
+   "kind": "execute",
+   "sql": "SELECT * FROM \"chancy_queues\"",
+   "statement_id": "0a55b8b9d368",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 27,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "queues",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/app.py:904:get_all_queues",
+    "framework_entry": null,
+    "txn": "w2:8",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000055,
+   "decision": 55,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 2,
+   "rows": [
+    {
+     "name": {
+      "str": 4,
+      "sha256": "b40779fda6ff"
+     },
+     "state": {
+      "str": 6,
+      "sha256": "96879611650f"
+     },
+     "concurrency": 1,
+     "tags": [
+      {
+       "str": 2,
+       "sha256": "12aca9f6a2a2"
+      }
+     ],
+     "executor": {
+      "str": 38,
+      "sha256": "f84d9698957a"
+     },
+     "executor_options": {},
+     "polling_interval": 1,
+     "created_at": {
+      "timestamptz_us": 1793880407868638
+     },
+     "rate_limit": null,
+     "rate_limit_window": null,
+     "resume_at": null,
+     "eager_polling": false
+    },
+    {
+     "name": {
+      "str": 7,
+      "sha256": "37a8eec1ce19"
+     },
+     "state": {
+      "str": 6,
+      "sha256": "96879611650f"
+     },
+     "concurrency": null,
+     "tags": [
+      {
+       "str": 2,
+       "sha256": "12aca9f6a2a2"
+      }
+     ],
+     "executor": {
+      "str": 40,
+      "sha256": "5b17a86ede52"
+     },
+     "executor_options": {},
+     "polling_interval": 5,
+     "created_at": {
+      "timestamptz_us": 1793880407883023
+     },
+     "rate_limit": null,
+     "rate_limit_window": null,
+     "resume_at": null,
+     "eager_polling": false
+    }
+   ],
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": true,
+   "blocked_by": [],
+   "requested_ms": 1319.76,
+   "completed_ms": 1322.96
+  },
+  {
+   "seq": 56,
+   "actor": "w1",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 28,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "queues",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/app.py:901:get_all_queues",
+    "framework_entry": null,
+    "txn": "w1:8",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000056,
+   "decision": 56,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1322.16,
+   "completed_ms": 1323.38
+  },
+  {
+   "seq": 57,
+   "actor": "w2",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 28,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "queues",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/app.py:901:get_all_queues",
+    "framework_entry": null,
+    "txn": "w2:8",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000057,
+   "decision": 57,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1323.07,
+   "completed_ms": 1481.54
+  },
+  {
+   "seq": 58,
+   "actor": "w1",
+   "kind": "transaction_enter",
+   "sql": "BEGIN",
+   "statement_id": "a8402858d4f1",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 29,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "heartbeat",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:534:_maintain_heartbeat",
+    "framework_entry": null,
+    "txn": "w1:9",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000058,
+   "decision": 58,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1480.52,
+   "completed_ms": 1482.32
+  },
+  {
+   "seq": 59,
+   "actor": "w2",
+   "kind": "transaction_enter",
+   "sql": "BEGIN",
+   "statement_id": "a8402858d4f1",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 29,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "heartbeat",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:534:_maintain_heartbeat",
+    "framework_entry": null,
+    "txn": "w2:9",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000059,
+   "decision": 59,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1481.84,
+   "completed_ms": 1482.87
+  },
+  {
+   "seq": 60,
+   "actor": "w1",
+   "kind": "transaction_enter",
+   "sql": "SAVEPOINT <auto>",
+   "statement_id": "19bfe31bf081",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 30,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "heartbeat",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:754:announce_worker",
+    "framework_entry": null,
+    "txn": "w1:9",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000060,
+   "decision": 60,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1482.44,
+   "completed_ms": 1483.28
+  },
+  {
+   "seq": 61,
+   "actor": "w2",
+   "kind": "transaction_enter",
+   "sql": "SAVEPOINT <auto>",
+   "statement_id": "19bfe31bf081",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 30,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "heartbeat",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:754:announce_worker",
+    "framework_entry": null,
+    "txn": "w2:9",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000061,
+   "decision": 61,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1483.01,
+   "completed_ms": 1483.53
+  },
+  {
+   "seq": 62,
+   "actor": "w1",
+   "kind": "execute",
+   "sql": "DELETE FROM \"chancy_workers\" WHERE expires_at < NOW()",
+   "statement_id": "fef58a7d9dfb",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 31,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "heartbeat",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:755:announce_worker",
+    "framework_entry": null,
+    "txn": "w1:9",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000062,
+   "decision": 62,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 0,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1483.34,
+   "completed_ms": 1484.07
+  },
+  {
+   "seq": 63,
+   "actor": "w2",
+   "kind": "execute",
+   "sql": "DELETE FROM \"chancy_workers\" WHERE expires_at < NOW()",
+   "statement_id": "fef58a7d9dfb",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 31,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "heartbeat",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:755:announce_worker",
+    "framework_entry": null,
+    "txn": "w2:9",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000063,
+   "decision": 63,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 0,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1483.57,
+   "completed_ms": 1484.57
+  },
+  {
+   "seq": 64,
+   "actor": "w1",
+   "kind": "execute",
+   "sql": "INSERT INTO \"chancy_workers\" (worker_id, last_seen, expires_at, tags, queues) VALUES ( %(worker_id)s, NOW(), NOW() + INTERVAL '90 seconds', %(tags)s, %(queues)s ) ON CONFLICT (worker_id) DO UPDATE SET last_seen = NOW(), expires_at = NOW() + INTERVAL '90 seconds', tags = EXCLUDED.tags, queues = EXCLUDED.queues",
+   "statement_id": "da40f1173bfd",
+   "params": {
+    "worker_id": {
+     "str": 36,
+     "sha256": "5afa29d95aa7"
+    },
+    "tags": [
+     {
+      "str": 21,
+      "sha256": "0e359371094a"
+     },
+     {
+      "str": 46,
+      "sha256": "33f667ee1b34"
+     },
+     {
+      "str": 12,
+      "sha256": "8eab980581cc"
+     },
+     {
+      "str": 8,
+      "sha256": "253955739601"
+     },
+     {
+      "str": 14,
+      "sha256": "2741758d2769"
+     },
+     {
+      "str": 1,
+      "sha256": "684888c0ebb1"
+     }
+    ],
+    "queues": [
+     {
+      "str": 4,
+      "sha256": "b40779fda6ff"
+     },
+     {
+      "str": 7,
+      "sha256": "37a8eec1ce19"
+     }
+    ]
+   },
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 32,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "heartbeat",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:763:announce_worker",
+    "framework_entry": null,
+    "txn": "w1:9",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000064,
+   "decision": 64,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1484.27,
+   "completed_ms": 1485.18
+  },
+  {
+   "seq": 65,
+   "actor": "w2",
+   "kind": "execute",
+   "sql": "INSERT INTO \"chancy_workers\" (worker_id, last_seen, expires_at, tags, queues) VALUES ( %(worker_id)s, NOW(), NOW() + INTERVAL '90 seconds', %(tags)s, %(queues)s ) ON CONFLICT (worker_id) DO UPDATE SET last_seen = NOW(), expires_at = NOW() + INTERVAL '90 seconds', tags = EXCLUDED.tags, queues = EXCLUDED.queues",
+   "statement_id": "da40f1173bfd",
+   "params": {
+    "worker_id": {
+     "str": 36,
+     "sha256": "9552b0d1e07f"
+    },
+    "tags": [
+     {
+      "str": 21,
+      "sha256": "0e359371094a"
+     },
+     {
+      "str": 46,
+      "sha256": "5e37795e2f7d"
+     },
+     {
+      "str": 12,
+      "sha256": "8eab980581cc"
+     },
+     {
+      "str": 8,
+      "sha256": "253955739601"
+     },
+     {
+      "str": 14,
+      "sha256": "2741758d2769"
+     },
+     {
+      "str": 1,
+      "sha256": "684888c0ebb1"
+     }
+    ],
+    "queues": [
+     {
+      "str": 4,
+      "sha256": "b40779fda6ff"
+     },
+     {
+      "str": 7,
+      "sha256": "37a8eec1ce19"
+     }
+    ]
+   },
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 32,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "heartbeat",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:763:announce_worker",
+    "framework_entry": null,
+    "txn": "w2:9",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000065,
+   "decision": 65,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1484.67,
+   "completed_ms": 1485.59
+  },
+  {
+   "seq": 66,
+   "actor": "w1",
+   "kind": "transaction_exit",
+   "sql": "RELEASE SAVEPOINT",
+   "statement_id": "ad0e5ae50049",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 33,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "heartbeat",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:754:announce_worker",
+    "framework_entry": null,
+    "txn": "w1:9",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000066,
+   "decision": 66,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1485.23,
+   "completed_ms": 1485.8
+  },
+  {
+   "seq": 67,
+   "actor": "w2",
+   "kind": "transaction_exit",
+   "sql": "RELEASE SAVEPOINT",
+   "statement_id": "ad0e5ae50049",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 33,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "heartbeat",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:754:announce_worker",
+    "framework_entry": null,
+    "txn": "w2:9",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000067,
+   "decision": 67,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1485.62,
+   "completed_ms": 1486.02
+  },
+  {
+   "seq": 68,
+   "actor": "w1",
+   "kind": "transaction_exit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 34,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "heartbeat",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:534:_maintain_heartbeat",
+    "framework_entry": null,
+    "txn": "w1:9",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000068,
+   "decision": 68,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1485.86,
+   "completed_ms": 1486.22
+  },
+  {
+   "seq": 69,
+   "actor": "w2",
+   "kind": "transaction_exit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 34,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "heartbeat",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:534:_maintain_heartbeat",
+    "framework_entry": null,
+    "txn": "w2:9",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000069,
+   "decision": 69,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1486.05,
+   "completed_ms": 1486.41
+  },
+  {
+   "seq": 70,
+   "actor": "w1",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 35,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "heartbeat",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:533:_maintain_heartbeat",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 1000070,
+   "decision": 70,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1486.26,
+   "completed_ms": 1486.5
+  },
+  {
+   "seq": 71,
+   "actor": "w2",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 35,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "heartbeat",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:533:_maintain_heartbeat",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 1000071,
+   "decision": 71,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1486.45,
+   "completed_ms": 1486.66
+  },
+  {
+   "seq": 72,
+   "actor": "w1",
+   "kind": "transaction_enter",
+   "sql": "BEGIN",
+   "statement_id": "a8402858d4f1",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 36,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "queue_ds_q",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:861:fetch_jobs",
+    "framework_entry": null,
+    "txn": "w1:10",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000072,
+   "decision": 72,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1486.61,
+   "completed_ms": 1486.94
+  },
+  {
+   "seq": 73,
+   "actor": "w2",
+   "kind": "transaction_enter",
+   "sql": "BEGIN",
+   "statement_id": "a8402858d4f1",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 36,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "queue_ds_q",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:861:fetch_jobs",
+    "framework_entry": null,
+    "txn": "w2:10",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000073,
+   "decision": 73,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1486.75,
+   "completed_ms": 1487.2
+  },
+  {
+   "seq": 74,
+   "actor": "w1",
+   "kind": "execute",
+   "sql": "WITH selected_jobs AS ( SELECT id FROM \"chancy_jobs\" WHERE queue = %(queue)s AND (state = 'pending' OR state = 'retrying') AND attempts < max_attempts AND (scheduled_at IS NULL OR scheduled_at <= NOW()) ORDER BY priority DESC, id ASC LIMIT %(maximum_jobs_to_fetch)s FOR UPDATE OF \"chancy_jobs\" SKIP LOCKED ) UPDATE \"chancy_jobs\" SET started_at = NOW(), state = 'running', claim_id = gen_random_uuid(), taken_by = %(worker_id)s FROM selected_jobs WHERE \"chancy_jobs\".id = selected_jobs.id RETURNING \"chancy_jobs\".*",
+   "statement_id": "a8d0f543fd4d",
+   "params": {
+    "queue": {
+     "str": 4,
+     "sha256": "b40779fda6ff"
+    },
+    "maximum_jobs_to_fetch": 1,
+    "worker_id": {
+     "str": 36,
+     "sha256": "5afa29d95aa7"
+    }
+   },
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 37,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "queue_ds_q",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:905:fetch_jobs",
+    "framework_entry": null,
+    "txn": "w1:10",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000074,
+   "decision": 74,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    {
+     "id": {
+      "uuid_sha256": "57ea64d8f72c"
+     },
+     "queue": {
+      "str": 4,
+      "sha256": "b40779fda6ff"
+     },
+     "func": {
+      "str": 59,
+      "sha256": "80e025e28c96"
+     },
+     "kwargs": {
+      "n": 2
+     },
+     "limits": [],
+     "meta": {},
+     "state": {
+      "str": 7,
+      "sha256": "c071cf5f5ed6"
+     },
+     "priority": 0,
+     "attempts": 0,
+     "max_attempts": 1,
+     "taken_by": {
+      "str": 36,
+      "sha256": "5afa29d95aa7"
+     },
+     "created_at": {
+      "timestamptz_us": 1793880407870783
+     },
+     "started_at": {
+      "timestamptz_us": 1793880409359225
+     },
+     "completed_at": null,
+     "scheduled_at": {
+      "timestamptz_us": 1793880407848836
+     },
+     "unique_key": null,
+     "errors": [],
+     "claim_id": {
+      "uuid_sha256": "2468e1e4f9f8"
+     }
+    }
+   ],
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1487.04,
+   "completed_ms": 1488.22
+  },
+  {
+   "seq": 75,
+   "actor": "w2",
+   "kind": "execute",
+   "sql": "WITH selected_jobs AS ( SELECT id FROM \"chancy_jobs\" WHERE queue = %(queue)s AND (state = 'pending' OR state = 'retrying') AND attempts < max_attempts AND (scheduled_at IS NULL OR scheduled_at <= NOW()) ORDER BY priority DESC, id ASC LIMIT %(maximum_jobs_to_fetch)s FOR UPDATE OF \"chancy_jobs\" SKIP LOCKED ) UPDATE \"chancy_jobs\" SET started_at = NOW(), state = 'running', claim_id = gen_random_uuid(), taken_by = %(worker_id)s FROM selected_jobs WHERE \"chancy_jobs\".id = selected_jobs.id RETURNING \"chancy_jobs\".*",
+   "statement_id": "a8d0f543fd4d",
+   "params": {
+    "queue": {
+     "str": 4,
+     "sha256": "b40779fda6ff"
+    },
+    "maximum_jobs_to_fetch": 1,
+    "worker_id": {
+     "str": 36,
+     "sha256": "9552b0d1e07f"
+    }
+   },
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 37,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "queue_ds_q",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:905:fetch_jobs",
+    "framework_entry": null,
+    "txn": "w2:10",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000075,
+   "decision": 75,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    {
+     "id": {
+      "uuid_sha256": "d66a604d4aa1"
+     },
+     "queue": {
+      "str": 4,
+      "sha256": "b40779fda6ff"
+     },
+     "func": {
+      "str": 59,
+      "sha256": "80e025e28c96"
+     },
+     "kwargs": {
+      "n": 3
+     },
+     "limits": [],
+     "meta": {},
+     "state": {
+      "str": 7,
+      "sha256": "c071cf5f5ed6"
+     },
+     "priority": 0,
+     "attempts": 0,
+     "max_attempts": 1,
+     "taken_by": {
+      "str": 36,
+      "sha256": "9552b0d1e07f"
+     },
+     "created_at": {
+      "timestamptz_us": 1793880407871151
+     },
+     "started_at": {
+      "timestamptz_us": 1793880409359527
+     },
+     "completed_at": null,
+     "scheduled_at": {
+      "timestamptz_us": 1793880407848836
+     },
+     "unique_key": null,
+     "errors": [],
+     "claim_id": {
+      "uuid_sha256": "d9e615829d00"
+     }
+    }
+   ],
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1487.26,
+   "completed_ms": 1489.19
+  },
+  {
+   "seq": 76,
+   "actor": "w1",
+   "kind": "transaction_exit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 38,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "queue_ds_q",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:861:fetch_jobs",
+    "framework_entry": null,
+    "txn": "w1:10",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000076,
+   "decision": 76,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1488.31,
+   "completed_ms": 1490.02
+  },
+  {
+   "seq": 77,
+   "actor": "w2",
+   "kind": "transaction_exit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 38,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "queue_ds_q",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:861:fetch_jobs",
+    "framework_entry": null,
+    "txn": "w2:10",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000077,
+   "decision": 77,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1489.38,
+   "completed_ms": 1490.5
+  },
+  {
+   "seq": 78,
+   "actor": "w1",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 39,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "queue_ds_q",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:505:_maintain_queue",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 1000078,
+   "decision": 78,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1490.12,
+   "completed_ms": 1490.65
+  },
+  {
+   "seq": 79,
+   "actor": "w2",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 39,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "queue_ds_q",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:505:_maintain_queue",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 1000079,
+   "decision": 79,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 1490.59,
+   "completed_ms": 2027.72
+  },
+  {
+   "seq": 80,
+   "actor": "w1",
+   "kind": "transaction_enter",
+   "sql": "BEGIN",
+   "statement_id": "a8402858d4f1",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 40,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "updates",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:679:flush",
+    "framework_entry": null,
+    "txn": "w1:11",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000080,
+   "decision": 80,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 2027.5,
+   "completed_ms": 2072.53
+  },
+  {
+   "seq": 81,
+   "actor": "w2",
+   "kind": "transaction_enter",
+   "sql": "BEGIN",
+   "statement_id": "a8402858d4f1",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 40,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "updates",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:679:flush",
+    "framework_entry": null,
+    "txn": "w2:11",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000081,
+   "decision": 81,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 2071.82,
+   "completed_ms": 2073.26
+  },
+  {
+   "seq": 82,
+   "actor": "w1",
+   "kind": "executemany",
+   "sql": "UPDATE \"chancy_jobs\" SET state = %(state)s, started_at = %(started_at)s, completed_at = %(completed_at)s, scheduled_at = %(scheduled_at)s, attempts = %(attempts)s, errors = %(errors)s, meta = %(meta)s, max_attempts = %(max_attempts)s WHERE id = %(id)s AND claim_id IS NOT DISTINCT FROM %(claim_id)s RETURNING id",
+   "statement_id": "9f175fccc789",
+   "params": [
+    {
+     "id": {
+      "uuid_sha256": "57ea64d8f72c"
+     },
+     "claim_id": {
+      "uuid_sha256": "2468e1e4f9f8"
+     },
+     "state": {
+      "str": 9,
+      "sha256": "5dceaeceb6d8"
+     },
+     "started_at": {
+      "timestamptz_us": 1793880409359225
+     },
+     "completed_at": {
+      "timestamptz_us": 1793880409363380
+     },
+     "scheduled_at": {
+      "timestamptz_us": 1793880407848836
+     },
+     "attempts": 1,
+     "errors": {
+      "json_sha256": "4f53cda18c2b"
+     },
+     "meta": {
+      "json_sha256": "44136fa355b3"
+     },
+     "max_attempts": 1
+    }
+   ],
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 41,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "updates",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:681:flush",
+    "framework_entry": null,
+    "txn": "w1:11",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000082,
+   "decision": 82,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 2072.8,
+   "completed_ms": 2075.09
+  },
+  {
+   "seq": 83,
+   "actor": "w2",
+   "kind": "executemany",
+   "sql": "UPDATE \"chancy_jobs\" SET state = %(state)s, started_at = %(started_at)s, completed_at = %(completed_at)s, scheduled_at = %(scheduled_at)s, attempts = %(attempts)s, errors = %(errors)s, meta = %(meta)s, max_attempts = %(max_attempts)s WHERE id = %(id)s AND claim_id IS NOT DISTINCT FROM %(claim_id)s RETURNING id",
+   "statement_id": "9f175fccc789",
+   "params": [
+    {
+     "id": {
+      "uuid_sha256": "d66a604d4aa1"
+     },
+     "claim_id": {
+      "uuid_sha256": "d9e615829d00"
+     },
+     "state": {
+      "str": 9,
+      "sha256": "5dceaeceb6d8"
+     },
+     "started_at": {
+      "timestamptz_us": 1793880409359527
+     },
+     "completed_at": {
+      "timestamptz_us": 1793880409900674
+     },
+     "scheduled_at": {
+      "timestamptz_us": 1793880407848836
+     },
+     "attempts": 1,
+     "errors": {
+      "json_sha256": "4f53cda18c2b"
+     },
+     "meta": {
+      "json_sha256": "44136fa355b3"
+     },
+     "max_attempts": 1
+    }
+   ],
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 41,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "updates",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:681:flush",
+    "framework_entry": null,
+    "txn": "w2:11",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000083,
+   "decision": 83,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 2073.43,
+   "completed_ms": 2076.2
+  },
+  {
+   "seq": 84,
+   "actor": "w1",
+   "kind": "transaction_exit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 42,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "updates",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:679:flush",
+    "framework_entry": null,
+    "txn": "w1:11",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000084,
+   "decision": 84,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 2075.21,
+   "completed_ms": 2076.57
+  },
+  {
+   "seq": 85,
+   "actor": "w2",
+   "kind": "transaction_exit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 42,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "updates",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:679:flush",
+    "framework_entry": null,
+    "txn": "w2:11",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000085,
+   "decision": 85,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 2076.29,
+   "completed_ms": 2076.8
+  },
+  {
+   "seq": 86,
+   "actor": "w1",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w1",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w1",
+    "migration_phase": "",
+    "logical_op": 43,
+    "session": {
+     "backend_pid": 24845
+    },
+    "task": "updates",
+    "on_behalf_of": "w1",
+    "call_site": "../app/src/chancy/worker.py:677:flush",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 1000086,
+   "decision": 86,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 2076.63,
+   "completed_ms": 2076.92
+  },
+  {
+   "seq": 87,
+   "actor": "w2",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 43,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "updates",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:677:flush",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": null,
+   "decision": null,
+   "outcome": "aborted",
+   "error_class": "cancelled_while_waiting",
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": null,
+   "txn_after": null,
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 2076.87,
+   "completed_ms": 2194.45
+  },
+  {
+   "seq": 88,
+   "actor": "w2",
+   "kind": "transaction_enter",
+   "sql": "BEGIN",
+   "statement_id": "a8402858d4f1",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 44,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "Task-42",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:679:flush",
+    "framework_entry": null,
+    "txn": "w2:12",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000087,
+   "decision": 87,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 2194.65,
+   "completed_ms": 2195.14
+  },
+  {
+   "seq": 89,
+   "actor": "w2",
+   "kind": "executemany",
+   "sql": "UPDATE \"chancy_jobs\" SET state = %(state)s, started_at = %(started_at)s, completed_at = %(completed_at)s, scheduled_at = %(scheduled_at)s, attempts = %(attempts)s, errors = %(errors)s, meta = %(meta)s, max_attempts = %(max_attempts)s WHERE id = %(id)s AND claim_id IS NOT DISTINCT FROM %(claim_id)s RETURNING id",
+   "statement_id": "9f175fccc789",
+   "params": [
+    {
+     "id": {
+      "uuid_sha256": "d66a604d4aa1"
+     },
+     "claim_id": {
+      "uuid_sha256": "d9e615829d00"
+     },
+     "state": {
+      "str": 9,
+      "sha256": "5dceaeceb6d8"
+     },
+     "started_at": {
+      "timestamptz_us": 1793880409359527
+     },
+     "completed_at": {
+      "timestamptz_us": 1793880409900674
+     },
+     "scheduled_at": {
+      "timestamptz_us": 1793880407848836
+     },
+     "attempts": 1,
+     "errors": {
+      "json_sha256": "4f53cda18c2b"
+     },
+     "meta": {
+      "json_sha256": "44136fa355b3"
+     },
+     "max_attempts": 1
+    }
+   ],
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 45,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "Task-42",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:681:flush",
+    "framework_entry": null,
+    "txn": "w2:12",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000088,
+   "decision": 88,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 2195.28,
+   "completed_ms": 2196.06
+  },
+  {
+   "seq": 90,
+   "actor": "w2",
+   "kind": "transaction_exit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 46,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "Task-42",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:679:flush",
+    "framework_entry": null,
+    "txn": "w2:12",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000089,
+   "decision": 89,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 2196.11,
+   "completed_ms": 2196.34
+  },
+  {
+   "seq": 91,
+   "actor": "w2",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "chancy-0.26.0",
+    "actor": "w2",
+    "handler": "worker",
+    "invocation_id": "isolated_chancy_workers:w2",
+    "migration_phase": "",
+    "logical_op": 47,
+    "session": {
+     "backend_pid": 24846
+    },
+    "task": "Task-42",
+    "on_behalf_of": "w2",
+    "call_site": "../app/src/chancy/worker.py:677:flush",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 1000090,
+   "decision": 90,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 2196.41,
+   "completed_ms": 2196.47
+  }
+ ]
+}
