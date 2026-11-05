@@ -451,8 +451,26 @@ class Run:
                 actor.exception_class = error_class(exc)
         finally:
             with contextlib.suppress(Exception):
-                if actor.conn is not None and actor.conn.info.transaction_status != TX.IDLE:
-                    psycopg.Connection.rollback(actor.conn)  # cleanup after the handler, not an application step
+                status = actor.conn.info.transaction_status if actor.conn is not None else None
+                if status in (TX.INTRANS, TX.INERROR):
+                    # cleanup after the handler, not an application step: recorded (ungranted) so that the server
+                    # log's ROLLBACK is explained, never silent
+                    op = OpRecord(seq=-1, actor=actor.name, kind="cleanup_rollback", sql="ROLLBACK",
+                                  statement_id=statement_id("ROLLBACK"), params=None,
+                                  provenance={"actor": actor.name, "handler": actor.handler.name,
+                                              "app_version": actor.handler.app_version,
+                                              "invocation_id": actor.invocation_id, "call_site": "<harness cleanup>",
+                                              "framework_entry": None, "txn": f"{actor.name}:{actor.txn}"},
+                                  txn_before=status.name, requested_ms=self._ms())
+                    try:
+                        psycopg.Connection.rollback(actor.conn)
+                        op.outcome = "ok"
+                    except Exception as exc:
+                        op.outcome, op.error_class = "error", error_class(exc)
+                    op.txn_after = actor.conn.info.transaction_status.name if not actor.conn.closed else "CLOSED"
+                    op.completed_ms = self._ms()
+                    with self.cv:
+                        self._append(op)
             with self.cv:
                 self.cv.notify_all()
 

@@ -8,9 +8,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import secrets
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 import psycopg
@@ -65,6 +67,8 @@ class RunResult:
     violations: list[str]
     seconds: float
     corroboration: dict[str, Any] | None = None
+    workload_sha256: str | None = None
+    handler_sources: dict[str, dict[str, str]] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {"run_id": self.run_id, "variant": self.variant, "workload": self.workload,
@@ -83,7 +87,53 @@ class RunResult:
                 "final_state_digest": oracle.digest(self.final_state), "oracle_violations": self.violations,
                 "corroboration": self.corroboration, "handlers": {n: a["handler"] for n, a in
                                                                   self.trace.actors.items()},
-                "versions": {"psycopg": psycopg.__version__}}
+                "classification": classify(self), "code_revision": code_revision(),
+                "workload_sha256": self.workload_sha256, "handler_sources": self.handler_sources,
+                "versions": versions()}
+
+
+def classify(r: RunResult) -> str:
+    """One label per run: what kind of evidence it is, before anyone reads the detail."""
+    if r.trace.outcome != "completed":
+        return f"run_{r.trace.outcome}"
+    if r.corroboration is not None and not r.corroboration.get("ok"):
+        return "refuted_by_server_log"
+    if r.violations:
+        return "oracle_violation"
+    errored = [a["exception_class"] for a in r.trace.actors.values() if a["exception_class"]]
+    return f"completed_with_actor_errors:{','.join(sorted(set(errored)))}" if errored else "completed_invariants_hold"
+
+
+def code_revision() -> dict[str, Any]:
+    import subprocess
+    here = Path(__file__).resolve().parent
+    try:
+        head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=here, capture_output=True, text=True,
+                              timeout=5).stdout.strip()
+        dirty = bool(subprocess.run(["git", "status", "--porcelain", "--", "."], cwd=here.parents[2],
+                                    capture_output=True, text=True, timeout=5).stdout.strip())
+    except Exception:  # no git: say so rather than guess
+        return {"head": None, "dirty": None}
+    return {"head": head or None, "dirty": dirty}
+
+
+def versions() -> dict[str, str]:
+    out = {"psycopg": psycopg.__version__}
+    try:
+        import sqlalchemy
+        out["sqlalchemy"] = sqlalchemy.__version__
+    except ImportError:
+        pass
+    return out
+
+
+def handler_source(fn: Any) -> dict[str, str]:
+    import inspect
+    target = getattr(fn, "func", fn)  # functools.partial: the real function
+    path = inspect.getsourcefile(target) or ""
+    digest = hashlib.sha256(Path(path).read_bytes()).hexdigest() if path else ""
+    return {"function": f"{target.__module__}.{target.__qualname__}", "file": os.path.relpath(path),
+            "sha256": digest}
 
 
 def workload_digest(w: Workload) -> str:
@@ -183,10 +233,14 @@ def run_app(target: Target, app_module: Any, invocations: list[dict[str, Any]], 
     admin = target.admin()
     try:
         app_module.reset(admin, seed)
-        got = oracle.digest(app_module.read_state(admin))
+        initial = app_module.read_state(admin)
+        got = oracle.digest(initial)
         want = expected_digest or oracle.digest(app_module.expected_initial(seed))
         if got != want:
             raise Refused(f"the initial state isn't the verified one (digest {got[:12]}, expected {want[:12]})")
+        already = app_module.check(initial)
+        if already:  # a violation that predates the run would be a false positive for every schedule
+            raise Refused(f"the initial state already violates the oracle: {already}")
         actors = []
         for inv in invocations:
             h = handlers.get((inv["app_version"], inv["handler"]))
@@ -204,11 +258,15 @@ def run_app(target: Target, app_module: Any, invocations: list[dict[str, Any]], 
         else:
             trace = run.execute()
         final = app_module.read_state(admin)
-        violations = app_module.check(final)
+        if hasattr(app_module, "check_run"):
+            violations = app_module.check_run(initial, final, trace.raw_results)
+        else:
+            violations = app_module.check(final)
     finally:
         admin.close()
     return RunResult(run_id, variant, label, got, trace, final, violations, round(time.monotonic() - started, 3),
-                     corroboration)
+                     corroboration, hashlib.sha256(key.encode()).hexdigest(),
+                     {a.name: handler_source(a.handler.fn) for a in actors})
 
 
 def explore_app(target: Target, app_module: Any, invocations: list[dict[str, Any]], seed: Any, *, variant: str,

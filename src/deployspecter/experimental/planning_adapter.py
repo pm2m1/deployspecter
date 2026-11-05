@@ -60,6 +60,7 @@ REPO = Path(__file__).resolve().parents[3]
 TRUSTED_SOURCES = {
     "live_app.reservations": REPO / "tests" / "live_app" / "reservations.py",
     "live_app.properties": REPO / "tests" / "live_app" / "properties.py",
+    "experimental.reservations_corrected": Path(__file__).resolve().parent / "apps" / "reservations_corrected.py",
 }
 TRUSTED_OPERATIONS = {"live_app.reservations:reserve_seats", "live_app.reservations:release_seats"}
 EXACT_TAGS = {"int": int, "float": float, "bool": bool, "str": str}
@@ -89,7 +90,11 @@ def _sha256(path: Path) -> str:
 PINNED_SHA256 = {
     "live_app.reservations": "8d60890d642253f4bf2672d7d48d97e8341930840791e4bacd1b6a0eba8661c1",
     "live_app.properties": "fa67687c3a58a7d9c873f1710dfc114ac26d3cbd96e3b579484c58a44e803f5b",
+    "experimental.reservations_corrected": "d656ee637a7a345afddad2f6b7fca7ceb2a1e78ec64ff32511599230771828cd",
 }
+# The two frozen builds come from Track A's harness-owned switch; ``corrected`` is this prototype's separately named
+# reference (``apps/reservations_corrected.py``). The frozen ``fixed`` build is not relabelled as correct.
+CORRECTED = "corrected"
 
 
 def load_trusted(module: str) -> ModuleType:
@@ -264,9 +269,10 @@ class PlannedReservations:
         self.expected = expected_rows(p)
 
     def registry(self, variant: str) -> dict[tuple[str, str], Handler]:
-        if variant not in sc.VARIANTS:
+        if variant not in sc.VARIANTS and variant != CORRECTED:
             raise ValueError(f"unknown variant {variant!r}")
-        switch = sc.VARIANTS[variant]
+        switch = sc.VARIANTS.get(variant, sc.VARIANTS["fixed"])  # corrected reserves exactly as lock_row=True
+        corrected = load_trusted("experimental.reservations_corrected") if variant == CORRECTED else None
         out = {}
         for ep in sc.REGISTRY_CONFIG["entrypoints"]:
             operation = ep["operation"]
@@ -276,6 +282,9 @@ class PlannedReservations:
             fn = getattr(self.app, name)
             allowed = set(ALLOWED_SQL[name]) | {s + " FOR UPDATE" for s in ALLOWED_SQL[name] if s in _LOCKABLE}
             bound = partial(fn, **switch)
+            if corrected is not None and name == "release_seats":
+                fn, allowed = corrected.release_seats, set(corrected.ALLOWED_RELEASE)
+                bound = partial(fn)
             bound.__name__, bound.__module__ = name, fn.__module__  # type: ignore[attr-defined]
             for version in ep["versions"]:
                 out[(version, ep["id"])] = Handler(version, ep["id"], bound, frozenset(normal_sql(s) for s in allowed),
@@ -307,6 +316,22 @@ class PlannedReservations:
 
     def check(self, state: dict[str, list[dict[str, Any]]]) -> list[str]:
         return list(self.properties.check_invariants(state))
+
+    def check_run(self, initial: dict[str, list[dict[str, Any]]], final: dict[str, list[dict[str, Any]]],
+                  results: dict[str, Any]) -> list[str]:
+        """R1 and R2 from the frozen properties, plus one EXPERIMENTAL check written from the declared release
+        semantics ("release_seats releases one reservation the holder has"), independent of either build's code:
+
+        R5  reservations after = reservations before + callers told "reserved" - callers told "released"
+        """
+        out = self.check(final)
+        told = [(r or {}).get("status") for r in results.values()]
+        want = len(initial["reservations"]) + told.count("reserved") - told.count("released")
+        if len(final["reservations"]) != want:
+            out.append(f"R5 {told.count('released')} caller(s) told released and {told.count('reserved')} told "
+                       f"reserved, but reservations went from {len(initial['reservations'])} to "
+                       f"{len(final['reservations'])}")
+        return out
 
     def verify_initial(self, target: hz.Target) -> str:
         """Reset, read independently, compare exactly with the requested typed rows; the digest the run binds to."""

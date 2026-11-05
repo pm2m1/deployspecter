@@ -129,6 +129,10 @@ def corroborate(log: bytes, *, start: str, end: str, trace: Any, admin_pid: int,
     for op in granted:
         pid = str(trace.actors[op.actor]["backend_pid"])
         expected[pid] += [(text, params, op.grant, op) for text, params in _expected(op)]
+    for op in trace.records:  # the harness's recorded cleanup after a failed handler: last on its session
+        if op.kind == "cleanup_rollback" and op.outcome == "ok":
+            pid = str(trace.actors[op.actor]["backend_pid"])
+            expected[pid].append(("ROLLBACK", None, None, op))  # no grant: outside the scheduler's order
     cursor = dict.fromkeys(actors, 0)
     order: list[int] = []
     for r in window:
@@ -172,7 +176,8 @@ def corroborate(log: bytes, *, start: str, end: str, trace: Any, admin_pid: int,
             continue
         cursor[pid] += 1
         out.matched += 1
-        order.append(grant)
+        if grant is not None:
+            order.append(grant)
         if values:
             logged = {int(n): v for n, v in PARAM.findall(r[DETAIL] or "")}
             for i, value in enumerate(values, 1):

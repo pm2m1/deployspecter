@@ -121,6 +121,7 @@ def test_the_fixed_build_still_double_releases_one_reservation(target):
     both_read_first = ["a", "b", "a", "a", "a", "a", "b", "b", "b", "b"]
     p, r, _d = pa.run_planned(target, d, variant="fixed", schedule=both_read_first, corroborate=True)
     assert p.outcome == "bridged" and r.corroboration["ok"], r.corroboration["problems"]
-    assert r.violations == ["R1 event 1: reserved=0 but reservations hold 4"]
+    assert r.violations == ["R1 event 1: reserved=0 but reservations hold 4",
+                            "R5 2 caller(s) told released and 0 told reserved, but reservations went from 2 to 1"]
     deletes = [op.rowcount for op in r.trace.records if op.sql.startswith("DELETE")]
     assert sorted(deletes) == [0, 1]  # the second release deleted nothing, yet decremented
