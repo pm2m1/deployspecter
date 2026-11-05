@@ -90,3 +90,21 @@ def test_the_claim_lock_mutant_is_distinguished_by_the_oracle(tmp_path):
     assert proc.returncode == 0, proc.stdout[-2000:] + proc.stderr[-2000:]  # the run itself is sound
     report = json.loads((tmp_path / "out" / "report.json").read_text())
     assert any(v.startswith("K2") for v in report["run"]["oracle_violations"])  # ...and the mutant is caught
+
+
+def test_old_and_new_workers_run_at_the_same_time_under_one_coordinator(tmp_path):
+    """Chancy 0.25.1 and 0.26.0 in two restricted containers, simultaneously, every statement granted by the
+    coordinator: sound, both versions granted inside one window, every session attributed, clean teardown."""
+    import json
+    env = {k: v for k, v in os.environ.items() if k not in ("MODEL_API_KEY", "DATABASE_URL")}
+    proc = subprocess.run([sys.executable, str(REPO / "research_tools/isolated/run_coordinated.py"), "run",
+                           "--scenario", "new_to_old", "--chancy-old-sdist", str(SDISTS / "chancy-0.25.1.tar.gz"),
+                           "--chancy-sdist", str(SDISTS / "chancy-0.26.0.tar.gz"), "--out", str(tmp_path / "out")],
+                          capture_output=True, text=True, timeout=900, env=env)
+    assert proc.returncode == 0, proc.stdout[-2000:] + proc.stderr[-2000:]
+    report = json.loads(next((tmp_path / "out").glob("*/report.json")).read_text())
+    sim, summary = report["simultaneous"], report["summary"]
+    assert report["verdict"] == "SOUND" and sim["versions"] == {"A": "0.25.1", "B": "0.26.0"}
+    assert set(summary["window"]["by_version"]) == {"0.25.1", "0.26.0"} and summary["window"]["version_switches"] > 0
+    assert set(summary["sessions"].values()) == {"old_worker", "new_worker", "new_push"}
+    assert all(sim["teardown"].values())

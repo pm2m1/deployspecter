@@ -150,7 +150,8 @@ def prephases(target: hz.Target, images: dict[str, Any], out: Path) -> list[dict
         d.mkdir(parents=True)
         r = ri.run_smoke(target, variant=name, schedule=[], out=d, image=images[which], mode="chancy-plan",
                          fresh_schema=(i == 0), keep_schema=True,
-                         extra_env={"DS_CHANCY_PLAN": json.dumps([{"actors": [actor]}])})
+                         extra_env={"DS_CHANCY_PLAN": json.dumps([{"actors": [actor]}]),
+                                    **images.get("env", {}).get(which, {})})
         phases.append(r)
         (d / "report.json").write_text(json.dumps(r, indent=1, default=str))
         if not (r.get("isolation_ok") and (r.get("corroboration") or {}).get("ok")):
@@ -205,7 +206,8 @@ def simultaneous(target: hz.Target, images: dict[str, Any], spec: dict[str, Any]
                            f"DS_PG_PASSWORD={target.password}", f"DS_PG_DB={target.dbname}",
                            "DS_MODE=chancy_coordinated", f"DS_SCHEMA={SCHEMA}", f"DS_CO_NONCE={token}",
                            "DS_CO_PLAN=" + json.dumps({"process": p, "coordinator": ["ds-coord", 7777],
-                                                       "markers": MARKERS, "actors": actors, "run_s": 160})]
+                                                       "markers": MARKERS, "actors": actors, "run_s": 160}),
+                           *[f"{k}={v}" for k, v in images.get("env", {}).get(p, {}).items()]]
             started = time.monotonic()
             for who in ["coordinator", *sorted(spec["processes"])]:
                 f = work / f"{who}.env"
@@ -361,7 +363,10 @@ def summary(r: dict[str, Any]) -> dict[str, Any]:
 
 
 def build_images(old_sdist: Path, new_sdist: Path, mutant: str | None) -> dict[str, Any]:
-    images = {}
+    """A: 0.25.1. B: 0.26.0, or the declared mutant of it (its declaration goes to every B container)."""
+    images: dict[str, Any] = {"env": {"A": {}, "B": {}}}
+    if mutant:
+        images["env"]["B"] = {"DS_CHANCY_MUTANT": ri.mutant_declaration(new_sdist, mutant, "0.26.0")}
     for p, sdist, m in (("A", old_sdist, None), ("B", new_sdist, mutant)):
         d = Path(tempfile.mkdtemp(prefix="ds_iso_build_"))
         try:
@@ -378,7 +383,8 @@ def one(target: hz.Target, images: dict[str, Any], name: str, policy: dict[str, 
     pre = prephases(target, images, out)
     pre_ok = len(pre) == 2 and all(p.get("isolation_ok") and p["corroboration"]["ok"] for p in pre)
     report: dict[str, Any] = {"scenario": name, "spec": spec, "mutant": mutant, "nonblind": True,
-                              "images": {p: list(v) for p, v in images.items()},
+                              "images": {p: list(v) for p, v in images.items() if p != "env"},
+                              "image_env": images.get("env"),
                               "prephases": [{"variant": p["variant"], "corroboration_ok": p["corroboration"]["ok"],
                                              "isolation_ok": p.get("isolation_ok"),
                                              "version": (p.get("pinned_sources") or {}).get("version")}
