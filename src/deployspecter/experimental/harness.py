@@ -228,7 +228,10 @@ def run_app(target: Target, app_module: Any, invocations: list[dict[str, Any]], 
     limits = limits or Limits()
     handlers = app_module.registry(variant, **(registry_kw or {}))
     started = time.monotonic()
-    key = json.dumps({"inv": invocations, "seed": seed}, sort_keys=True, default=str)
+    # the planned fixtures pass no seed (their state is the plan), so the label and the pinned initial digest are part
+    # of the identity too
+    key = json.dumps({"inv": invocations, "seed": seed, "label": label, "initial": expected_digest}, sort_keys=True,
+                     default=str)
     run_id = hashlib.sha256(f"{key}|{variant}|{','.join(schedule)}".encode()).hexdigest()[:12]
     admin = target.admin()
     try:
