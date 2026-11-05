@@ -248,6 +248,14 @@ def main() -> int:
         report["contract_order"] = {"post_after_overlap_ended": [p["phase"] for p in report["phases"]].index(
             "4_post_migration") > [p["phase"] for p in report["phases"]].index("3_overlap")}
     report["results"] = results
+    admin = target.admin()
+    try:  # teardown: leave the disposable database's public schema empty, as found (other tests read its catalog)
+        if admin.execute("SELECT current_setting('cluster_name')").fetchone()[0] == "ds_mvp_disposable":
+            admin.execute("DROP SCHEMA public CASCADE")
+            admin.execute("CREATE SCHEMA public")
+            report["teardown_public_schema_reset"] = True
+    finally:
+        admin.close()
     (a.out / "report.json").write_text(json.dumps(report, indent=1, default=str))
     print(json.dumps({"verdict": verdict, "violations": (report.get("case_checker") or {}).get("violations")},
                      default=str))

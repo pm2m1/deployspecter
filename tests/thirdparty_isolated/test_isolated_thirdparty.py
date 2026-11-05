@@ -126,3 +126,25 @@ def test_historical_case_chancy_2895c4a_on_the_forced_schedule(tmp_path, tree, e
     assert proc.returncode == 0, proc.stdout[-2000:] + proc.stderr[-2000:]
     row = json.loads((tmp_path / "out" / "summary.json").read_text())[0]
     assert row["verdict"] == "SOUND" and row["case_verdict"] == expected
+
+
+def test_procrastinate_blue_green_upgrade_runs_in_contract_order_and_holds(tmp_path):
+    """The rolling-upgrade case (docs/experimental_mvp/rolling_upgrade/procrastinate_3.3_3.4): 3.3.0 and 3.4.0 run at
+    the same time on the pre-migrated schema; every phase is sound; no application property is violated, with the
+    frozen checker's R2/R5 entries read through errata E1/E2. Needs the two procrastinate sdists in the sdist dir."""
+    import json
+    old, new = SDISTS / "procrastinate-3.3.0.tar.gz", SDISTS / "procrastinate-3.4.0.tar.gz"
+    if not (old.exists() and new.exists()):
+        pytest.skip("procrastinate sdists not fetched")
+    sys.path.insert(0, str(REPO / "research_tools"))
+    import mvp_compare_procrastinate as m
+    env = {k: v for k, v in os.environ.items() if k not in ("MODEL_API_KEY", "DATABASE_URL")}
+    proc = subprocess.run([sys.executable, str(REPO / "research_tools/isolated/run_rolling_upgrade.py"),
+                           "--old-sdist", str(old), "--new-sdist", str(new), "--out", str(tmp_path / "out")],
+                          capture_output=True, text=True, timeout=1500, env=env)
+    assert proc.returncode == 0, proc.stdout[-2000:] + proc.stderr[-2000:]
+    c = m.coverage(tmp_path / "out")
+    assert c["verdict"] == "SOUND" and c["phases_sound"] == 7 and c["mismatched"] == 0
+    assert c["violations_after_errata"] == {}
+    assert c["coverage"]["v1_retries_by_3.3.0"] >= 1 and c["coverage"]["v2_admin_retries"] >= 1
+    assert json.loads((tmp_path / "out" / "report.json").read_text())["contract_order"]["post_after_overlap_ended"]
