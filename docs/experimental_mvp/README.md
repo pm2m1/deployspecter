@@ -18,24 +18,40 @@ This prototype runs real Python application handlers concurrently on psycopg 3, 
 ## Reproduce in one command
 
 ```bash
-cd ~/Desktop/deployspecter-real-app-mvp && research_tools/mvp_demo.sh
+cd ~/Desktop/deployspecter-real-app-mvp && research_tools/mvp_demo.sh            # sync, as before
+cd ~/Desktop/deployspecter-real-app-mvp && research_tools/mvp_demo.sh OUT all    # sync + async + isolated runner
 ```
+
+The second argument is `sync` (the default), `async` or `all`.
 
 The script runs these steps:
 
-1. **Installs dependencies:** `uv sync --frozen --extra experimental`, which brings in SQLAlchemy 2.0.57.
+1. **Installs dependencies:** `uv sync --frozen --extra experimental`, which brings in SQLAlchemy 2.0.57 with asyncio and greenlet.
 2. **Starts `deployspecter-mvp-pg`:**
    - pinned PostgreSQL 16 on tmpfs;
    - 1 GB, 2 CPUs, 256 PIDs;
    - `127.0.0.1:55441`, never 55432;
-   - csvlog with `log_statement=all`.
+   - csvlog with `log_statement=all`;
+   - WAL bounded to 64 MB.
 3. **Runs the tests:** the offline and live tests.
 4. **Re-executes three fixtures on their race schedules, buggy and fixed:**
    - the migration backfill (`reservations_mixed`);
    - the SQLAlchemy ledger (`ledger_orm`);
    - Gate 2A's synthetic `live_app.reservations`, seeded from a WorkloadSpec v2 document through the planning chain.
 
-Each run prints the trace, the scheduler's decisions, the call sites, the oracle's verdict and the server log's verdict, and writes an evidence bundle. Teardown runs on every outcome.
+5. **`async` adds:** the async migration race, the SQLAlchemy asyncio ledger, and the release path (frozen `fixed` against the experimental `corrected`), all on the async engine.
+6. **`all` adds:** the isolated-runner smoke test (`research_tools/isolated/run_isolated.py smoke`).
+
+Each run prints the trace, the scheduler's decisions, the call sites, the oracle's verdict and the server log's verdict. It also writes an evidence bundle:
+- code revision;
+- workload hash;
+- the executed functions' source files and hashes;
+- initial and final digests;
+- trace hash;
+- the server-log reconciliation;
+- a classification.
+
+Teardown runs on every outcome.
 
 Other commands each need a running instance: run `research_tools/mvp_pg.sh start` first and `stop` afterwards.
 
@@ -43,6 +59,44 @@ Other commands each need a running instance: run `research_tools/mvp_pg.sh start
 - `python -m deployspecter.experimental.demo_integrated --out DIR`: the ledger and planned reservations alone.
 - `python research_tools/mvp_compare.py ...`: the earlier curated, systematic and Muse comparison on `reservations_mixed`.
 - `python research_tools/mvp_compare_apps.py --workloads 6 --schedules 60 [--muse-calls 2] --out DIR`: the same comparison on the ledger and the planner path. It reads only `MODEL_*` from the main repository's `.env`, and `--muse-usd` caps it.
+- `python research_tools/mvp_compare.py --engine async ...`: the `reservations_mixed` comparison on the async engine.
+- `python research_tools/mvp_compare_release.py --workloads 6 --schedules 60 [--muse-calls 2] --out DIR`: the release path. It runs the frozen builds, the corrected reference and four mutants, with Muse hypotheses gated by the reference.
+- `python research_tools/mvp_release_evidence.py --out DIR`: the release_seats evidence (see `RELEASE_PATH.md`).
+- `python research_tools/isolated/run_isolated.py smoke|chancy --out DIR`: the isolated runner. `chancy` also needs `--chancy-sdist` pointing at the pinned `chancy-0.26.0.tar.gz`; its SHA-256 is re-verified.
+
+## Async engine (`stepping_async.py`)
+
+- **Driver classes:** `AsyncSteppedConnection` and `AsyncSteppedCursor` subclass psycopg's `AsyncConnection` and `AsyncCursor`. They're installed only through `cursor_factory` and `connect()`, and nothing is patched.
+- **Gated:** `execute`, `executemany`, `commit`, `rollback`, and `transaction()` with savepoints. Each is gated on an `asyncio.Condition`, with one task per actor.
+- **Refused:** named cursors (including SQLAlchemy `stream`), COPY, `stream`, pipelines, any statement outside the allowlist, and a second operation on one connection while one is in flight.
+- **Task identity is causal.** A task the actor's own code spawns, or that a framework spawns on its behalf (SQLAlchemy closes an `AsyncSession` in a shielded child task), inherits the actor's context variable. Its operations record `on_behalf_of`. Another actor's task is refused.
+- **Lock waits** are seen on a separate async monitor connection.
+- **A halt:** it cancels blocked queries on the server, cancels any task still running after a grace period, records the cleanup ROLLBACK, and closes every connection. Tests check that no backend or lock remains.
+- **Equivalence:** the async engine reproduces the sync engine step for step. On the migration race it explores the same schedule sets: buggy 61 schedules with 46 violating, fixed 30 with 0.
+- **Scope:** exploring decision points isn't exploring every asyncio interleaving. CPU-bound handler code blocks the loop.
+
+## Isolated runner (`research_tools/isolated/`)
+
+- **Image:** a digest-pinned base, dependencies installed `--require-hashes --no-deps` from `uv.lock`, and the payload copied in, never mounted.
+- **Network:** a fresh `--internal` network shared only with the disposable PostgreSQL.
+- **Container:** uid 65534, read-only root, a 64 MB noexec tmpfs, all capabilities dropped, `no-new-privileges`, 64 PIDs, 512 MB memory and no swap, 1 CPU, and a wall-clock kill. Its environment holds only the disposable credentials.
+- **Probes:** the container reports what it observes (identity, filesystem, secrets, the host and 55432, the internet, DNS and cgroup limits), and the host refuses the run unless every probe matches. Corroboration and the oracle run on the host. Teardown removes the container, the network and the work directory, and checks the protected container is unchanged.
+- **Not a hostile-code sandbox:** it shares the Docker Desktop VM's kernel and has no gVisor or Kata.
+- **Third-party run (`results/third_party_chancy_capture_1`):** chancy 0.26.0's own migration applier ran in it through its public API, `Migrator.migrate(conn)`, on a stepped async connection. That's a capture, with no allowlist, no defect hypothesis and no oracle. The server log corroborates all 36 statements, and six tables were created.
+
+## Live catalog verification (`catalog_export.py`)
+
+`planning_adapter.run_planned_live` creates the trusted schema fresh and exports its catalog read-only. Then it plans with that snapshot, under its own trust labels, and refuses unless the unmodified `verify_context` says MATCH. After the planned reset it re-exports, and refuses if the structure changed. On a database holding only the planned schema, the live export is structurally identical to Track A's dry-run fixture.
+
+Refusals, all tested:
+
+| Live schema | Outcome |
+|---|---|
+| A user trigger elsewhere, writes unknown | `indeterminate` |
+| A CHECK constraint | `unsupported` |
+| A renamed column | `invalid` |
+| A changed type | `invalid` |
+| A change between export and run | refused |
 
 ## What is intercepted
 
@@ -116,4 +170,5 @@ Budgets: K = 6 valid workloads per source, S = 60 schedules per workload per bui
 - **Trusted synthetic fixtures only.** All three were written with their defects known, so every comparison here is a smoke test, not a benchmark.
 - **Exploration scope.** "Exhausted" means the decision frontier emptied within the budget, assuming each prefix re-executes to the same decision points. It isn't a completeness proof.
 - **Statement allowlists.** These are reviewed captures (`ledger_orm.py` and `planning_adapter.ALLOWED_SQL`). A new ORM query shape needs a new reviewed entry.
-- **Isolation.** No third-party code has been run. The two pinned candidates are async and blocked (`CORPUS_SHORTLIST.json`).
+- **Third-party scope.** One pinned library's migration path has run, as a capture in the isolated runner. Its job-queue runtime builds its own psycopg pool from a DSN, which can't be intercepted without patching. pgqueuer stays blocked (`CORPUS_SHORTLIST.json`).
+- **Release path.** See `RELEASE_PATH.md`. The frozen `fixed` build is not a valid negative control for `release_seats`.

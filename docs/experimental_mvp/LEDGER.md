@@ -42,3 +42,24 @@
 | `apps_compare_1` (failed attempt) | 2 completed, 1 timed out at 300 s | 0.068449, plus the timed-out request: its tokens are unknown, at most about 0.07 if billed at the 16,000-token output cap |
 | `apps_compare_2` | 4 completed | 0.148953 |
 | **Increment total** | 7 sent | **0.217 known; at most about 0.29** (cap $10) |
+
+## Increment 3 (2026-11-05): async execution, the release path, isolation, live catalog
+
+14. **Release path.** The `release_seats` root cause was established live: a missing claim on the reservation, plus a transition that doesn't check the reservation was removed. It needs concurrency. The fix is a separately named `corrected` reference (`apps/reservations_corrected.py`), an R5 release-semantics check, a guard against initial states that already violate the oracle, and four mutants (`apps/reservations_mutants.py`). See `RELEASE_PATH.md` and `results/release_path_1`.
+15. **Tracer fixes.**
+    - Zero-row SELECTs no longer fail the rewind.
+    - The run identity includes the planned state.
+    - The harness's cleanup ROLLBACK is recorded and expected.
+    - Ungranted exits during a halt are expected.
+16. **Async.** `stepping_async.py` and `apps/reservations_mixed_async.py` add the async psycopg engine and fixture. `apps/ledger_orm_async.py` adds the SQLAlchemy asyncio ledger, and SQLAlchemy now comes with its `asyncio` extra.
+17. **Isolated runner.** `research_tools/isolated/` holds the runner, its trusted smoke test (`results/isolated_smoke_1`, `_2`) and the chancy 0.26.0 migration capture (`results/third_party_chancy_capture_1`).
+18. **Live catalog.** `catalog_export.py` and `planning_adapter.run_planned_live` add live catalog verification.
+19. **Measurements.** `results/release_compare_1` covers the release path with mutants, and `results/async_compare_1` covers `reservations_mixed` on the async engine.
+
+### Meta usage in this increment (estimates at Meta's published rates, not billing data)
+
+| Run | Requests | Estimated USD |
+|---|---|---|
+| `release_compare_1` | 2 completed | 0.081551 |
+| `async_compare_1` | 2 completed | 0.062097 |
+| **Increment total** | 4 sent, 0 failed | **0.143648** (cap $10) |
