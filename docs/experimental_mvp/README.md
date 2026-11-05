@@ -118,6 +118,15 @@ The server-log check compares one-dimensional arrays and `bytea` exactly.
 
 **Hostile-grade isolation is NOT COMPLETE:** only `runc` is available (`results/isolation_runtime_scan_1`).
 
+## Django (`experimental/django_backend`)
+
+A trusted backend subclasses Django 5.2's PostgreSQL `DatabaseWrapper`.
+- **Connections:** it hands each actor thread its stepped connection, and refuses reopening, pooling, wrong targets and server-side cursors.
+- **Binding modes:** both of Django's psycopg 3 modes are gated. In client-side binding, the merged statement text is compared with the server log by digest.
+- **Fixture:** `apps/django_fixture.py`. The schema comes from the app's own migration, applied through the gate.
+
+See `CAPABILITY_MATRIX.md` for every supported, refused and unsupported path.
+
 ## Live catalog verification (`catalog_export.py`)
 
 `planning_adapter.run_planned_live` creates the trusted schema fresh and exports its catalog read-only. Then it plans with that snapshot, under its own trust labels, and refuses unless the unmodified `verify_context` says MATCH. After the planned reset it re-exports, and refuses if the structure changed. On a database holding only the planned schema, the live export is structurally identical to Track A's dry-run fixture.

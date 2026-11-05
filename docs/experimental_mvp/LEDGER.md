@@ -84,3 +84,15 @@
 | **Increment total** | 1 sent, 0 failed | **0.010854** (cap $10) |
 
 Account balance was not checked through the API. The Responses API returns per-request usage, which is what is recorded here.
+
+## Increment 5 (2026-11-05): engineering completion
+
+29. **Typed parameters.** Date/time, interval, UUID and json/jsonb values are now reconciled exactly. PGQueuer: 72 compared, 0 mismatched, 0 unchecked. Chancy: 79/0/0.
+30. **Django 5.2.** A trusted backend (`experimental/django_backend`) and the ledger fixture (`apps/django_ledger`, `apps/django_fixture.py`), in both binding modes. Django was added to the `experimental` extra.
+31. **Chancy concurrency.** Workers as concurrent actors. Engine fix: a task cancelled at the gate no longer leaves its actor pending (regression test shown to fail without the fix).
+32. **Corpus selection.** `research_tools/corpus_select.py` and `results/corpus_selection_1`, with `protocol/PROPOSED_SELECTION_RULE_AMENDMENTS.md` (not applied).
+33. **Protocol.** `protocol/AMENDMENT_003_DRAFT_v2.md` and `protocol/ADOPTION_READINESS.md`. NOT READY: 5 blocking decisions.
+34. **Isolation.** `results/isolation_runtime_scan_2`: hostile-grade isolation BLOCKED.
+35. **Capability matrix.** `CAPABILITY_MATRIX.md`.
+
+**Meta usage in this increment:** none (0 requests, $0). No new pathway had an independent outcome on which a Muse comparison would mean anything.
