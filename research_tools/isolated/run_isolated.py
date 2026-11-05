@@ -110,8 +110,23 @@ def copy_verified_package(sdist: Path, *, name: str, sha256: str, package: str, 
     shutil.copytree(unpack / name.removesuffix(".tar.gz") / package, dest / package)
 
 
-def build_image(work: Path, *, chancy_sdist: Path | None = None, pgqueuer_sdist: Path | None = None) -> tuple[
-        str, str]:
+# Controlled mutants of pinned public code, applied to the isolated build copy only (never in place): an exact
+# substring of one file, replaced; the mutated file's sha256 is declared to the adapter.
+MUTANTS = {"no_skip_locked_claim": ("chancy/worker.py", "FOR UPDATE OF {jobs} SKIP LOCKED", "",
+                                    "the job claim's row lock is removed: two workers can claim one job")}
+
+
+def mutant_declaration(sdist: Path, mutant: str, base: str) -> str:
+    """What the adapter must accept for this mutant: '<id>:<base>:<file>:<sha256 of the mutated file>'."""
+    import tarfile
+    rel, old, new, _why = MUTANTS[mutant]
+    with tarfile.open(sdist) as tf:
+        text = tf.extractfile(f"{sdist.name.removesuffix('.tar.gz')}/{rel}").read().decode()
+    return f"{mutant}:{base}:{rel}:{hashlib.sha256(text.replace(old, new).encode()).hexdigest()}"
+
+
+def build_image(work: Path, *, chancy_sdist: Path | None = None, pgqueuer_sdist: Path | None = None,
+                mutant: str | None = None) -> tuple[str, str]:
     ctx = work / "context"
     (ctx / "app" / "src").mkdir(parents=True)
     extra = ""
@@ -129,6 +144,13 @@ def build_image(work: Path, *, chancy_sdist: Path | None = None, pgqueuer_sdist:
         with tarfile.open(chancy_sdist) as tf:
             tf.extractall(unpack, filter="data")  # data only: no links out, no device files, no absolute paths
         shutil.copytree(unpack / chancy_sdist.name.removesuffix(".tar.gz") / "chancy", ctx / "app" / "src" / "chancy")
+        if mutant is not None:
+            rel, old, new, _why = MUTANTS[mutant]
+            target_file = ctx / "app" / "src" / rel
+            text = target_file.read_text()
+            if text.count(old) != 1:
+                raise RuntimeError(f"mutant {mutant}: the substring doesn't occur exactly once in {rel}")
+            target_file.write_text(text.replace(old, new))
         extra = CHANCY_EXTRA_REQUIREMENTS
     for rel in PAYLOAD:
         dst = ctx / "app" / "src" / rel
@@ -515,6 +537,7 @@ def main() -> int:
     ap.add_argument("--pgqueuer-sdist", type=Path, help="the downloaded pgqueuer-1.6.0.tar.gz (sha256 re-verified)")
     ap.add_argument("--public-factory", action="store_true",
                     help="pgqueuer negative control: PGQueuer's own driver, which the server log must refute")
+    ap.add_argument("--mutant", choices=sorted(MUTANTS), help="chancy-runtime --concurrent-workers: a declared mutant")
     ap.add_argument("--concurrent-workers", action="store_true",
                     help="chancy-runtime: a producer, then two workers, each its own actor and stepped connection")
     ap.add_argument("--with-notifications", action="store_true",
@@ -556,12 +579,16 @@ def main() -> int:
     build_dir = Path(tempfile.mkdtemp(prefix="ds_iso_build_"))
     try:
         image = build_image(build_dir, chancy_sdist=a.chancy_sdist if a.mode in ("chancy", "chancy-runtime") else None,
+                            mutant=a.mutant,
                             pgqueuer_sdist=a.pgqueuer_sdist if a.mode == "pgqueuer" else None)
     finally:
         shutil.rmtree(build_dir, ignore_errors=True)
     if a.mode == "chancy-runtime" and a.concurrent_workers:
-        r = run_smoke(target, variant="chancy_concurrent", schedule=[], out=a.out, image=image, mode="chancy-runtime",
-                      chancy_variant="concurrent")
+        env = {"DS_CHANCY_MUTANT": mutant_declaration(a.chancy_sdist, a.mutant, "0.26.0")} if a.mutant else {}
+        r = run_smoke(target, variant="chancy_concurrent" + (f"_mutant_{a.mutant}" if a.mutant else ""), schedule=[],
+                      out=a.out, image=image, mode="chancy-runtime", chancy_variant="concurrent", extra_env=env)
+        r["mutant"] = {"id": a.mutant, "declaration": env.get("DS_CHANCY_MUTANT"),
+                       "description": MUTANTS[a.mutant][3]} if a.mutant else None
         c = r.get("corroboration", {})
         report = {"kind": "EXPERIMENTAL: Chancy 0.26.0, two workers as two actors (each its own Chancy instance and "
                          "stepped connection) draining four jobs concurrently, in the isolated runner",
@@ -574,6 +601,8 @@ def main() -> int:
                   "handled_here"), "w2", (raw.get("w2") or {}).get("handled_here"), "sessions", c.get("sessions"),
               "teardown", r["teardown"], "problems", (c.get("problems") or [])[:4],
               "stderr", (r.get("stderr_tail") or "")[-500:])
+        if a.mutant:  # for a mutant the verdict is the oracle's; the run itself must still be sound
+            return 0 if (r.get("isolation_ok") and c.get("ok") and all(r["teardown"].values())) else 1
         return 0 if (r.get("isolation_ok") and c.get("ok") and r.get("oracle_violations") == []
                      and all(r["teardown"].values())) else 1
     if a.mode == "chancy-runtime" and a.with_notifications:

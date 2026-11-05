@@ -59,11 +59,22 @@ def installed_version() -> str:
     for version, pins in PINNED_BY_VERSION.items():
         if got == pins:
             return version
+    # A declared mutant (built from a pinned release by the isolated runner): only the named file may differ, and
+    # only to the declared hash.
+    import os
+    mutant = os.environ.get("DS_CHANCY_MUTANT")  # "<id>:<base version>:<file>:<sha256>"
+    if mutant:
+        ident, base, rel, sha = mutant.split(":")
+        pins = dict(PINNED_BY_VERSION[base])
+        pins[rel] = sha
+        if got == pins:
+            return f"{base}+mutant:{ident}"
     raise Refused(f"chancy's sources match no pinned release: {sorted((k, v[:12]) for k, v in got.items())}")
 
 
 def verify_pinned() -> dict[str, str]:
-    return {"version": installed_version(), **PINNED_BY_VERSION[installed_version()]}
+    version = installed_version()
+    return {"version": version, **PINNED_BY_VERSION[version.split("+")[0]]}
 
 
 def stepped_pool(conn: AsyncSteppedConnection) -> Any:
