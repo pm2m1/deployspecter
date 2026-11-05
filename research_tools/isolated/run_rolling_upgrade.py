@@ -79,20 +79,36 @@ def actor(name: str, fn: str, **args: Any) -> dict[str, Any]:
     return {"actor": name, "fn": fn, "args": args}
 
 
-def phases(ids: dict[int, int]) -> list[dict[str, Any]]:
-    """The contract's six phases. ``ids`` maps n -> job id for jobs from earlier phases (the admin retries)."""
+CURATED_OVERLAP = {"old_jobs": [{"kind": "ok"}, {"kind": "flaky", "fail_in": OLD}, {"kind": "flaky", "fail_in": NEW},
+                                {"kind": "fail"}],
+                   "new_jobs": [{"kind": "ok"}, {"kind": "flaky", "fail_in": OLD}, {"kind": "flaky", "fail_in": NEW},
+                                {"kind": "fail"}],
+                   "admin": [1]}  # the frozen case's overlap workload (CASE.md, phase 3)
+
+
+def phases(ids: dict[int, int], overlap: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    """The contract's six phases. ``ids`` maps n -> job id for jobs from earlier phases (the admin retries).
+    ``overlap``: the overlap workload (``old_jobs``, ``new_jobs``, ``admin``); default, the frozen curated one."""
+    ov = overlap or CURATED_OVERLAP
     def drain(worker: str, deferrer: str, count: int, extra: list[dict[str, Any]] | None = None) -> list[dict]:
         until = [{"actor": deferrer, "marker": "push", "count": count}] + (extra or [])
         return [{"actor": worker, "match": None, "until": until}]
     p0 = [{"n": 0, "kind": "ok"}, {"n": 1, "kind": "fail"}, {"n": 2, "kind": "flaky", "fail_in": OLD}]
     p2 = [{"n": 3, "kind": "ok"}, {"n": 4, "kind": "fail"}]
-    p3_old = [{"n": 5, "kind": "ok"}, {"n": 6, "kind": "flaky", "fail_in": OLD}, {"n": 7, "kind": "flaky",
-                                                                                  "fail_in": NEW},
-              {"n": 8, "kind": "fail"}]
-    p3_new = [{"n": 9, "kind": "ok"}, {"n": 10, "kind": "flaky", "fail_in": OLD}, {"n": 11, "kind": "flaky",
-                                                                                   "fail_in": NEW},
-              {"n": 12, "kind": "fail"}]
-    p5 = [{"n": 13, "kind": "ok"}, {"n": 14, "kind": "fail"}]
+    nxt = iter(range(5, 100))
+    p3_old = [{"n": next(nxt), **j} for j in ov["old_jobs"]]
+    p3_new = [{"n": next(nxt), **j} for j in ov["new_jobs"]]
+    first5 = max([j["n"] for j in p3_old + p3_new], default=4) + 1
+    p5 = [{"n": first5, "kind": "ok"}, {"n": first5 + 1, "kind": "fail"}]
+    overlap_ns = [j["n"] for j in p3_old + p3_new]
+    ok_ns = [j["n"] for j in p3_old + p3_new if j["kind"] == "ok"]
+    admin = [{"n": n, "id": ids.get(n)} for n in ov["admin"]]
+    overlap_actors = {"A": ([actor("old_defer", "defer", jobs=p3_old)] if p3_old else []) +
+                           [actor("old_worker", "work", wait=True)],
+                      "B": ([actor("new_defer", "defer", jobs=p3_new)] if p3_new else []) +
+                           [actor("new_worker", "work", wait=True)] +
+                           ([actor("new_admin", "admin_retry", targets=admin)] if admin else [])}
+    producers = [a["actor"] for acts in overlap_actors.values() for a in acts if a["fn"] in ("defer", "admin_retry")]
     base = {"covers": [], "consumer_of": {}}
     return [
         {"name": "0a_old_schema", **base, "processes": {"A": [actor("old_schema", "schema")]}, "gates": [],
@@ -107,12 +123,9 @@ def phases(ids: dict[int, int]) -> list[dict[str, Any]]:
                                                                     actor("old_worker", "work", wait=False)]},
          "gates": drain("old_worker", "old_defer", len(p2)),
          "expect": {"retry_v2": True, "trigger_records_retried": False}},
-        {"name": "3_overlap", "covers": [5, 9], "handled_all": [1, 5, 6, 7, 8, 9, 10, 11, 12], "consumer_of": {},
-         "producers": ["old_defer", "new_defer", "new_admin"],
-         "processes": {"A": [actor("old_defer", "defer", jobs=p3_old), actor("old_worker", "work", wait=True)],
-                       "B": [actor("new_defer", "defer", jobs=p3_new), actor("new_worker", "work", wait=True),
-                             actor("new_admin", "admin_retry", targets=[{"n": 1, "id": ids.get(1)}])]},
-         "gates": rc._window(["old_defer", "new_defer", "new_admin"], ["old_worker", "new_worker"]),
+        {"name": "3_overlap", "covers": ok_ns, "handled_all": sorted(set(overlap_ns) | set(ov["admin"])),
+         "consumer_of": {}, "producers": producers, "processes": overlap_actors,
+         "gates": rc._window(producers, ["old_worker", "new_worker"]),
          "expect": {"retry_v2": True, "trigger_records_retried": False}},
         {"name": "4_post_migration", **base, "processes": {"B": [actor("operator", "migrate", migration=POST)]},
          "gates": [], "expect": {"retry_v2": True, "trigger_records_retried": False}},
@@ -154,6 +167,7 @@ def main() -> int:
     ap.add_argument("--old-sdist", type=Path, required=True)
     ap.add_argument("--new-sdist", type=Path, required=True)
     ap.add_argument("--policy", default='{"kind": "alternate"}')
+    ap.add_argument("--overlap", default=None, help="the overlap workload as JSON (default: the frozen curated one)")
     ap.add_argument("--out", type=Path, required=True)
     a = ap.parse_args()
     if a.out.exists():
@@ -189,8 +203,10 @@ def main() -> int:
     results: dict[str, Any] = {}
     post_retries: set[int] = set()
     verdict = "SOUND"
-    for i, spec in enumerate(phases(ids)):
-        spec = phases(ids)[i]  # rebuilt: later phases need job ids from earlier ones
+    overlap = json.loads(a.overlap) if a.overlap else None
+    report["overlap_workload"] = overlap or CURATED_OVERLAP
+    for i, spec in enumerate(phases(ids, overlap)):
+        spec = phases(ids, overlap)[i]  # rebuilt: later phases need job ids from earlier ones
         (a.out / spec["name"]).mkdir()
         sim = rc.simultaneous(target, images, spec, policy, a.out / spec["name"], label=spec["name"],
                               app=Procrastinate)
