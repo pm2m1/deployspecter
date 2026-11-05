@@ -325,3 +325,45 @@ def explore_workload(target: Target, w: Workload, *, variant: str, max_runs: int
 
     _traces, exhausted = explore(run_with, max_runs=max_runs)
     return results, exhausted
+
+
+def corroborated_coordinated(admin: Any, coordinator: Any, runs: dict[str, Any], *, user: str,
+                             port: int) -> tuple[dict[str, Trace], dict[str, Any], dict[str, Any]]:
+    """In-process: serve ``coordinator`` on 127.0.0.1:``port`` and execute every process's ``RemoteAsyncRun``
+    concurrently, between two markers; then reconcile the merged trace with the server's log."""
+    from deployspecter.live.serverlog import ServerLog
+
+    from .coordinated import merge_traces
+    from .corroborate import corroborate
+    log = ServerLog(lambda q, prm=None: admin.execute(q, prm).fetchone())
+    log.position()
+    nonce = secrets.token_hex(6)
+    start, end = f"ds_mvp_mark_start_{nonce}", f"ds_mvp_mark_end_{nonce}"
+    admin.execute(f"SELECT '{start}'")
+
+    async def together() -> tuple[dict[str, Any], list[Trace]]:
+        serving = asyncio.create_task(coordinator.serve("127.0.0.1", port))
+        await asyncio.sleep(0.1)
+        traces = await asyncio.gather(*(r.execute() for r in runs.values()))
+        return await serving, list(traces)
+
+    report, traces_list = asyncio.run(together())
+    traces = dict(zip(runs, traces_list, strict=True))
+    merged = merge_traces(traces)
+    monitors = {r.monitor_pid for r in runs.values() if r.monitor_pid}
+    gone = _wait_gone(admin, [a["backend_pid"] for a in merged.actors.values()] + sorted(monitors))
+    admin.execute(f"SELECT '{end}'")
+    until = time.monotonic() + 5.0
+    while True:
+        data = log.read()
+        if f"SELECT '{end}'".encode() in data and data.endswith(b"\n"):
+            break
+        if time.monotonic() > until:
+            return traces, report, {"ok": False, "problems": ["the end marker never reached the log"]}
+        time.sleep(0.02)
+    result = corroborate(data, start=start, end=end, trace=merged, admin_pid={admin.info.backend_pid, *monitors},
+                         user=user, database=DATABASE).to_dict()
+    if not gone:
+        result["ok"] = False
+        result["problems"].append("an actor backend outlived the run")
+    return traces, report, result
