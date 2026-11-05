@@ -12,19 +12,24 @@
 #          PGQueuer's lifecycle through the stepped Driver adapter, Chancy's job runtime through the stepped pool,
 #          and both negative controls (each library's uninstrumented path, which the server log must refute).
 #   full:  all, then thirdparty.
+#   simultaneous: fetch and verify the pinned sdists, then run Chancy 0.25.1 and 0.26.0 workers AT THE SAME TIME
+#          (three restricted containers, one coordinator granting every statement): old producer -> new consumer,
+#          new producer -> old consumer, both workers competing for one queue, and two cancellation cells. Exit 0
+#          means every run was isolated, coordinated to completion and corroborated (property verdicts are in
+#          each report.json, whatever they are).
 # Every step's exit status is checked; the first failure stops the run (and teardown still happens).
 set -u
 cd "$(dirname "$0")/.."
 OUT=${1:-docs/experimental_mvp/results/demo_$(date -u +%Y%m%dT%H%M%SZ)}
 MODE=${2:-sync}
-case "$MODE" in sync|async|all|thirdparty|full) ;; *) echo "mode must be sync, async, all, thirdparty or full" >&2; exit 64 ;; esac
+case "$MODE" in sync|async|all|thirdparty|full|simultaneous) ;; *) echo "mode must be sync, async, all, thirdparty, full or simultaneous" >&2; exit 64 ;; esac
 export DS_MVP_PORT=${DS_MVP_PORT:-55441}
 PY="env -u MODEL_API_KEY -u DATABASE_URL .venv/bin/python"
 SDISTS=$(mktemp -d "${TMPDIR:-/tmp}/ds_sdists.XXXXXX")
 trap 'research_tools/mvp_pg.sh stop; rm -rf "$SDISTS"' EXIT
 uv sync --frozen --extra experimental -q || exit 1  # SQLAlchemy (with asyncio) for the ORM fixtures
 research_tools/mvp_pg.sh start || exit 2
-if [ "$MODE" != thirdparty ]; then
+if [ "$MODE" != thirdparty ] && [ "$MODE" != simultaneous ]; then
   $PY -m pytest -q -p no:cacheprovider tests/experimental || exit 3
 fi
 if [ "$MODE" = sync ] || [ "$MODE" = all ] || [ "$MODE" = full ]; then
@@ -52,4 +57,14 @@ if [ "$MODE" = thirdparty ] || [ "$MODE" = full ]; then
     --chancy-sdist "$CHANCY" --out "$OUT/chancy_mutant_no_skip_locked_claim" || exit 14
   $PY research_tools/isolated/run_isolated.py chancy-mixed --chancy-old-sdist "$SDISTS/chancy-0.25.1.tar.gz" \
     --chancy-sdist "$CHANCY" --out "$OUT/chancy_mixed_version_pilot" || exit 15
+fi
+if [ "$MODE" = simultaneous ]; then
+  research_tools/isolated/fetch_pinned.sh "$SDISTS" || exit 8
+  i=20
+  for SC in old_to_new new_to_old compete cancel_new_new cancel_new_old; do
+    $PY research_tools/isolated/run_coordinated.py run --scenario "$SC" \
+      --chancy-old-sdist "$SDISTS/chancy-0.25.1.tar.gz" --chancy-sdist "$SDISTS/chancy-0.26.0.tar.gz" \
+      --out "$OUT/simultaneous_$SC" || exit $i
+    i=$((i + 1))
+  done
 fi
