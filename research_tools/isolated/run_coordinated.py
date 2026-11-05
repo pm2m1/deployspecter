@@ -277,10 +277,16 @@ def simultaneous(target: hz.Target, images: dict[str, Any], spec: dict[str, Any]
         complete = bool(stop_event) and stop_event.get("why") == "covered"
         quiescent = complete and bool(workers) and all(w["worker_stopped"] and w["stopped_by"] == "signal"
                                                        for w in workers)
-        sound = (coord.get("outcome") == "completed" and corr.get("ok") and
-                 all(all(c.values()) for c in isolation.values()) and not result.get("refusals") and
-                 all(t["outcome"] == "completed" for t in traces.values()) and
-                 not any(a["exception"] for t in traces.values() for a in t["actors"].values()))
+        failed = {"coordinator_completed": coord.get("outcome") == "completed",
+                  "corroborated": bool(corr.get("ok")),
+                  "isolation": all(all(c.values()) for c in isolation.values()),
+                  "every_container_reported": not result.get("refusals"),
+                  "every_run_completed": len(traces) == len(spec["processes"]) and
+                  all(t["outcome"] == "completed" for t in traces.values()),
+                  "no_actor_exception": not any(a["exception"] for t in traces.values()
+                                                for a in t["actors"].values())}
+        result["refusal_reasons"] = sorted(k for k, ok in failed.items() if not ok)
+        sound = all(failed.values())
         result.update(
             coordinator=coord, corroboration=corr, isolation_checks=isolation, probes=probes,
             isolation_ok=all(all(c.values()) for c in isolation.values()),

@@ -147,18 +147,17 @@ async def produce(conn: AsyncSteppedConnection, *, count: int) -> dict[str, Any]
 
 
 async def stop_worker(worker: Any) -> bool:
-    """Stop a worker without cancelling one of its tasks mid-statement.
+    """Stop a worker with its own ``stop()``, after queued job updates have been flushed.
 
-    Both releases' ``stop()`` cancel the worker's maintenance tasks (heartbeat, queue polling, updates). Cancelled
-    while a statement is on the wire, a task leaves its session in a state the trace can't vouch for, and the server
-    log then (correctly) refutes the run; that happened once in 0.25.1's heartbeat (``demo_full_3``). So, promptly:
-    wait until no job update is queued and the pool's one connection is back (no unit of work is under way), then,
-    in the same step, hold the worker's tasks before the gate and stop. 0.26.0's ``stop`` takes ``timeout``;
-    0.25.1's takes no arguments."""
+    Both releases' ``stop()`` cancel the worker's maintenance tasks. Cancelled while a statement is on the wire, a
+    task used to leave its session in a state the trace couldn't vouch for. The server log then (correctly)
+    refuted the run: that happened in 0.25.1's heartbeat in ``demo_full_3``. The async gate now defers such a
+    cancellation to the statement boundary (``AsyncRun.defer_cancellation``), so nothing is held here. An earlier
+    hold (``AsyncRun.quiesced``) blocked 0.26.0's own graceful drain, whose queue loops need their next
+    statement to finish (``simultaneous_scenarios_1`` and the ``new_to_old`` diagnosis).
+    0.26.0's ``stop`` takes ``timeout``; 0.25.1's takes no arguments."""
     import asyncio
     import time
-
-    from ..stepping_async import _ACTING_FOR
 
     def idle() -> bool:
         stats = worker.chancy.pool.get_stats()
@@ -168,13 +167,9 @@ async def stop_worker(worker: Any) -> bool:
     until = time.monotonic() + 10
     while not idle() and time.monotonic() < until:
         await asyncio.sleep(0.02)
-    me = _ACTING_FOR.get()  # no await between the idle check and the hold
-    if me is None:
-        raise RuntimeError("stop_worker must run in a stepped actor's task")
-    async with me.run.quiesced(me):
-        if "timeout" in inspect.signature(worker.stop).parameters:
-            return await worker.stop(timeout=10)
-        return await worker.stop()
+    if "timeout" in inspect.signature(worker.stop).parameters:
+        return await worker.stop(timeout=max(10, worker.shutdown_timeout))
+    return await worker.stop()
 
 
 # ------------------------------------------------------------------ the mixed-version pilot (NONBLIND), one phase each
@@ -298,7 +293,9 @@ async def co_work(conn: AsyncSteppedConnection, *, timeout_s: float = 60) -> dic
         raise Refused("co_work runs only under a coordinated run")
     stop = me.run.signal("stop")
     async with stepped_chancy(conn) as chancy:
-        worker = Worker(chancy, register_signal_handlers=False, shutdown_timeout=5, queue_change_poll_interval=1,
+        # under the coordinator every statement is a cross-process round trip, so allow 10 s (below the 15 s
+        # idle-in-transaction limit, since other actors wait while a stop drains); a timed-out stop isn't quiescent
+        worker = Worker(chancy, register_signal_handlers=False, shutdown_timeout=10, queue_change_poll_interval=1,
                         heartbeat_poll_interval=1, tags={worker_tag()})
         await worker.start()
         try:

@@ -211,6 +211,7 @@ class AsyncRun:
         self.diagnostics: list[str] = []
         self.grants = 0
         self.aborted = False
+        self.defer_cancellation = True  # see _gate; False only in the adversarial control
         self.t0 = time.monotonic()
 
     def _ms(self) -> float:
@@ -361,9 +362,8 @@ class AsyncRun:
         op.txn_before = conn.info.transaction_status.name
         if op.txn_before == "IDLE" and kind in ("execute", "executemany", "transaction_enter"):
             actor.txn += 1
-        try:
-            out = await call()
-            op.outcome = "ok"
+        async def work() -> Any:
+            result = await call()
             if cursor is not None and cursor.description is not None:
                 rows = await cursor.fetchall()
                 if rows:
@@ -371,12 +371,41 @@ class AsyncRun:
                 op.rows = [sanitize(dict(r)) if isinstance(r, dict) else sanitize(list(r)) for r in rows]
             if cursor is not None:
                 op.rowcount = cursor.rowcount
-            return out
+            return result
+
+        deferred = False
+        try:
+            if self.defer_cancellation:
+                # A cancellation that arrives while the statement is on the wire waits for the statement to
+                # complete, and is then raised at the statement boundary: the session's state stays the one the
+                # trace records, and psycopg never sends a cancel request. (Halts cancel on the server instead.)
+                inner = asyncio.ensure_future(work())
+                while True:
+                    try:
+                        out = await asyncio.shield(inner)
+                        break
+                    except asyncio.CancelledError:
+                        if inner.done() and inner.cancelled():
+                            raise
+                        deferred = True
+                        if inner.done():
+                            out = inner.result()  # raises the statement's own error, if it failed
+                            break
+            else:
+                out = await work()
+            op.outcome = "ok"
+            if deferred:
+                prov["cancellation"] = "deferred to the statement boundary"
+            else:
+                return out
         except BaseException as exc:
             cancelled = isinstance(exc, (RunAborted, asyncio.CancelledError))
             op.outcome = "aborted" if cancelled else "error"
             op.error_class = "cancelled" if isinstance(exc, asyncio.CancelledError) else error_class(exc)
             op.sqlstate = getattr(exc, "sqlstate", None)
+            if deferred and not cancelled:
+                prov["cancellation"] = "deferred to the statement boundary"
+                raise asyncio.CancelledError() from exc
             raise
         finally:
             op.txn_after = conn.info.transaction_status.name if not conn.closed else "CLOSED"
@@ -395,6 +424,7 @@ class AsyncRun:
             if actor.state in ("executing", "blocked"):
                 actor.state = "running"
             await self._notify()
+        raise asyncio.CancelledError()  # the deferred cancellation, now that the statement has completed
 
     async def _notify(self) -> None:
         assert self.cv is not None

@@ -438,10 +438,50 @@ class TestQuiesced:
         assert trace.records[-1].kind != "cleanup_rollback"
         assert c["ok"], c["problems"]
 
+    def test_a_cancellation_mid_statement_is_deferred_to_the_statement_boundary(self, target, monkeypatch):
+        """With the hold off but cancellation deferral on (the default), the same mid-statement cancel waits for
+        the statement to complete: the trace records it as completed, then the task is cancelled, and the server
+        log agrees."""
+        @contextlib.asynccontextmanager
+        async def no_hold(self, actor):
+            yield
+
+        monkeypatch.setattr(sa.AsyncRun, "quiesced", no_hold)
+        async def framework(conn):
+            async def busy():
+                while True:
+                    async with conn.transaction():
+                        await conn.execute("SELECT pg_sleep(0.5)")
+
+            loop = asyncio.create_task(busy())
+            while conn._ds_actor.state != "executing":
+                await asyncio.sleep(0.005)
+            loop.cancel()
+            await asyncio.gather(loop, return_exceptions=True)
+            return "ok"
+
+        admin = target.admin()
+        try:
+            sync_app.reset(admin, SEED)
+            lim = st.Limits()
+            actor = st.Actor("q", st.Handler("test", "framework", framework, frozenset({"SELECT pg_sleep(0.5)"}), {},
+                                             serialize_tasks=True), {})
+            connect = sa.async_actor_connection_factory(target.conninfo(), lim, search_path=A.SCHEMA)
+            run = sa.AsyncRun([actor], connect, hz.async_monitor(target), limits=lim, run_id="deferred")
+            trace, c = hz.corroborated(admin, run, user=target.user)
+        finally:
+            admin.close()
+        sleeps = [op for op in trace.records if "pg_sleep" in op.sql]
+        assert sleeps and sleeps[-1].outcome == "ok"
+        assert sleeps[-1].provenance.get("cancellation") == "deferred to the statement boundary"
+        assert "cancelled" not in [op.error_class for op in trace.records]
+        assert c["ok"], c["problems"]
+
     def test_without_the_hold_the_same_stop_cancels_mid_statement_and_the_server_log_refuses(self, target,
                                                                                               monkeypatch):
-        """Adversarial control for the test above: ``quiesced`` disabled. The busy task is cancelled while its
-        statement is on the wire, the trace says so, and the server-log reconciliation refuses the run."""
+        """Adversarial control: both protections off (``quiesced`` a no-op, ``defer_cancellation`` False). The busy
+        task is cancelled while its statement is on the wire, the trace says so, and the server-log reconciliation
+        refuses the run."""
         @contextlib.asynccontextmanager
         async def no_hold(self, actor):
             yield
@@ -469,6 +509,7 @@ class TestQuiesced:
                                              serialize_tasks=True), {})
             connect = sa.async_actor_connection_factory(target.conninfo(), lim, search_path=A.SCHEMA)
             run = sa.AsyncRun([actor], connect, hz.async_monitor(target), limits=lim, run_id="unquiesced")
+            run.defer_cancellation = False
             trace, c = hz.corroborated(admin, run, user=target.user)
         finally:
             admin.close()
