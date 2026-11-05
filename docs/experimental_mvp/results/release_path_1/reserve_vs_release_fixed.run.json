@@ -1,0 +1,475 @@
+{
+ "run_id": "9112d6e2d1ef",
+ "variant": "fixed",
+ "workload": "reserve_vs_release",
+ "initial_digest": "23029760b142b12e03032333c8135ea1238bdc433036b800b3e8612baaa84a05",
+ "trace": {
+  "run_id": "9112d6e2d1ef",
+  "schedule": [
+   "a",
+   "b",
+   "a",
+   "a",
+   "a",
+   "a",
+   "a",
+   "b",
+   "b",
+   "b",
+   "b",
+   "b"
+  ],
+  "chosen": [
+   "a",
+   "b",
+   "a",
+   "a",
+   "a",
+   "a",
+   "b"
+  ],
+  "decisions": [
+   {
+    "index": 0,
+    "enabled": [
+     "a",
+     "b"
+    ],
+    "blocked": {},
+    "finished": [],
+    "requested": "a",
+    "chosen": "a",
+    "source": "schedule"
+   },
+   {
+    "index": 1,
+    "enabled": [
+     "a",
+     "b"
+    ],
+    "blocked": {},
+    "finished": [],
+    "requested": "b",
+    "chosen": "b",
+    "source": "schedule"
+   },
+   {
+    "index": 2,
+    "enabled": [
+     "a",
+     "b"
+    ],
+    "blocked": {},
+    "finished": [],
+    "requested": "a",
+    "chosen": "a",
+    "source": "schedule"
+   },
+   {
+    "index": 3,
+    "enabled": [
+     "a",
+     "b"
+    ],
+    "blocked": {},
+    "finished": [],
+    "requested": "a",
+    "chosen": "a",
+    "source": "schedule"
+   },
+   {
+    "index": 4,
+    "enabled": [
+     "a",
+     "b"
+    ],
+    "blocked": {},
+    "finished": [],
+    "requested": "a",
+    "chosen": "a",
+    "source": "schedule"
+   },
+   {
+    "index": 5,
+    "enabled": [
+     "a",
+     "b"
+    ],
+    "blocked": {},
+    "finished": [],
+    "requested": "a",
+    "chosen": "a",
+    "source": "schedule"
+   },
+   {
+    "index": 6,
+    "enabled": [
+     "b"
+    ],
+    "blocked": {},
+    "finished": [
+     "a"
+    ],
+    "requested": "b",
+    "chosen": "b",
+    "source": "schedule"
+   }
+  ],
+  "records": [
+   {
+    "seq": 0,
+    "actor": "a",
+    "kind": "transaction_enter",
+    "sql": "BEGIN",
+    "statement_id": "a8402858d4f1",
+    "params": null,
+    "provenance": {
+     "app_version": "v1",
+     "actor": "a",
+     "handler": "reserve_seats",
+     "invocation_id": "9112d6e2d1ef:a",
+     "migration_phase": "",
+     "logical_op": 0,
+     "session": {
+      "backend_pid": 13704
+     },
+     "thread": "ds-actor-a",
+     "call_site": "tests/live_app/reservations.py:35:reserve_seats",
+     "framework_entry": null,
+     "txn": "a:1"
+    },
+    "grant": 0,
+    "decision": 0,
+    "outcome": "ok",
+    "error_class": null,
+    "sqlstate": null,
+    "rowcount": null,
+    "rows": null,
+    "txn_before": "IDLE",
+    "txn_after": "INTRANS",
+    "implicit_begin": false,
+    "blocked_by": [],
+    "requested_ms": 7.83,
+    "completed_ms": 8.15
+   },
+   {
+    "seq": 1,
+    "actor": "b",
+    "kind": "execute",
+    "sql": "SELECT id, event_id, qty FROM reservations WHERE holder = %s ORDER BY id",
+    "statement_id": "d80bc11aacea",
+    "params": [
+     {
+      "str": 4,
+      "sha256": "31611159e7e6"
+     }
+    ],
+    "provenance": {
+     "app_version": "v1",
+     "actor": "b",
+     "handler": "release_seats",
+     "invocation_id": "9112d6e2d1ef:b",
+     "migration_phase": "",
+     "logical_op": 0,
+     "session": {
+      "backend_pid": 13705
+     },
+     "thread": "ds-actor-b",
+     "call_site": "tests/live_app/reservations.py:54:release_seats",
+     "framework_entry": null,
+     "txn": "b:1"
+    },
+    "grant": 1,
+    "decision": 1,
+    "outcome": "ok",
+    "error_class": null,
+    "sqlstate": null,
+    "rowcount": 0,
+    "rows": [],
+    "txn_before": "IDLE",
+    "txn_after": "INTRANS",
+    "implicit_begin": true,
+    "blocked_by": [],
+    "requested_ms": 7.85,
+    "completed_ms": 8.93
+   },
+   {
+    "seq": 2,
+    "actor": "a",
+    "kind": "execute",
+    "sql": "SELECT capacity, reserved FROM events WHERE id = %s FOR UPDATE",
+    "statement_id": "1611d48e3f65",
+    "params": [
+     1
+    ],
+    "provenance": {
+     "app_version": "v1",
+     "actor": "a",
+     "handler": "reserve_seats",
+     "invocation_id": "9112d6e2d1ef:a",
+     "migration_phase": "",
+     "logical_op": 1,
+     "session": {
+      "backend_pid": 13704
+     },
+     "thread": "ds-actor-a",
+     "call_site": "tests/live_app/reservations.py:36:reserve_seats",
+     "framework_entry": null,
+     "txn": "a:1"
+    },
+    "grant": 2,
+    "decision": 2,
+    "outcome": "ok",
+    "error_class": null,
+    "sqlstate": null,
+    "rowcount": 1,
+    "rows": [
+     [
+      10,
+      0
+     ]
+    ],
+    "txn_before": "INTRANS",
+    "txn_after": "INTRANS",
+    "implicit_begin": false,
+    "blocked_by": [],
+    "requested_ms": 8.19,
+    "completed_ms": 9.41
+   },
+   {
+    "seq": 3,
+    "actor": "a",
+    "kind": "execute",
+    "sql": "UPDATE events SET reserved = %s WHERE id = %s",
+    "statement_id": "bd7f741674bb",
+    "params": [
+     2,
+     1
+    ],
+    "provenance": {
+     "app_version": "v1",
+     "actor": "a",
+     "handler": "reserve_seats",
+     "invocation_id": "9112d6e2d1ef:a",
+     "migration_phase": "",
+     "logical_op": 2,
+     "session": {
+      "backend_pid": 13704
+     },
+     "thread": "ds-actor-a",
+     "call_site": "tests/live_app/reservations.py:46:reserve_seats",
+     "framework_entry": null,
+     "txn": "a:1"
+    },
+    "grant": 3,
+    "decision": 3,
+    "outcome": "ok",
+    "error_class": null,
+    "sqlstate": null,
+    "rowcount": 1,
+    "rows": null,
+    "txn_before": "INTRANS",
+    "txn_after": "INTRANS",
+    "implicit_begin": false,
+    "blocked_by": [],
+    "requested_ms": 9.45,
+    "completed_ms": 9.87
+   },
+   {
+    "seq": 4,
+    "actor": "a",
+    "kind": "execute",
+    "sql": "INSERT INTO reservations (event_id, holder, qty) VALUES (%s, %s, %s)",
+    "statement_id": "9bcb4d7b95be",
+    "params": [
+     1,
+     {
+      "str": 4,
+      "sha256": "31611159e7e6"
+     },
+     2
+    ],
+    "provenance": {
+     "app_version": "v1",
+     "actor": "a",
+     "handler": "reserve_seats",
+     "invocation_id": "9112d6e2d1ef:a",
+     "migration_phase": "",
+     "logical_op": 3,
+     "session": {
+      "backend_pid": 13704
+     },
+     "thread": "ds-actor-a",
+     "call_site": "tests/live_app/reservations.py:47:reserve_seats",
+     "framework_entry": null,
+     "txn": "a:1"
+    },
+    "grant": 4,
+    "decision": 4,
+    "outcome": "ok",
+    "error_class": null,
+    "sqlstate": null,
+    "rowcount": 1,
+    "rows": null,
+    "txn_before": "INTRANS",
+    "txn_after": "INTRANS",
+    "implicit_begin": false,
+    "blocked_by": [],
+    "requested_ms": 9.91,
+    "completed_ms": 10.32
+   },
+   {
+    "seq": 5,
+    "actor": "a",
+    "kind": "transaction_exit",
+    "sql": "COMMIT",
+    "statement_id": "79663c1d3b43",
+    "params": null,
+    "provenance": {
+     "app_version": "v1",
+     "actor": "a",
+     "handler": "reserve_seats",
+     "invocation_id": "9112d6e2d1ef:a",
+     "migration_phase": "",
+     "logical_op": 4,
+     "session": {
+      "backend_pid": 13704
+     },
+     "thread": "ds-actor-a",
+     "call_site": "tests/live_app/reservations.py:35:reserve_seats",
+     "framework_entry": null,
+     "txn": "a:1"
+    },
+    "grant": 5,
+    "decision": 5,
+    "outcome": "ok",
+    "error_class": null,
+    "sqlstate": null,
+    "rowcount": null,
+    "rows": null,
+    "txn_before": "INTRANS",
+    "txn_after": "IDLE",
+    "implicit_begin": false,
+    "blocked_by": [],
+    "requested_ms": 10.36,
+    "completed_ms": 10.6
+   },
+   {
+    "seq": 6,
+    "actor": "b",
+    "kind": "rollback",
+    "sql": "ROLLBACK",
+    "statement_id": "587fa628a9fe",
+    "params": null,
+    "provenance": {
+     "app_version": "v1",
+     "actor": "b",
+     "handler": "release_seats",
+     "invocation_id": "9112d6e2d1ef:b",
+     "migration_phase": "",
+     "logical_op": 1,
+     "session": {
+      "backend_pid": 13705
+     },
+     "thread": "ds-actor-b",
+     "call_site": "tests/live_app/reservations.py:57:release_seats",
+     "framework_entry": null,
+     "txn": "b:1"
+    },
+    "grant": 6,
+    "decision": 6,
+    "outcome": "ok",
+    "error_class": null,
+    "sqlstate": null,
+    "rowcount": null,
+    "rows": null,
+    "txn_before": "INTRANS",
+    "txn_after": "IDLE",
+    "implicit_begin": false,
+    "blocked_by": [],
+    "requested_ms": 8.97,
+    "completed_ms": 10.96
+   }
+  ],
+  "actors": {
+   "a": {
+    "handler": "v1.reserve_seats",
+    "args": {
+     "event_id": 1,
+     "holder": {
+      "str": 4,
+      "sha256": "31611159e7e6"
+     },
+     "qty": 2
+    },
+    "state": "finished",
+    "result": {
+     "status": {
+      "str": 8,
+      "sha256": "c0d03c1239e0"
+     },
+     "available": 8
+    },
+    "exception": null,
+    "exception_class": null,
+    "backend_pid": 13704,
+    "transactions": 1
+   },
+   "b": {
+    "handler": "v1.release_seats",
+    "args": {
+     "holder": {
+      "str": 4,
+      "sha256": "31611159e7e6"
+     }
+    },
+    "state": "finished",
+    "result": {
+     "status": {
+      "str": 12,
+      "sha256": "7bd4d66ca319"
+     }
+    },
+    "exception": null,
+    "exception_class": null,
+    "backend_pid": 13705,
+    "transactions": 1
+   }
+  },
+  "outcome": "completed",
+  "diagnostics": [],
+  "migration_phase": "",
+  "fingerprint": "2aad5d78cca49b97c3113a73cb0d4ce2dbdedb709e16943d4be5bd2e887a697f"
+ },
+ "final_state": {
+  "events": [
+   {
+    "id": 1,
+    "capacity": 10,
+    "reserved": 2
+   }
+  ],
+  "reservations": [
+   {
+    "id": 1,
+    "event_id": 1,
+    "holder": "jack",
+    "qty": 2
+   }
+  ],
+  "rejections": []
+ },
+ "violations": [],
+ "seconds": 0.024,
+ "corroboration": {
+  "ok": true,
+  "matched": 8,
+  "params_compared": 7,
+  "params_unchecked": 0,
+  "sessions": {
+   "13704": "a",
+   "13705": "b"
+  },
+  "problems": []
+ }
+}
