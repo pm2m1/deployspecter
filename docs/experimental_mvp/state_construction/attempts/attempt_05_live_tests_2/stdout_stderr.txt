@@ -1,0 +1,27 @@
+..F.................................................................     [100%]
+=================================== FAILURES ===================================
+____________________ test_a_refused_plan_constructs_nothing ____________________
+
+target = Target(host='127.0.0.1', port=55441, user='ds_mvp', dbname='ds_mvp')
+sandbox = <deployspecter.database.Sandbox object at 0x10803bc80>
+
+    def test_a_refused_plan_constructs_nothing(target, sandbox):
+        d = copy.deepcopy(sc.DOCUMENT)
+        d["state_goals"][0]["constraints"].append({"field": "colour", "op": "eq",
+                                                   "value": {"type": "str", "value": "red"}})
+        admin = target.admin()
+        admin.execute("DROP SCHEMA IF EXISTS ds_run CASCADE")
+        admin.close()
+        o = pipeline.run(target, d, variant="fixed", schedule=BOTH_READ_FIRST, sandbox=sandbox, catalog="dry_run")
+>       assert o.status == "refused_planning" and o.stage == "authorize" and o.construction is None and o.run is None
+E       AssertionError: assert ('refused_planning' == 'refused_planning'
+E         
+E           refused_planning and 'plan_state' == 'authorize'
+E         
+E         - authorize
+E         + plan_state)
+
+tests/experimental/test_state_construction_live.py:101: AssertionError
+=========================== short test summary info ============================
+FAILED tests/experimental/test_state_construction_live.py::test_a_refused_plan_constructs_nothing
+1 failed, 67 passed in 1.04s

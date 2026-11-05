@@ -1,0 +1,83 @@
+F..F.........                                                            [100%]
+=================================== FAILURES ===================================
+_____ test_the_pipeline_runs_both_builds_on_the_phase9b_constructed_state ______
+
+target = Target(host='127.0.0.1', port=55441, user='ds_mvp', dbname='ds_mvp')
+sandbox = <deployspecter.database.Sandbox object at 0x108bb2ea0>
+
+    def test_the_pipeline_runs_both_builds_on_the_phase9b_constructed_state(target, sandbox):
+        results = {v: pipeline.run(target, sc.DOCUMENT, variant=v, schedule=BOTH_READ_FIRST, sandbox=sandbox)
+                   for v in ("buggy", "fixed")}
+        for o in results.values():
+>           assert o.status == "ran", o.detail
+E           AssertionError: {'outcome': 'indeterminate', 'detail': [{'kind': 'incomplete', 'code': 'trigger_effect_unknown', 'entity': 'event', 'f...d': None, ...}, {'kind': 'incomplete', 'code': 'trigger_effect_unknown', 'entity': 'reservation', 'field': None, ...}]}
+E           assert 'refused_planning' == 'ran'
+E             
+E             - ran
+E             + refused_planning
+
+tests/experimental/test_state_construction_live.py:64: AssertionError
+____ test_exact_values_survive_and_drift_is_caught_by_the_independent_read _____
+
+target = Target(host='127.0.0.1', port=55441, user='ds_mvp', dbname='ds_mvp')
+sandbox = <deployspecter.database.Sandbox object at 0x108bb2ea0>
+
+    def test_exact_values_survive_and_drift_is_caught_by_the_independent_read(target, sandbox):
+        rows = [("v", {"id": TV("int", 2**63 - 1), "f": TV("float", -0.0), "s": TV("str", "NULL"),
+                       "b": TV("bool", False), "n": TV("null", None)}),
+                ("v", {"id": TV("int", 1), "f": TV("float", 5e-324), "s": TV("null", None), "b": TV("bool", True),
+                       "n": TV("int", 0)})]
+        r = generic.construct_typed(target, sandbox, setup_sql=EXACT, rows=rows, schema="ds_sc_t_exact")
+        assert r.status == "constructed", r.detail
+        with psycopg.connect(**target.conninfo(), autocommit=True) as conn:
+            assert typed.verify(conn, "ds_sc_t_exact", "v", [v for _, v in rows]) == []
+            for drift in ("UPDATE ds_sc_t_exact.v SET f = 0.0 WHERE f = 0",  # -0.0 → 0.0: equal under =, not exact
+                          "UPDATE ds_sc_t_exact.v SET s = NULL WHERE s = 'NULL'",
+                          "UPDATE ds_sc_t_exact.v SET n = NULL WHERE n = 0",
+                          "INSERT INTO ds_sc_t_exact.v (id) VALUES (2)"):
+                with conn.transaction():
+                    conn.execute(drift)
+>                   assert typed.verify(conn, "ds_sc_t_exact", "v", [v for _, v in rows]), drift
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/experimental/test_state_construction_live.py:113: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/deployspecter/experimental/state_construction/typed.py:174: in verify
+    conn.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <psycopg.Connection [BAD] at 0x108c6f860>
+query = 'SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY'
+params = None, prepare = None, binary = False
+
+    def execute(
+        self,
+        query: Query,
+        params: Params | None = None,
+        *,
+        prepare: bool | None = None,
+        binary: bool = False,
+    ) -> Cursor[Row]:
+        """Execute a query and return a cursor to read its results."""
+        try:
+            cur = self.cursor()
+            if binary:
+                cur.format = BINARY
+    
+            if isinstance(query, Template):
+                if params is not None:
+                    raise TypeError(
+                        "'execute()' with string template query doesn't support parameters"
+                    )
+                return cur.execute(query, prepare=prepare)
+            else:
+                return cur.execute(query, params, prepare=prepare)
+        except e._NO_TRACEBACK as ex:
+>           raise ex.with_traceback(None)
+E           psycopg.errors.ActiveSqlTransaction: SET TRANSACTION ISOLATION LEVEL must be called before any query
+
+../deployspecter-real-app-mvp/.venv/lib/python3.12/site-packages/psycopg/connection.py:304: ActiveSqlTransaction
+=========================== short test summary info ============================
+FAILED tests/experimental/test_state_construction_live.py::test_the_pipeline_runs_both_builds_on_the_phase9b_constructed_state
+FAILED tests/experimental/test_state_construction_live.py::test_exact_values_survive_and_drift_is_caught_by_the_independent_read
+2 failed, 11 passed in 0.67s
