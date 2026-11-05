@@ -5,7 +5,8 @@
    PostgreSQL, on the schedule given in argv, and prints one JSON document: probes, the monitor's pid and the trace.
    Reset, initial-state verification, the oracle and the server-log corroboration happen on the host.
 
-Reads only DS_PG_HOST, DS_PG_PORT, DS_PG_USER, DS_PG_PASSWORD, DS_PG_DB, DS_SCHEDULE and DS_VARIANT.
+Reads only DS_PG_HOST, DS_PG_PORT, DS_PG_USER, DS_PG_PASSWORD, DS_PG_DB, DS_SCHEDULE, DS_VARIANT,
+DS_MODE and DS_SCHEMA.
 """
 
 from __future__ import annotations
@@ -94,9 +95,53 @@ async def run(schedule: list[str], variant: str) -> dict:
     return {"monitor_pid": r.monitor_pid, "trace": trace.to_dict(), "raw_results": trace.raw_results}
 
 
+async def chancy_migrate() -> dict:
+    """Capture mode for one pinned third-party library: chancy's own migration applier, through its public API
+    (``Migrator.migrate(conn)`` takes the caller's AsyncConnection), on one stepped connection. Every statement is
+    gated and recorded; there is no allowlist (the library's SQL can't be reviewed in advance), and the host refuses
+    the run unless the server log explains every row. Named cursors, COPY, streams, pipelines and use from another
+    task stay refused."""
+    import psycopg
+    from chancy.migrate import Migrator
+
+    from deployspecter.experimental.stepping import Actor, Handler, Limits
+    from deployspecter.experimental.stepping_async import AsyncRun, async_actor_connection_factory
+
+    class CaptureHandler(Handler):
+        def allows(self, text: str) -> bool:
+            return True
+
+    info = {"host": os.environ["DS_PG_HOST"], "port": int(os.environ["DS_PG_PORT"]),
+            "user": os.environ["DS_PG_USER"], "password": os.environ["DS_PG_PASSWORD"],
+            "dbname": os.environ["DS_PG_DB"]}
+
+    async def monitor() -> psycopg.AsyncConnection:
+        conn = await psycopg.AsyncConnection.connect(**info, autocommit=True, prepare_threshold=None,
+                                                     application_name="ds_mvp_admin")
+        cur = await conn.execute("SELECT current_setting('cluster_name'), current_database()")
+        if await cur.fetchone() != ("ds_mvp_disposable", "ds_mvp"):
+            await conn.close()
+            raise SystemExit("not the disposable database")
+        return conn
+
+    async def migrate(conn: psycopg.AsyncConnection) -> bool:
+        return await Migrator("chancy", "chancy.migrations", prefix="chancy_").migrate(conn)
+
+    actor = Actor("m", CaptureHandler("chancy-0.26.0", "Migrator.migrate", migrate, frozenset(), {}), {})
+    lim = Limits(statement_ms=20000, run_s=120, python_step_s=30)
+    r = AsyncRun([actor], async_actor_connection_factory(info, lim, search_path=os.environ["DS_SCHEMA"],
+                                                         autocommit=False), monitor, limits=lim,
+                 run_id="isolated_chancy_migrate")
+    trace = await r.execute()
+    return {"monitor_pid": r.monitor_pid, "trace": trace.to_dict(), "raw_results": trace.raw_results}
+
+
 def main() -> int:
     out: dict = {"probes": probe()}
-    out.update(asyncio.run(run(json.loads(os.environ["DS_SCHEDULE"]), os.environ["DS_VARIANT"])))
+    if os.environ.get("DS_MODE") == "chancy_migrate":
+        out.update(asyncio.run(chancy_migrate()))
+    else:
+        out.update(asyncio.run(run(json.loads(os.environ["DS_SCHEDULE"]), os.environ["DS_VARIANT"])))
     print(json.dumps(out, default=str))
     return 0
 

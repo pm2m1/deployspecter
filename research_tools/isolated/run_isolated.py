@@ -58,6 +58,12 @@ PAYLOAD = ["deployspecter/__init__.py", "deployspecter/experimental/__init__.py"
            "deployspecter/experimental/apps/reservations_mixed.py",
            "deployspecter/experimental/apps/reservations_mixed_async.py"]
 LOCKED = ["psycopg", "psycopg-binary", "typing-extensions"]
+# The one third-party candidate whose migration path takes a caller-supplied connection (CORPUS_SHORTLIST.json v2).
+CHANCY_SDIST = "chancy-0.26.0.tar.gz"
+CHANCY_SDIST_SHA256 = "ac98b9c502d7bdb6f47d53fac1c22b4dc55e6cfcfec84b08b1a0cbaee45aef06"
+CHANCY_EXTRA_REQUIREMENTS = ("psycopg-pool==3.3.3 "
+                             "--hash=sha256:9b9cd6a4fcec47a410f7e82d408540e7f77b478509e91b44c1a5457a13e5ff37\n")
+CAPTURE_SCHEMA = "chancy_capture"
 EXPECTED_PROBES = {"uid": 65534, "root_writable": False, "app_writable": False, "tmp_writable": True,
                    "ssh_dir_present": False, "secret_like_env": []}
 
@@ -76,16 +82,27 @@ def requirements_from_lock(names: list[str]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def build_image(work: Path) -> tuple[str, str]:
+def build_image(work: Path, *, chancy_sdist: Path | None = None) -> tuple[str, str]:
     ctx = work / "context"
     (ctx / "app" / "src").mkdir(parents=True)
+    extra = ""
+    if chancy_sdist is not None:
+        import tarfile
+        got = hashlib.sha256(chancy_sdist.read_bytes()).hexdigest()
+        if chancy_sdist.name != CHANCY_SDIST or got != CHANCY_SDIST_SHA256:
+            raise RuntimeError(f"{chancy_sdist.name} isn't the pinned sdist (sha256 {got[:12]})")
+        unpack = work / "sdist"
+        with tarfile.open(chancy_sdist) as tf:
+            tf.extractall(unpack, filter="data")  # data only: no links out, no device files, no absolute paths
+        shutil.copytree(unpack / "chancy-0.26.0" / "chancy", ctx / "app" / "src" / "chancy")
+        extra = CHANCY_EXTRA_REQUIREMENTS
     for rel in PAYLOAD:
         dst = ctx / "app" / "src" / rel
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(REPO / "src" / rel, dst)
     shutil.copyfile(Path(__file__).with_name("smoke_inside.py"), ctx / "app" / "smoke_inside.py")
     shutil.copyfile(Path(__file__).with_name("Dockerfile.runner"), ctx / "Dockerfile")
-    (ctx / "requirements.txt").write_text(requirements_from_lock(LOCKED))
+    (ctx / "requirements.txt").write_text(requirements_from_lock(LOCKED) + extra)
     digest = hashlib.sha256()
     for f in sorted(p for p in ctx.rglob("*") if p.is_file()):
         digest.update(str(f.relative_to(ctx)).encode() + b"\0" + f.read_bytes())
@@ -100,8 +117,8 @@ def protected_state() -> str:
                   check=False).stdout.strip()
 
 
-def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path, image: tuple[str, str]) -> dict[
-        str, Any]:
+def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path, image: tuple[str, str],
+              mode: str = "smoke") -> dict[str, Any]:
     before = protected_state()
     work = Path(tempfile.mkdtemp(prefix="ds_iso_"))
     nonce = secrets.token_hex(4)
@@ -117,11 +134,19 @@ def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path
         seed = {"events": [{"id": 1, "capacity": 5, "reserved": 0}]}
         admin = target.admin()
         try:
-            app.reset(admin, seed)
-            initial = oracle.read_state(admin)
-            digest = oracle.digest(initial)
-            if digest != oracle.digest(oracle.expected_initial(seed)):
-                raise RuntimeError("the initial state isn't the verified one")
+            if mode == "chancy":
+                admin.execute(f"DROP SCHEMA IF EXISTS {CAPTURE_SCHEMA} CASCADE")
+                admin.execute(f"CREATE SCHEMA {CAPTURE_SCHEMA}")
+                initial = {"catalog": catalog(admin)}
+                if initial["catalog"]:
+                    raise RuntimeError("the capture schema isn't empty")
+                digest = oracle.digest(initial)
+            else:
+                app.reset(admin, seed)
+                initial = oracle.read_state(admin)
+                digest = oracle.digest(initial)
+                if digest != oracle.digest(oracle.expected_initial(seed)):
+                    raise RuntimeError("the initial state isn't the verified one")
             from deployspecter.live.serverlog import ServerLog
             log = ServerLog(lambda q, prm=None: admin.execute(q, prm).fetchone())
             log.position()
@@ -129,7 +154,8 @@ def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path
             envfile.write_text("\n".join([
                 "DS_PG_HOST=ds-mvp-pg", "DS_PG_PORT=5432", f"DS_PG_USER={target.user}",
                 f"DS_PG_PASSWORD={target.password}", f"DS_PG_DB={target.dbname}",
-                f"DS_SCHEDULE={json.dumps(schedule)}", f"DS_VARIANT={variant}"]) + "\n")
+                f"DS_SCHEDULE={json.dumps(schedule)}", f"DS_VARIANT={variant}",
+                f"DS_MODE={'chancy_migrate' if mode == 'chancy' else 'smoke'}", f"DS_SCHEMA={CAPTURE_SCHEMA}"]) + "\n")
             envfile.chmod(0o600)
             admin.execute(f"SELECT '{start}'")
             started = time.monotonic()
@@ -161,7 +187,9 @@ def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path
             if not gone:
                 corr["ok"] = False
                 corr["problems"].append("a container session outlived the run")
-            final = oracle.read_state(admin)
+            final = {"catalog": catalog(admin)} if mode == "chancy" else oracle.read_state(admin)
+            if mode == "chancy":
+                admin.execute(f"DROP SCHEMA IF EXISTS {CAPTURE_SCHEMA} CASCADE")
         finally:
             admin.close()
         done = any(isinstance(r, dict) and r.get("status") == "done" for r in inside["raw_results"].values())
@@ -176,7 +204,8 @@ def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path
                          memory_limited=probes["memory_limit"] == str(512 * 1024 * 1024))
         result.update(probes=probes, isolation_checks=isolation, isolation_ok=all(isolation.values()),
                       initial_state_digest=digest, final_state=final, final_state_digest=oracle.digest(final),
-                      oracle_violations=oracle.check(final, backfill_done=done), corroboration=corr,
+                      oracle_violations=None if mode == "chancy" else oracle.check(final, backfill_done=done),
+                      corroboration=corr,
                       trace_sha256=hashlib.sha256(json.dumps(trace, sort_keys=True, default=str).encode()).hexdigest(),
                       raw_results=inside["raw_results"], code_revision=hz.code_revision(),
                       payload_sha256={rel: hashlib.sha256((REPO / "src" / rel).read_bytes()).hexdigest()
@@ -194,10 +223,17 @@ def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path
     return result
 
 
+def catalog(admin: Any) -> list[list[Any]]:
+    return [list(r) for r in admin.execute(
+        "SELECT table_name, column_name, data_type, is_nullable FROM information_schema.columns "
+        "WHERE table_schema = %s ORDER BY table_name, ordinal_position", (CAPTURE_SCHEMA,)).fetchall()]
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("mode", choices=["smoke"])
+    ap.add_argument("mode", choices=["smoke", "chancy"])
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument("--chancy-sdist", type=Path, help="the downloaded chancy-0.26.0.tar.gz (sha256 is re-verified)")
     a = ap.parse_args()
     secret = Path(os.environ.get("DS_MVP_SECRET_FILE", os.path.expanduser("~/.ds_mvp_pg_password")))
     target = hz.Target("127.0.0.1", int(os.environ.get("DS_MVP_PORT", "55441")), "ds_mvp", secret.read_text().strip())
@@ -206,9 +242,25 @@ def main() -> int:
     race = ["j", "j", "a", "a", "a", "a", "a", "j", "j"]
     build_dir = Path(tempfile.mkdtemp(prefix="ds_iso_build_"))
     try:
-        image = build_image(build_dir)  # one image for both builds of the fixture
+        image = build_image(build_dir, chancy_sdist=a.chancy_sdist if a.mode == "chancy" else None)
     finally:
         shutil.rmtree(build_dir, ignore_errors=True)
+    if a.mode == "chancy":
+        r = run_smoke(target, variant="chancy_migrate", schedule=[], out=a.out, image=image, mode="chancy")
+        report = {"kind": "EXPERIMENTAL capture of one pinned third-party library's migration path in the isolated "
+                         "runner; not a blind evaluation, no defect hypothesis, no oracle",
+                  "library": {"name": "chancy", "version": "0.26.0", "sdist_sha256": CHANCY_SDIST_SHA256,
+                              "tag_commit": "73fd582c0e5d2f8655316e09f189ba0c57d76ca7",
+                              "entrypoint": "chancy.migrate.Migrator('chancy', 'chancy.migrations', "
+                                            "prefix='chancy_').migrate(conn)"},
+                  "image": {"tag": image[0], "id": image[1]}, "run": r}
+        (a.out / "report.json").write_text(json.dumps(report, indent=1, default=str))
+        print("isolation", r.get("isolation_ok"), "corroborated", r.get("corroboration", {}).get("ok"),
+              "statements", r.get("corroboration", {}).get("matched"), "tables",
+              len({row[0] for row in r.get("final_state", {}).get("catalog", [])}), "result", r.get("raw_results"),
+              "teardown", r["teardown"])
+        return 0 if (r.get("isolation_ok") and r.get("corroboration", {}).get("ok")
+                     and all(r["teardown"].values())) else 1
     report = {"kind": "EXPERIMENTAL isolated-runner smoke test on a trusted fixture; not a hostile-code sandbox",
               "image": {"tag": image[0], "id": image[1]},
               "runs": {v: run_smoke(target, variant=v, schedule=race, out=a.out, image=image)
