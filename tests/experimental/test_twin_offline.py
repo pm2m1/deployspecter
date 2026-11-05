@@ -171,3 +171,17 @@ def test_exit_checks_refuse_catalog_change_workers_doing_and_bad_provenance(step
     if step == "3_overlap":
         solo = {**ctx_ok(), "interleaving": {"by_version": {"a": 3}, "switches": 0}}
         assert any("interleave" in x for x in rt.exit_checks(step, entry, side(BASE), solo))
+
+
+def test_classification_matches_each_r5_entry_to_its_own_retry_when_a_job_is_retried_twice():
+    """Regression (found in twin run seeded_2): n=1 is admin-retried in the overlap *and* in T4. The frozen checker's
+    R5 entry names the overlap retry; keying retries by n alone matched it to the T4 retry and called a documented
+    E2 a genuine violation."""
+    overlap = {"n": 1, "ok": True, "before": {"status": "failed", "attempts": 2},
+               "after": {"status": "doing", "attempts": 3}}
+    t4 = {"n": 1, "ok": True, "before": {"status": "failed", "attempts": 4}, "after": {"status": "todo", "attempts": 5}}
+    entry = f"admin retry of n=1: before {overlap['before']}, after {overlap['after']}"
+    checked = {"violations": {"R5": [entry]}, "admin_retries": [overlap, t4],
+               "executions": {"1": ["3.3.0", "3.4.0", "3.3.0"]}}
+    c = tw.classify(checked)
+    assert c["oracle_error_E2"] == [entry] and c["genuine_violations"] == []

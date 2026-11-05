@@ -293,7 +293,9 @@ def classify(checked: dict[str, Any]) -> dict[str, Any]:
     'after' read that isn't ``todo`` where the retry demonstrably did its documented effect: before ``failed``,
     attempts exactly one higher, and the job executed at least twice. Everything else is a genuine violation."""
     viol = checked.get("violations", {})
-    admin = {(int(a["n"])): a for a in checked.get("admin_retries", []) if a.get("ok")}
+    # each R5 entry is matched to the exact retry it was rendered from (a job can be retried more than once)
+    admin = {f"admin retry of n={a['n']}: before {a.get('before')}, after {a.get('after')}": a
+             for a in checked.get("admin_retries", []) if a.get("ok")}
     execs = checked.get("executions", {})
     e1, e2, genuine = [], [], []
     for rule, entries in sorted(viol.items()):
@@ -303,7 +305,7 @@ def classify(checked: dict[str, Any]) -> dict[str, Any]:
                 continue
             if rule == "R5" and e.startswith("admin retry of n="):
                 m = re.match(r"admin retry of n=(\d+):", e)
-                a = admin.get(int(m.group(1))) if m else None
+                a = admin.get(e)
                 if a and (a.get("before") or {}).get("status") == "failed" and \
                         (a.get("after") or {}).get("attempts") == (a.get("before") or {}).get("attempts", -9) + 1 and \
                         (a.get("after") or {}).get("status") != "todo" and len(execs.get(m.group(1), [])) >= 2:
