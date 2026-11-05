@@ -180,3 +180,22 @@ Account balance was not checked through the API. The Responses API returns per-r
 63. **Research-paper outline**, with evidence classes ([IND] vs [DEV]).
 
 **Meta usage in this increment:** none ($0).
+
+## Increment 11 (2026-11-06): final reliability gate and evaluation handoff
+
+64. **Reliability gate: UNRESOLVED INTERMITTENT FAILURE.** 0 failures in 58 evidence-complete invocations:
+    - `stress_1`: 8 whole-suite attempts, 104/104 tests;
+    - `stress_2_targeted`: 50/50.
+
+    The earlier single failure stays unidentified, because its output was truncated and its tmp_path was gone. Nothing was changed for it (`reliability/RESULTS.md`).
+65. **Sealed-workflow rehearsal** (`research_tools/sealed_evaluation.py`; 15 tests, synthetic only).
+    - **The full path:** submission → seal → freeze → evaluator package → blinded results → bound reveal authorization → scoring → verification.
+    - **Found and closed:** `git archive` writes the commit id into a pax header, and commit-time mtimes order the revisions. Archives are now normalized, and unnormalized ones are refused.
+    - **Documented limit:** diffing R1 against R2 shows the fix location.
+66. **Amendment 003 integrity verifier** (`research_tools/verify_amendment.py`; 4 tests).
+    - The candidate is `ad5ea331…`, and all 4 forms name it.
+    - Unadopted and unsigned; 24 decisions unresolved.
+    - A silent edit, a mismatched form or an adoption before signatures is detected.
+67. **External one-page overview** (`handoff/send/OVERVIEW.md`) and a blank participation and conflict-of-interest declaration (not sent).
+
+**Meta usage in this increment:** none ($0).
