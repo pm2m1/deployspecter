@@ -1,0 +1,1009 @@
+[
+ {
+  "label": "mc_res_w_r0#0",
+  "valid": false,
+  "reasons": [
+   "unsupported@plan_state",
+   {
+    "goal_label": "evt",
+    "code": "no_filler_policy",
+    "reason": "capacity needs a value and no trusted policy supplies one"
+   }
+  ],
+  "document": {
+   "schema_version": 2,
+   "name": "overbook_pair",
+   "application": "reservations",
+   "rationale": "Two concurrent reserves on same event whose sum exceeds capacity to expose lost-update overbooking.",
+   "provenance": {
+    "origin": "model_proposal",
+    "author": "muse"
+   },
+   "actors": [
+    {
+     "name": "req_alice",
+     "entrypoint": "reserve_seats",
+     "application_version": "v1",
+     "role": "request",
+     "arguments": [
+      {
+       "name": "event_id",
+       "value": {
+        "type": "int",
+        "value": 1
+       }
+      },
+      {
+       "name": "holder",
+       "value": {
+        "type": "str",
+        "value": "alice"
+       }
+      },
+      {
+       "name": "qty",
+       "value": {
+        "type": "int",
+        "value": 6
+       }
+      }
+     ]
+    },
+    {
+     "name": "req_bob",
+     "entrypoint": "reserve_seats",
+     "application_version": "v1",
+     "role": "request",
+     "arguments": [
+      {
+       "name": "event_id",
+       "value": {
+        "type": "int",
+        "value": 1
+       }
+      },
+      {
+       "name": "holder",
+       "value": {
+        "type": "str",
+        "value": "bob"
+       }
+      },
+      {
+       "name": "qty",
+       "value": {
+        "type": "int",
+        "value": 6
+       }
+      }
+     ]
+    }
+   ],
+   "state_goals": [
+    {
+     "entity": "event",
+     "label": "evt",
+     "count": 1,
+     "constraints": [
+      {
+       "field": "id",
+       "op": "eq",
+       "value": {
+        "type": "int",
+        "value": 1
+       }
+      },
+      {
+       "field": "reserved",
+       "op": "le",
+       "value": {
+        "type": "int",
+        "value": 10
+       }
+      }
+     ]
+    },
+    {
+     "entity": "reservation",
+     "label": "res",
+     "count": 1,
+     "constraints": [
+      {
+       "field": "event_id",
+       "op": "eq",
+       "value": {
+        "type": "int",
+        "value": 1
+       }
+      }
+     ]
+    },
+    {
+     "entity": "rejection",
+     "label": "rej",
+     "count": 1,
+     "constraints": [
+      {
+       "field": "event_id",
+       "op": "eq",
+       "value": {
+        "type": "int",
+        "value": 1
+       }
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "label": "mc_res_w_r0#1",
+  "valid": false,
+  "reasons": [
+   "unsupported@plan_state",
+   {
+    "goal_label": "evt",
+    "code": "no_filler_policy",
+    "reason": "capacity needs a value and no trusted policy supplies one"
+   }
+  ],
+  "document": {
+   "schema_version": 2,
+   "name": "triple_contention",
+   "application": "reservations",
+   "rationale": "Three-way reserve contention where only two should fit to test atomic check-and-update under concurrency.",
+   "provenance": {
+    "origin": "model_proposal",
+    "author": "muse"
+   },
+   "actors": [
+    {
+     "name": "req_a",
+     "entrypoint": "reserve_seats",
+     "application_version": "v1",
+     "role": "request",
+     "arguments": [
+      {
+       "name": "event_id",
+       "value": {
+        "type": "int",
+        "value": 1
+       }
+      },
+      {
+       "name": "holder",
+       "value": {
+        "type": "str",
+        "value": "alice"
+       }
+      },
+      {
+       "name": "qty",
+       "value": {
+        "type": "int",
+        "value": 4
+       }
+      }
+     ]
+    },
+    {
+     "name": "req_b",
+     "entrypoint": "reserve_seats",
+     "application_version": "v1",
+     "role": "request",
+     "arguments": [
+      {
+       "name": "event_id",
+       "value": {
+        "type": "int",
+        "value": 1
+       }
+      },
+      {
+       "name": "holder",
+       "value": {
+        "type": "str",
+        "value": "bob"
+       }
+      },
+      {
+       "name": "qty",
+       "value": {
+        "type": "int",
+        "value": 4
+       }
+      }
+     ]
+    },
+    {
+     "name": "req_c",
+     "entrypoint": "reserve_seats",
+     "application_version": "v1",
+     "role": "request",
+     "arguments": [
+      {
+       "name": "event_id",
+       "value": {
+        "type": "int",
+        "value": 1
+       }
+      },
+      {
+       "name": "holder",
+       "value": {
+        "type": "str",
+        "value": "carol"
+       }
+      },
+      {
+       "name": "qty",
+       "value": {
+        "type": "int",
+        "value": 4
+       }
+      }
+     ]
+    }
+   ],
+   "state_goals": [
+    {
+     "entity": "event",
+     "label": "evt",
+     "count": 1,
+     "constraints": [
+      {
+       "field": "id",
+       "op": "eq",
+       "value": {
+        "type": "int",
+        "value": 1
+       }
+      }
+     ]
+    },
+    {
+     "entity": "reservation",
+     "label": "res",
+     "count": 2,
+     "constraints": [
+      {
+       "field": "event_id",
+       "op": "eq",
+       "value": {
+        "type": "int",
+        "value": 1
+       }
+      }
+     ]
+    },
+    {
+     "entity": "rejection",
+     "label": "rej",
+     "count": 1,
+     "constraints": [
+      {
+       "field": "event_id",
+       "op": "eq",
+       "value": {
+        "type": "int",
+        "value": 1
+       }
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "label": "mc_res_w_r0#2",
+  "valid": false,
+  "reasons": [
+   "unsupported@plan_state",
+   {
+    "goal_label": "evt",
+    "code": "no_filler_policy",
+    "reason": "capacity needs a value and no trusted policy supplies one"
+   }
+  ],
+  "document": {
+   "schema_version": 2,
+   "name": "reserve_release_race",
+   "application": "reservations",
+   "rationale": "Reserve and release for same holder race to test read-modify-write on reserved counter.",
+   "provenance": {
+    "origin": "model_proposal",
+    "author": "muse"
+   },
+   "actors": [
+    {
+     "name": "reserver",
+     "entrypoint": "reserve_seats",
+     "application_version": "v1",
+     "role": "request",
+     "arguments": [
+      {
+       "name": "event_id",
+       "value": {
+        "type": "int",
+        "value": 1
+       }
+      },
+      {
+       "name": "holder",
+       "value": {
+        "type": "str",
+        "value": "alice"
+       }
+      },
+      {
+       "name": "qty",
+       "value": {
+        "type": "int",
+        "value": 5
+       }
+      }
+     ]
+    },
+    {
+     "name": "releaser",
+     "entrypoint": "release_seats",
+     "application_version": "v1",
+     "role": "request",
+     "arguments": [
+      {
+       "name": "holder",
+       "value": {
+        "type": "str",
+        "value": "alice"
+       }
+      }
+     ]
+    }
+   ],
+   "state_goals": [
+    {
+     "entity": "event",
+     "label": "evt",
+     "count": 1,
+     "constraints": [
+      {
+       "field": "id",
+       "op": "eq",
+       "value": {
+        "type": "int",
+        "value": 1
+       }
+      },
+      {
+       "field": "reserved",
+       "op": "ge",
+       "value": {
+        "type": "int",
+        "value": 0
+       }
+      }
+     ]
+    },
+    {
+     "entity": "reservation",
+     "label": "res",
+     "count": 1,
+     "constraints": [
+      {
+       "field": "event_id",
+       "op": "eq",
+       "value": {
+        "type": "int",
+        "value": 1
+       }
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "label": "mc_res_w_r0#3",
+  "valid": false,
+  "reasons": [
+   "unsupported@plan_state",
+   {
+    "goal_label": "evt",
+    "code": "no_filler_policy",
+    "reason": "capacity needs a value and no trusted policy supplies one"
+   }
+  ],
+  "document": {
+   "schema_version": 2,
+   "name": "double_release_same",
+   "application": "reservations",
+   "rationale": "Two concurrent releases of same holder to test idempotence and double decrement of reserved.",
+   "provenance": {
+    "origin": "model_proposal",
+    "author": "muse"
+   },
+   "actors": [
+    {
+     "name": "rel_a",
+     "entrypoint": "release_seats",
+     "application_version": "v1",
+     "role": "request",
+     "arguments": [
+      {
+       "name": "holder",
+       "value": {
+        "type": "str",
+        "value": "alice"
+       }
+      }
+     ]
+    },
+    {
+     "name": "rel_b",
+     "entrypoint": "release_seats",
+     "application_version": "v1",
+     "role": "request",
+     "arguments": [
+      {
+       "name": "holder",
+       "value": {
+        "type": "str",
+        "value": "alice"
+       }
+      }
+     ]
+    }
+   ],
+   "state_goals": [
+    {
+     "entity": "event",
+     "label": "evt",
+     "count": 1,
+     "constraints": [
+      {
+       "field": "id",
+       "op": "eq",
+       "value": {
+        "type": "int",
+        "value": 1
+       }
+      },
+      {
+       "field": "reserved",
+       "op": "ge",
+       "value": {
+        "type": "int",
+        "value": 0
+       }
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "label": "mc_res_w_r0#4",
+  "valid": false,
+  "reasons": [
+   "unsupported@plan_state",
+   {
+    "goal_label": "evt1",
+    "code": "no_filler_policy",
+    "reason": "capacity needs a value and no trusted policy supplies one"
+   }
+  ],
+  "document": {
+   "schema_version": 2,
+   "name": "isolated_events",
+   "application": "reservations",
+   "rationale": "Reserves on different events should not interfere and both succeed without cross-row anomalies.",
+   "provenance": {
+    "origin": "model_proposal",
+    "author": "muse"
+   },
+   "actors": [
+    {
+     "name": "req_a",
+     "entrypoint": "reserve_seats",
+     "application_version": "v1",
+     "role": "request",
+     "arguments": [
+      {
+       "name": "event_id",
+       "value": {
+        "type": "int",
+        "value": 1
+       }
+      },
+      {
+       "name": "holder",
+       "value": {
+        "type": "str",
+        "value": "alice"
+       }
+      },
+      {
+       "name": "qty",
+       "value": {
+        "type": "int",
+        "value": 3
+       }
+      }
+     ]
+    },
+    {
+     "name": "req_b",
+     "entrypoint": "reserve_seats",
+     "application_version": "v1",
+     "role": "request",
+     "arguments": [
+      {
+       "name": "event_id",
+       "value": {
+        "type": "int",
+        "value": 2
+       }
+      },
+      {
+       "name": "holder",
+       "value": {
+        "type": "str",
+        "value": "bob"
+       }
+      },
+      {
+       "name": "qty",
+       "value": {
+        "type": "int",
+        "value": 3
+       }
+      }
+     ]
+    }
+   ],
+   "state_goals": [
+    {
+     "entity": "reservation",
+     "label": "res_e1",
+     "count": 1,
+     "constraints": [
+      {
+       "field": "event_id",
+       "op": "eq",
+       "value": {
+        "type": "int",
+        "value": 1
+       }
+      }
+     ]
+    },
+    {
+     "entity": "reservation",
+     "label": "res_e2",
+     "count": 1,
+     "constraints": [
+      {
+       "field": "event_id",
+       "op": "eq",
+       "value": {
+        "type": "int",
+        "value": 2
+       }
+      }
+     ]
+    },
+    {
+     "entity": "event",
+     "label": "evt1",
+     "count": 1,
+     "constraints": [
+      {
+       "field": "id",
+       "op": "eq",
+       "value": {
+        "type": "int",
+        "value": 1
+       }
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "label": "mc_res_w_r0#5",
+  "valid": false,
+  "reasons": [
+   "unsupported@plan_state",
+   {
+    "goal_label": "evt",
+    "code": "no_filler_policy",
+    "reason": "capacity needs a value and no trusted policy supplies one"
+   }
+  ],
+  "document": {
+   "schema_version": 2,
+   "name": "burst_with_release",
+   "application": "reservations",
+   "rationale": "Two fitting reserves plus unrelated release to test exact-capacity fill with background delete path.",
+   "provenance": {
+    "origin": "model_proposal",
+    "author": "muse"
+   },
+   "actors": [
+    {
+     "name": "req_alice",
+     "entrypoint": "reserve_seats",
+     "application_version": "v1",
+     "role": "request",
+     "arguments": [
+      {
+       "name": "event_id",
+       "value": {
+        "type": "int",
+        "value": 1
+       }
+      },
+      {
+       "name": "holder",
+       "value": {
+        "type": "str",
+        "value": "alice"
+       }
+      },
+      {
+       "name": "qty",
+       "value": {
+        "type": "int",
+        "value": 5
+       }
+      }
+     ]
+    },
+    {
+     "name": "req_bob",
+     "entrypoint": "reserve_seats",
+     "application_version": "v1",
+     "role": "request",
+     "arguments": [
+      {
+       "name": "event_id",
+       "value": {
+        "type": "int",
+        "value": 1
+       }
+      },
+      {
+       "name": "holder",
+       "value": {
+        "type": "str",
+        "value": "bob"
+       }
+      },
+      {
+       "name": "qty",
+       "value": {
+        "type": "int",
+        "value": 5
+       }
+      }
+     ]
+    },
+    {
+     "name": "rel_carol",
+     "entrypoint": "release_seats",
+     "application_version": "v1",
+     "role": "request",
+     "arguments": [
+      {
+       "name": "holder",
+       "value": {
+        "type": "str",
+        "value": "carol"
+       }
+      }
+     ]
+    }
+   ],
+   "state_goals": [
+    {
+     "entity": "event",
+     "label": "evt",
+     "count": 1,
+     "constraints": [
+      {
+       "field": "id",
+       "op": "eq",
+       "value": {
+        "type": "int",
+        "value": 1
+       }
+      },
+      {
+       "field": "reserved",
+       "op": "le",
+       "value": {
+        "type": "int",
+        "value": 10
+       }
+      }
+     ]
+    },
+    {
+     "entity": "reservation",
+     "label": "res",
+     "count": 2,
+     "constraints": [
+      {
+       "field": "event_id",
+       "op": "eq",
+       "value": {
+        "type": "int",
+        "value": 1
+       }
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "label": "mc_res_w_r0#6",
+  "valid": false,
+  "reasons": [
+   "unsupported@plan_state",
+   {
+    "goal_label": "evt",
+    "code": "no_filler_policy",
+    "reason": "capacity needs a value and no trusted policy supplies one"
+   }
+  ],
+  "document": {
+   "schema_version": 2,
+   "name": "reserve_vs_release",
+   "application": "reservations",
+   "rationale": "Large reserve racing with release of different holder to test freeing capacity versus capacity check.",
+   "provenance": {
+    "origin": "model_proposal",
+    "author": "muse"
+   },
+   "actors": [
+    {
+     "name": "req_a",
+     "entrypoint": "reserve_seats",
+     "application_version": "v1",
+     "role": "request",
+     "arguments": [
+      {
+       "name": "event_id",
+       "value": {
+        "type": "int",
+        "value": 1
+       }
+      },
+      {
+       "name": "holder",
+       "value": {
+        "type": "str",
+        "value": "alice"
+       }
+      },
+      {
+       "name": "qty",
+       "value": {
+        "type": "int",
+        "value": 8
+       }
+      }
+     ]
+    },
+    {
+     "name": "rel_b",
+     "entrypoint": "release_seats",
+     "application_version": "v1",
+     "role": "request",
+     "arguments": [
+      {
+       "name": "holder",
+       "value": {
+        "type": "str",
+        "value": "bob"
+       }
+      }
+     ]
+    }
+   ],
+   "state_goals": [
+    {
+     "entity": "event",
+     "label": "evt",
+     "count": 1,
+     "constraints": [
+      {
+       "field": "id",
+       "op": "eq",
+       "value": {
+        "type": "int",
+        "value": 1
+       }
+      }
+     ]
+    },
+    {
+     "entity": "reservation",
+     "label": "res_bob",
+     "count": 1,
+     "constraints": [
+      {
+       "field": "holder",
+       "op": "eq",
+       "value": {
+        "type": "str",
+        "value": "bob"
+       }
+      }
+     ]
+    },
+    {
+     "entity": "rejection",
+     "label": "rej",
+     "count": 1,
+     "constraints": [
+      {
+       "field": "event_id",
+       "op": "eq",
+       "value": {
+        "type": "int",
+        "value": 1
+       }
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "label": "mc_res_w_r0#7",
+  "valid": false,
+  "reasons": [
+   "unsupported@plan_state",
+   {
+    "goal_label": "evt",
+    "code": "no_filler_policy",
+    "reason": "capacity needs a value and no trusted policy supplies one"
+   }
+  ],
+  "document": {
+   "schema_version": 2,
+   "name": "mixed_cancel_race",
+   "application": "reservations",
+   "rationale": "Two overbooking reserves plus cancel of one reserver to test delete versus insert interleavings.",
+   "provenance": {
+    "origin": "model_proposal",
+    "author": "muse"
+   },
+   "actors": [
+    {
+     "name": "req_alice",
+     "entrypoint": "reserve_seats",
+     "application_version": "v1",
+     "role": "request",
+     "arguments": [
+      {
+       "name": "event_id",
+       "value": {
+        "type": "int",
+        "value": 1
+       }
+      },
+      {
+       "name": "holder",
+       "value": {
+        "type": "str",
+        "value": "alice"
+       }
+      },
+      {
+       "name": "qty",
+       "value": {
+        "type": "int",
+        "value": 6
+       }
+      }
+     ]
+    },
+    {
+     "name": "req_bob",
+     "entrypoint": "reserve_seats",
+     "application_version": "v1",
+     "role": "request",
+     "arguments": [
+      {
+       "name": "event_id",
+       "value": {
+        "type": "int",
+        "value": 1
+       }
+      },
+      {
+       "name": "holder",
+       "value": {
+        "type": "str",
+        "value": "bob"
+       }
+      },
+      {
+       "name": "qty",
+       "value": {
+        "type": "int",
+        "value": 6
+       }
+      }
+     ]
+    },
+    {
+     "name": "rel_alice",
+     "entrypoint": "release_seats",
+     "application_version": "v1",
+     "role": "request",
+     "arguments": [
+      {
+       "name": "holder",
+       "value": {
+        "type": "str",
+        "value": "alice"
+       }
+      }
+     ]
+    }
+   ],
+   "state_goals": [
+    {
+     "entity": "event",
+     "label": "evt",
+     "count": 1,
+     "constraints": [
+      {
+       "field": "id",
+       "op": "eq",
+       "value": {
+        "type": "int",
+        "value": 1
+       }
+      }
+     ]
+    },
+    {
+     "entity": "reservation",
+     "label": "res",
+     "count": 1,
+     "constraints": [
+      {
+       "field": "event_id",
+       "op": "eq",
+       "value": {
+        "type": "int",
+        "value": 1
+       }
+      }
+     ]
+    },
+    {
+     "entity": "rejection",
+     "label": "rej",
+     "count": 1,
+     "constraints": [
+      {
+       "field": "event_id",
+       "op": "eq",
+       "value": {
+        "type": "int",
+        "value": 1
+       }
+      }
+     ]
+    }
+   ]
+  }
+ }
+]

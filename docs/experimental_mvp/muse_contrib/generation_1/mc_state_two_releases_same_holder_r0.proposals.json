@@ -1,0 +1,70 @@
+[
+ [
+  "mc_state_two_releases_same_holder_r0#0",
+  {
+   "capacity": 10,
+   "rationale": "single jack reservation exactly equals reserved; one release should zero it, concurrent double release double-decrements to negative and breaks sum invariant",
+   "reservations": [
+    {
+     "holder": "jack",
+     "qty": 5
+    }
+   ],
+   "reserved": 5
+  }
+ ],
+ [
+  "mc_state_two_releases_same_holder_r0#1",
+  {
+   "capacity": 10,
+   "rationale": "shared counter with surviving holder alice; over-decrement from double jack release corrupts shared reserved and leaves mismatch vs sum",
+   "reservations": [
+    {
+     "holder": "jack",
+     "qty": 4
+    },
+    {
+     "holder": "alice",
+     "qty": 3
+    }
+   ],
+   "reserved": 7
+  }
+ ],
+ [
+  "mc_state_two_releases_same_holder_r0#2",
+  {
+   "capacity": 10,
+   "rationale": "two separate jack rows; tests whether release deletes one row or all rows and whether concurrent releases double-decrement shared counter or race on same row",
+   "reservations": [
+    {
+     "holder": "jack",
+     "qty": 3
+    },
+    {
+     "holder": "jack",
+     "qty": 3
+    }
+   ],
+   "reserved": 6
+  }
+ ],
+ [
+  "mc_state_two_releases_same_holder_r0#3",
+  {
+   "capacity": 5,
+   "rationale": "full event with partial jack qty; double decrement stays non-negative so bug shows only as reserved-vs-sum mismatch, catching checkers that only look for negative",
+   "reservations": [
+    {
+     "holder": "jack",
+     "qty": 2
+    },
+    {
+     "holder": "bob",
+     "qty": 3
+    }
+   ],
+   "reserved": 5
+  }
+ ]
+]
