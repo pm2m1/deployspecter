@@ -1,0 +1,330 @@
+{
+ "spec": {
+  "name": "0a_old_schema",
+  "covers": [],
+  "consumer_of": {},
+  "processes": {
+   "A": [
+    {
+     "actor": "old_schema",
+     "fn": "schema",
+     "args": {}
+    }
+   ]
+  },
+  "gates": [],
+  "expect": {
+   "schema_present": false
+  }
+ },
+ "label": "0a_old_schema",
+ "policy": {
+  "kind": "alternate"
+ },
+ "network": "ds-mvp-coord-d1e075c7",
+ "containers": {
+  "coordinator": "ds-mvp-coord-c-d1e075c7",
+  "A": "ds-mvp-coord-a-d1e075c7"
+ },
+ "frozen_sha256": {
+  "properties": "d701a2f4c5150c8874cfe1ca514fab1f88ba0af15e266a6d5c67d1398222d4cd",
+  "checker": "72320a82f9d9c3e0175e19221f3b5f3ec4368803a1e5060cdd70b8deb9d975e9"
+ },
+ "code_revision": {
+  "head": "13af6b3edaef6b31ed3e6f7e7d8edce903a62bad",
+  "dirty": false
+ },
+ "runtime_flags": [
+  "--read-only",
+  "--tmpfs",
+  "/tmp:rw,noexec,nosuid,nodev,size=64m",
+  "--cap-drop",
+  "ALL",
+  "--security-opt",
+  "no-new-privileges",
+  "--pids-limit",
+  "64",
+  "--memory",
+  "512m",
+  "--memory-swap",
+  "512m",
+  "--cpus",
+  "1",
+  "--ulimit",
+  "nofile=256:256",
+  "--user",
+  "65534:65534"
+ ],
+ "network_internal": "true",
+ "precondition": {
+  "schema_present": false
+ },
+ "initial_state_digest": "d119dbdfe516f7b33d9d1acce663e31cea01b9f0adc92e447e2497f465cc5ba0",
+ "container_seconds": 0.63,
+ "sessions_left_after_run": [],
+ "refusal_reasons": [],
+ "coordinator": {
+  "protocol": "ds-coord/1",
+  "outcome": "completed",
+  "reason": null,
+  "policy": {
+   "kind": "alternate"
+  },
+  "gates": [],
+  "stop": {
+   "key": "succeeded",
+   "covers": [],
+   "after_s": 45
+  },
+  "processes": {
+   "A": {
+    "version": "3.3.0",
+    "run_id": "procr_A",
+    "monitor_pid": 572,
+    "actors": {
+     "old_schema": {
+      "backend_pid": 573,
+      "handler": "procrastinate-3.3.0.schema"
+     }
+    },
+    "bye": "completed"
+   }
+  },
+  "decisions": [
+   {
+    "decision": 0,
+    "grant": 0,
+    "epoch": 1,
+    "process": "A",
+    "version": "3.3.0",
+    "actor": "old_schema",
+    "source": "alternate",
+    "enabled": [
+     "old_schema"
+    ],
+    "gated": [],
+    "blocked": {},
+    "kind": "execute",
+    "statement_id": "a763a157ceae",
+    "sql": "-- Procrastinate Schema CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog; -- Enums CREATE TYPE procrastinate_job_status AS ENUM ( 'todo', -- The job is queued 'doing', -- The job has been fetched by a worker 'succeeded', -- The job ended successfully 'failed', -- The job ended with an e",
+    "t_ms": 37.85
+   },
+   {
+    "decision": 1,
+    "grant": 1,
+    "epoch": 2,
+    "process": "A",
+    "version": "3.3.0",
+    "actor": "old_schema",
+    "source": "alternate",
+    "enabled": [
+     "old_schema"
+    ],
+    "gated": [],
+    "blocked": {},
+    "kind": "commit",
+    "statement_id": "79663c1d3b43",
+    "sql": "COMMIT",
+    "t_ms": 88.69
+   }
+  ],
+  "statements": {
+   "a763a157ceae": "-- Procrastinate Schema CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog; -- Enums CREATE TYPE procrastinate_job_status AS ENUM ( 'todo', -- The job is queued 'doing', -- The job has been fetched by a worker 'succeeded', -- The job ended successfully 'failed', -- The job ended with an error 'cancelled', -- The job was cancelled 'aborting', -- legacy, not used anymore since v3.0.0 'aborted' -- The job was aborted ); CREATE TYPE procrastinate_job_event_type AS ENUM ( 'deferred', -- Job created, in todo 'started', -- todo -> doing 'deferred_for_retry', -- doing -> todo 'failed', -- doing -> failed 'succeeded', -- doing -> succeeded 'cancelled', -- todo -> cancelled 'abort_requested', -- not a state transition, but set in a separate field 'aborted', -- doing -> aborted (only allowed when abort_requested field is set) 'scheduled' -- not a state transition, but recording when a task is scheduled for ); -- Composite Types CREATE TYPE procrastinate_job_to_defer_v1 AS ( queue_name character varying, task_name character varying, priority integer, lock text, queueing_lock text, args jsonb, scheduled_at timestamp with time zone ); -- Tables CREATE TABLE procrastinate_workers( id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY, last_heartbeat timestamp with time zone NOT NULL DEFAULT NOW() ); CREATE TABLE procrastinate_jobs ( id bigserial PRIMARY KEY, queue_name character varying(128) NOT NULL, task_name character varying(128) NOT NULL, priority integer DEFAULT 0 NOT NULL, lock text, queueing_lock text, args jsonb DEFAULT '{}' NOT NULL, status procrastinate_job_status DEFAULT 'todo'::procrastinate_job_status NOT NULL, scheduled_at timestamp with time zone NULL, attempts integer DEFAULT 0 NOT NULL, abort_requested boolean DEFAULT false NOT NULL, worker_id bigint REFERENCES procrastinate_workers(id) ON DELETE SET NULL, CONSTRAINT check_not_todo_abort_requested CHECK (NOT (status = 'todo' AND abort_requested = true)) ); CREATE TABLE procrastinate_periodic_defers ( id b",
+   "79663c1d3b43": "COMMIT"
+  },
+  "events": [
+   {
+    "event": "start",
+    "t_ms": 37.48,
+    "pids": {
+     "573": "old_schema"
+    }
+   },
+   {
+    "event": "stop",
+    "why": "covered",
+    "at_grant": 0,
+    "t_ms": 37.78
+   },
+   {
+    "event": "bye",
+    "process": "A",
+    "t_ms": 150.09
+   },
+   {
+    "event": "end",
+    "t_ms": 150.1
+   }
+  ],
+  "grants": 2,
+  "elapsed_ms": 150.1
+ },
+ "corroboration": {
+  "ok": true,
+  "matched": 3,
+  "params_compared": 0,
+  "params_mismatched": 0,
+  "params_unchecked": 0,
+  "client_texts_matched": 0,
+  "unchecked_kinds": {},
+  "sessions": {
+   "573": "old_schema"
+  },
+  "problems": []
+ },
+ "isolation_checks": {
+  "A": {
+   "uid": true,
+   "root_writable": true,
+   "app_writable": true,
+   "tmp_writable": true,
+   "ssh_dir_present": true,
+   "secret_like_env": true,
+   "host_55432_unreachable": true,
+   "internet_tcp_unreachable": true,
+   "internet_dns_unresolved": true,
+   "pids_limited": true,
+   "memory_limited": true
+  },
+  "coordinator": {
+   "uid": true,
+   "root_writable": true,
+   "app_writable": true,
+   "tmp_writable": true,
+   "ssh_dir_present": true,
+   "secret_like_env": true,
+   "host_55432_unreachable": true,
+   "internet_tcp_unreachable": true,
+   "internet_dns_unresolved": true,
+   "pids_limited": true,
+   "memory_limited": true
+  }
+ },
+ "probes": {
+  "A": {
+   "uid": 65534,
+   "gid": 65534,
+   "root_writable": false,
+   "app_writable": false,
+   "tmp_writable": true,
+   "ssh_dir_present": false,
+   "env_keys": [
+    "DS_CO_NONCE",
+    "DS_CO_PLAN",
+    "DS_MODE",
+    "DS_PG_DB",
+    "DS_PG_HOST",
+    "DS_PG_PASSWORD",
+    "DS_PG_PORT",
+    "DS_PG_USER",
+    "DS_SCHEMA",
+    "GPG_KEY",
+    "HOME",
+    "HOSTNAME",
+    "LANG",
+    "PATH",
+    "PIP_DISABLE_PIP_VERSION_CHECK",
+    "PIP_NO_CACHE_DIR",
+    "PYTHONDONTWRITEBYTECODE",
+    "PYTHON_SHA256",
+    "PYTHON_VERSION"
+   ],
+   "secret_like_env": [],
+   "host_55432": "refused:gaierror",
+   "host_gateway_55441": "refused:gaierror",
+   "internet_tcp": "refused:OSError",
+   "internet_dns": "unresolved:gaierror",
+   "nproc_limit": "64",
+   "memory_limit": "536870912"
+  },
+  "coordinator": {
+   "uid": 65534,
+   "gid": 65534,
+   "root_writable": false,
+   "app_writable": false,
+   "tmp_writable": true,
+   "ssh_dir_present": false,
+   "env_keys": [
+    "DS_CO_NONCE",
+    "DS_CO_SPEC",
+    "DS_MODE",
+    "GPG_KEY",
+    "HOME",
+    "HOSTNAME",
+    "LANG",
+    "PATH",
+    "PIP_DISABLE_PIP_VERSION_CHECK",
+    "PIP_NO_CACHE_DIR",
+    "PYTHONDONTWRITEBYTECODE",
+    "PYTHON_SHA256",
+    "PYTHON_VERSION"
+   ],
+   "secret_like_env": [],
+   "host_55432": "refused:gaierror",
+   "host_gateway_55441": "refused:gaierror",
+   "internet_tcp": "refused:OSError",
+   "internet_dns": "unresolved:gaierror",
+   "nproc_limit": "64",
+   "memory_limit": "536870912"
+  }
+ },
+ "isolation_ok": true,
+ "versions": {
+  "A": "3.3.0"
+ },
+ "pinned_sources": {
+  "A": {
+   "version": "3.3.0",
+   "procrastinate/sql/queries.sql": "c9b3fb0be4e26bac6612c3a3d4883bdb8e129bac6175362a224e4b7cb643ff9d",
+   "procrastinate/sql/schema.sql": "bcc21931d84c4d61d319719a59d31f5322e180ab5ccd04db1875a1a7b6f59b03",
+   "procrastinate/app.py": "1147f1a56d55a23c396d364183296dc9ffd66bfc3b16d25e2033752276b35797",
+   "procrastinate/worker.py": "c4f6108f93471e145d6ae143d17a7112bc42fd7f9dc12ba102b301847aa421d0",
+   "procrastinate/manager.py": "2e41449c71b9b6ed74b5872fec3e103ddb4597646449dffab11e1e3de2107efe",
+   "procrastinate/psycopg_connector.py": "d93aaa49a39c1c5822c6fb34ddec6121969f454b253159a7abc891ba7d1c4c9e"
+  }
+ },
+ "outcomes": {
+  "A": "completed"
+ },
+ "exceptions": {},
+ "raw_results": {
+  "old_schema": {
+   "version": "3.3.0",
+   "schema_applied": true
+  }
+ },
+ "final_state": {
+  "schema_present": true,
+  "retry_v1": true,
+  "retry_v2": false,
+  "jobs": [],
+  "events": [],
+  "trigger_records_retried": false
+ },
+ "final_state_digest": "49e68c12794fbc2c2614e51b3296c63afc0a4765ab3e9f629aaa2a4e980adc5f",
+ "trace_sha256": {
+  "A": "a5c04ba45eae49a46aadeca8f76c0ea68be7ecf098b0829d1c3811e44e606d06"
+ },
+ "outputs": {
+  "coordinator": {
+   "exit": 0,
+   "stderr_tail": ""
+  },
+  "A": {
+   "exit": 0,
+   "stderr_tail": ""
+  }
+ },
+ "sound": true,
+ "complete": true,
+ "verdict": "SOUND",
+ "properties": {
+  "phase_only": true
+ },
+ "teardown": {
+  "containers_removed": true,
+  "network_removed": true,
+  "workdir_removed": true,
+  "protected_unchanged": true
+ }
+}

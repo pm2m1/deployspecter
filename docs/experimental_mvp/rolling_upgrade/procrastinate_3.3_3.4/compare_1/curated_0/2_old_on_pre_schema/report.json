@@ -1,0 +1,958 @@
+{
+ "spec": {
+  "name": "2_old_on_pre_schema",
+  "covers": [],
+  "consumer_of": {},
+  "processes": {
+   "A": [
+    {
+     "actor": "old_defer",
+     "fn": "defer",
+     "args": {
+      "jobs": [
+       {
+        "n": 3,
+        "kind": "ok"
+       },
+       {
+        "n": 4,
+        "kind": "fail"
+       }
+      ]
+     }
+    },
+    {
+     "actor": "old_worker",
+     "fn": "work",
+     "args": {
+      "wait": false
+     }
+    }
+   ]
+  },
+  "gates": [
+   {
+    "actor": "old_worker",
+    "match": null,
+    "until": [
+     {
+      "actor": "old_defer",
+      "marker": "push",
+      "count": 2
+     }
+    ]
+   }
+  ],
+  "expect": {
+   "retry_v2": true,
+   "trigger_records_retried": false
+  }
+ },
+ "label": "2_old_on_pre_schema",
+ "policy": {
+  "kind": "alternate"
+ },
+ "network": "ds-mvp-coord-d6862300",
+ "containers": {
+  "coordinator": "ds-mvp-coord-c-d6862300",
+  "A": "ds-mvp-coord-a-d6862300"
+ },
+ "frozen_sha256": {
+  "properties": "d701a2f4c5150c8874cfe1ca514fab1f88ba0af15e266a6d5c67d1398222d4cd",
+  "checker": "72320a82f9d9c3e0175e19221f3b5f3ec4368803a1e5060cdd70b8deb9d975e9"
+ },
+ "code_revision": {
+  "head": "13af6b3edaef6b31ed3e6f7e7d8edce903a62bad",
+  "dirty": false
+ },
+ "runtime_flags": [
+  "--read-only",
+  "--tmpfs",
+  "/tmp:rw,noexec,nosuid,nodev,size=64m",
+  "--cap-drop",
+  "ALL",
+  "--security-opt",
+  "no-new-privileges",
+  "--pids-limit",
+  "64",
+  "--memory",
+  "512m",
+  "--memory-swap",
+  "512m",
+  "--cpus",
+  "1",
+  "--ulimit",
+  "nofile=256:256",
+  "--user",
+  "65534:65534"
+ ],
+ "network_internal": "true",
+ "precondition": {
+  "retry_v2": true,
+  "trigger_records_retried": false
+ },
+ "initial_state_digest": "732adf098ec0b0e46ae83acf7ccdfc8f694df07c5312a9df1246463d6565c30f",
+ "container_seconds": 1.9,
+ "sessions_left_after_run": [],
+ "refusal_reasons": [],
+ "coordinator": {
+  "protocol": "ds-coord/1",
+  "outcome": "completed",
+  "reason": null,
+  "policy": {
+   "kind": "alternate"
+  },
+  "gates": [
+   {
+    "actor": "old_worker",
+    "match": null,
+    "until": [
+     {
+      "actor": "old_defer",
+      "marker": "push",
+      "count": 2
+     }
+    ]
+   }
+  ],
+  "stop": {
+   "key": "succeeded",
+   "covers": [],
+   "after_s": 45
+  },
+  "processes": {
+   "A": {
+    "version": "3.3.0",
+    "run_id": "procr_A",
+    "monitor_pid": 582,
+    "actors": {
+     "old_defer": {
+      "backend_pid": 583,
+      "handler": "procrastinate-3.3.0.defer"
+     },
+     "old_worker": {
+      "backend_pid": 584,
+      "handler": "procrastinate-3.3.0.work"
+     }
+    },
+    "bye": "completed"
+   }
+  },
+  "decisions": [
+   {
+    "decision": 0,
+    "grant": 0,
+    "epoch": 1,
+    "process": "A",
+    "version": "3.3.0",
+    "actor": "old_defer",
+    "source": "alternate",
+    "enabled": [
+     "old_defer"
+    ],
+    "gated": [
+     "old_worker"
+    ],
+    "blocked": {},
+    "kind": "execute",
+    "statement_id": "c6e63dc79a28",
+    "sql": "SELECT unnest( procrastinate_defer_jobs_v1( %(jobs)s::procrastinate_job_to_defer_v1[] ) ) AS id;",
+    "t_ms": 35.83
+   },
+   {
+    "decision": 1,
+    "grant": 1,
+    "epoch": 2,
+    "process": "A",
+    "version": "3.3.0",
+    "actor": "old_defer",
+    "source": "alternate",
+    "enabled": [
+     "old_defer"
+    ],
+    "gated": [
+     "old_worker"
+    ],
+    "blocked": {},
+    "kind": "commit",
+    "statement_id": "79663c1d3b43",
+    "sql": "COMMIT",
+    "t_ms": 86.61
+   },
+   {
+    "decision": 2,
+    "grant": 2,
+    "epoch": 3,
+    "process": "A",
+    "version": "3.3.0",
+    "actor": "old_defer",
+    "source": "alternate",
+    "enabled": [
+     "old_defer"
+    ],
+    "gated": [
+     "old_worker"
+    ],
+    "blocked": {},
+    "kind": "execute",
+    "statement_id": "c6e63dc79a28",
+    "sql": "SELECT unnest( procrastinate_defer_jobs_v1( %(jobs)s::procrastinate_job_to_defer_v1[] ) ) AS id;",
+    "t_ms": 137.7
+   },
+   {
+    "decision": 3,
+    "grant": 3,
+    "epoch": 4,
+    "process": "A",
+    "version": "3.3.0",
+    "actor": "old_defer",
+    "source": "alternate",
+    "enabled": [
+     "old_defer",
+     "old_worker"
+    ],
+    "gated": [],
+    "blocked": {},
+    "kind": "commit",
+    "statement_id": "79663c1d3b43",
+    "sql": "COMMIT",
+    "t_ms": 198.12
+   },
+   {
+    "decision": 4,
+    "grant": 4,
+    "epoch": 5,
+    "process": "A",
+    "version": "3.3.0",
+    "actor": "old_worker",
+    "source": "alternate",
+    "enabled": [
+     "old_worker"
+    ],
+    "gated": [],
+    "blocked": {},
+    "kind": "execute",
+    "statement_id": "20ea599ae729",
+    "sql": "SELECT * FROM procrastinate_prune_stalled_workers_v1(%(seconds_since_heartbeat)s)",
+    "t_ms": 259.0
+   },
+   {
+    "decision": 5,
+    "grant": 5,
+    "epoch": 6,
+    "process": "A",
+    "version": "3.3.0",
+    "actor": "old_worker",
+    "source": "alternate",
+    "enabled": [
+     "old_worker"
+    ],
+    "gated": [],
+    "blocked": {},
+    "kind": "commit",
+    "statement_id": "79663c1d3b43",
+    "sql": "COMMIT",
+    "t_ms": 313.91
+   },
+   {
+    "decision": 6,
+    "grant": 6,
+    "epoch": 7,
+    "process": "A",
+    "version": "3.3.0",
+    "actor": "old_worker",
+    "source": "alternate",
+    "enabled": [
+     "old_worker"
+    ],
+    "gated": [],
+    "blocked": {},
+    "kind": "execute",
+    "statement_id": "c1f586449d9e",
+    "sql": "SELECT * FROM procrastinate_register_worker_v1()",
+    "t_ms": 366.78
+   },
+   {
+    "decision": 7,
+    "grant": 7,
+    "epoch": 8,
+    "process": "A",
+    "version": "3.3.0",
+    "actor": "old_worker",
+    "source": "alternate",
+    "enabled": [
+     "old_worker"
+    ],
+    "gated": [],
+    "blocked": {},
+    "kind": "commit",
+    "statement_id": "79663c1d3b43",
+    "sql": "COMMIT",
+    "t_ms": 420.13
+   },
+   {
+    "decision": 8,
+    "grant": 8,
+    "epoch": 9,
+    "process": "A",
+    "version": "3.3.0",
+    "actor": "old_worker",
+    "source": "alternate",
+    "enabled": [
+     "old_worker"
+    ],
+    "gated": [],
+    "blocked": {},
+    "kind": "execute",
+    "statement_id": "f835132a0a32",
+    "sql": "SELECT id, status, task_name, priority, lock, queueing_lock, args, scheduled_at, queue_name, attempts, worker_id FROM procrastinate_fetch_job_v2(%(queues)s::varchar[], %(worker_id)s);",
+    "t_ms": 474.73
+   },
+   {
+    "decision": 9,
+    "grant": 9,
+    "epoch": 10,
+    "process": "A",
+    "version": "3.3.0",
+    "actor": "old_worker",
+    "source": "alternate",
+    "enabled": [
+     "old_worker"
+    ],
+    "gated": [],
+    "blocked": {},
+    "kind": "commit",
+    "statement_id": "79663c1d3b43",
+    "sql": "COMMIT",
+    "t_ms": 528.46
+   },
+   {
+    "decision": 10,
+    "grant": 10,
+    "epoch": 11,
+    "process": "A",
+    "version": "3.3.0",
+    "actor": "old_worker",
+    "source": "alternate",
+    "enabled": [
+     "old_worker"
+    ],
+    "gated": [],
+    "blocked": {},
+    "kind": "execute",
+    "statement_id": "46012253eb46",
+    "sql": "SELECT procrastinate_finish_job_v1(%(job_id)s, %(status)s, %(delete_job)s);",
+    "t_ms": 584.03
+   },
+   {
+    "decision": 11,
+    "grant": 11,
+    "epoch": 12,
+    "process": "A",
+    "version": "3.3.0",
+    "actor": "old_worker",
+    "source": "alternate",
+    "enabled": [
+     "old_worker"
+    ],
+    "gated": [],
+    "blocked": {},
+    "kind": "commit",
+    "statement_id": "79663c1d3b43",
+    "sql": "COMMIT",
+    "t_ms": 643.62
+   },
+   {
+    "decision": 12,
+    "grant": 12,
+    "epoch": 13,
+    "process": "A",
+    "version": "3.3.0",
+    "actor": "old_worker",
+    "source": "alternate",
+    "enabled": [
+     "old_worker"
+    ],
+    "gated": [],
+    "blocked": {},
+    "kind": "execute",
+    "statement_id": "f835132a0a32",
+    "sql": "SELECT id, status, task_name, priority, lock, queueing_lock, args, scheduled_at, queue_name, attempts, worker_id FROM procrastinate_fetch_job_v2(%(queues)s::varchar[], %(worker_id)s);",
+    "t_ms": 696.6
+   },
+   {
+    "decision": 13,
+    "grant": 13,
+    "epoch": 14,
+    "process": "A",
+    "version": "3.3.0",
+    "actor": "old_worker",
+    "source": "alternate",
+    "enabled": [
+     "old_worker"
+    ],
+    "gated": [],
+    "blocked": {},
+    "kind": "commit",
+    "statement_id": "79663c1d3b43",
+    "sql": "COMMIT",
+    "t_ms": 749.06
+   },
+   {
+    "decision": 14,
+    "grant": 14,
+    "epoch": 15,
+    "process": "A",
+    "version": "3.3.0",
+    "actor": "old_worker",
+    "source": "alternate",
+    "enabled": [
+     "old_worker"
+    ],
+    "gated": [],
+    "blocked": {},
+    "kind": "execute",
+    "statement_id": "23b3375dd10c",
+    "sql": "SELECT procrastinate_retry_job_v1(%(job_id)s, %(retry_at)s, %(new_priority)s, %(new_queue_name)s, %(new_lock)s);",
+    "t_ms": 810.99
+   },
+   {
+    "decision": 15,
+    "grant": 15,
+    "epoch": 16,
+    "process": "A",
+    "version": "3.3.0",
+    "actor": "old_worker",
+    "source": "alternate",
+    "enabled": [
+     "old_worker"
+    ],
+    "gated": [],
+    "blocked": {},
+    "kind": "commit",
+    "statement_id": "79663c1d3b43",
+    "sql": "COMMIT",
+    "t_ms": 867.83
+   },
+   {
+    "decision": 16,
+    "grant": 16,
+    "epoch": 17,
+    "process": "A",
+    "version": "3.3.0",
+    "actor": "old_worker",
+    "source": "alternate",
+    "enabled": [
+     "old_worker"
+    ],
+    "gated": [],
+    "blocked": {},
+    "kind": "execute",
+    "statement_id": "f835132a0a32",
+    "sql": "SELECT id, status, task_name, priority, lock, queueing_lock, args, scheduled_at, queue_name, attempts, worker_id FROM procrastinate_fetch_job_v2(%(queues)s::varchar[], %(worker_id)s);",
+    "t_ms": 921.48
+   },
+   {
+    "decision": 17,
+    "grant": 17,
+    "epoch": 18,
+    "process": "A",
+    "version": "3.3.0",
+    "actor": "old_worker",
+    "source": "alternate",
+    "enabled": [
+     "old_worker"
+    ],
+    "gated": [],
+    "blocked": {},
+    "kind": "commit",
+    "statement_id": "79663c1d3b43",
+    "sql": "COMMIT",
+    "t_ms": 980.21
+   },
+   {
+    "decision": 18,
+    "grant": 18,
+    "epoch": 19,
+    "process": "A",
+    "version": "3.3.0",
+    "actor": "old_worker",
+    "source": "alternate",
+    "enabled": [
+     "old_worker"
+    ],
+    "gated": [],
+    "blocked": {},
+    "kind": "execute",
+    "statement_id": "46012253eb46",
+    "sql": "SELECT procrastinate_finish_job_v1(%(job_id)s, %(status)s, %(delete_job)s);",
+    "t_ms": 1042.18
+   },
+   {
+    "decision": 19,
+    "grant": 19,
+    "epoch": 20,
+    "process": "A",
+    "version": "3.3.0",
+    "actor": "old_worker",
+    "source": "alternate",
+    "enabled": [
+     "old_worker"
+    ],
+    "gated": [],
+    "blocked": {},
+    "kind": "commit",
+    "statement_id": "79663c1d3b43",
+    "sql": "COMMIT",
+    "t_ms": 1094.29
+   },
+   {
+    "decision": 20,
+    "grant": 20,
+    "epoch": 21,
+    "process": "A",
+    "version": "3.3.0",
+    "actor": "old_worker",
+    "source": "alternate",
+    "enabled": [
+     "old_worker"
+    ],
+    "gated": [],
+    "blocked": {},
+    "kind": "execute",
+    "statement_id": "f835132a0a32",
+    "sql": "SELECT id, status, task_name, priority, lock, queueing_lock, args, scheduled_at, queue_name, attempts, worker_id FROM procrastinate_fetch_job_v2(%(queues)s::varchar[], %(worker_id)s);",
+    "t_ms": 1148.47
+   },
+   {
+    "decision": 21,
+    "grant": 21,
+    "epoch": 22,
+    "process": "A",
+    "version": "3.3.0",
+    "actor": "old_worker",
+    "source": "alternate",
+    "enabled": [
+     "old_worker"
+    ],
+    "gated": [],
+    "blocked": {},
+    "kind": "commit",
+    "statement_id": "79663c1d3b43",
+    "sql": "COMMIT",
+    "t_ms": 1205.17
+   },
+   {
+    "decision": 22,
+    "grant": 22,
+    "epoch": 23,
+    "process": "A",
+    "version": "3.3.0",
+    "actor": "old_worker",
+    "source": "alternate",
+    "enabled": [
+     "old_worker"
+    ],
+    "gated": [],
+    "blocked": {},
+    "kind": "execute",
+    "statement_id": "5d457810260d",
+    "sql": "SELECT procrastinate_unregister_worker_v1(%(worker_id)s)",
+    "t_ms": 1257.25
+   },
+   {
+    "decision": 23,
+    "grant": 23,
+    "epoch": 24,
+    "process": "A",
+    "version": "3.3.0",
+    "actor": "old_worker",
+    "source": "alternate",
+    "enabled": [
+     "old_worker"
+    ],
+    "gated": [],
+    "blocked": {},
+    "kind": "commit",
+    "statement_id": "79663c1d3b43",
+    "sql": "COMMIT",
+    "t_ms": 1311.08
+   }
+  ],
+  "statements": {
+   "c6e63dc79a28": "SELECT unnest( procrastinate_defer_jobs_v1( %(jobs)s::procrastinate_job_to_defer_v1[] ) ) AS id;",
+   "79663c1d3b43": "COMMIT",
+   "20ea599ae729": "SELECT * FROM procrastinate_prune_stalled_workers_v1(%(seconds_since_heartbeat)s)",
+   "c1f586449d9e": "SELECT * FROM procrastinate_register_worker_v1()",
+   "f835132a0a32": "SELECT id, status, task_name, priority, lock, queueing_lock, args, scheduled_at, queue_name, attempts, worker_id FROM procrastinate_fetch_job_v2(%(queues)s::varchar[], %(worker_id)s);",
+   "46012253eb46": "SELECT procrastinate_finish_job_v1(%(job_id)s, %(status)s, %(delete_job)s);",
+   "23b3375dd10c": "SELECT procrastinate_retry_job_v1(%(job_id)s, %(retry_at)s, %(new_priority)s, %(new_queue_name)s, %(new_lock)s);",
+   "5d457810260d": "SELECT procrastinate_unregister_worker_v1(%(worker_id)s)"
+  },
+  "events": [
+   {
+    "event": "start",
+    "t_ms": 35.6,
+    "pids": {
+     "583": "old_defer",
+     "584": "old_worker"
+    }
+   },
+   {
+    "event": "stop",
+    "why": "covered",
+    "at_grant": 0,
+    "t_ms": 35.79
+   },
+   {
+    "event": "bye",
+    "process": "A",
+    "t_ms": 1386.64
+   },
+   {
+    "event": "end",
+    "t_ms": 1386.65
+   }
+  ],
+  "grants": 24,
+  "elapsed_ms": 1386.66
+ },
+ "corroboration": {
+  "ok": true,
+  "matched": 36,
+  "params_compared": 20,
+  "params_mismatched": 0,
+  "params_unchecked": 3,
+  "client_texts_matched": 0,
+  "unchecked_kinds": {
+   "list": 2,
+   "float": 1
+  },
+  "sessions": {
+   "583": "old_defer",
+   "584": "old_worker"
+  },
+  "problems": []
+ },
+ "isolation_checks": {
+  "A": {
+   "uid": true,
+   "root_writable": true,
+   "app_writable": true,
+   "tmp_writable": true,
+   "ssh_dir_present": true,
+   "secret_like_env": true,
+   "host_55432_unreachable": true,
+   "internet_tcp_unreachable": true,
+   "internet_dns_unresolved": true,
+   "pids_limited": true,
+   "memory_limited": true
+  },
+  "coordinator": {
+   "uid": true,
+   "root_writable": true,
+   "app_writable": true,
+   "tmp_writable": true,
+   "ssh_dir_present": true,
+   "secret_like_env": true,
+   "host_55432_unreachable": true,
+   "internet_tcp_unreachable": true,
+   "internet_dns_unresolved": true,
+   "pids_limited": true,
+   "memory_limited": true
+  }
+ },
+ "probes": {
+  "A": {
+   "uid": 65534,
+   "gid": 65534,
+   "root_writable": false,
+   "app_writable": false,
+   "tmp_writable": true,
+   "ssh_dir_present": false,
+   "env_keys": [
+    "DS_CO_NONCE",
+    "DS_CO_PLAN",
+    "DS_MODE",
+    "DS_PG_DB",
+    "DS_PG_HOST",
+    "DS_PG_PASSWORD",
+    "DS_PG_PORT",
+    "DS_PG_USER",
+    "DS_SCHEMA",
+    "GPG_KEY",
+    "HOME",
+    "HOSTNAME",
+    "LANG",
+    "PATH",
+    "PIP_DISABLE_PIP_VERSION_CHECK",
+    "PIP_NO_CACHE_DIR",
+    "PYTHONDONTWRITEBYTECODE",
+    "PYTHON_SHA256",
+    "PYTHON_VERSION"
+   ],
+   "secret_like_env": [],
+   "host_55432": "refused:gaierror",
+   "host_gateway_55441": "refused:gaierror",
+   "internet_tcp": "refused:OSError",
+   "internet_dns": "unresolved:gaierror",
+   "nproc_limit": "64",
+   "memory_limit": "536870912"
+  },
+  "coordinator": {
+   "uid": 65534,
+   "gid": 65534,
+   "root_writable": false,
+   "app_writable": false,
+   "tmp_writable": true,
+   "ssh_dir_present": false,
+   "env_keys": [
+    "DS_CO_NONCE",
+    "DS_CO_SPEC",
+    "DS_MODE",
+    "GPG_KEY",
+    "HOME",
+    "HOSTNAME",
+    "LANG",
+    "PATH",
+    "PIP_DISABLE_PIP_VERSION_CHECK",
+    "PIP_NO_CACHE_DIR",
+    "PYTHONDONTWRITEBYTECODE",
+    "PYTHON_SHA256",
+    "PYTHON_VERSION"
+   ],
+   "secret_like_env": [],
+   "host_55432": "refused:gaierror",
+   "host_gateway_55441": "refused:gaierror",
+   "internet_tcp": "refused:OSError",
+   "internet_dns": "unresolved:gaierror",
+   "nproc_limit": "64",
+   "memory_limit": "536870912"
+  }
+ },
+ "isolation_ok": true,
+ "versions": {
+  "A": "3.3.0"
+ },
+ "pinned_sources": {
+  "A": {
+   "version": "3.3.0",
+   "procrastinate/sql/queries.sql": "c9b3fb0be4e26bac6612c3a3d4883bdb8e129bac6175362a224e4b7cb643ff9d",
+   "procrastinate/sql/schema.sql": "bcc21931d84c4d61d319719a59d31f5322e180ab5ccd04db1875a1a7b6f59b03",
+   "procrastinate/app.py": "1147f1a56d55a23c396d364183296dc9ffd66bfc3b16d25e2033752276b35797",
+   "procrastinate/worker.py": "c4f6108f93471e145d6ae143d17a7112bc42fd7f9dc12ba102b301847aa421d0",
+   "procrastinate/manager.py": "2e41449c71b9b6ed74b5872fec3e103ddb4597646449dffab11e1e3de2107efe",
+   "procrastinate/psycopg_connector.py": "d93aaa49a39c1c5822c6fb34ddec6121969f454b253159a7abc891ba7d1c4c9e"
+  }
+ },
+ "outcomes": {
+  "A": "completed"
+ },
+ "exceptions": {},
+ "raw_results": {
+  "old_defer": {
+   "version": "3.3.0",
+   "pushed": [
+    {
+     "n": 3,
+     "id": 4,
+     "kind": "ok",
+     "version": "3.3.0",
+     "max_attempts": 0
+    },
+    {
+     "n": 4,
+     "id": 5,
+     "kind": "fail",
+     "version": "3.3.0",
+     "max_attempts": 1
+    }
+   ]
+  },
+  "old_worker": {
+   "version": "3.3.0",
+   "handled": [
+    3,
+    4,
+    4
+   ],
+   "succeeded": [
+    3
+   ],
+   "worker_stopped": true,
+   "stopped_by": "drained"
+  }
+ },
+ "final_state": {
+  "schema_present": true,
+  "retry_v1": true,
+  "retry_v2": true,
+  "jobs": [
+   {
+    "id": 1,
+    "task_name": "ds_ok",
+    "n": 0,
+    "status": "succeeded",
+    "attempts": 1,
+    "queue_name": "ds_q"
+   },
+   {
+    "id": 2,
+    "task_name": "ds_fail",
+    "n": 1,
+    "status": "failed",
+    "attempts": 2,
+    "queue_name": "ds_q"
+   },
+   {
+    "id": 3,
+    "task_name": "ds_flaky",
+    "n": 2,
+    "status": "failed",
+    "attempts": 2,
+    "queue_name": "ds_q"
+   },
+   {
+    "id": 4,
+    "task_name": "ds_ok",
+    "n": 3,
+    "status": "succeeded",
+    "attempts": 1,
+    "queue_name": "ds_q"
+   },
+   {
+    "id": 5,
+    "task_name": "ds_fail",
+    "n": 4,
+    "status": "failed",
+    "attempts": 2,
+    "queue_name": "ds_q"
+   }
+  ],
+  "events": [
+   {
+    "job_id": 1,
+    "type": "deferred"
+   },
+   {
+    "job_id": 2,
+    "type": "deferred"
+   },
+   {
+    "job_id": 3,
+    "type": "deferred"
+   },
+   {
+    "job_id": 1,
+    "type": "started"
+   },
+   {
+    "job_id": 1,
+    "type": "succeeded"
+   },
+   {
+    "job_id": 2,
+    "type": "started"
+   },
+   {
+    "job_id": 2,
+    "type": "scheduled"
+   },
+   {
+    "job_id": 2,
+    "type": "deferred_for_retry"
+   },
+   {
+    "job_id": 2,
+    "type": "started"
+   },
+   {
+    "job_id": 2,
+    "type": "failed"
+   },
+   {
+    "job_id": 3,
+    "type": "started"
+   },
+   {
+    "job_id": 3,
+    "type": "scheduled"
+   },
+   {
+    "job_id": 3,
+    "type": "deferred_for_retry"
+   },
+   {
+    "job_id": 3,
+    "type": "started"
+   },
+   {
+    "job_id": 3,
+    "type": "failed"
+   },
+   {
+    "job_id": 4,
+    "type": "deferred"
+   },
+   {
+    "job_id": 5,
+    "type": "deferred"
+   },
+   {
+    "job_id": 4,
+    "type": "started"
+   },
+   {
+    "job_id": 4,
+    "type": "succeeded"
+   },
+   {
+    "job_id": 5,
+    "type": "started"
+   },
+   {
+    "job_id": 5,
+    "type": "scheduled"
+   },
+   {
+    "job_id": 5,
+    "type": "deferred_for_retry"
+   },
+   {
+    "job_id": 5,
+    "type": "started"
+   },
+   {
+    "job_id": 5,
+    "type": "failed"
+   }
+  ],
+  "trigger_records_retried": false
+ },
+ "final_state_digest": "c53aea45e1d9cf1d0e5934c28b820bb7fb828bfc942d6347599dcb95a6f916b2",
+ "trace_sha256": {
+  "A": "441e21a23b1d99fcfcfc626a66663fbb6631c776b2a77c20a57301ddc72629e9"
+ },
+ "outputs": {
+  "coordinator": {
+   "exit": 0,
+   "stderr_tail": ""
+  },
+  "A": {
+   "exit": 0,
+   "stderr_tail": "Job ds_fail[5](n=4) ended with status: Error, lasted 0.000 s\nTraceback (most recent call last):\n  File \"/app/src/procrastinate/worker.py\", line 266, in _process_job\n    job_result.result = await ensure_async()\n                        ^^^^^^^^^^^^^^^^^^^^\n  File \"/app/src/procrastinate/worker.py\", line 252, in ensure_async\n    task_result = await await_func(*job_args, **job.task_kwargs)\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/app/src/deployspecter/experimental/thirdparty/procrastinate_adapter.py\", line 109, in ds_fail\n    raise RuntimeError(\"ds_fail: always fails\")\nRuntimeError: ds_fail: always fails\n"
+  }
+ },
+ "sound": true,
+ "complete": true,
+ "verdict": "SOUND",
+ "properties": {
+  "phase_only": true
+ },
+ "teardown": {
+  "containers_removed": true,
+  "network_removed": true,
+  "workdir_removed": true,
+  "protected_unchanged": true
+ }
+}
