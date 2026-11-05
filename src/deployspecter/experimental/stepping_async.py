@@ -85,6 +85,38 @@ class AsyncSteppedCursor(psycopg.AsyncCursor):
         raise Refused("streaming cursors aren't supported by the stepping prototype")
 
 
+class AsyncSteppedRawCursor(psycopg.AsyncRawCursor):
+    """``AsyncRawCursor`` (PostgreSQL-native ``$1`` placeholders), gated like ``AsyncSteppedCursor``. psycopg builds
+    raw cursors only when asked to, so an adapter must construct this class itself; a plain ``AsyncRawCursor(conn)``
+    built elsewhere bypasses the gate and is left to the server-log corroboration."""
+
+    async def execute(self, query: Any, params: Any = None, *, prepare: bool | None = None,
+                      binary: bool | None = None) -> AsyncSteppedRawCursor:
+        text = query if isinstance(query, str) else query.as_string(self.connection)
+        actor = self.connection._ds_actor  # type: ignore[attr-defined]
+
+        async def run() -> Any:
+            await psycopg.AsyncRawCursor.execute(self, query, params, prepare=prepare, binary=binary)
+            return self
+
+        await actor.run.gate(actor, "execute", text, params, run, cursor=self, raw=True)
+        return self
+
+    async def executemany(self, query: Any, params_seq: Any, *, returning: bool = False) -> None:
+        text = query if isinstance(query, str) else query.as_string(self.connection)
+        params_seq = list(params_seq)
+        actor = self.connection._ds_actor  # type: ignore[attr-defined]
+        await actor.run.gate(actor, "executemany", text, params_seq,
+                             lambda: psycopg.AsyncRawCursor.executemany(self, query, params_seq, returning=returning),
+                             raw=True)
+
+    def copy(self, *_a: Any, **_k: Any) -> Any:
+        raise Refused("COPY isn't supported by the stepping prototype")
+
+    def stream(self, *_a: Any, **_k: Any) -> Any:
+        raise Refused("streaming cursors aren't supported by the stepping prototype")
+
+
 class AsyncSteppedConnection(psycopg.AsyncConnection):
     """A psycopg 3 AsyncConnection whose every supported database operation passes the actor's gate."""
 
@@ -129,10 +161,18 @@ class AsyncSteppedConnection(psycopg.AsyncConnection):
         raise Refused("pipeline mode isn't supported by the stepping prototype")
         yield  # pragma: no cover
 
+    async def notifies(self, *args: Any, **kwargs: Any) -> AsyncIterator[Any]:
+        """Notifications are received, not sent, so they reach no gate; each one is recorded in the trace."""
+        a = self._ds_actor
+        async for note in psycopg.AsyncConnection.notifies(self, *args, **kwargs):
+            a.run.record_notification(a, note)
+            yield note
+
 
 @dataclass
 class AsyncActor(Actor):
     task: asyncio.Task[Any] | None = None
+    lock: asyncio.Lock | None = None  # serialize_tasks: the actor's tasks take turns on its connection
 
 
 # The actor a task acts for. Set in the actor's own task; a task it (or a framework on its behalf) creates inherits a
@@ -178,12 +218,36 @@ class AsyncRun:
 
     # -- the gate, in the actor's task
 
+    def record_notification(self, actor: AsyncActor, note: Any) -> None:
+        current = asyncio.current_task()
+        self._append(OpRecord(seq=-1, actor=actor.name, kind="notify_received", sql=f"NOTIFY {note.channel}",
+                              statement_id=statement_id(f"NOTIFY {note.channel}"), params=sanitize([note.payload]),
+                              provenance={"actor": actor.name, "handler": actor.handler.name,
+                                          "app_version": actor.handler.app_version,
+                                          "invocation_id": actor.invocation_id,
+                                          "task": current.get_name() if current else None,
+                                          "sender_pid": note.pid, "call_site": call_sites()[0],
+                                          "framework_entry": call_sites()[1], "txn": None},
+                              outcome="ok", requested_ms=self._ms(), completed_ms=self._ms()))
+
     async def gate(self, actor: AsyncActor, kind: str, text: str, params: Any, call: Callable[[], Awaitable[Any]],
-                   *, cursor: Any = None, aborting: bool = False) -> Any:
+                   *, cursor: Any = None, aborting: bool = False, raw: bool = False) -> Any:
         assert self.cv is not None
         current = asyncio.current_task()
         if current is not actor.task and _ACTING_FOR.get() is not actor:
             raise Refused(f"{actor.name}'s connection was used from another task")
+        if actor.handler.serialize_tasks and not aborting:
+            assert actor.lock is not None
+            async with actor.lock:  # this actor's other tasks wait here, outside the scheduler
+                return await self._gate(actor, kind, text, params, call, cursor=cursor, aborting=aborting, raw=raw,
+                                        current=current)
+        return await self._gate(actor, kind, text, params, call, cursor=cursor, aborting=aborting, raw=raw,
+                                current=current)
+
+    async def _gate(self, actor: AsyncActor, kind: str, text: str, params: Any,
+                    call: Callable[[], Awaitable[Any]], *, cursor: Any, aborting: bool, raw: bool,
+                    current: asyncio.Task[Any] | None) -> Any:
+        assert self.cv is not None
         if not aborting and (actor.request is not None or actor.state in ("pending", "granted", "executing",
                                                                           "blocked")):
             raise Refused(f"{actor.name}'s connection got a second operation while one was in flight")
@@ -195,7 +259,8 @@ class AsyncRun:
                 "logical_op": actor.ops, "session": {"backend_pid": actor.backend_pid},
                 "task": current.get_name() if current else None,
                 "on_behalf_of": actor.name if current is not actor.task else None,
-                "call_site": site, "framework_entry": entry, "txn": None}
+                "call_site": site, "framework_entry": entry, "txn": None,
+                "placeholders": "native" if raw else "psycopg"}
         op = OpRecord(seq=-1, actor=actor.name, kind=kind, sql=normal_sql(text), statement_id=statement_id(text),
                       params=sanitize(params), provenance=prov, requested_ms=self._ms())
         actor.ops += 1
@@ -360,6 +425,7 @@ class AsyncRun:
                 conn = await self.connect()
                 conn._ds_actor = a
                 a.conn, a.run, a.backend_pid = conn, self, conn.info.backend_pid
+                a.lock = asyncio.Lock()
                 a.invocation_id = f"{self.run_id}:{a.name}"
             for a in self.actors:
                 a.state = "running"
@@ -463,4 +529,5 @@ def async_actor_connection_factory(conninfo: dict[str, Any], limits: Limits, *, 
     return connect
 
 
-__all__ = ["AsyncActor", "AsyncRun", "AsyncSteppedConnection", "AsyncSteppedCursor", "async_actor_connection_factory"]
+__all__ = ["AsyncActor", "AsyncRun", "AsyncSteppedConnection", "AsyncSteppedCursor", "AsyncSteppedRawCursor",
+           "async_actor_connection_factory"]

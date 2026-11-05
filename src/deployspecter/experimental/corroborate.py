@@ -83,10 +83,11 @@ def _expected(op: Any) -> list[tuple[str, list[Any] | None]]:
     out: list[tuple[str, list[Any] | None]] = []
     if op.implicit_begin:
         out.append(("BEGIN", None))
+    native = (op.provenance or {}).get("placeholders") == "native"  # a raw cursor: the text is sent as written
     if op.kind == "execute":
-        out.append(bind(op.sql, op.params))
+        out.append((op.sql, list(op.params or [])) if native else bind(op.sql, op.params))
     elif op.kind == "executemany":
-        out += [bind(op.sql, p) for p in op.params]
+        out += [(op.sql, list(p)) if native else bind(op.sql, p) for p in op.params]
     elif op.kind == "transaction_enter":
         out.append(("BEGIN" if op.sql == "BEGIN" else "re:^SAVEPOINT ", None))
     elif op.kind == "transaction_exit":
@@ -106,6 +107,15 @@ def _value_matches(logged: str, want: Any) -> bool | None:
         return logged == ("'t'" if want else "'f'")
     if isinstance(want, int):
         return logged == f"'{want}'"
+    if isinstance(want, dict) and "bytes" in want:  # bytea is logged as '\x<hex>'
+        text = logged[1:-1] if logged.startswith("'") else ""
+        if not text.startswith("\\x"):
+            return False
+        try:
+            raw = bytes.fromhex(text[2:])
+        except ValueError:
+            return False
+        return len(raw) == want["bytes"] and hashlib.sha256(raw).hexdigest()[:12] == want["sha256"]
     if isinstance(want, dict) and "str" in want:
         text = logged[1:-1].replace("''", "'") if logged.startswith("'") else None
         return text is not None and len(text) == want["str"] and hashlib.sha256(

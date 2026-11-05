@@ -260,6 +260,10 @@ class Handler:
     # commute with every other actor's operations, so interleaving them can't change the outcome. Still gated,
     # recorded and corroborated.
     setup_sql: frozenset[str] = frozenset()
+    # Async engine only, opt-in for a framework that runs several tasks on one connection (a job queue's worker,
+    # heartbeat and listener): such tasks queue for the actor's connection in arrival order, as psycopg's own
+    # connection lock would make them, instead of being refused as concurrent use. Each operation is still gated.
+    serialize_tasks: bool = False
 
     def allows(self, text: str) -> bool:
         return normal_sql(text) in self.allowed_sql or normal_sql(text) in self.setup_sql

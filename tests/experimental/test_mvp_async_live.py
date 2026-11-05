@@ -256,3 +256,43 @@ class TestTaskIdentity:
         trace, c, leftovers, _ = run_handlers(target, ("a", concurrent, ["SELECT 1"]))
         assert trace.actors["a"]["exception_class"] == "refused"
         assert "in flight" in trace.actors["a"]["exception"] and leftovers == 0
+
+
+class TestFrameworkSupport:
+    """What a job-queue adapter needs: native-placeholder raw cursors, LISTEN/NOTIFY, and several framework tasks
+    taking turns on one connection (Handler.serialize_tasks)."""
+
+    def test_raw_cursor_listen_notify_and_serialized_tasks_are_gated_recorded_and_corroborated(self, target):
+        async def framework(conn):
+            await conn.set_autocommit(True)
+            await conn.execute('LISTEN "ds_chan"')
+            cur = sa.AsyncSteppedRawCursor(conn)
+            await cur.execute("SELECT $1::int, $2::bytea", (5, b"hi"))
+            first = await cur.fetchone()
+            two = await asyncio.gather(  # two framework tasks on one connection: they take turns, both gated
+                asyncio.create_task(sa.AsyncSteppedRawCursor(conn).execute("SELECT pg_notify($1, $2)",
+                                                                           ("ds_chan", "job-1"))),
+                asyncio.create_task(sa.AsyncSteppedRawCursor(conn).execute("SELECT $1::int", (7,))))
+            notes = [n.payload async for n in conn.notifies(timeout=2.0, stop_after=1)]
+            return {"first": first, "tasks": len(two), "notes": notes}
+
+        admin = target.admin()
+        try:
+            sync_app.reset(admin, SEED)
+            lim = st.Limits()
+            allowed = frozenset(st.normal_sql(s) for s in ('LISTEN "ds_chan"', "SELECT $1::int, $2::bytea",
+                                                            "SELECT pg_notify($1, $2)", "SELECT $1::int"))
+            actor = st.Actor("q", st.Handler("test", "framework", framework, allowed, {}, serialize_tasks=True), {})
+            connect = sa.async_actor_connection_factory(target.conninfo(), lim, search_path=A.SCHEMA)
+            run = sa.AsyncRun([actor], connect, hz.async_monitor(target), limits=lim, run_id="framework")
+            trace, c = hz.corroborated(admin, run, user=target.user)
+        finally:
+            admin.close()
+        assert trace.actors["q"]["exception"] is None
+        assert trace.raw_results["q"] == {"first": (5, b"hi"), "tasks": 2, "notes": ["job-1"]}
+        received = [op for op in trace.records if op.kind == "notify_received"]
+        assert len(received) == 1 and received[0].sql == "NOTIFY ds_chan"
+        raw = [op for op in trace.records if op.provenance.get("placeholders") == "native"]
+        assert len(raw) == 3 and {op.provenance["on_behalf_of"] for op in raw[1:]} == {"q"}
+        assert c["ok"], c["problems"]
+        assert c["params_compared"] == 5 and c["params_unchecked"] == 0  # incl. the bytea, compared by digest
