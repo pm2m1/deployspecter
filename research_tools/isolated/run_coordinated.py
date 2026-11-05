@@ -160,7 +160,11 @@ def prephases(target: hz.Target, images: dict[str, Any], out: Path) -> list[dict
 
 
 def simultaneous(target: hz.Target, images: dict[str, Any], spec: dict[str, Any], policy: dict[str, Any],
-                 out: Path, *, label: str) -> dict[str, Any]:
+                 out: Path, *, label: str, app: Any = None) -> dict[str, Any]:
+    """``app``: optional hooks for another application (``schema``, ``inside_mode``, ``state(admin)``,
+    ``precondition(initial, spec)`` returning a record or raising, ``check(final, results, spec, quiescent)``).
+    Without it, the Chancy behaviour, unchanged."""
+    schema = app.schema if app else SCHEMA
     before = ri.protected_state()
     work = Path(tempfile.mkdtemp(prefix="ds_coord_"))
     nonce = secrets.token_hex(4)
@@ -179,14 +183,18 @@ def simultaneous(target: hz.Target, images: dict[str, Any], spec: dict[str, Any]
         result["network_internal"] = ri.docker("network", "inspect", "-f", "{{.Internal}}", net).stdout.strip()
         admin = target.admin()
         try:
-            initial = {**ri.chancy_state(admin, SCHEMA), "jobs_detail": jobs_detail(admin)}
-            result["precondition"] = {"schema_version": initial["schema_version"],
-                                      "jobs_before": len(initial["jobs_detail"])}
-            versions = {v.get("version_of"): v.get("version") for v in initial["schema_version"]}
-            if versions.get("chancy") != spec.get("expect_schema", "8"):
-                raise RuntimeError(f"the migration isn't complete before the window: {initial['schema_version']}")
-            if initial["jobs_detail"]:
-                raise RuntimeError("jobs exist before the simultaneous phase")
+            if app is not None:
+                initial = app.state(admin)
+                result["precondition"] = app.precondition(initial, spec)
+            else:
+                initial = {**ri.chancy_state(admin, SCHEMA), "jobs_detail": jobs_detail(admin)}
+                result["precondition"] = {"schema_version": initial["schema_version"],
+                                          "jobs_before": len(initial["jobs_detail"])}
+                versions = {v.get("version_of"): v.get("version") for v in initial["schema_version"]}
+                if versions.get("chancy") != spec.get("expect_schema", "8"):
+                    raise RuntimeError(f"the migration isn't complete before the window: {initial['schema_version']}")
+                if initial["jobs_detail"]:
+                    raise RuntimeError("jobs exist before the simultaneous phase")
             result["initial_state_digest"] = oracle.digest(initial)
             from deployspecter.live.serverlog import ServerLog
             log = ServerLog(lambda q, prm=None: admin.execute(q, prm).fetchone())
@@ -204,7 +212,8 @@ def simultaneous(target: hz.Target, images: dict[str, Any], spec: dict[str, Any]
             for p, actors in spec["processes"].items():
                 envs[p] = ["DS_PG_HOST=ds-mvp-pg", "DS_PG_PORT=5432", f"DS_PG_USER={target.user}",
                            f"DS_PG_PASSWORD={target.password}", f"DS_PG_DB={target.dbname}",
-                           "DS_MODE=chancy_coordinated", f"DS_SCHEMA={SCHEMA}", f"DS_CO_NONCE={token}",
+                           f"DS_MODE={app.inside_mode if app else 'chancy_coordinated'}", f"DS_SCHEMA={schema}",
+                           f"DS_CO_NONCE={token}",
                            "DS_CO_PLAN=" + json.dumps({"process": p, "coordinator": ["ds-coord", 7777],
                                                        "markers": MARKERS, "actors": actors, "run_s": 160}),
                            *[f"{k}={v}" for k, v in images.get("env", {}).get(p, {}).items()]]
@@ -255,7 +264,7 @@ def simultaneous(target: hz.Target, images: dict[str, Any], spec: dict[str, Any]
             if not gone:
                 corr["ok"] = False
                 corr["problems"].append("a session outlived the run")
-            final = {**ri.chancy_state(admin, SCHEMA), "jobs_detail": jobs_detail(admin)}
+            final = app.state(admin) if app else {**ri.chancy_state(admin, SCHEMA), "jobs_detail": jobs_detail(admin)}
             result["sessions_left_after_run"] = [list(r) for r in sessions_left(admin)]
         finally:
             admin.close()
@@ -301,7 +310,8 @@ def simultaneous(target: hz.Target, images: dict[str, Any], spec: dict[str, Any]
             sound=bool(sound), complete=complete,
             verdict="REFUSED" if not sound else "SOUND" if complete else "INCOMPLETE")
         if sound and complete:  # an incomplete run (stopped on the timeout) gets no property verdict
-            result["properties"] = cp.check(final["jobs_detail"], results, spec, quiescent=quiescent)
+            result["properties"] = (app.check(final, results, spec, quiescent) if app else
+                                    cp.check(final["jobs_detail"], results, spec, quiescent=quiescent))
         for p, t in traces.items():
             (out / f"{p}.trace.json").write_text(json.dumps(t, indent=1, default=str))
         (out / "coordinator.json").write_text(json.dumps(coord, indent=1, default=str))
