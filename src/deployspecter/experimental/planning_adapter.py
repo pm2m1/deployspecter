@@ -134,7 +134,8 @@ PLANNER_OUTCOMES = {"unsupported_goal": "unsupported", "invalid_trusted_context"
 CATALOG_OUTCOMES = {"MISMATCH": "invalid", "UNSUPPORTED": "unsupported", "INCOMPLETE": "indeterminate"}
 
 
-def plan(document: Any, *, snapshot: dict[str, Any] | None = None) -> Plan:
+def plan(document: Any, *, snapshot: dict[str, Any] | None = None,
+         snapshot_source: tuple[str, str, str] | None = None) -> Plan:
     """Every planning stage on ``document``, offline. The first stage that doesn't succeed decides the outcome."""
     out = Plan("indeterminate", "start")
     registry = tp.build_registry()
@@ -172,8 +173,9 @@ def plan(document: Any, *, snapshot: dict[str, Any] | None = None) -> Plan:
     context = sc.context_config(registry_digest=registry.digest, schema_digest=snap_digest)
     context_trust = sp.TrustedPlanning(reviewer=tp.DRY_RUN, pinned_digest=sp.context_digest(
         sp.SchemaContextConfig.model_validate(context)))
-    snapshot_trust = cv.TrustedSnapshot(exporter=tp.DRY_RUN, source_label="hand_written_track_a_fixture",
-                                        exported_on="2026-11-04", pinned_digest=snap_digest)
+    exporter, label, exported_on = snapshot_source or (tp.DRY_RUN, "hand_written_track_a_fixture", "2026-11-04")
+    snapshot_trust = cv.TrustedSnapshot(exporter=exporter, source_label=label, exported_on=exported_on,
+                                        pinned_digest=snap_digest)
     out.digests.update(snapshot=snap_digest, context=context_trust.pinned_digest)
 
     planned = sp.plan_state(out.validated, registry=registry, contracts=contracts, context=context,
@@ -356,6 +358,71 @@ def invocations(p: Plan) -> list[dict[str, Any]]:
             raise AdapterRefused("a workload argument collides with the harness-owned variant switch")
         out.append({"actor": actor.actor, "app_version": actor.application_version, "handler": actor.entrypoint,
                     "args": args})
+    return out
+
+
+LIVE_EXPORTER = "mvp_live_catalog_export"
+
+
+def live_snapshot(target: hz.Target) -> dict[str, Any]:
+    """The trusted schema (``live_app.reservations.SETUP_SQL``, hash-checked) created fresh in the disposable
+    database, then exported read-only from its catalog. No rows: the structure is what the verifier checks."""
+    from . import catalog_export as ce
+    app = load_trusted("live_app.reservations")
+    if hashlib.sha256(app.SETUP_SQL.encode()).hexdigest() != sc.SETUP_SQL_SHA256:
+        raise AdapterRefused("setup SQL isn't the reviewed live_app.reservations schema")
+    admin = target.admin()
+    try:
+        with admin.transaction():
+            admin.execute(sql.SQL("DROP SCHEMA IF EXISTS {} CASCADE").format(sql.Identifier(sc.SCHEMA)))
+            admin.execute(sql.SQL("CREATE SCHEMA {}").format(sql.Identifier(sc.SCHEMA)))
+            admin.execute(sql.SQL("SET LOCAL search_path = {}").format(sql.Identifier(sc.SCHEMA)))
+            admin.execute(app.SETUP_SQL)
+        return ce.export_snapshot(admin, sc.SCHEMA)
+    finally:
+        admin.close()
+
+
+def run_planned_live(target: hz.Target, document: Any, *, variant: str, schedule: list[str],
+                     corroborate: bool = False, alter: Any = None, **kw: Any) -> dict[str, Any]:
+    """Plan against the live catalog instead of the dry-run fixture; refuse unless the verifier says MATCH.
+
+    1. export the live catalog of the freshly created trusted schema (``alter``, a test hook, may change the schema
+       first, to show a mismatch is refused);
+    2. plan with that snapshot (its own trust labels; the snapshot's digest is the context's schema digest);
+    3. if bridged: reset with the planned rows, re-export, and refuse unless the structure is unchanged;
+    4. run, bound to the verified initial digest.
+    """
+    import datetime
+
+    from . import catalog_export as ce
+    snap = live_snapshot(target)
+    if alter is not None:
+        admin = target.admin()
+        try:
+            alter(admin)
+            snap = ce.export_snapshot(admin, sc.SCHEMA)
+        finally:
+            admin.close()
+    today = datetime.date.today().isoformat()
+    p = plan(document, snapshot=snap, snapshot_source=(LIVE_EXPORTER, "disposable_ds_mvp", today))
+    out: dict[str, Any] = {"plan": p, "snapshot": snap, "canonical_digest": ce.canonical_digest(snap),
+                           "result": None, "initial_digest": None}
+    if p.outcome != "bridged":
+        return out
+    fixture = PlannedReservations(p)
+    digest = fixture.verify_initial(target)
+    admin = target.admin()
+    try:
+        again = ce.export_snapshot(admin, sc.SCHEMA)
+    finally:
+        admin.close()
+    if ce.canonical_digest(again) != out["canonical_digest"]:
+        raise AdapterRefused(f"the catalog changed between the export and the run: {ce.diff(snap, again)}")
+    out["initial_digest"] = digest
+    out["result"] = hz.run_app(target, fixture, invocations(p), None, variant=variant, schedule=schedule,
+                               label=str(document.get("name", "")), corroborate=corroborate, expected_digest=digest,
+                               **kw)
     return out
 
 
