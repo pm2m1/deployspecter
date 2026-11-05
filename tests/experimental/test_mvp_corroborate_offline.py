@@ -110,3 +110,17 @@ from psycopg.types.json import Json, Jsonb  # noqa: E402
 ])
 def test_json_values_are_compared_by_value(value, logged, verdict):
     assert _value_matches(logged, sanitize(value)) is verdict
+
+
+U = "03fbb261-c406-2a37-a654-f9643fe1ba94"
+
+
+@pytest.mark.parametrize("sent, logged, verdict", [
+    (U.replace("-", ""), f"'{U}'", True),  # a 32-hex string the server coerced to uuid
+    (U, f"'{U}'", True),
+    (U.replace("-", "")[:-1] + "5", f"'{U}'", None),  # uuid-shaped but not the same: UNVERIFIED, never accepted
+    ("hello", f"'{U}'", None),
+    ("hello", "'world'", False),  # an ordinary string that differs: a mismatch
+])
+def test_strings_coerced_to_uuid_by_the_server(sent, logged, verdict):
+    assert _value_matches(logged, sanitize(sent)) is verdict

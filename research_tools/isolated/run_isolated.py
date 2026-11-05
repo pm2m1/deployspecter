@@ -64,6 +64,8 @@ LOCKED = ["psycopg", "psycopg-binary", "typing-extensions"]
 # The one third-party candidate whose migration path takes a caller-supplied connection (CORPUS_SHORTLIST.json v2).
 CHANCY_SDIST = "chancy-0.26.0.tar.gz"
 CHANCY_SDIST_SHA256 = "ac98b9c502d7bdb6f47d53fac1c22b4dc55e6cfcfec84b08b1a0cbaee45aef06"
+CHANCY_SDISTS = {CHANCY_SDIST: CHANCY_SDIST_SHA256,  # the mixed-version pilot also needs the previous release
+                 "chancy-0.25.1.tar.gz": "264ed4f732cb51c405b789e0727c4d045fdfa1dcee1e3eed6d762df6c44122d7"}
 CHANCY_EXTRA_REQUIREMENTS = ("psycopg-pool==3.3.3 "
                              "--hash=sha256:9b9cd6a4fcec47a410f7e82d408540e7f77b478509e91b44c1a5457a13e5ff37\n")
 CAPTURE_SCHEMA = "chancy_capture"
@@ -72,10 +74,10 @@ PGQUEUER_SDIST = "pgqueuer-1.6.0.tar.gz"
 PGQUEUER_SDIST_SHA256 = "ed1306404f96e25c84c951f434e8b06b091e04e0177af0d5441505a7944f156e"
 PGQUEUER_REQUIREMENTS = Path(__file__).with_name("requirements.pgqueuer.txt")
 SCHEMAS = {"smoke": CAPTURE_SCHEMA, "chancy": CAPTURE_SCHEMA, "pgqueuer": "pgq_capture",
-           "chancy-runtime": CAPTURE_SCHEMA}
+           "chancy-runtime": CAPTURE_SCHEMA, "chancy-plan": CAPTURE_SCHEMA}
 INSIDE_MODE = {"smoke": "smoke", "chancy": "chancy_migrate", "pgqueuer": "pgqueuer_lifecycle",
-               "chancy-runtime": "chancy_runtime"}
-CAPTURE_MODES = ("chancy", "pgqueuer", "chancy-runtime")
+               "chancy-runtime": "chancy_runtime", "chancy-plan": "chancy_plan"}
+CAPTURE_MODES = ("chancy", "pgqueuer", "chancy-runtime", "chancy-plan")
 PGQ_DEFAULT_WORKLOAD = {"jobs": [{"payload": "alpha", "priority": 0}, {"payload": "beta", "priority": 0}],
                         "batch_size": 1}
 EXPECTED_PROBES = {"uid": 65534, "root_writable": False, "app_writable": False, "tmp_writable": True,
@@ -121,12 +123,12 @@ def build_image(work: Path, *, chancy_sdist: Path | None = None, pgqueuer_sdist:
     if chancy_sdist is not None:
         import tarfile
         got = hashlib.sha256(chancy_sdist.read_bytes()).hexdigest()
-        if chancy_sdist.name != CHANCY_SDIST or got != CHANCY_SDIST_SHA256:
-            raise RuntimeError(f"{chancy_sdist.name} isn't the pinned sdist (sha256 {got[:12]})")
+        if CHANCY_SDISTS.get(chancy_sdist.name) != got:
+            raise RuntimeError(f"{chancy_sdist.name} isn't a pinned sdist (sha256 {got[:12]})")
         unpack = work / "sdist"
         with tarfile.open(chancy_sdist) as tf:
             tf.extractall(unpack, filter="data")  # data only: no links out, no device files, no absolute paths
-        shutil.copytree(unpack / "chancy-0.26.0" / "chancy", ctx / "app" / "src" / "chancy")
+        shutil.copytree(unpack / chancy_sdist.name.removesuffix(".tar.gz") / "chancy", ctx / "app" / "src" / "chancy")
         extra = CHANCY_EXTRA_REQUIREMENTS
     for rel in PAYLOAD:
         dst = ctx / "app" / "src" / rel
@@ -151,7 +153,8 @@ def protected_state() -> str:
 
 def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path, image: tuple[str, str],
               mode: str = "smoke", pgq_variant: str = "adapter", chancy_variant: str = "pool_only",
-              pgq_workload: dict[str, Any] | None = None) -> dict[str, Any]:
+              pgq_workload: dict[str, Any] | None = None, fresh_schema: bool = True, keep_schema: bool = False,
+              extra_env: dict[str, str] | None = None) -> dict[str, Any]:
     before = protected_state()
     work = Path(tempfile.mkdtemp(prefix="ds_iso_"))
     nonce = secrets.token_hex(4)
@@ -169,11 +172,14 @@ def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path
         try:
             schema = SCHEMAS[mode]
             if mode in CAPTURE_MODES:
-                admin.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")
-                admin.execute(f"CREATE SCHEMA {schema}")
+                if fresh_schema:
+                    admin.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")
+                    admin.execute(f"CREATE SCHEMA {schema}")
                 initial = {"catalog": catalog(admin, schema)}
-                if initial["catalog"]:
+                if fresh_schema and initial["catalog"]:
                     raise RuntimeError("the capture schema isn't empty")
+                if mode == "chancy-plan":
+                    initial.update(chancy_state(admin, schema))
                 digest = oracle.digest(initial)
             else:
                 app.reset(admin, seed)
@@ -191,7 +197,8 @@ def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path
                 f"DS_SCHEDULE={json.dumps(schedule)}", f"DS_VARIANT={variant}",
                 f"DS_MODE={INSIDE_MODE[mode]}", f"DS_SCHEMA={schema}", f"DS_PGQ_VARIANT={pgq_variant}",
                 f"DS_CHANCY_VARIANT={chancy_variant}",
-                f"DS_PGQ_WORKLOAD={json.dumps(pgq_workload or PGQ_DEFAULT_WORKLOAD)}"]) + "\n")
+                f"DS_PGQ_WORKLOAD={json.dumps(pgq_workload or PGQ_DEFAULT_WORKLOAD)}",
+                *[f"{k}={v}" for k, v in (extra_env or {}).items()]]) + "\n")
             envfile.chmod(0o600)
             admin.execute(f"SELECT '{start}'")
             started = time.monotonic()
@@ -230,11 +237,11 @@ def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path
                 final = {"catalog": catalog(admin, schema)}
             elif mode == "pgqueuer":
                 final = {"catalog": catalog(admin, schema), **pgqueuer_state(admin, schema)}
-            elif mode == "chancy-runtime":
+            elif mode in ("chancy-runtime", "chancy-plan"):
                 final = {"catalog": catalog(admin, schema), **chancy_state(admin, schema)}
             else:
                 final = oracle.read_state(admin)
-            if mode in CAPTURE_MODES:
+            if mode in CAPTURE_MODES and not keep_schema:
                 admin.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")
         finally:
             admin.close()
@@ -254,9 +261,9 @@ def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path
                       initial_state_digest=digest, final_state=final, final_state_digest=oracle.digest(final),
                       oracle_violations=(None if mode == "chancy" else pgqueuer_check(
                                              final, inside["raw_results"], pgq_workload or PGQ_DEFAULT_WORKLOAD)
-                                         if mode == "pgqueuer" else (chancy_concurrent_check if chancy_variant ==
-                                                                     "concurrent" else chancy_check)(
-                                             final, inside["raw_results"])
+                                         if mode == "pgqueuer" else None if mode == "chancy-plan" else (
+                                             chancy_concurrent_check if chancy_variant == "concurrent"
+                                             else chancy_check)(final, inside["raw_results"])
                                          if mode == "chancy-runtime" else oracle.check(final, backfill_done=done)),
                       pinned_sources=inside.get("pinned_sources"),
                       corroboration=corr,
@@ -325,11 +332,94 @@ def pgqueuer_state(admin: Any, schema: str) -> dict[str, Any]:
 
 def chancy_state(admin: Any, schema: str) -> dict[str, Any]:
     if not admin.execute("SELECT to_regclass(%s) IS NOT NULL", (f"{schema}.chancy_jobs",)).fetchone()[0]:
-        return {"jobs": []}
+        return {"jobs": [], "schema_version": []}
+    has_claim = admin.execute("SELECT count(*) FROM information_schema.columns WHERE table_schema = %s AND "
+                              "table_name = 'chancy_jobs' AND column_name = 'claim_id'", (schema,)).fetchone()[0]
+    claim = ", claim_id IS NOT NULL AS has_claim_id" if has_claim else ""
     cur = admin.execute(f"SELECT id::text AS id, queue, func, state, attempts, kwargs::text AS kwargs, "
-                        f"completed_at IS NOT NULL AS completed FROM {schema}.chancy_jobs ORDER BY created_at")
+                        f"completed_at IS NOT NULL AS completed{claim} FROM {schema}.chancy_jobs ORDER BY created_at")
     names = [d.name for d in cur.description]
-    return {"jobs": [dict(zip(names, r, strict=True)) for r in cur.fetchall()]}
+    jobs = [dict(zip(names, r, strict=True)) for r in cur.fetchall()]
+    cur = admin.execute(f"SELECT * FROM {schema}.chancy_schema_version")
+    names = [d.name for d in cur.description]
+    return {"jobs": jobs, "schema_version": [{k: str(v) for k, v in zip(names, r, strict=True)}
+                                             for r in cur.fetchall()]}
+
+
+def chancy_mixed_check(final: dict[str, Any], phases: list[dict[str, Any]]) -> list[str]:
+    """Independent of either version's code, from Chancy's documented job states and the workload:
+    M1 exactly the pushed jobs exist; M2 each reached 'succeeded', with a completion time, after one attempt;
+    M3 across all workers of both versions, each pushed job's handler ran exactly once; M4 the schema ends at the
+    new release's version (8)."""
+    out = []
+    pushed, ns, handled = [], [], []
+    for ph in phases:
+        for name, res in (ph.get("raw_results") or {}).items():
+            res = res or {}
+            pushed += res.get("job_ids", [])
+            if name.endswith("worker"):
+                handled += res.get("handled", [])
+    for ph in phases:
+        ns += ph.get("ns", [])
+    jobs = final["jobs"]
+    if sorted(j["id"] for j in jobs) != sorted(pushed) or not pushed:
+        out.append(f"M1 {len(jobs)} jobs in the database, {len(pushed)} pushed")
+    bad = [(j["id"][:8], j["state"], j["attempts"]) for j in jobs
+           if j["state"] != "succeeded" or j["attempts"] != 1 or not j["completed"]]
+    if bad:
+        out.append(f"M2 not succeeded once: {bad}")
+    if sorted(handled) != sorted(ns):
+        out.append(f"M3 handlers ran for {sorted(handled)}, pushed {sorted(ns)}")
+    versions = [r.get("version") for r in final.get("schema_version", [])]
+    if "8" not in versions:
+        out.append(f"M4 schema version rows {final.get('schema_version')}")
+    return out
+
+
+def run_chancy_mixed(target: hz.Target, *, old_sdist: Path, new_sdist: Path, out: Path) -> dict[str, Any]:
+    """The NONBLIND mixed-version pilot: Chancy 0.25.1 (old) and 0.26.0 (new) on one schema, as a rolling deploy:
+    1. old: migrate to v6, declare the queue, push jobs 0..3;
+    2. new: apply v7 and v8 (the deploy's migration step);
+    3. old, on the new schema: a producer pushes jobs 4..5 while an old worker handles jobs (stopping once it has
+       handled 3), the two scheduled against each other;
+    4. new: push jobs 6..7, then a new worker drains every remaining job.
+    Each phase is one isolated container, one stepped run per step, corroborated against the server log."""
+    images = {}
+    for label, sdist in (("old", old_sdist), ("new", new_sdist)):
+        build_dir = Path(tempfile.mkdtemp(prefix="ds_iso_build_"))
+        try:
+            images[label] = build_image(build_dir, chancy_sdist=sdist)
+        finally:
+            shutil.rmtree(build_dir, ignore_errors=True)
+    plans = [("1_old_setup", "old", [{"actors": [{"actor": "old_setup", "fn": "setup", "args": {"ns": [0, 1, 2, 3]}}]}],
+              [0, 1, 2, 3]),
+             ("2_new_migrate", "new", [{"actors": [{"actor": "new_migrate", "fn": "migrate"}]}], []),
+             ("3_old_on_new_schema", "old", [{"actors": [
+                 {"actor": "old_push", "fn": "push", "args": {"ns": [4, 5]}},
+                 {"actor": "old_worker", "fn": "work", "args": {"handle_at_least": 3}}],
+                 "schedule": ["old_push", "old_worker"] * 200}], [4, 5]),
+             ("4_new", "new", [{"actors": [{"actor": "new_push", "fn": "push", "args": {"ns": [6, 7]}}]}], [6, 7])]
+    phases = []
+    pushed: list[str] = []
+    for i, (name, which, plan, ns) in enumerate(plans):
+        if name == "4_new":  # the new worker waits for every job pushed so far, and for the new pushes before it
+            plan = plan + [{"actors": [{"actor": "new_worker", "fn": "work",
+                                        "args": {"handle_at_least": 10 ** 6, "wait_for": list(pushed),
+                                                 "include_earlier_runs": True}}]}]
+        plan_json = json.dumps(plan)
+        phase_dir = out / name
+        phase_dir.mkdir()
+        r = run_smoke(target, variant=name, schedule=[], out=phase_dir, image=images[which], mode="chancy-plan",
+                      fresh_schema=(i == 0), keep_schema=(i < len(plans) - 1),
+                      extra_env={"DS_CHANCY_PLAN": plan_json})
+        r["image"], r["ns"] = images[which], ns
+        phases.append(r)
+        for res in (r.get("raw_results") or {}).values():
+            pushed += (res or {}).get("job_ids", [])
+        if not (r.get("isolation_ok") and (r.get("corroboration") or {}).get("ok")):
+            break
+    final = phases[-1].get("final_state", {"jobs": []})
+    return {"phases": phases, "oracle_violations": chancy_mixed_check(final, phases), "final_state": final}
 
 
 def chancy_concurrent_check(final: dict[str, Any], raw: dict[str, Any]) -> list[str]:
@@ -418,9 +508,10 @@ def pgqueuer_check(final: dict[str, Any], raw: dict[str, Any], workload: dict[st
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("mode", choices=["smoke", "chancy", "pgqueuer", "chancy-runtime"])
+    ap.add_argument("mode", choices=["smoke", "chancy", "pgqueuer", "chancy-runtime", "chancy-mixed"])
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--chancy-sdist", type=Path, help="the downloaded chancy-0.26.0.tar.gz (sha256 is re-verified)")
+    ap.add_argument("--chancy-old-sdist", type=Path, help="chancy-mixed: the downloaded chancy-0.25.1.tar.gz")
     ap.add_argument("--pgqueuer-sdist", type=Path, help="the downloaded pgqueuer-1.6.0.tar.gz (sha256 re-verified)")
     ap.add_argument("--public-factory", action="store_true",
                     help="pgqueuer negative control: PGQueuer's own driver, which the server log must refute")
@@ -433,6 +524,34 @@ def main() -> int:
     target = hz.Target("127.0.0.1", int(os.environ.get("DS_MVP_PORT", "55441")), "ds_mvp", secret.read_text().strip())
     target.conninfo()  # refuses anything but the disposable database
     a.out.mkdir(parents=True, exist_ok=False)
+    if a.mode == "chancy-mixed":
+        result = run_chancy_mixed(target, old_sdist=a.chancy_old_sdist, new_sdist=a.chancy_sdist, out=a.out)
+        report = {"kind": "EXPERIMENTAL NONBLIND development pilot: Chancy 0.25.1 and 0.26.0 on one schema as a "
+                         "rolling deploy, in the isolated runner. Not a blind or confirmatory result",
+                  "library": {"old": {"version": "0.25.1", "sdist_sha256": CHANCY_SDISTS["chancy-0.25.1.tar.gz"],
+                                      "tag_commit": "b0e3e94fd12a567e47568d75f9d2d1d8fd996ea1"},
+                              "new": {"version": "0.26.0", "sdist_sha256": CHANCY_SDIST_SHA256,
+                                      "tag_commit": "73fd582c0e5d2f8655316e09f189ba0c57d76ca7"}},
+                  "migration_area": "chancy/migrations/v8.py (frozen rule), with v7; the new release adds both",
+                  "exposure": "NONBLIND: v7/v8 bodies, app/worker/migrate/executor modules read; no issue, "
+                              "changelog or fix commit read",
+                  **result}
+        (a.out / "report.json").write_text(json.dumps(report, indent=1, default=str))
+        sound = True
+        for ph in result["phases"]:
+            c = ph.get("corroboration") or {}
+            good = bool(ph.get("isolation_ok") and c.get("ok") and all(ph["teardown"].values()))
+            sound &= good
+            print(ph["variant"], "isolation", ph.get("isolation_ok"), "corroborated", c.get("ok"), "statements",
+                  c.get("matched"), "compared", c.get("params_compared"), "mismatched", c.get("params_mismatched"),
+                  "unchecked", c.get("params_unchecked"), "results", {k: {x: y for x, y in (v or {}).items()
+                                                                          if x != "job_ids"} if isinstance(v, dict)
+                                                                      else v for k, v in
+                                                                      (ph.get("raw_results") or {}).items()},
+                  "problems", (c.get("problems") or [])[:3], "stderr", (ph.get("stderr_tail") or "")[-400:])
+        print("oracle", result["oracle_violations"], "jobs", [(j["state"], j["attempts"], j.get("has_claim_id"))
+                                                              for j in result["final_state"].get("jobs", [])])
+        return 0 if sound and len(result["phases"]) == 4 else 1
     race = ["j", "j", "a", "a", "a", "a", "a", "j", "j"]
     build_dir = Path(tempfile.mkdtemp(prefix="ds_iso_build_"))
     try:

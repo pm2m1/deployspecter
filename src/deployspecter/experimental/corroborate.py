@@ -133,6 +133,7 @@ def _array_elements(text: str) -> list[str | None] | None:
     return out
 
 
+_UUID_TEXT = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 _TS = re.compile(r"^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?([+-]\d{2}(?::\d{2}(?::\d{2})?)?)?$")
 _TIME = re.compile(r"^(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?([+-]\d{2}(?::\d{2}(?::\d{2})?)?)?$")
 _INTERVAL = re.compile(r"^(?:(-?\d+) years? ?)?(?:(-?\d+) mons? ?)?(?:(-?\d+) days? ?)?"
@@ -241,8 +242,19 @@ def _value_matches(logged: str, want: Any) -> bool | None:
         return len(raw) == want["bytes"] and hashlib.sha256(raw).hexdigest()[:12] == want["sha256"]
     if isinstance(want, dict) and "str" in want:
         text = logged[1:-1].replace("''", "'") if logged.startswith("'") else None
-        return text is not None and len(text) == want["str"] and hashlib.sha256(
-            text.encode()).hexdigest()[:12] == want["sha256"]
+        if text is None:
+            return False
+
+        def same(candidate: str) -> bool:
+            return len(candidate) == want["str"] and hashlib.sha256(candidate.encode()).hexdigest()[:12] == \
+                want["sha256"]
+        if same(text):
+            return True
+        if _UUID_TEXT.fullmatch(text):
+            # A string the server coerced to uuid is logged in uuid's canonical output. Its exact input forms are
+            # tried (canonical and 32-hex): a match is the same value; anything else is UNVERIFIED, never accepted.
+            return True if same(text.replace("-", "")) else None
+        return False
     return None
 
 
@@ -328,7 +340,8 @@ def corroborate(log: bytes, *, start: str, end: str, trace: Any, admin_pid: int 
                 verdict = _value_matches(logged.get(i, "<absent>"), value)
                 if verdict is None:
                     out.params_unchecked += 1
-                    kind = (sorted(value)[0] if isinstance(value, dict) and value else type(value).__name__)
+                    kind = ("str_coerced_uuid" if isinstance(value, dict) and "str" in value else
+                            sorted(value)[0] if isinstance(value, dict) and value else type(value).__name__)
                     out.unchecked_kinds[kind] = out.unchecked_kinds.get(kind, 0) + 1
                 elif verdict:
                     out.params_compared += 1

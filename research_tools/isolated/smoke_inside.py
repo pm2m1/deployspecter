@@ -242,6 +242,60 @@ async def chancy_runtime() -> dict:
     return {"monitor_pid": r.monitor_pid, "trace": trace.to_dict(), "raw_results": trace.raw_results}
 
 
+async def chancy_plan() -> dict:
+    """The mixed-version pilot: a plan (DS_CHANCY_PLAN, JSON) of stepped runs, each a list of actors that call one of
+    the adapter's whitelisted phase functions with JSON arguments. Whichever pinned chancy release this image holds
+    is the version that runs; the adapter verifies it by source hashes."""
+    import psycopg
+
+    from deployspecter.experimental.stepping import Actor, Handler, Limits
+    from deployspecter.experimental.stepping_async import AsyncRun, async_actor_connection_factory
+    from deployspecter.experimental.thirdparty import chancy_adapter as ca
+
+    functions = {"setup": ca.phase_setup, "migrate": ca.phase_migrate, "push": ca.phase_push, "work": ca.phase_work}
+
+    class CaptureHandler(Handler):
+        def allows(self, text: str) -> bool:
+            return True
+
+    info = {"host": os.environ["DS_PG_HOST"], "port": int(os.environ["DS_PG_PORT"]),
+            "user": os.environ["DS_PG_USER"], "password": os.environ["DS_PG_PASSWORD"],
+            "dbname": os.environ["DS_PG_DB"]}
+
+    async def monitor() -> psycopg.AsyncConnection:
+        conn = await psycopg.AsyncConnection.connect(**info, autocommit=True, prepare_threshold=None,
+                                                     application_name="ds_mvp_admin")
+        cur = await conn.execute("SELECT current_setting('cluster_name'), current_database()")
+        if await cur.fetchone() != ("ds_mvp_disposable", "ds_mvp"):
+            await conn.close()
+            raise SystemExit("not the disposable database")
+        return conn
+
+    version = ca.installed_version()
+    lim = Limits(statement_ms=20000, run_s=150, python_step_s=90)
+    connect = async_actor_connection_factory(info, lim, search_path=os.environ["DS_SCHEMA"], autocommit=False)
+    runs = []
+    pushed_here: list[str] = []
+    for i, step in enumerate(json.loads(os.environ["DS_CHANCY_PLAN"])):
+        actors = []
+        for a in step["actors"]:
+            args = dict(a.get("args", {}))
+            if args.pop("include_earlier_runs", False):  # also wait for jobs pushed by this container's earlier runs
+                args["wait_for"] = list(args.get("wait_for", [])) + pushed_here
+            actors.append(Actor(a["actor"], CaptureHandler(f"chancy-{version}", a["fn"], functions[a["fn"]],
+                                                           frozenset(), {}, serialize_tasks=True), args))
+        r = AsyncRun(actors, connect, monitor, schedule=step.get("schedule", []), limits=lim,
+                     run_id=f"isolated_chancy_plan_{i}")
+        trace = await r.execute()
+        runs.append({"phase": step["actors"][0]["actor"], "monitor_pid": r.monitor_pid, "trace": trace.to_dict(),
+                     "raw_results": trace.raw_results})
+        for res in trace.raw_results.values():
+            pushed_here += (res or {}).get("job_ids", []) if isinstance(res, dict) else []
+        if any(a["exception"] for a in trace.actors.values()):
+            break
+    return {"pinned_sources": ca.verify_pinned(), "runs": runs}
+
+
 def main() -> int:
     out: dict = {"probes": probe()}
     if os.environ.get("DS_MODE") == "chancy_migrate":
@@ -250,6 +304,8 @@ def main() -> int:
         out.update(asyncio.run(pgqueuer_lifecycle()))
     elif os.environ.get("DS_MODE") == "chancy_runtime":
         out.update(asyncio.run(chancy_runtime()))
+    elif os.environ.get("DS_MODE") == "chancy_plan":
+        out.update(asyncio.run(chancy_plan()))
     else:
         out.update(asyncio.run(run(json.loads(os.environ["DS_SCHEDULE"]), os.environ["DS_VARIANT"])))
     print(json.dumps(out, default=str))
