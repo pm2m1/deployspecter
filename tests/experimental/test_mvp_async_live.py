@@ -357,6 +357,46 @@ class TestCancelledWhileWaiting:
         assert c["ok"], c["problems"]  # the cancelled operation never reached the server
 
 
+class TestCommitCancelledAtTheGate:
+    def test_a_commit_cancelled_before_its_grant_rolls_the_transaction_back_and_is_corroborated(self, target):
+        """Regression (simultaneous_explore_compete_3, seed 1): a framework task cancelled while its COMMIT waited
+        for a grant used to leave psycopg's transaction open, so the session stayed in a transaction and the
+        pool's later rollback failed client-side. The commit never ran; the transaction is rolled back, ungranted
+        and recorded, and the actor goes on."""
+        async def framework(conn):
+            async def unit():
+                async with conn.transaction():
+                    await conn.execute("SELECT 1")
+            task = asyncio.create_task(unit())
+            while not any(op.sql == "SELECT 1" and op.outcome == "ok" for op in conn._ds_actor.run.records):
+                await asyncio.sleep(0.005)
+            await asyncio.sleep(0.05)  # its COMMIT is now waiting at the gate (the other actor keeps it busy)
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+            await conn.execute("SELECT 1")  # the actor must still work, outside any transaction
+            return conn.info.transaction_status.name
+
+        admin = target.admin()
+        try:
+            sync_app.reset(admin, SEED)
+            lim = st.Limits()
+            actor = st.Actor("q", st.Handler("test", "framework", framework, frozenset({"SELECT 1"}), {},
+                                             serialize_tasks=True), {})
+            other = st.Actor("o", st.Handler("test", "idle", idle_long, frozenset({"SELECT 1"}), {}), {})
+            connect = sa.async_actor_connection_factory(target.conninfo(), lim, search_path=A.SCHEMA)
+            run = sa.AsyncRun([actor, other], connect, hz.async_monitor(target), schedule=["q", "q", "o", "q"],
+                              limits=lim, run_id="commit_cancel")
+            trace, c = hz.corroborated(admin, run, user=target.user)
+        finally:
+            admin.close()
+        assert trace.actors["q"]["exception"] is None and trace.raw_results["q"] == "IDLE"
+        commits = [op for op in trace.records if op.actor == "q" and op.sql == "COMMIT"]
+        assert commits and commits[0].error_class == "cancelled_while_waiting" and commits[0].grant is None
+        rollbacks = [op for op in trace.records if op.actor == "q" and op.sql == "ROLLBACK" and op.outcome == "ok"]
+        assert rollbacks and rollbacks[0].grant is None  # ungranted, recorded, and in the server log
+        assert c["ok"], c["problems"]
+
+
 async def idle_long(conn):
     await conn.execute("SELECT 1")
     await asyncio.sleep(0.6)  # keeps the controller busy so q's second request waits at the gate

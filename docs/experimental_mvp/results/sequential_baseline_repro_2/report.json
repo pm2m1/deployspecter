@@ -1,0 +1,2325 @@
+{
+ "kind": "EXPERIMENTAL NONBLIND development pilot: Chancy 0.25.1 and 0.26.0 on one schema as a rolling deploy, in the isolated runner. Not a blind or confirmatory result",
+ "library": {
+  "old": {
+   "version": "0.25.1",
+   "sdist_sha256": "264ed4f732cb51c405b789e0727c4d045fdfa1dcee1e3eed6d762df6c44122d7",
+   "tag_commit": "b0e3e94fd12a567e47568d75f9d2d1d8fd996ea1"
+  },
+  "new": {
+   "version": "0.26.0",
+   "sdist_sha256": "ac98b9c502d7bdb6f47d53fac1c22b4dc55e6cfcfec84b08b1a0cbaee45aef06",
+   "tag_commit": "73fd582c0e5d2f8655316e09f189ba0c57d76ca7"
+  }
+ },
+ "migration_area": "chancy/migrations/v8.py (frozen rule), with v7; the new release adds both",
+ "exposure": "NONBLIND: v7/v8 bodies, app/worker/migrate/executor modules read; no issue, changelog or fix commit read",
+ "phases": [
+  {
+   "variant": "1_old_setup",
+   "schedule": [],
+   "network": "ds-mvp-iso-c1b90d71",
+   "image": [
+    "ds-mvp-iso:ebf88b6f32cbc2bb",
+    "sha256:1cc443e3ab9e0c50bd4bb99c622a8fc54fe66f9f313f9ff5f160418a70848820"
+   ],
+   "image_id": "sha256:1cc443e3ab9e0c50bd4bb99c622a8fc54fe66f9f313f9ff5f160418a70848820",
+   "runtime_flags": [
+    "--read-only",
+    "--tmpfs",
+    "/tmp:rw,noexec,nosuid,nodev,size=64m",
+    "--cap-drop",
+    "ALL",
+    "--security-opt",
+    "no-new-privileges",
+    "--pids-limit",
+    "64",
+    "--memory",
+    "512m",
+    "--memory-swap",
+    "512m",
+    "--cpus",
+    "1",
+    "--ulimit",
+    "nofile=256:256",
+    "--user",
+    "65534:65534"
+   ],
+   "network_internal": "true",
+   "container_seconds": 0.51,
+   "exit_code": 0,
+   "probes": {
+    "uid": 65534,
+    "gid": 65534,
+    "root_writable": false,
+    "app_writable": false,
+    "tmp_writable": true,
+    "ssh_dir_present": false,
+    "env_keys": [
+     "DS_CHANCY_PLAN",
+     "DS_CHANCY_VARIANT",
+     "DS_MODE",
+     "DS_PGQ_VARIANT",
+     "DS_PGQ_WORKLOAD",
+     "DS_PG_DB",
+     "DS_PG_HOST",
+     "DS_PG_PASSWORD",
+     "DS_PG_PORT",
+     "DS_PG_USER",
+     "DS_SCHEDULE",
+     "DS_SCHEMA",
+     "DS_VARIANT",
+     "GPG_KEY",
+     "HOME",
+     "HOSTNAME",
+     "LANG",
+     "PATH",
+     "PIP_DISABLE_PIP_VERSION_CHECK",
+     "PIP_NO_CACHE_DIR",
+     "PYTHONDONTWRITEBYTECODE",
+     "PYTHON_SHA256",
+     "PYTHON_VERSION"
+    ],
+    "secret_like_env": [],
+    "host_55432": "refused:gaierror",
+    "host_gateway_55441": "refused:gaierror",
+    "internet_tcp": "refused:OSError",
+    "internet_dns": "unresolved:gaierror",
+    "nproc_limit": "64",
+    "memory_limit": "536870912"
+   },
+   "isolation_checks": {
+    "uid": true,
+    "root_writable": true,
+    "app_writable": true,
+    "tmp_writable": true,
+    "ssh_dir_present": true,
+    "secret_like_env": true,
+    "host_55432_unreachable": true,
+    "host_gateway_unreachable": true,
+    "internet_tcp_unreachable": true,
+    "internet_dns_unresolved": true,
+    "disposable_pg_reachable": true,
+    "pids_limited": true,
+    "memory_limited": true
+   },
+   "isolation_ok": true,
+   "initial_state_digest": "783dbf799661326cf1b407677446410ab50eca0f457aaf74c150ab8c7dbd14dc",
+   "final_state": {
+    "catalog": [
+     {
+      "table": "chancy_jobs",
+      "column": "id",
+      "type": "uuid",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "queue",
+      "type": "text",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "func",
+      "type": "text",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "kwargs",
+      "type": "jsonb",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "limits",
+      "type": "jsonb",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "meta",
+      "type": "jsonb",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "state",
+      "type": "character varying",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "priority",
+      "type": "integer",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "attempts",
+      "type": "integer",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "max_attempts",
+      "type": "integer",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "taken_by",
+      "type": "text",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "started_at",
+      "type": "timestamp with time zone",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "completed_at",
+      "type": "timestamp with time zone",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "scheduled_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "unique_key",
+      "type": "text",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "errors",
+      "type": "jsonb",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_leader",
+      "column": "id",
+      "type": "bigint",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_leader",
+      "column": "worker_id",
+      "type": "text",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_leader",
+      "column": "first_seen",
+      "type": "timestamp with time zone",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_leader",
+      "column": "expires_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queue_rate_limits",
+      "column": "queue",
+      "type": "character varying",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queue_rate_limits",
+      "column": "window_start",
+      "type": "integer",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queue_rate_limits",
+      "column": "count",
+      "type": "integer",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "name",
+      "type": "text",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "state",
+      "type": "text",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "concurrency",
+      "type": "integer",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "tags",
+      "type": "ARRAY",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "executor",
+      "type": "text",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "executor_options",
+      "type": "jsonb",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "polling_interval",
+      "type": "integer",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "rate_limit",
+      "type": "integer",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "rate_limit_window",
+      "type": "integer",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "resume_at",
+      "type": "timestamp with time zone",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "eager_polling",
+      "type": "boolean",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_schema_version",
+      "column": "version_of",
+      "type": "character varying",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_schema_version",
+      "column": "version",
+      "type": "integer",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_workers",
+      "column": "worker_id",
+      "type": "text",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_workers",
+      "column": "tags",
+      "type": "ARRAY",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_workers",
+      "column": "queues",
+      "type": "ARRAY",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_workers",
+      "column": "last_seen",
+      "type": "timestamp with time zone",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_workers",
+      "column": "expires_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO"
+     }
+    ],
+    "jobs": [
+     {
+      "id": "03fbb559-a7f7-de67-a454-c454c28765cd",
+      "queue": "ds_q",
+      "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+      "state": "pending",
+      "attempts": 0,
+      "kwargs": "{\"n\": 0}",
+      "completed": false
+     },
+     {
+      "id": "03fbb559-a7fa-5697-a90e-2816819744dc",
+      "queue": "ds_q",
+      "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+      "state": "pending",
+      "attempts": 0,
+      "kwargs": "{\"n\": 1}",
+      "completed": false
+     },
+     {
+      "id": "03fbb559-a7fb-b247-b6f1-f5939c0bece5",
+      "queue": "ds_q",
+      "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+      "state": "pending",
+      "attempts": 0,
+      "kwargs": "{\"n\": 2}",
+      "completed": false
+     },
+     {
+      "id": "03fbb559-a7fc-f8b7-bd89-15401fc6e938",
+      "queue": "ds_q",
+      "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+      "state": "pending",
+      "attempts": 0,
+      "kwargs": "{\"n\": 3}",
+      "completed": false
+     }
+    ],
+    "schema_version": [
+     {
+      "version_of": "chancy",
+      "version": "6"
+     }
+    ]
+   },
+   "final_state_digest": "f101bf7149f1b115964c7762b5f7daa480c3686119340777289cb6212ca5ce62",
+   "oracle_violations": null,
+   "pinned_sources": {
+    "version": "0.25.1",
+    "chancy/app.py": "e18bdf44f41b8223a0503df99bfd05afd53c4761b4fffd087790a0ced3d11688",
+    "chancy/worker.py": "2742f88da03bcaca2158691e09554dbbf7fa906da4425072f34023ad1b298af3",
+    "chancy/migrate.py": "b25d63e03dd13b17c41283415c97533baa11bf8243b17cf5a0ba7a50a8be715b",
+    "chancy/executors/asyncex.py": "b3617071805ec538b3bc30c19864af8bcca1bf5654f51644f3e0a7db5ddd9525"
+   },
+   "corroboration": {
+    "ok": true,
+    "matched": 45,
+    "params_compared": 64,
+    "params_mismatched": 0,
+    "params_unchecked": 0,
+    "client_texts_matched": 0,
+    "unchecked_kinds": {},
+    "sessions": {
+     "9519": "old_setup"
+    },
+    "problems": []
+   },
+   "trace_sha256": "471e1a9e854f6c1c57407fdc45a8c6c093cb0791d9a430dae1d639999409e01a",
+   "raw_results": {
+    "old_setup": {
+     "version": "0.25.1",
+     "job_ids": [
+      "03fbb559-a7f7-de67-a454-c454c28765cd",
+      "03fbb559-a7fa-5697-a90e-2816819744dc",
+      "03fbb559-a7fb-b247-b6f1-f5939c0bece5",
+      "03fbb559-a7fc-f8b7-bd89-15401fc6e938"
+     ]
+    }
+   },
+   "code_revision": {
+    "head": "637334f998250f22fc78b8fae6e820db2a339432",
+    "dirty": false
+   },
+   "payload_sha256": {
+    "deployspecter/__init__.py": "b4026257185a44b86831ff2d6b28954c750e3ba5015d59ef92c6c240386b1314",
+    "deployspecter/experimental/__init__.py": "5ee45683d1acdcd143b31e1c933133229fef9ffb1a7abf09aba2c80068b7f8cf",
+    "deployspecter/experimental/stepping.py": "cb2d869471bb2824ebacf3eac1b8e6b97d0a97835595be27f864a1809106954c",
+    "deployspecter/experimental/stepping_async.py": "bb98c9dd9df85ab71264d449e59c8abc4244a526c5e48248190ff34fef5b31bd",
+    "deployspecter/experimental/oracle.py": "3e8a70ed6a56e0a540b8723c0879167f60cd98a0bd9532e726ff96256a3ace11",
+    "deployspecter/experimental/apps/__init__.py": "59994e097df271f0c67178baef8ac7c528bc40873b95adccdd51eb7ee8e65da7",
+    "deployspecter/experimental/apps/reservations_mixed.py": "9fefbb5eae1017488d28e0bd05093850324ab86bde159974e6953152e6ac8d47",
+    "deployspecter/experimental/apps/reservations_mixed_async.py": "35e5b49075cd6519db7a39c2e002199ae69f38a30dff2f95588d97d6ed00488f",
+    "deployspecter/experimental/thirdparty/__init__.py": "fb45270909b8288fb7b7a41aa16c0cd9a0c00274657193e74818b1c7598e4d96",
+    "deployspecter/experimental/thirdparty/pgqueuer_adapter.py": "0e721c374774712317ba10545ee183206d54c2d392d136d26ec791264ffc1017",
+    "deployspecter/experimental/thirdparty/chancy_adapter.py": "4bd6507410827ec2b67502fdccdf085bea86c88490c5cb1ca69abe793394a4b5",
+    "deployspecter/experimental/coordinated.py": "a7526c332e55271e367d2379d23ca37f46297cda1274e25fb8af8547a7189e36"
+   },
+   "teardown": {
+    "container_removed": true,
+    "network_removed": true,
+    "workdir_removed": true,
+    "protected_unchanged": true
+   },
+   "ns": [
+    0,
+    1,
+    2,
+    3
+   ]
+  },
+  {
+   "variant": "2_new_migrate",
+   "schedule": [],
+   "network": "ds-mvp-iso-9a3886e0",
+   "image": [
+    "ds-mvp-iso:3ee31f8346916e68",
+    "sha256:d8567373451ce654b8643a8929aa807099847b654c0c667dea14ed9e8a82b9b5"
+   ],
+   "image_id": "sha256:d8567373451ce654b8643a8929aa807099847b654c0c667dea14ed9e8a82b9b5",
+   "runtime_flags": [
+    "--read-only",
+    "--tmpfs",
+    "/tmp:rw,noexec,nosuid,nodev,size=64m",
+    "--cap-drop",
+    "ALL",
+    "--security-opt",
+    "no-new-privileges",
+    "--pids-limit",
+    "64",
+    "--memory",
+    "512m",
+    "--memory-swap",
+    "512m",
+    "--cpus",
+    "1",
+    "--ulimit",
+    "nofile=256:256",
+    "--user",
+    "65534:65534"
+   ],
+   "network_internal": "true",
+   "container_seconds": 0.44,
+   "exit_code": 0,
+   "probes": {
+    "uid": 65534,
+    "gid": 65534,
+    "root_writable": false,
+    "app_writable": false,
+    "tmp_writable": true,
+    "ssh_dir_present": false,
+    "env_keys": [
+     "DS_CHANCY_PLAN",
+     "DS_CHANCY_VARIANT",
+     "DS_MODE",
+     "DS_PGQ_VARIANT",
+     "DS_PGQ_WORKLOAD",
+     "DS_PG_DB",
+     "DS_PG_HOST",
+     "DS_PG_PASSWORD",
+     "DS_PG_PORT",
+     "DS_PG_USER",
+     "DS_SCHEDULE",
+     "DS_SCHEMA",
+     "DS_VARIANT",
+     "GPG_KEY",
+     "HOME",
+     "HOSTNAME",
+     "LANG",
+     "PATH",
+     "PIP_DISABLE_PIP_VERSION_CHECK",
+     "PIP_NO_CACHE_DIR",
+     "PYTHONDONTWRITEBYTECODE",
+     "PYTHON_SHA256",
+     "PYTHON_VERSION"
+    ],
+    "secret_like_env": [],
+    "host_55432": "refused:gaierror",
+    "host_gateway_55441": "refused:gaierror",
+    "internet_tcp": "refused:OSError",
+    "internet_dns": "unresolved:gaierror",
+    "nproc_limit": "64",
+    "memory_limit": "536870912"
+   },
+   "isolation_checks": {
+    "uid": true,
+    "root_writable": true,
+    "app_writable": true,
+    "tmp_writable": true,
+    "ssh_dir_present": true,
+    "secret_like_env": true,
+    "host_55432_unreachable": true,
+    "host_gateway_unreachable": true,
+    "internet_tcp_unreachable": true,
+    "internet_dns_unresolved": true,
+    "disposable_pg_reachable": true,
+    "pids_limited": true,
+    "memory_limited": true
+   },
+   "isolation_ok": true,
+   "initial_state_digest": "f101bf7149f1b115964c7762b5f7daa480c3686119340777289cb6212ca5ce62",
+   "final_state": {
+    "catalog": [
+     {
+      "table": "chancy_jobs",
+      "column": "id",
+      "type": "uuid",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "queue",
+      "type": "text",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "func",
+      "type": "text",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "kwargs",
+      "type": "jsonb",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "limits",
+      "type": "jsonb",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "meta",
+      "type": "jsonb",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "state",
+      "type": "character varying",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "priority",
+      "type": "integer",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "attempts",
+      "type": "integer",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "max_attempts",
+      "type": "integer",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "taken_by",
+      "type": "text",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "started_at",
+      "type": "timestamp with time zone",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "completed_at",
+      "type": "timestamp with time zone",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "scheduled_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "unique_key",
+      "type": "text",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "errors",
+      "type": "jsonb",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "claim_id",
+      "type": "uuid",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_leader",
+      "column": "id",
+      "type": "bigint",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_leader",
+      "column": "worker_id",
+      "type": "text",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_leader",
+      "column": "first_seen",
+      "type": "timestamp with time zone",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_leader",
+      "column": "expires_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queue_rate_limits",
+      "column": "queue",
+      "type": "character varying",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queue_rate_limits",
+      "column": "window_start",
+      "type": "integer",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queue_rate_limits",
+      "column": "count",
+      "type": "integer",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "name",
+      "type": "text",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "state",
+      "type": "text",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "concurrency",
+      "type": "integer",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "tags",
+      "type": "ARRAY",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "executor",
+      "type": "text",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "executor_options",
+      "type": "jsonb",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "polling_interval",
+      "type": "integer",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "rate_limit",
+      "type": "integer",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "rate_limit_window",
+      "type": "integer",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "resume_at",
+      "type": "timestamp with time zone",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "eager_polling",
+      "type": "boolean",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_schema_version",
+      "column": "version_of",
+      "type": "character varying",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_schema_version",
+      "column": "version",
+      "type": "integer",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_workers",
+      "column": "worker_id",
+      "type": "text",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_workers",
+      "column": "tags",
+      "type": "ARRAY",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_workers",
+      "column": "queues",
+      "type": "ARRAY",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_workers",
+      "column": "last_seen",
+      "type": "timestamp with time zone",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_workers",
+      "column": "expires_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO"
+     }
+    ],
+    "jobs": [
+     {
+      "id": "03fbb559-a7f7-de67-a454-c454c28765cd",
+      "queue": "ds_q",
+      "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+      "state": "pending",
+      "attempts": 0,
+      "kwargs": "{\"n\": 0}",
+      "completed": false,
+      "has_claim_id": false
+     },
+     {
+      "id": "03fbb559-a7fa-5697-a90e-2816819744dc",
+      "queue": "ds_q",
+      "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+      "state": "pending",
+      "attempts": 0,
+      "kwargs": "{\"n\": 1}",
+      "completed": false,
+      "has_claim_id": false
+     },
+     {
+      "id": "03fbb559-a7fb-b247-b6f1-f5939c0bece5",
+      "queue": "ds_q",
+      "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+      "state": "pending",
+      "attempts": 0,
+      "kwargs": "{\"n\": 2}",
+      "completed": false,
+      "has_claim_id": false
+     },
+     {
+      "id": "03fbb559-a7fc-f8b7-bd89-15401fc6e938",
+      "queue": "ds_q",
+      "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+      "state": "pending",
+      "attempts": 0,
+      "kwargs": "{\"n\": 3}",
+      "completed": false,
+      "has_claim_id": false
+     }
+    ],
+    "schema_version": [
+     {
+      "version_of": "chancy",
+      "version": "8"
+     }
+    ]
+   },
+   "final_state_digest": "e84a3a59bb8adf46fdbbd319239bd6e40c26f3ba32ce4febf92230f5966210fd",
+   "oracle_violations": null,
+   "pinned_sources": {
+    "version": "0.26.0",
+    "chancy/app.py": "403e471247c81e0b37560da70e64570b92aa9586ff31826c16316b61deb2cd14",
+    "chancy/worker.py": "0f541cbfd5ebce9abe75fd5f6365987333d847aaca352b4e7d8445c56575072a",
+    "chancy/migrate.py": "2f19e93779a146ef6b162edf76e2fe174a0405a028d9f38339793ee0213b240e",
+    "chancy/executors/asyncex.py": "f6495e78fb80973f1227a9060c9698ef61f984f15180d06f3e4f917aa4eae855"
+   },
+   "corroboration": {
+    "ok": true,
+    "matched": 11,
+    "params_compared": 7,
+    "params_mismatched": 0,
+    "params_unchecked": 0,
+    "client_texts_matched": 0,
+    "unchecked_kinds": {},
+    "sessions": {
+     "9522": "new_migrate"
+    },
+    "problems": []
+   },
+   "trace_sha256": "37ba36732155a58debd03dd7b19bdc8aa6f9252baedd556f2d1c3a309162e36b",
+   "raw_results": {
+    "new_migrate": {
+     "version": "0.26.0",
+     "migrated": true
+    }
+   },
+   "code_revision": {
+    "head": "637334f998250f22fc78b8fae6e820db2a339432",
+    "dirty": false
+   },
+   "payload_sha256": {
+    "deployspecter/__init__.py": "b4026257185a44b86831ff2d6b28954c750e3ba5015d59ef92c6c240386b1314",
+    "deployspecter/experimental/__init__.py": "5ee45683d1acdcd143b31e1c933133229fef9ffb1a7abf09aba2c80068b7f8cf",
+    "deployspecter/experimental/stepping.py": "cb2d869471bb2824ebacf3eac1b8e6b97d0a97835595be27f864a1809106954c",
+    "deployspecter/experimental/stepping_async.py": "bb98c9dd9df85ab71264d449e59c8abc4244a526c5e48248190ff34fef5b31bd",
+    "deployspecter/experimental/oracle.py": "3e8a70ed6a56e0a540b8723c0879167f60cd98a0bd9532e726ff96256a3ace11",
+    "deployspecter/experimental/apps/__init__.py": "59994e097df271f0c67178baef8ac7c528bc40873b95adccdd51eb7ee8e65da7",
+    "deployspecter/experimental/apps/reservations_mixed.py": "9fefbb5eae1017488d28e0bd05093850324ab86bde159974e6953152e6ac8d47",
+    "deployspecter/experimental/apps/reservations_mixed_async.py": "35e5b49075cd6519db7a39c2e002199ae69f38a30dff2f95588d97d6ed00488f",
+    "deployspecter/experimental/thirdparty/__init__.py": "fb45270909b8288fb7b7a41aa16c0cd9a0c00274657193e74818b1c7598e4d96",
+    "deployspecter/experimental/thirdparty/pgqueuer_adapter.py": "0e721c374774712317ba10545ee183206d54c2d392d136d26ec791264ffc1017",
+    "deployspecter/experimental/thirdparty/chancy_adapter.py": "4bd6507410827ec2b67502fdccdf085bea86c88490c5cb1ca69abe793394a4b5",
+    "deployspecter/experimental/coordinated.py": "a7526c332e55271e367d2379d23ca37f46297cda1274e25fb8af8547a7189e36"
+   },
+   "teardown": {
+    "container_removed": true,
+    "network_removed": true,
+    "workdir_removed": true,
+    "protected_unchanged": true
+   },
+   "ns": []
+  },
+  {
+   "variant": "3_old_on_new_schema",
+   "schedule": [],
+   "network": "ds-mvp-iso-75031ad0",
+   "image": [
+    "ds-mvp-iso:ebf88b6f32cbc2bb",
+    "sha256:1cc443e3ab9e0c50bd4bb99c622a8fc54fe66f9f313f9ff5f160418a70848820"
+   ],
+   "image_id": "sha256:1cc443e3ab9e0c50bd4bb99c622a8fc54fe66f9f313f9ff5f160418a70848820",
+   "runtime_flags": [
+    "--read-only",
+    "--tmpfs",
+    "/tmp:rw,noexec,nosuid,nodev,size=64m",
+    "--cap-drop",
+    "ALL",
+    "--security-opt",
+    "no-new-privileges",
+    "--pids-limit",
+    "64",
+    "--memory",
+    "512m",
+    "--memory-swap",
+    "512m",
+    "--cpus",
+    "1",
+    "--ulimit",
+    "nofile=256:256",
+    "--user",
+    "65534:65534"
+   ],
+   "network_internal": "true",
+   "container_seconds": 5.76,
+   "exit_code": 0,
+   "probes": {
+    "uid": 65534,
+    "gid": 65534,
+    "root_writable": false,
+    "app_writable": false,
+    "tmp_writable": true,
+    "ssh_dir_present": false,
+    "env_keys": [
+     "DS_CHANCY_PLAN",
+     "DS_CHANCY_VARIANT",
+     "DS_MODE",
+     "DS_PGQ_VARIANT",
+     "DS_PGQ_WORKLOAD",
+     "DS_PG_DB",
+     "DS_PG_HOST",
+     "DS_PG_PASSWORD",
+     "DS_PG_PORT",
+     "DS_PG_USER",
+     "DS_SCHEDULE",
+     "DS_SCHEMA",
+     "DS_VARIANT",
+     "GPG_KEY",
+     "HOME",
+     "HOSTNAME",
+     "LANG",
+     "PATH",
+     "PIP_DISABLE_PIP_VERSION_CHECK",
+     "PIP_NO_CACHE_DIR",
+     "PYTHONDONTWRITEBYTECODE",
+     "PYTHON_SHA256",
+     "PYTHON_VERSION"
+    ],
+    "secret_like_env": [],
+    "host_55432": "refused:gaierror",
+    "host_gateway_55441": "refused:gaierror",
+    "internet_tcp": "refused:OSError",
+    "internet_dns": "unresolved:gaierror",
+    "nproc_limit": "64",
+    "memory_limit": "536870912"
+   },
+   "isolation_checks": {
+    "uid": true,
+    "root_writable": true,
+    "app_writable": true,
+    "tmp_writable": true,
+    "ssh_dir_present": true,
+    "secret_like_env": true,
+    "host_55432_unreachable": true,
+    "host_gateway_unreachable": true,
+    "internet_tcp_unreachable": true,
+    "internet_dns_unresolved": true,
+    "disposable_pg_reachable": true,
+    "pids_limited": true,
+    "memory_limited": true
+   },
+   "isolation_ok": true,
+   "initial_state_digest": "e84a3a59bb8adf46fdbbd319239bd6e40c26f3ba32ce4febf92230f5966210fd",
+   "final_state": {
+    "catalog": [
+     {
+      "table": "chancy_jobs",
+      "column": "id",
+      "type": "uuid",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "queue",
+      "type": "text",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "func",
+      "type": "text",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "kwargs",
+      "type": "jsonb",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "limits",
+      "type": "jsonb",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "meta",
+      "type": "jsonb",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "state",
+      "type": "character varying",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "priority",
+      "type": "integer",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "attempts",
+      "type": "integer",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "max_attempts",
+      "type": "integer",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "taken_by",
+      "type": "text",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "started_at",
+      "type": "timestamp with time zone",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "completed_at",
+      "type": "timestamp with time zone",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "scheduled_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "unique_key",
+      "type": "text",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "errors",
+      "type": "jsonb",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "claim_id",
+      "type": "uuid",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_leader",
+      "column": "id",
+      "type": "bigint",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_leader",
+      "column": "worker_id",
+      "type": "text",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_leader",
+      "column": "first_seen",
+      "type": "timestamp with time zone",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_leader",
+      "column": "expires_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queue_rate_limits",
+      "column": "queue",
+      "type": "character varying",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queue_rate_limits",
+      "column": "window_start",
+      "type": "integer",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queue_rate_limits",
+      "column": "count",
+      "type": "integer",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "name",
+      "type": "text",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "state",
+      "type": "text",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "concurrency",
+      "type": "integer",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "tags",
+      "type": "ARRAY",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "executor",
+      "type": "text",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "executor_options",
+      "type": "jsonb",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "polling_interval",
+      "type": "integer",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "rate_limit",
+      "type": "integer",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "rate_limit_window",
+      "type": "integer",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "resume_at",
+      "type": "timestamp with time zone",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "eager_polling",
+      "type": "boolean",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_schema_version",
+      "column": "version_of",
+      "type": "character varying",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_schema_version",
+      "column": "version",
+      "type": "integer",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_workers",
+      "column": "worker_id",
+      "type": "text",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_workers",
+      "column": "tags",
+      "type": "ARRAY",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_workers",
+      "column": "queues",
+      "type": "ARRAY",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_workers",
+      "column": "last_seen",
+      "type": "timestamp with time zone",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_workers",
+      "column": "expires_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO"
+     }
+    ],
+    "jobs": [
+     {
+      "id": "03fbb559-a7f7-de67-a454-c454c28765cd",
+      "queue": "ds_q",
+      "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+      "state": "succeeded",
+      "attempts": 1,
+      "kwargs": "{\"n\": 0}",
+      "completed": true,
+      "has_claim_id": false
+     },
+     {
+      "id": "03fbb559-a7fa-5697-a90e-2816819744dc",
+      "queue": "ds_q",
+      "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+      "state": "succeeded",
+      "attempts": 1,
+      "kwargs": "{\"n\": 1}",
+      "completed": true,
+      "has_claim_id": false
+     },
+     {
+      "id": "03fbb559-a7fb-b247-b6f1-f5939c0bece5",
+      "queue": "ds_q",
+      "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+      "state": "succeeded",
+      "attempts": 1,
+      "kwargs": "{\"n\": 2}",
+      "completed": true,
+      "has_claim_id": false
+     },
+     {
+      "id": "03fbb559-a7fc-f8b7-bd89-15401fc6e938",
+      "queue": "ds_q",
+      "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+      "state": "pending",
+      "attempts": 0,
+      "kwargs": "{\"n\": 3}",
+      "completed": false,
+      "has_claim_id": false
+     },
+     {
+      "id": "03fbb559-b6e3-1ce7-8885-cb429bb822f7",
+      "queue": "ds_q",
+      "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+      "state": "pending",
+      "attempts": 0,
+      "kwargs": "{\"n\": 4}",
+      "completed": false,
+      "has_claim_id": false
+     },
+     {
+      "id": "03fbb559-b6e6-c417-9474-50a51e084a1d",
+      "queue": "ds_q",
+      "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+      "state": "pending",
+      "attempts": 0,
+      "kwargs": "{\"n\": 5}",
+      "completed": false,
+      "has_claim_id": false
+     }
+    ],
+    "schema_version": [
+     {
+      "version_of": "chancy",
+      "version": "8"
+     }
+    ]
+   },
+   "final_state_digest": "24609398678d86dfecc0d0e3bf8de58048b3ab52c8f40b49735085da5ea034b2",
+   "oracle_violations": null,
+   "pinned_sources": {
+    "version": "0.25.1",
+    "chancy/app.py": "e18bdf44f41b8223a0503df99bfd05afd53c4761b4fffd087790a0ced3d11688",
+    "chancy/worker.py": "2742f88da03bcaca2158691e09554dbbf7fa906da4425072f34023ad1b298af3",
+    "chancy/migrate.py": "b25d63e03dd13b17c41283415c97533baa11bf8243b17cf5a0ba7a50a8be715b",
+    "chancy/executors/asyncex.py": "b3617071805ec538b3bc30c19864af8bcca1bf5654f51644f3e0a7db5ddd9525"
+   },
+   "corroboration": {
+    "ok": true,
+    "matched": 65,
+    "params_compared": 80,
+    "params_mismatched": 0,
+    "params_unchecked": 0,
+    "client_texts_matched": 0,
+    "unchecked_kinds": {},
+    "sessions": {
+     "9525": "old_push",
+     "9526": "old_worker"
+    },
+    "problems": []
+   },
+   "trace_sha256": "159c40065a4dae8591fd401774a6fcc60846b5b615a94e83bd5fa6477e987fa0",
+   "raw_results": {
+    "old_push": {
+     "version": "0.25.1",
+     "job_ids": [
+      "03fbb559-b6e3-1ce7-8885-cb429bb822f7",
+      "03fbb559-b6e6-c417-9474-50a51e084a1d"
+     ]
+    },
+    "old_worker": {
+     "version": "0.25.1",
+     "handled": [
+      0,
+      1,
+      2
+     ],
+     "worker_stopped": true,
+     "waited_states": []
+    }
+   },
+   "code_revision": {
+    "head": "637334f998250f22fc78b8fae6e820db2a339432",
+    "dirty": false
+   },
+   "payload_sha256": {
+    "deployspecter/__init__.py": "b4026257185a44b86831ff2d6b28954c750e3ba5015d59ef92c6c240386b1314",
+    "deployspecter/experimental/__init__.py": "5ee45683d1acdcd143b31e1c933133229fef9ffb1a7abf09aba2c80068b7f8cf",
+    "deployspecter/experimental/stepping.py": "cb2d869471bb2824ebacf3eac1b8e6b97d0a97835595be27f864a1809106954c",
+    "deployspecter/experimental/stepping_async.py": "bb98c9dd9df85ab71264d449e59c8abc4244a526c5e48248190ff34fef5b31bd",
+    "deployspecter/experimental/oracle.py": "3e8a70ed6a56e0a540b8723c0879167f60cd98a0bd9532e726ff96256a3ace11",
+    "deployspecter/experimental/apps/__init__.py": "59994e097df271f0c67178baef8ac7c528bc40873b95adccdd51eb7ee8e65da7",
+    "deployspecter/experimental/apps/reservations_mixed.py": "9fefbb5eae1017488d28e0bd05093850324ab86bde159974e6953152e6ac8d47",
+    "deployspecter/experimental/apps/reservations_mixed_async.py": "35e5b49075cd6519db7a39c2e002199ae69f38a30dff2f95588d97d6ed00488f",
+    "deployspecter/experimental/thirdparty/__init__.py": "fb45270909b8288fb7b7a41aa16c0cd9a0c00274657193e74818b1c7598e4d96",
+    "deployspecter/experimental/thirdparty/pgqueuer_adapter.py": "0e721c374774712317ba10545ee183206d54c2d392d136d26ec791264ffc1017",
+    "deployspecter/experimental/thirdparty/chancy_adapter.py": "4bd6507410827ec2b67502fdccdf085bea86c88490c5cb1ca69abe793394a4b5",
+    "deployspecter/experimental/coordinated.py": "a7526c332e55271e367d2379d23ca37f46297cda1274e25fb8af8547a7189e36"
+   },
+   "teardown": {
+    "container_removed": true,
+    "network_removed": true,
+    "workdir_removed": true,
+    "protected_unchanged": true
+   },
+   "ns": [
+    4,
+    5
+   ]
+  },
+  {
+   "variant": "4_new",
+   "schedule": [],
+   "network": "ds-mvp-iso-c73d445f",
+   "image": [
+    "ds-mvp-iso:3ee31f8346916e68",
+    "sha256:d8567373451ce654b8643a8929aa807099847b654c0c667dea14ed9e8a82b9b5"
+   ],
+   "image_id": "sha256:d8567373451ce654b8643a8929aa807099847b654c0c667dea14ed9e8a82b9b5",
+   "runtime_flags": [
+    "--read-only",
+    "--tmpfs",
+    "/tmp:rw,noexec,nosuid,nodev,size=64m",
+    "--cap-drop",
+    "ALL",
+    "--security-opt",
+    "no-new-privileges",
+    "--pids-limit",
+    "64",
+    "--memory",
+    "512m",
+    "--memory-swap",
+    "512m",
+    "--cpus",
+    "1",
+    "--ulimit",
+    "nofile=256:256",
+    "--user",
+    "65534:65534"
+   ],
+   "network_internal": "true",
+   "container_seconds": 5.88,
+   "exit_code": 0,
+   "probes": {
+    "uid": 65534,
+    "gid": 65534,
+    "root_writable": false,
+    "app_writable": false,
+    "tmp_writable": true,
+    "ssh_dir_present": false,
+    "env_keys": [
+     "DS_CHANCY_PLAN",
+     "DS_CHANCY_VARIANT",
+     "DS_MODE",
+     "DS_PGQ_VARIANT",
+     "DS_PGQ_WORKLOAD",
+     "DS_PG_DB",
+     "DS_PG_HOST",
+     "DS_PG_PASSWORD",
+     "DS_PG_PORT",
+     "DS_PG_USER",
+     "DS_SCHEDULE",
+     "DS_SCHEMA",
+     "DS_VARIANT",
+     "GPG_KEY",
+     "HOME",
+     "HOSTNAME",
+     "LANG",
+     "PATH",
+     "PIP_DISABLE_PIP_VERSION_CHECK",
+     "PIP_NO_CACHE_DIR",
+     "PYTHONDONTWRITEBYTECODE",
+     "PYTHON_SHA256",
+     "PYTHON_VERSION"
+    ],
+    "secret_like_env": [],
+    "host_55432": "refused:gaierror",
+    "host_gateway_55441": "refused:gaierror",
+    "internet_tcp": "refused:OSError",
+    "internet_dns": "unresolved:gaierror",
+    "nproc_limit": "64",
+    "memory_limit": "536870912"
+   },
+   "isolation_checks": {
+    "uid": true,
+    "root_writable": true,
+    "app_writable": true,
+    "tmp_writable": true,
+    "ssh_dir_present": true,
+    "secret_like_env": true,
+    "host_55432_unreachable": true,
+    "host_gateway_unreachable": true,
+    "internet_tcp_unreachable": true,
+    "internet_dns_unresolved": true,
+    "disposable_pg_reachable": true,
+    "pids_limited": true,
+    "memory_limited": true
+   },
+   "isolation_ok": true,
+   "initial_state_digest": "24609398678d86dfecc0d0e3bf8de58048b3ab52c8f40b49735085da5ea034b2",
+   "final_state": {
+    "catalog": [
+     {
+      "table": "chancy_jobs",
+      "column": "id",
+      "type": "uuid",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "queue",
+      "type": "text",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "func",
+      "type": "text",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "kwargs",
+      "type": "jsonb",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "limits",
+      "type": "jsonb",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "meta",
+      "type": "jsonb",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "state",
+      "type": "character varying",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "priority",
+      "type": "integer",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "attempts",
+      "type": "integer",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "max_attempts",
+      "type": "integer",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "taken_by",
+      "type": "text",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "started_at",
+      "type": "timestamp with time zone",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "completed_at",
+      "type": "timestamp with time zone",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "scheduled_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "unique_key",
+      "type": "text",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "errors",
+      "type": "jsonb",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_jobs",
+      "column": "claim_id",
+      "type": "uuid",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_leader",
+      "column": "id",
+      "type": "bigint",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_leader",
+      "column": "worker_id",
+      "type": "text",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_leader",
+      "column": "first_seen",
+      "type": "timestamp with time zone",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_leader",
+      "column": "expires_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queue_rate_limits",
+      "column": "queue",
+      "type": "character varying",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queue_rate_limits",
+      "column": "window_start",
+      "type": "integer",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queue_rate_limits",
+      "column": "count",
+      "type": "integer",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "name",
+      "type": "text",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "state",
+      "type": "text",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "concurrency",
+      "type": "integer",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "tags",
+      "type": "ARRAY",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "executor",
+      "type": "text",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "executor_options",
+      "type": "jsonb",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "polling_interval",
+      "type": "integer",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "rate_limit",
+      "type": "integer",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "rate_limit_window",
+      "type": "integer",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "resume_at",
+      "type": "timestamp with time zone",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_queues",
+      "column": "eager_polling",
+      "type": "boolean",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_schema_version",
+      "column": "version_of",
+      "type": "character varying",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_schema_version",
+      "column": "version",
+      "type": "integer",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_workers",
+      "column": "worker_id",
+      "type": "text",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_workers",
+      "column": "tags",
+      "type": "ARRAY",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_workers",
+      "column": "queues",
+      "type": "ARRAY",
+      "nullable": "YES"
+     },
+     {
+      "table": "chancy_workers",
+      "column": "last_seen",
+      "type": "timestamp with time zone",
+      "nullable": "NO"
+     },
+     {
+      "table": "chancy_workers",
+      "column": "expires_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO"
+     }
+    ],
+    "jobs": [
+     {
+      "id": "03fbb559-a7f7-de67-a454-c454c28765cd",
+      "queue": "ds_q",
+      "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+      "state": "succeeded",
+      "attempts": 1,
+      "kwargs": "{\"n\": 0}",
+      "completed": true,
+      "has_claim_id": false
+     },
+     {
+      "id": "03fbb559-a7fa-5697-a90e-2816819744dc",
+      "queue": "ds_q",
+      "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+      "state": "succeeded",
+      "attempts": 1,
+      "kwargs": "{\"n\": 1}",
+      "completed": true,
+      "has_claim_id": false
+     },
+     {
+      "id": "03fbb559-a7fb-b247-b6f1-f5939c0bece5",
+      "queue": "ds_q",
+      "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+      "state": "succeeded",
+      "attempts": 1,
+      "kwargs": "{\"n\": 2}",
+      "completed": true,
+      "has_claim_id": false
+     },
+     {
+      "id": "03fbb559-a7fc-f8b7-bd89-15401fc6e938",
+      "queue": "ds_q",
+      "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+      "state": "succeeded",
+      "attempts": 1,
+      "kwargs": "{\"n\": 3}",
+      "completed": true,
+      "has_claim_id": true
+     },
+     {
+      "id": "03fbb559-b6e3-1ce7-8885-cb429bb822f7",
+      "queue": "ds_q",
+      "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+      "state": "succeeded",
+      "attempts": 1,
+      "kwargs": "{\"n\": 4}",
+      "completed": true,
+      "has_claim_id": true
+     },
+     {
+      "id": "03fbb559-b6e6-c417-9474-50a51e084a1d",
+      "queue": "ds_q",
+      "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+      "state": "succeeded",
+      "attempts": 1,
+      "kwargs": "{\"n\": 5}",
+      "completed": true,
+      "has_claim_id": true
+     },
+     {
+      "id": "03fbb559-f137-efb7-917c-c6f54670161a",
+      "queue": "ds_q",
+      "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+      "state": "succeeded",
+      "attempts": 1,
+      "kwargs": "{\"n\": 6}",
+      "completed": true,
+      "has_claim_id": true
+     },
+     {
+      "id": "03fbb559-f13a-d427-b292-641072b78c6a",
+      "queue": "ds_q",
+      "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+      "state": "succeeded",
+      "attempts": 1,
+      "kwargs": "{\"n\": 7}",
+      "completed": true,
+      "has_claim_id": true
+     }
+    ],
+    "schema_version": [
+     {
+      "version_of": "chancy",
+      "version": "8"
+     }
+    ]
+   },
+   "final_state_digest": "f454a837af97b3228bc29bd381f768f0a83e4f493082b62d76a4323c97b18621",
+   "oracle_violations": null,
+   "pinned_sources": {
+    "version": "0.26.0",
+    "chancy/app.py": "403e471247c81e0b37560da70e64570b92aa9586ff31826c16316b61deb2cd14",
+    "chancy/worker.py": "0f541cbfd5ebce9abe75fd5f6365987333d847aaca352b4e7d8445c56575072a",
+    "chancy/migrate.py": "2f19e93779a146ef6b162edf76e2fe174a0405a028d9f38339793ee0213b240e",
+    "chancy/executors/asyncex.py": "f6495e78fb80973f1227a9060c9698ef61f984f15180d06f3e4f917aa4eae855"
+   },
+   "corroboration": {
+    "ok": true,
+    "matched": 371,
+    "params_compared": 212,
+    "params_mismatched": 0,
+    "params_unchecked": 0,
+    "client_texts_matched": 0,
+    "unchecked_kinds": {},
+    "sessions": {
+     "9529": "new_push",
+     "9531": "new_worker"
+    },
+    "problems": []
+   },
+   "trace_sha256": "9d9fbec1262f3593854fcbeb9f9d104299ece28bbd2554b77d30b84651e2cd89",
+   "raw_results": {
+    "new_push": {
+     "version": "0.26.0",
+     "job_ids": [
+      "03fbb559-f137-efb7-917c-c6f54670161a",
+      "03fbb559-f13a-d427-b292-641072b78c6a"
+     ]
+    },
+    "new_worker": {
+     "version": "0.26.0",
+     "handled": [
+      3,
+      4,
+      5,
+      6,
+      7
+     ],
+     "worker_stopped": true,
+     "waited_states": [
+      "succeeded",
+      "succeeded",
+      "succeeded",
+      "succeeded",
+      "succeeded",
+      "succeeded",
+      "succeeded",
+      "succeeded"
+     ]
+    }
+   },
+   "code_revision": {
+    "head": "637334f998250f22fc78b8fae6e820db2a339432",
+    "dirty": false
+   },
+   "payload_sha256": {
+    "deployspecter/__init__.py": "b4026257185a44b86831ff2d6b28954c750e3ba5015d59ef92c6c240386b1314",
+    "deployspecter/experimental/__init__.py": "5ee45683d1acdcd143b31e1c933133229fef9ffb1a7abf09aba2c80068b7f8cf",
+    "deployspecter/experimental/stepping.py": "cb2d869471bb2824ebacf3eac1b8e6b97d0a97835595be27f864a1809106954c",
+    "deployspecter/experimental/stepping_async.py": "bb98c9dd9df85ab71264d449e59c8abc4244a526c5e48248190ff34fef5b31bd",
+    "deployspecter/experimental/oracle.py": "3e8a70ed6a56e0a540b8723c0879167f60cd98a0bd9532e726ff96256a3ace11",
+    "deployspecter/experimental/apps/__init__.py": "59994e097df271f0c67178baef8ac7c528bc40873b95adccdd51eb7ee8e65da7",
+    "deployspecter/experimental/apps/reservations_mixed.py": "9fefbb5eae1017488d28e0bd05093850324ab86bde159974e6953152e6ac8d47",
+    "deployspecter/experimental/apps/reservations_mixed_async.py": "35e5b49075cd6519db7a39c2e002199ae69f38a30dff2f95588d97d6ed00488f",
+    "deployspecter/experimental/thirdparty/__init__.py": "fb45270909b8288fb7b7a41aa16c0cd9a0c00274657193e74818b1c7598e4d96",
+    "deployspecter/experimental/thirdparty/pgqueuer_adapter.py": "0e721c374774712317ba10545ee183206d54c2d392d136d26ec791264ffc1017",
+    "deployspecter/experimental/thirdparty/chancy_adapter.py": "4bd6507410827ec2b67502fdccdf085bea86c88490c5cb1ca69abe793394a4b5",
+    "deployspecter/experimental/coordinated.py": "a7526c332e55271e367d2379d23ca37f46297cda1274e25fb8af8547a7189e36"
+   },
+   "teardown": {
+    "container_removed": true,
+    "network_removed": true,
+    "workdir_removed": true,
+    "protected_unchanged": true
+   },
+   "ns": [
+    6,
+    7
+   ]
+  }
+ ],
+ "oracle_violations": [],
+ "final_state": {
+  "catalog": [
+   {
+    "table": "chancy_jobs",
+    "column": "id",
+    "type": "uuid",
+    "nullable": "NO"
+   },
+   {
+    "table": "chancy_jobs",
+    "column": "queue",
+    "type": "text",
+    "nullable": "NO"
+   },
+   {
+    "table": "chancy_jobs",
+    "column": "func",
+    "type": "text",
+    "nullable": "NO"
+   },
+   {
+    "table": "chancy_jobs",
+    "column": "kwargs",
+    "type": "jsonb",
+    "nullable": "NO"
+   },
+   {
+    "table": "chancy_jobs",
+    "column": "limits",
+    "type": "jsonb",
+    "nullable": "NO"
+   },
+   {
+    "table": "chancy_jobs",
+    "column": "meta",
+    "type": "jsonb",
+    "nullable": "NO"
+   },
+   {
+    "table": "chancy_jobs",
+    "column": "state",
+    "type": "character varying",
+    "nullable": "NO"
+   },
+   {
+    "table": "chancy_jobs",
+    "column": "priority",
+    "type": "integer",
+    "nullable": "YES"
+   },
+   {
+    "table": "chancy_jobs",
+    "column": "attempts",
+    "type": "integer",
+    "nullable": "YES"
+   },
+   {
+    "table": "chancy_jobs",
+    "column": "max_attempts",
+    "type": "integer",
+    "nullable": "NO"
+   },
+   {
+    "table": "chancy_jobs",
+    "column": "taken_by",
+    "type": "text",
+    "nullable": "YES"
+   },
+   {
+    "table": "chancy_jobs",
+    "column": "created_at",
+    "type": "timestamp with time zone",
+    "nullable": "NO"
+   },
+   {
+    "table": "chancy_jobs",
+    "column": "started_at",
+    "type": "timestamp with time zone",
+    "nullable": "YES"
+   },
+   {
+    "table": "chancy_jobs",
+    "column": "completed_at",
+    "type": "timestamp with time zone",
+    "nullable": "YES"
+   },
+   {
+    "table": "chancy_jobs",
+    "column": "scheduled_at",
+    "type": "timestamp with time zone",
+    "nullable": "NO"
+   },
+   {
+    "table": "chancy_jobs",
+    "column": "unique_key",
+    "type": "text",
+    "nullable": "YES"
+   },
+   {
+    "table": "chancy_jobs",
+    "column": "errors",
+    "type": "jsonb",
+    "nullable": "NO"
+   },
+   {
+    "table": "chancy_jobs",
+    "column": "claim_id",
+    "type": "uuid",
+    "nullable": "YES"
+   },
+   {
+    "table": "chancy_leader",
+    "column": "id",
+    "type": "bigint",
+    "nullable": "NO"
+   },
+   {
+    "table": "chancy_leader",
+    "column": "worker_id",
+    "type": "text",
+    "nullable": "NO"
+   },
+   {
+    "table": "chancy_leader",
+    "column": "first_seen",
+    "type": "timestamp with time zone",
+    "nullable": "NO"
+   },
+   {
+    "table": "chancy_leader",
+    "column": "expires_at",
+    "type": "timestamp with time zone",
+    "nullable": "NO"
+   },
+   {
+    "table": "chancy_queue_rate_limits",
+    "column": "queue",
+    "type": "character varying",
+    "nullable": "NO"
+   },
+   {
+    "table": "chancy_queue_rate_limits",
+    "column": "window_start",
+    "type": "integer",
+    "nullable": "NO"
+   },
+   {
+    "table": "chancy_queue_rate_limits",
+    "column": "count",
+    "type": "integer",
+    "nullable": "NO"
+   },
+   {
+    "table": "chancy_queues",
+    "column": "name",
+    "type": "text",
+    "nullable": "NO"
+   },
+   {
+    "table": "chancy_queues",
+    "column": "state",
+    "type": "text",
+    "nullable": "NO"
+   },
+   {
+    "table": "chancy_queues",
+    "column": "concurrency",
+    "type": "integer",
+    "nullable": "YES"
+   },
+   {
+    "table": "chancy_queues",
+    "column": "tags",
+    "type": "ARRAY",
+    "nullable": "YES"
+   },
+   {
+    "table": "chancy_queues",
+    "column": "executor",
+    "type": "text",
+    "nullable": "NO"
+   },
+   {
+    "table": "chancy_queues",
+    "column": "executor_options",
+    "type": "jsonb",
+    "nullable": "YES"
+   },
+   {
+    "table": "chancy_queues",
+    "column": "polling_interval",
+    "type": "integer",
+    "nullable": "YES"
+   },
+   {
+    "table": "chancy_queues",
+    "column": "created_at",
+    "type": "timestamp with time zone",
+    "nullable": "NO"
+   },
+   {
+    "table": "chancy_queues",
+    "column": "rate_limit",
+    "type": "integer",
+    "nullable": "YES"
+   },
+   {
+    "table": "chancy_queues",
+    "column": "rate_limit_window",
+    "type": "integer",
+    "nullable": "YES"
+   },
+   {
+    "table": "chancy_queues",
+    "column": "resume_at",
+    "type": "timestamp with time zone",
+    "nullable": "YES"
+   },
+   {
+    "table": "chancy_queues",
+    "column": "eager_polling",
+    "type": "boolean",
+    "nullable": "NO"
+   },
+   {
+    "table": "chancy_schema_version",
+    "column": "version_of",
+    "type": "character varying",
+    "nullable": "NO"
+   },
+   {
+    "table": "chancy_schema_version",
+    "column": "version",
+    "type": "integer",
+    "nullable": "YES"
+   },
+   {
+    "table": "chancy_workers",
+    "column": "worker_id",
+    "type": "text",
+    "nullable": "NO"
+   },
+   {
+    "table": "chancy_workers",
+    "column": "tags",
+    "type": "ARRAY",
+    "nullable": "YES"
+   },
+   {
+    "table": "chancy_workers",
+    "column": "queues",
+    "type": "ARRAY",
+    "nullable": "YES"
+   },
+   {
+    "table": "chancy_workers",
+    "column": "last_seen",
+    "type": "timestamp with time zone",
+    "nullable": "NO"
+   },
+   {
+    "table": "chancy_workers",
+    "column": "expires_at",
+    "type": "timestamp with time zone",
+    "nullable": "NO"
+   }
+  ],
+  "jobs": [
+   {
+    "id": "03fbb559-a7f7-de67-a454-c454c28765cd",
+    "queue": "ds_q",
+    "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+    "state": "succeeded",
+    "attempts": 1,
+    "kwargs": "{\"n\": 0}",
+    "completed": true,
+    "has_claim_id": false
+   },
+   {
+    "id": "03fbb559-a7fa-5697-a90e-2816819744dc",
+    "queue": "ds_q",
+    "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+    "state": "succeeded",
+    "attempts": 1,
+    "kwargs": "{\"n\": 1}",
+    "completed": true,
+    "has_claim_id": false
+   },
+   {
+    "id": "03fbb559-a7fb-b247-b6f1-f5939c0bece5",
+    "queue": "ds_q",
+    "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+    "state": "succeeded",
+    "attempts": 1,
+    "kwargs": "{\"n\": 2}",
+    "completed": true,
+    "has_claim_id": false
+   },
+   {
+    "id": "03fbb559-a7fc-f8b7-bd89-15401fc6e938",
+    "queue": "ds_q",
+    "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+    "state": "succeeded",
+    "attempts": 1,
+    "kwargs": "{\"n\": 3}",
+    "completed": true,
+    "has_claim_id": true
+   },
+   {
+    "id": "03fbb559-b6e3-1ce7-8885-cb429bb822f7",
+    "queue": "ds_q",
+    "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+    "state": "succeeded",
+    "attempts": 1,
+    "kwargs": "{\"n\": 4}",
+    "completed": true,
+    "has_claim_id": true
+   },
+   {
+    "id": "03fbb559-b6e6-c417-9474-50a51e084a1d",
+    "queue": "ds_q",
+    "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+    "state": "succeeded",
+    "attempts": 1,
+    "kwargs": "{\"n\": 5}",
+    "completed": true,
+    "has_claim_id": true
+   },
+   {
+    "id": "03fbb559-f137-efb7-917c-c6f54670161a",
+    "queue": "ds_q",
+    "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+    "state": "succeeded",
+    "attempts": 1,
+    "kwargs": "{\"n\": 6}",
+    "completed": true,
+    "has_claim_id": true
+   },
+   {
+    "id": "03fbb559-f13a-d427-b292-641072b78c6a",
+    "queue": "ds_q",
+    "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+    "state": "succeeded",
+    "attempts": 1,
+    "kwargs": "{\"n\": 7}",
+    "completed": true,
+    "has_claim_id": true
+   }
+  ],
+  "schema_version": [
+   {
+    "version_of": "chancy",
+    "version": "8"
+   }
+  ]
+ }
+}

@@ -239,12 +239,18 @@ class RemoteAsyncRun(AsyncRun):
                         epoch, owed = int(msg["epoch"]), int(msg["epoch"])
                         if kind == "grant":
                             a = self.by_name.get(msg.get("actor", ""))
-                            if a is None or a.state != "pending" or a.request is None:
-                                return await self._fail("protocol_error", f"grant for {msg.get('actor')!r}, which "
-                                                        "isn't pending here")
-                            if a.request.statement_id != msg.get("statement_id"):
-                                return await self._fail("protocol_error", f"grant for {a.name}'s statement "
-                                                        f"{msg.get('statement_id')}, which isn't the one it reported")
+                            if a is None:
+                                return await self._fail("protocol_error",
+                                                        f"grant for unknown actor {msg.get('actor')!r}")
+                            if a.state != "pending" or a.request is None or \
+                                    a.request.statement_id != msg.get("statement_id"):
+                                # the reported request is gone: the framework cancelled that task at its gate after
+                                # the snapshot (e.g. Worker.stop). Declined, recorded, and decided again.
+                                await send(writer, {"t": "decline", "epoch": epoch, "grant": msg.get("grant"),
+                                                    "actor": a.name, "now": a.state,
+                                                    "statement_id": None if a.request is None
+                                                    else a.request.statement_id})
+                                continue
                             self.decisions.append(Decision(int(msg["decision"]), list(msg.get("enabled", [])),
                                                            dict(msg.get("blocked", {})), list(msg.get("finished", [])),
                                                            None, a.name, str(msg.get("source", "coordinator"))))
@@ -469,6 +475,13 @@ class Coordinator:
                     reports[p] = msg.get("report", {})
                     for name, view in msg["actors"].items():
                         last[name] = view
+                elif t == "decline":
+                    if p not in live or int(msg.get("epoch", -1)) != epoch or not self.decisions or \
+                            self.decisions[-1]["grant"] != msg.get("grant") or self.decisions[-1]["process"] != p:
+                        return await self._abort("protocol_error", f"{p} declined a grant it wasn't given", live)
+                    self.decisions[-1]["declined"] = {"now": msg.get("now"), "statement_id": msg.get("statement_id")}
+                    self.events.append({"event": "decline", "process": p, "grant": msg.get("grant"),
+                                        "t_ms": self._ms()})
                 elif t == "bye":
                     if any(last.get(n, {}).get("state") not in TERMINAL for n in self.peers[p]["actors"]):
                         return await self._abort("protocol_error", f"{p} said bye with an actor not done", live)

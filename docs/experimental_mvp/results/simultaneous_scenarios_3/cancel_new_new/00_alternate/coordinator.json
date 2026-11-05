@@ -1,0 +1,1340 @@
+{
+ "protocol": "ds-coord/1",
+ "outcome": "completed",
+ "reason": null,
+ "policy": {
+  "kind": "alternate"
+ },
+ "gates": [
+  {
+   "actor": "new_push",
+   "match": null,
+   "until": [
+    {
+     "actor": "new_worker",
+     "marker": "fetch",
+     "count": 1
+    }
+   ]
+  },
+  {
+   "actor": "new_push",
+   "match": "SET state = 'failed'",
+   "until": [
+    {
+     "actor": "new_worker",
+     "marker": "claim",
+     "count": 1
+    }
+   ]
+  },
+  {
+   "actor": "new_worker",
+   "match": "UPDATE \"chancy_jobs\" SET state = %\\(state\\)s",
+   "from": [
+    {
+     "actor": "new_worker",
+     "marker": "claim",
+     "count": 1
+    }
+   ],
+   "until": [
+    {
+     "actor": "new_push",
+     "marker": "cancel",
+     "count": 1
+    }
+   ]
+  }
+ ],
+ "stop": {
+  "key": "succeeded",
+  "covers": [
+   0
+  ],
+  "after_s": 45
+ },
+ "processes": {
+  "B": {
+   "version": "0.26.0",
+   "run_id": "coordinated_B",
+   "monitor_pid": 13904,
+   "actors": {
+    "new_push": {
+     "backend_pid": 13906,
+     "handler": "chancy-0.26.0.push"
+    },
+    "new_worker": {
+     "backend_pid": 13905,
+     "handler": "chancy-0.26.0.work"
+    }
+   },
+   "bye": "completed"
+  }
+ },
+ "decisions": [
+  {
+   "decision": 0,
+   "grant": 0,
+   "epoch": 1,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "920b81e0ec32",
+   "sql": "CREATE TABLE IF NOT EXISTS \"chancy_schema_version\" ( version_of VARCHAR(255) PRIMARY KEY, version INT )",
+   "t_ms": 33.24
+  },
+  {
+   "decision": 1,
+   "grant": 1,
+   "epoch": 2,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "920b81e0ec32",
+   "sql": "CREATE TABLE IF NOT EXISTS \"chancy_schema_version\" ( version_of VARCHAR(255) PRIMARY KEY, version INT )",
+   "t_ms": 84.77
+  },
+  {
+   "decision": 2,
+   "grant": 2,
+   "epoch": 3,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "82d080aaa5ab",
+   "sql": "SELECT version FROM \"chancy_schema_version\" WHERE version_of = %s",
+   "t_ms": 136.22
+  },
+  {
+   "decision": 3,
+   "grant": 3,
+   "epoch": 4,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 187.65
+  },
+  {
+   "decision": 4,
+   "grant": 4,
+   "epoch": 5,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "f1e1c0d1d19a",
+   "sql": "INSERT INTO \"chancy_queues\" ( name, state, concurrency, tags, executor, executor_options, polling_interval, rate_limit, rate_limit_window, resume_at, eager_polling ) VALUES ( %(name)s, %(state)s, %(concurrency)s, %(tags)s, %(executor)s, %(executor_options)s, %(polling_interval)s, %(rate_limit)s, %(r",
+   "t_ms": 248.59
+  },
+  {
+   "decision": 5,
+   "grant": 5,
+   "epoch": 6,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 307.43
+  },
+  {
+   "decision": 6,
+   "grant": 6,
+   "epoch": 7,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "0a55b8b9d368",
+   "sql": "SELECT * FROM \"chancy_queues\"",
+   "t_ms": 365.05
+  },
+  {
+   "decision": 7,
+   "grant": 7,
+   "epoch": 8,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 417.8
+  },
+  {
+   "decision": 8,
+   "grant": 8,
+   "epoch": 9,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "a8402858d4f1",
+   "sql": "BEGIN",
+   "t_ms": 698.43
+  },
+  {
+   "decision": 9,
+   "grant": 9,
+   "epoch": 10,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "19bfe31bf081",
+   "sql": "SAVEPOINT <auto>",
+   "t_ms": 753.78
+  },
+  {
+   "decision": 10,
+   "grant": 10,
+   "epoch": 11,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "fef58a7d9dfb",
+   "sql": "DELETE FROM \"chancy_workers\" WHERE expires_at < NOW()",
+   "t_ms": 814.48
+  },
+  {
+   "decision": 11,
+   "grant": 11,
+   "epoch": 12,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "da40f1173bfd",
+   "sql": "INSERT INTO \"chancy_workers\" (worker_id, last_seen, expires_at, tags, queues) VALUES ( %(worker_id)s, NOW(), NOW() + INTERVAL '90 seconds', %(tags)s, %(queues)s ) ON CONFLICT (worker_id) DO UPDATE SET last_seen = NOW(), expires_at = NOW() + INTERVAL '90 seconds', tags = EXCLUDED.tags, queues = EXCLU",
+   "t_ms": 871.71
+  },
+  {
+   "decision": 12,
+   "grant": 12,
+   "epoch": 13,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "ad0e5ae50049",
+   "sql": "RELEASE SAVEPOINT",
+   "t_ms": 923.22
+  },
+  {
+   "decision": 13,
+   "grant": 13,
+   "epoch": 14,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 984.57
+  },
+  {
+   "decision": 14,
+   "grant": 14,
+   "epoch": 15,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 1037.94
+  },
+  {
+   "decision": 15,
+   "grant": 15,
+   "epoch": 16,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "a8402858d4f1",
+   "sql": "BEGIN",
+   "t_ms": 1099.11
+  },
+  {
+   "decision": 16,
+   "grant": 16,
+   "epoch": 17,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "a8d0f543fd4d",
+   "sql": "WITH selected_jobs AS ( SELECT id FROM \"chancy_jobs\" WHERE queue = %(queue)s AND (state = 'pending' OR state = 'retrying') AND attempts < max_attempts AND (scheduled_at IS NULL OR scheduled_at <= NOW()) ORDER BY priority DESC, id ASC LIMIT %(maximum_jobs_to_fetch)s FOR UPDATE OF \"chancy_jobs\" SKIP L",
+   "t_ms": 1152.77
+  },
+  {
+   "decision": 17,
+   "grant": 17,
+   "epoch": 18,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_push",
+   "source": "alternate",
+   "enabled": [
+    "new_push",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "4c84553c03d4",
+   "sql": "INSERT INTO \"chancy_jobs\" ( id, queue, func, kwargs, limits, meta, priority, max_attempts, scheduled_at, unique_key ) VALUES ( %(id)s, %(queue)s, %(func)s, %(kwargs)s, %(limits)s, %(meta)s, %(priority)s, %(max_attempts)s, %(scheduled_at)s, %(unique_key)s ) ON CONFLICT (unique_key) WHERE unique_key I",
+   "t_ms": 1207.01
+  },
+  {
+   "decision": 18,
+   "grant": 18,
+   "epoch": 19,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_push",
+   "source": "alternate",
+   "enabled": [
+    "new_push",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 1265.64
+  },
+  {
+   "decision": 19,
+   "grant": 19,
+   "epoch": 20,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_push",
+   "source": "alternate",
+   "enabled": [
+    "new_push",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "a8402858d4f1",
+   "sql": "BEGIN",
+   "t_ms": 1323.83
+  },
+  {
+   "decision": 20,
+   "grant": 20,
+   "epoch": 21,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 1383.81
+  },
+  {
+   "decision": 21,
+   "grant": 21,
+   "epoch": 22,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 1436.12
+  },
+  {
+   "decision": 22,
+   "grant": 22,
+   "epoch": 23,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "a8402858d4f1",
+   "sql": "BEGIN",
+   "t_ms": 1496.45
+  },
+  {
+   "decision": 23,
+   "grant": 23,
+   "epoch": 24,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "a8d0f543fd4d",
+   "sql": "WITH selected_jobs AS ( SELECT id FROM \"chancy_jobs\" WHERE queue = %(queue)s AND (state = 'pending' OR state = 'retrying') AND attempts < max_attempts AND (scheduled_at IS NULL OR scheduled_at <= NOW()) ORDER BY priority DESC, id ASC LIMIT %(maximum_jobs_to_fetch)s FOR UPDATE OF \"chancy_jobs\" SKIP L",
+   "t_ms": 1549.73
+  },
+  {
+   "decision": 24,
+   "grant": 24,
+   "epoch": 25,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 1609.89
+  },
+  {
+   "decision": 25,
+   "grant": 25,
+   "epoch": 26,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 1665.58
+  },
+  {
+   "decision": 26,
+   "grant": 26,
+   "epoch": 27,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "a8402858d4f1",
+   "sql": "BEGIN",
+   "t_ms": 1719.82
+  },
+  {
+   "decision": 27,
+   "grant": 27,
+   "epoch": 28,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "a8d0f543fd4d",
+   "sql": "WITH selected_jobs AS ( SELECT id FROM \"chancy_jobs\" WHERE queue = %(queue)s AND (state = 'pending' OR state = 'retrying') AND attempts < max_attempts AND (scheduled_at IS NULL OR scheduled_at <= NOW()) ORDER BY priority DESC, id ASC LIMIT %(maximum_jobs_to_fetch)s FOR UPDATE OF \"chancy_jobs\" SKIP L",
+   "t_ms": 1774.25
+  },
+  {
+   "decision": 28,
+   "grant": 28,
+   "epoch": 29,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 1831.68
+  },
+  {
+   "decision": 29,
+   "grant": 29,
+   "epoch": 30,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 1891.59
+  },
+  {
+   "decision": 30,
+   "grant": 30,
+   "epoch": 31,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "0a55b8b9d368",
+   "sql": "SELECT * FROM \"chancy_queues\"",
+   "t_ms": 1945.56
+  },
+  {
+   "decision": 31,
+   "grant": 31,
+   "epoch": 32,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 1998.29
+  },
+  {
+   "decision": 32,
+   "grant": 32,
+   "epoch": 33,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "a8402858d4f1",
+   "sql": "BEGIN",
+   "t_ms": 2053.07
+  },
+  {
+   "decision": 33,
+   "grant": 33,
+   "epoch": 34,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "19bfe31bf081",
+   "sql": "SAVEPOINT <auto>",
+   "t_ms": 2115.36
+  },
+  {
+   "decision": 34,
+   "grant": 34,
+   "epoch": 35,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "fef58a7d9dfb",
+   "sql": "DELETE FROM \"chancy_workers\" WHERE expires_at < NOW()",
+   "t_ms": 2172.16
+  },
+  {
+   "decision": 35,
+   "grant": 35,
+   "epoch": 36,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "da40f1173bfd",
+   "sql": "INSERT INTO \"chancy_workers\" (worker_id, last_seen, expires_at, tags, queues) VALUES ( %(worker_id)s, NOW(), NOW() + INTERVAL '90 seconds', %(tags)s, %(queues)s ) ON CONFLICT (worker_id) DO UPDATE SET last_seen = NOW(), expires_at = NOW() + INTERVAL '90 seconds', tags = EXCLUDED.tags, queues = EXCLU",
+   "t_ms": 2226.3
+  },
+  {
+   "decision": 36,
+   "grant": 36,
+   "epoch": 37,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "ad0e5ae50049",
+   "sql": "RELEASE SAVEPOINT",
+   "t_ms": 2288.53
+  },
+  {
+   "decision": 37,
+   "grant": 37,
+   "epoch": 38,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 2340.95
+  },
+  {
+   "decision": 38,
+   "grant": 38,
+   "epoch": 39,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 2398.1
+  },
+  {
+   "decision": 39,
+   "grant": 39,
+   "epoch": 40,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "a8402858d4f1",
+   "sql": "BEGIN",
+   "t_ms": 2452.26
+  },
+  {
+   "decision": 40,
+   "grant": 40,
+   "epoch": 41,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [
+    "new_push"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "a8d0f543fd4d",
+   "sql": "WITH selected_jobs AS ( SELECT id FROM \"chancy_jobs\" WHERE queue = %(queue)s AND (state = 'pending' OR state = 'retrying') AND attempts < max_attempts AND (scheduled_at IS NULL OR scheduled_at <= NOW()) ORDER BY priority DESC, id ASC LIMIT %(maximum_jobs_to_fetch)s FOR UPDATE OF \"chancy_jobs\" SKIP L",
+   "t_ms": 2505.2
+  },
+  {
+   "decision": 41,
+   "grant": 41,
+   "epoch": 42,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_push",
+   "source": "alternate",
+   "enabled": [
+    "new_push",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "5b494902cb60",
+   "sql": "UPDATE \"chancy_jobs\" SET state = 'failed', claim_id = NULL, completed_at = NOW() WHERE id = %s",
+   "t_ms": 2556.83
+  },
+  {
+   "decision": 42,
+   "grant": 42,
+   "epoch": 43,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {
+    "new_push": [
+     "new_worker"
+    ]
+   },
+   "kind": "transaction_exit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 2667.68
+  },
+  {
+   "decision": 43,
+   "grant": 43,
+   "epoch": 44,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_push",
+   "source": "alternate",
+   "enabled": [
+    "new_push",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 2728.76
+  },
+  {
+   "decision": 44,
+   "grant": 44,
+   "epoch": 45,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_push",
+   "source": "alternate",
+   "enabled": [
+    "new_push",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 2789.55
+  },
+  {
+   "decision": 45,
+   "grant": 45,
+   "epoch": 46,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 2842.8
+  },
+  {
+   "decision": 46,
+   "grant": 46,
+   "epoch": 47,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "a8402858d4f1",
+   "sql": "BEGIN",
+   "t_ms": 2897.94
+  },
+  {
+   "decision": 47,
+   "grant": 47,
+   "epoch": 48,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "a8d0f543fd4d",
+   "sql": "WITH selected_jobs AS ( SELECT id FROM \"chancy_jobs\" WHERE queue = %(queue)s AND (state = 'pending' OR state = 'retrying') AND attempts < max_attempts AND (scheduled_at IS NULL OR scheduled_at <= NOW()) ORDER BY priority DESC, id ASC LIMIT %(maximum_jobs_to_fetch)s FOR UPDATE OF \"chancy_jobs\" SKIP L",
+   "t_ms": 2953.11
+  },
+  {
+   "decision": 48,
+   "grant": 48,
+   "epoch": 49,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 3013.86
+  },
+  {
+   "decision": 49,
+   "grant": 49,
+   "epoch": 50,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 3066.98
+  },
+  {
+   "decision": 50,
+   "grant": 50,
+   "epoch": 51,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "0a55b8b9d368",
+   "sql": "SELECT * FROM \"chancy_queues\"",
+   "t_ms": 3119.19
+  },
+  {
+   "decision": 51,
+   "grant": 51,
+   "epoch": 52,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 3172.59
+  },
+  {
+   "decision": 52,
+   "grant": 52,
+   "epoch": 53,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "a8402858d4f1",
+   "sql": "BEGIN",
+   "t_ms": 3229.65
+  },
+  {
+   "decision": 53,
+   "grant": 53,
+   "epoch": 54,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "executemany",
+   "statement_id": "9f175fccc789",
+   "sql": "UPDATE \"chancy_jobs\" SET state = %(state)s, started_at = %(started_at)s, completed_at = %(completed_at)s, scheduled_at = %(scheduled_at)s, attempts = %(attempts)s, errors = %(errors)s, meta = %(meta)s, max_attempts = %(max_attempts)s WHERE id = %(id)s AND claim_id IS NOT DISTINCT FROM %(claim_id)s R",
+   "t_ms": 3285.87
+  },
+  {
+   "decision": 54,
+   "grant": 54,
+   "epoch": 55,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 3338.9
+  },
+  {
+   "decision": 55,
+   "grant": 55,
+   "epoch": 56,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 3398.58
+  },
+  {
+   "decision": 56,
+   "grant": 56,
+   "epoch": 57,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "a8402858d4f1",
+   "sql": "BEGIN",
+   "t_ms": 3451.49
+  },
+  {
+   "decision": 57,
+   "grant": 57,
+   "epoch": 58,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "19bfe31bf081",
+   "sql": "SAVEPOINT <auto>",
+   "t_ms": 3504.16
+  },
+  {
+   "decision": 58,
+   "grant": 58,
+   "epoch": 59,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "fef58a7d9dfb",
+   "sql": "DELETE FROM \"chancy_workers\" WHERE expires_at < NOW()",
+   "t_ms": 3556.34
+  },
+  {
+   "decision": 59,
+   "grant": 59,
+   "epoch": 60,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "da40f1173bfd",
+   "sql": "INSERT INTO \"chancy_workers\" (worker_id, last_seen, expires_at, tags, queues) VALUES ( %(worker_id)s, NOW(), NOW() + INTERVAL '90 seconds', %(tags)s, %(queues)s ) ON CONFLICT (worker_id) DO UPDATE SET last_seen = NOW(), expires_at = NOW() + INTERVAL '90 seconds', tags = EXCLUDED.tags, queues = EXCLU",
+   "t_ms": 3609.99
+  },
+  {
+   "decision": 60,
+   "grant": 60,
+   "epoch": 61,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "ad0e5ae50049",
+   "sql": "RELEASE SAVEPOINT",
+   "t_ms": 3661.58
+  },
+  {
+   "decision": 61,
+   "grant": 61,
+   "epoch": 62,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 3714.49
+  },
+  {
+   "decision": 62,
+   "grant": 62,
+   "epoch": 63,
+   "process": "B",
+   "version": "0.26.0",
+   "actor": "new_worker",
+   "source": "alternate",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 3766.2
+  }
+ ],
+ "statements": {
+  "920b81e0ec32": "CREATE TABLE IF NOT EXISTS \"chancy_schema_version\" ( version_of VARCHAR(255) PRIMARY KEY, version INT )",
+  "82d080aaa5ab": "SELECT version FROM \"chancy_schema_version\" WHERE version_of = %s",
+  "79663c1d3b43": "COMMIT",
+  "f1e1c0d1d19a": "INSERT INTO \"chancy_queues\" ( name, state, concurrency, tags, executor, executor_options, polling_interval, rate_limit, rate_limit_window, resume_at, eager_polling ) VALUES ( %(name)s, %(state)s, %(concurrency)s, %(tags)s, %(executor)s, %(executor_options)s, %(polling_interval)s, %(rate_limit)s, %(rate_limit_window)s, %(resume_at)s, %(eager_polling)s ) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING state, concurrency, tags, polling_interval, executor, executor_options, rate_limit, rate_limit_window, resume_at, eager_polling",
+  "0a55b8b9d368": "SELECT * FROM \"chancy_queues\"",
+  "a8402858d4f1": "BEGIN",
+  "19bfe31bf081": "SAVEPOINT <auto>",
+  "fef58a7d9dfb": "DELETE FROM \"chancy_workers\" WHERE expires_at < NOW()",
+  "da40f1173bfd": "INSERT INTO \"chancy_workers\" (worker_id, last_seen, expires_at, tags, queues) VALUES ( %(worker_id)s, NOW(), NOW() + INTERVAL '90 seconds', %(tags)s, %(queues)s ) ON CONFLICT (worker_id) DO UPDATE SET last_seen = NOW(), expires_at = NOW() + INTERVAL '90 seconds', tags = EXCLUDED.tags, queues = EXCLUDED.queues",
+  "ad0e5ae50049": "RELEASE SAVEPOINT",
+  "a8d0f543fd4d": "WITH selected_jobs AS ( SELECT id FROM \"chancy_jobs\" WHERE queue = %(queue)s AND (state = 'pending' OR state = 'retrying') AND attempts < max_attempts AND (scheduled_at IS NULL OR scheduled_at <= NOW()) ORDER BY priority DESC, id ASC LIMIT %(maximum_jobs_to_fetch)s FOR UPDATE OF \"chancy_jobs\" SKIP LOCKED ) UPDATE \"chancy_jobs\" SET started_at = NOW(), state = 'running', claim_id = gen_random_uuid(), taken_by = %(worker_id)s FROM selected_jobs WHERE \"chancy_jobs\".id = selected_jobs.id RETURNING \"chancy_jobs\".*",
+  "4c84553c03d4": "INSERT INTO \"chancy_jobs\" ( id, queue, func, kwargs, limits, meta, priority, max_attempts, scheduled_at, unique_key ) VALUES ( %(id)s, %(queue)s, %(func)s, %(kwargs)s, %(limits)s, %(meta)s, %(priority)s, %(max_attempts)s, %(scheduled_at)s, %(unique_key)s ) ON CONFLICT (unique_key) WHERE unique_key IS NOT NULL AND state NOT IN ('succeeded', 'failed') DO UPDATE SET state = \"chancy_jobs\".state RETURNING id;",
+  "5b494902cb60": "UPDATE \"chancy_jobs\" SET state = 'failed', claim_id = NULL, completed_at = NOW() WHERE id = %s",
+  "9f175fccc789": "UPDATE \"chancy_jobs\" SET state = %(state)s, started_at = %(started_at)s, completed_at = %(completed_at)s, scheduled_at = %(scheduled_at)s, attempts = %(attempts)s, errors = %(errors)s, meta = %(meta)s, max_attempts = %(max_attempts)s WHERE id = %(id)s AND claim_id IS NOT DISTINCT FROM %(claim_id)s RETURNING id"
+ },
+ "events": [
+  {
+   "event": "start",
+   "t_ms": 33.1,
+   "pids": {
+    "13906": "new_push",
+    "13905": "new_worker"
+   }
+  },
+  {
+   "event": "stop",
+   "why": "covered",
+   "at_grant": 46,
+   "t_ms": 2897.77
+  },
+  {
+   "event": "bye",
+   "process": "B",
+   "t_ms": 3830.08
+  },
+  {
+   "event": "end",
+   "t_ms": 3830.08
+  }
+ ],
+ "grants": 63,
+ "elapsed_ms": 3830.09
+}

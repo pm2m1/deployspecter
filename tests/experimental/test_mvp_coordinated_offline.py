@@ -179,3 +179,41 @@ def test_the_schedule_policy_defers_an_unavailable_entry_and_keeps_it():
     assert p.choose([("A", "a"), ("B", "b")]) == ("B", "b", "schedule")
     assert p.choose([("A", "a"), ("B", "b")]) == ("A", "a", "schedule")
     assert p.choose([("B", "b")]) == ("B", "b", "continuation")
+
+
+def test_a_declined_grant_is_recorded_and_decided_again():
+    port = free_port()
+    a = Fake(port, "A", {"x": 10})
+
+    async def script():
+        await a.open()
+        await a.recv()
+        await a.snap(0, {"x": ("pending", "FIRST")})
+        g = await a.recv()
+        await a.send({"t": "decline", "epoch": g["epoch"], "grant": g["grant"], "actor": "x", "now": "pending",
+                      "statement_id": "SECOND"})
+        await a.snap(g["epoch"], {"x": ("pending", "SECOND")})
+        g2 = await a.recv()
+        await a.snap(g2["epoch"], {"x": ("finished", None)})
+        await a.send({"t": "bye", "outcome": "completed"})
+        return g, g2
+
+    report, (g, g2) = run(co.Coordinator(processes=["A"], token="tok"), port, script)
+    assert report["outcome"] == "completed"
+    assert (g["statement_id"], g2["statement_id"]) == ("FIRST", "SECOND") and g2["grant"] == g["grant"] + 1
+    assert report["decisions"][0]["declined"] == {"now": "pending", "statement_id": "SECOND"}
+    assert "declined" not in report["decisions"][1]
+
+
+def test_a_decline_for_a_grant_never_given_is_a_protocol_error():
+    port = free_port()
+    a = Fake(port, "A", {"x": 10})
+
+    async def script():
+        await a.open()
+        await a.recv()
+        await a.send({"t": "decline", "epoch": 0, "grant": 5, "actor": "x"})
+        return await a.recv()
+
+    report, last = run(co.Coordinator(processes=["A"], token="tok", epoch_timeout_s=3), port, script)
+    assert report["outcome"] == "protocol_error" and last["t"] == "abort"

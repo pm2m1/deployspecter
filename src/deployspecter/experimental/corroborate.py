@@ -281,6 +281,9 @@ def corroborate(log: bytes, *, start: str, end: str, trace: Any, admin_pid: int 
     for op in trace.records:
         if op.grant is None and op.outcome != "ok":
             continue  # never executed: refused, cancelled before its grant, or held
+        if getattr(op, "error_class", None) == "client_side":
+            continue  # granted, but refused by the driver before any I/O (if it did reach the server, the log
+            # has a row the trace doesn't explain, and the run is refused)
         pid = str(trace.actors[op.actor]["backend_pid"])
         items = [("ROLLBACK", None)] if op.kind == "cleanup_rollback" else _expected(op)
         ordered[pid] += [(op.seq, i, text, params, op.grant, op) for i, (text, params) in enumerate(items)]

@@ -154,7 +154,18 @@ class AsyncSteppedConnection(psycopg.AsyncConnection):
             raise
         else:
             exit_label = ("RELEASE SAVEPOINT" if nested else "COMMIT") if not force_rollback else "ROLLBACK"
-            await a.run.gate(a, "transaction_exit", exit_label, None, lambda: cm.__aexit__(None, None, None))
+            try:
+                await a.run.gate(a, "transaction_exit", exit_label, None, lambda: cm.__aexit__(None, None, None))
+            except asyncio.CancelledError as cancel:
+                # cancelled before its COMMIT (or RELEASE) was granted: the commit never ran (recorded as
+                # cancelled_while_waiting), so leave psycopg's transaction as an exception would, with a rollback
+                # that runs ungranted and is recorded; otherwise the session would stay in a transaction
+                err2 = cancel
+                if a.conn is not None and a.conn.info.transaction_status != TX.IDLE:
+                    abort_label = "ROLLBACK TO SAVEPOINT + RELEASE" if nested else "ROLLBACK"
+                    await a.run.gate(a, "transaction_exit", abort_label, None,
+                                     lambda: cm.__aexit__(type(err2), err2, err2.__traceback__), aborting=True)
+                raise
 
     @contextlib.asynccontextmanager
     async def pipeline(self) -> AsyncIterator[Any]:
@@ -403,6 +414,8 @@ class AsyncRun:
             op.outcome = "aborted" if cancelled else "error"
             op.error_class = "cancelled" if isinstance(exc, asyncio.CancelledError) else error_class(exc)
             op.sqlstate = getattr(exc, "sqlstate", None)
+            if isinstance(exc, (psycopg.ProgrammingError, psycopg.InterfaceError)) and op.sqlstate is None:
+                op.error_class = "client_side"  # refused by psycopg before any I/O: it never reached the server
             if deferred and not cancelled:
                 prov["cancellation"] = "deferred to the statement boundary"
                 raise asyncio.CancelledError() from exc
