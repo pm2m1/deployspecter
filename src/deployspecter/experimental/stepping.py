@@ -103,6 +103,13 @@ def sanitize(value: Any) -> Any:
         return {"interval_days": value.days, "interval_us": value.seconds * 1_000_000 + value.microseconds}
     if isinstance(value, uuid.UUID):
         return {"uuid_sha256": hashlib.sha256(str(value).encode()).hexdigest()[:12]}
+    from psycopg.types.json import Json, Jsonb
+    if isinstance(value, (Json, Jsonb)):  # by value: a digest of its canonical JSON, compared against the server's
+        try:
+            canonical = json.dumps(value.obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+        except (TypeError, ValueError):
+            return {"type": type(value).__name__}
+        return {"json_sha256": hashlib.sha256(canonical.encode()).hexdigest()[:12]}
     if isinstance(value, str):
         return {"str": len(value), "sha256": hashlib.sha256(value.encode()).hexdigest()[:12]}
     if isinstance(value, (bytes, bytearray, memoryview)):

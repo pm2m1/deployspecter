@@ -95,3 +95,18 @@ def test_typed_values_keep_no_raw_uuid_and_exact_instants():
     assert set(s) == {"uuid_sha256"} and "03fbb261" not in str(s)
     assert sanitize(INSTANT) == sanitize(INSTANT.astimezone(IST))  # one instant, one value
     assert sanitize(dt.datetime(2026, 1, 1)) != sanitize(dt.datetime(2026, 1, 1, tzinfo=UTC))
+
+
+from psycopg.types.json import Json, Jsonb  # noqa: E402
+
+
+@pytest.mark.parametrize("value, logged, verdict", [
+    (Json({"a": 1, "b": [1, 2]}), """'{"a": 1, "b": [1, 2]}'""", True),
+    (Jsonb({"b": [1, 2], "a": 1}), """'{"a": 1, "b": [1, 2]}'""", True),  # jsonb's normalized output, same value
+    (Json({"a": 1}), """'{"a": 2}'""", False),
+    (Json({"a": 1}), """'{"a": 1, "x": null}'""", False),
+    (Json({"q": "it's"}), """'{"q": "it''s"}'""", True),
+    (Json({"a": 1}), "NULL", False), (Json({"a": 1}), "'not json'", False),
+])
+def test_json_values_are_compared_by_value(value, logged, verdict):
+    assert _value_matches(logged, sanitize(value)) is verdict

@@ -18,6 +18,7 @@ every row must be explained:
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from dataclasses import dataclass, field
 from typing import Any
@@ -197,6 +198,15 @@ def _value_matches(logged: str, want: Any) -> bool | None:
         if logged == "NULL":
             return False
         return datetime_matches(logged[1:-1].replace("''", "'") if logged.startswith("'") else logged, want)
+    if isinstance(want, dict) and "json_sha256" in want:  # json/jsonb, compared as values, not as text
+        if logged == "NULL" or not logged.startswith("'"):
+            return False
+        try:
+            value = json.loads(logged[1:-1].replace("''", "'"))
+        except ValueError:
+            return False
+        canonical = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+        return hashlib.sha256(canonical.encode()).hexdigest()[:12] == want["json_sha256"]
     if isinstance(want, dict) and "uuid_sha256" in want:
         text = logged[1:-1] if logged.startswith("'") else ""
         return bool(re.fullmatch(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", text)) and \
