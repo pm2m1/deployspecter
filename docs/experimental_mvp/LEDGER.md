@@ -151,3 +151,19 @@ Account balance was not checked through the API. The Responses API returns per-r
 53. **Prospective Muse plan** (`protocol/PROSPECTIVE_MUSE_PLAN.md`): predeclared, not executed, and not ready for confirmatory execution.
 
 **Meta usage in this increment:** none (0 requests, $0).
+
+## Increment 9 (2026-11-06): causal validation and a supported rolling upgrade
+
+54. **Audit of the 34-run chancy-2895c4a record** (`research_tools/audit_historical.py`): 0 problems. Hashes, versions, traces and recomputed verdicts all agree.
+55. **Code and schema ablations of the fix** (`historical/chancy_2895c4a/ablation/RESULTS.md`): 36/36 sound, with the independent SQL check agreeing.
+    - Removing the claim assignment, the completion fence or the cancel's claim invalidation each restores the overwrite (3/3).
+    - The schema change alone (the parent's code on v8) doesn't remove it.
+    - Result: each part is necessary within `2895c4a`. Sufficiency of a minimal patch wasn't tested.
+56. **procrastinate 3.3.0 → 3.4.0**, an exploratory development case (`rolling_upgrade/procrastinate_3.3_3.4/`).
+    - The pair was chosen by a mechanical rule, and the blue-green contract read at the 3.4.0 tag. It was frozen before any run.
+    - Built with an adapter on the public `open_async(pool)` seam and dependencies pinned as of the release date, then run through six contract phases, old and new code simultaneous in the overlap.
+    - 5/5 runs sound, with **no application violation**. Two oracle errors in harness assumptions (E1, E2) are recorded in `ERRATA.md`.
+57. **Muse vs deterministic on the overlap** (`compare_1`): K = 2 per source, all sound, no violation in any source. Muse 4/4 valid at $0.016684. No advantage claimed.
+58. **Ready-to-send curator and oracle-review packages** (`handoff/send/`), not sent. Amendment 003 addendum (#21). All decisions still PROPOSED; confirmatory evaluation BLOCKED.
+
+**Meta usage in this increment:** 1 request, an estimated $0.016684 (cap $10).

@@ -26,6 +26,8 @@ This prototype runs real Python application handlers concurrently on psycopg 3, 
 - **Historical defect reproduced (NONBLIND development case):** `historical/chancy_2895c4a/RESULTS.md`.
   - **The defect:** Chancy's fix commit `2895c4a` and its parent, built from pinned trees and each run on its own schema. The parent lets a late completion overwrite a cancellation (3/3 forced, 9/10 explored); the fix commit doesn't (0/13).
   - **The oracle:** maintainer-sourced (their regression test), developer-encoded.
+- **Causal attribution (chancy-2895c4a):** each part of the fix's claim fence is necessary, and the schema change alone isn't sufficient (`historical/chancy_2895c4a/ablation/RESULTS.md`).
+- **Supported rolling upgrade (exploratory development case):** procrastinate 3.3.0 and 3.4.0 ran together under the documented blue-green procedure. **No application violation** in 5 sound runs (`rolling_upgrade/procrastinate_3.3_3.4/RESULTS.md`).
 - **Amendment 003:** review-ready draft v3 and a recommended-rulings package. Every decision is PROPOSED, and no reviewer or curator exists. See `protocol/DECISIONS_003_v2.md`.
 - **Simultaneous mixed-version execution: LIVE-TESTED (NONBLIND).** Chancy 0.25.1 and 0.26.0 workers ran at the same time, in two restricted containers, with one coordinator granting every statement. See `simultaneous/RESULTS.md` (`research_tools/mvp_demo.sh OUT simultaneous`).
   - The released code never ran a job twice in 10 seeded schedules; the claim-lock mutant did, in 2 of 10.
