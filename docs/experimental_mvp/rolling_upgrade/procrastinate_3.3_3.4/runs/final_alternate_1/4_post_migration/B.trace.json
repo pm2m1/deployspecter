@@ -1,0 +1,194 @@
+{
+ "run_id": "procr_B",
+ "schedule": [],
+ "chosen": [
+  "operator",
+  "operator",
+  "operator"
+ ],
+ "decisions": [
+  {
+   "index": 0,
+   "enabled": [
+    "operator"
+   ],
+   "blocked": {},
+   "finished": [],
+   "requested": null,
+   "chosen": "operator",
+   "source": "alternate"
+  },
+  {
+   "index": 1,
+   "enabled": [
+    "operator"
+   ],
+   "blocked": {},
+   "finished": [],
+   "requested": null,
+   "chosen": "operator",
+   "source": "alternate"
+  },
+  {
+   "index": 2,
+   "enabled": [
+    "operator"
+   ],
+   "blocked": {},
+   "finished": [],
+   "requested": null,
+   "chosen": "operator",
+   "source": "alternate"
+  }
+ ],
+ "records": [
+  {
+   "seq": 0,
+   "actor": "operator",
+   "kind": "transaction_enter",
+   "sql": "BEGIN",
+   "statement_id": "a8402858d4f1",
+   "params": null,
+   "provenance": {
+    "app_version": "procrastinate-3.4.0",
+    "actor": "operator",
+    "handler": "migrate",
+    "invocation_id": "procr_B:operator",
+    "migration_phase": "",
+    "logical_op": 0,
+    "session": {
+     "backend_pid": 435
+    },
+    "task": "ds-actor-operator",
+    "on_behalf_of": null,
+    "call_site": "../app/src/deployspecter/experimental/thirdparty/procrastinate_adapter.py:142:p_migrate",
+    "framework_entry": null,
+    "txn": "operator:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 0,
+   "decision": 0,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 10.97,
+   "completed_ms": 12.43
+  },
+  {
+   "seq": 1,
+   "actor": "operator",
+   "kind": "execute",
+   "sql": "DROP TRIGGER IF EXISTS procrastinate_trigger_status_events_update_v1 ON procrastinate_jobs; DROP FUNCTION IF EXISTS public.procrastinate_trigger_function_status_events_update_v1; CREATE FUNCTION public.procrastinate_trigger_function_status_events_update_v1() RETURNS trigger LANGUAGE plpgsql AS $function$ BEGIN WITH t AS ( SELECT CASE WHEN OLD.status = 'todo'::procrastinate_job_status AND NEW.status = 'doing'::procrastinate_job_status THEN 'started'::procrastinate_job_event_type WHEN OLD.status = 'doing'::procrastinate_job_status AND NEW.status = 'todo'::procrastinate_job_status THEN 'deferred_for_retry'::procrastinate_job_event_type WHEN OLD.status = 'doing'::procrastinate_job_status AND NEW.status = 'failed'::procrastinate_job_status THEN 'failed'::procrastinate_job_event_type WHEN OLD.status = 'doing'::procrastinate_job_status AND NEW.status = 'succeeded'::procrastinate_job_status THEN 'succeeded'::procrastinate_job_event_type WHEN OLD.status = 'todo'::procrastinate_job_status AND ( NEW.status = 'cancelled'::procrastinate_job_status OR NEW.status = 'failed'::procrastinate_job_status OR NEW.status = 'succeeded'::procrastinate_job_status ) THEN 'cancelled'::procrastinate_job_event_type WHEN OLD.status = 'doing'::procrastinate_job_status AND NEW.status = 'aborted'::procrastinate_job_status THEN 'aborted'::procrastinate_job_event_type WHEN OLD.status = 'failed'::procrastinate_job_status AND NEW.status = 'todo'::procrastinate_job_status THEN 'retried'::procrastinate_job_event_type ELSE NULL END as event_type ) INSERT INTO procrastinate_events(job_id, type) SELECT NEW.id, t.event_type FROM t WHERE t.event_type IS NOT NULL; RETURN NEW; END; $function$; CREATE TRIGGER procrastinate_trigger_status_events_update_v1 AFTER UPDATE OF status ON procrastinate_jobs FOR EACH ROW EXECUTE PROCEDURE procrastinate_trigger_function_status_events_update_v1();",
+   "statement_id": "6317687c8100",
+   "params": null,
+   "provenance": {
+    "app_version": "procrastinate-3.4.0",
+    "actor": "operator",
+    "handler": "migrate",
+    "invocation_id": "procr_B:operator",
+    "migration_phase": "",
+    "logical_op": 1,
+    "session": {
+     "backend_pid": 435
+    },
+    "task": "ds-actor-operator",
+    "on_behalf_of": null,
+    "call_site": "../app/src/deployspecter/experimental/thirdparty/procrastinate_adapter.py:143:p_migrate",
+    "framework_entry": null,
+    "txn": "operator:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 1,
+   "decision": 1,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 12.55,
+   "completed_ms": 64.43
+  },
+  {
+   "seq": 2,
+   "actor": "operator",
+   "kind": "transaction_exit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "procrastinate-3.4.0",
+    "actor": "operator",
+    "handler": "migrate",
+    "invocation_id": "procr_B:operator",
+    "migration_phase": "",
+    "logical_op": 2,
+    "session": {
+     "backend_pid": 435
+    },
+    "task": "ds-actor-operator",
+    "on_behalf_of": null,
+    "call_site": "../app/src/deployspecter/experimental/thirdparty/procrastinate_adapter.py:142:p_migrate",
+    "framework_entry": null,
+    "txn": "operator:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 2,
+   "decision": 2,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 64.49,
+   "completed_ms": 114.37
+  }
+ ],
+ "actors": {
+  "operator": {
+   "handler": "procrastinate-3.4.0.migrate",
+   "args": {
+    "migration": {
+     "str": 51,
+     "sha256": "63b9dce1a97b"
+    }
+   },
+   "state": "finished",
+   "result": {
+    "version": {
+     "str": 5,
+     "sha256": "1ec555427828"
+    },
+    "migration": {
+     "str": 51,
+     "sha256": "63b9dce1a97b"
+    },
+    "sha256": {
+     "str": 64,
+     "sha256": "a819d635289b"
+    }
+   },
+   "exception": null,
+   "exception_class": null,
+   "backend_pid": 435,
+   "transactions": 1
+  }
+ },
+ "outcome": "completed",
+ "diagnostics": [],
+ "migration_phase": "",
+ "fingerprint": "8a80835f30f33c97faa8579670c982ec337f2a6a3a13949b3d90b79ecf27d0ea"
+}

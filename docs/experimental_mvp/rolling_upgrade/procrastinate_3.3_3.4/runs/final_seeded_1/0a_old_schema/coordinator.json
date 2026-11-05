@@ -1,0 +1,97 @@
+{
+ "protocol": "ds-coord/1",
+ "outcome": "completed",
+ "reason": null,
+ "policy": {
+  "kind": "seeded",
+  "seed": 1
+ },
+ "gates": [],
+ "stop": {
+  "key": "succeeded",
+  "covers": [],
+  "after_s": 45
+ },
+ "processes": {
+  "A": {
+   "version": "3.3.0",
+   "run_id": "procr_A",
+   "monitor_pid": 476,
+   "actors": {
+    "old_schema": {
+     "backend_pid": 477,
+     "handler": "procrastinate-3.3.0.schema"
+    }
+   },
+   "bye": "completed"
+  }
+ },
+ "decisions": [
+  {
+   "decision": 0,
+   "grant": 0,
+   "epoch": 1,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_schema",
+   "source": "seeded",
+   "enabled": [
+    "old_schema"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "a763a157ceae",
+   "sql": "-- Procrastinate Schema CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog; -- Enums CREATE TYPE procrastinate_job_status AS ENUM ( 'todo', -- The job is queued 'doing', -- The job has been fetched by a worker 'succeeded', -- The job ended successfully 'failed', -- The job ended with an e",
+   "t_ms": 31.68
+  },
+  {
+   "decision": 1,
+   "grant": 1,
+   "epoch": 2,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_schema",
+   "source": "seeded",
+   "enabled": [
+    "old_schema"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 87.47
+  }
+ ],
+ "statements": {
+  "a763a157ceae": "-- Procrastinate Schema CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog; -- Enums CREATE TYPE procrastinate_job_status AS ENUM ( 'todo', -- The job is queued 'doing', -- The job has been fetched by a worker 'succeeded', -- The job ended successfully 'failed', -- The job ended with an error 'cancelled', -- The job was cancelled 'aborting', -- legacy, not used anymore since v3.0.0 'aborted' -- The job was aborted ); CREATE TYPE procrastinate_job_event_type AS ENUM ( 'deferred', -- Job created, in todo 'started', -- todo -> doing 'deferred_for_retry', -- doing -> todo 'failed', -- doing -> failed 'succeeded', -- doing -> succeeded 'cancelled', -- todo -> cancelled 'abort_requested', -- not a state transition, but set in a separate field 'aborted', -- doing -> aborted (only allowed when abort_requested field is set) 'scheduled' -- not a state transition, but recording when a task is scheduled for ); -- Composite Types CREATE TYPE procrastinate_job_to_defer_v1 AS ( queue_name character varying, task_name character varying, priority integer, lock text, queueing_lock text, args jsonb, scheduled_at timestamp with time zone ); -- Tables CREATE TABLE procrastinate_workers( id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY, last_heartbeat timestamp with time zone NOT NULL DEFAULT NOW() ); CREATE TABLE procrastinate_jobs ( id bigserial PRIMARY KEY, queue_name character varying(128) NOT NULL, task_name character varying(128) NOT NULL, priority integer DEFAULT 0 NOT NULL, lock text, queueing_lock text, args jsonb DEFAULT '{}' NOT NULL, status procrastinate_job_status DEFAULT 'todo'::procrastinate_job_status NOT NULL, scheduled_at timestamp with time zone NULL, attempts integer DEFAULT 0 NOT NULL, abort_requested boolean DEFAULT false NOT NULL, worker_id bigint REFERENCES procrastinate_workers(id) ON DELETE SET NULL, CONSTRAINT check_not_todo_abort_requested CHECK (NOT (status = 'todo' AND abort_requested = true)) ); CREATE TABLE procrastinate_periodic_defers ( id b",
+  "79663c1d3b43": "COMMIT"
+ },
+ "events": [
+  {
+   "event": "start",
+   "t_ms": 31.53,
+   "pids": {
+    "477": "old_schema"
+   }
+  },
+  {
+   "event": "stop",
+   "why": "covered",
+   "at_grant": 0,
+   "t_ms": 31.65
+  },
+  {
+   "event": "bye",
+   "process": "A",
+   "t_ms": 154.97
+  },
+  {
+   "event": "end",
+   "t_ms": 154.98
+  }
+ ],
+ "grants": 2,
+ "elapsed_ms": 154.98
+}

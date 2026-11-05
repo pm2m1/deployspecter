@@ -1,0 +1,194 @@
+{
+ "run_id": "procr_B",
+ "schedule": [],
+ "chosen": [
+  "operator",
+  "operator",
+  "operator"
+ ],
+ "decisions": [
+  {
+   "index": 0,
+   "enabled": [
+    "operator"
+   ],
+   "blocked": {},
+   "finished": [],
+   "requested": null,
+   "chosen": "operator",
+   "source": "alternate"
+  },
+  {
+   "index": 1,
+   "enabled": [
+    "operator"
+   ],
+   "blocked": {},
+   "finished": [],
+   "requested": null,
+   "chosen": "operator",
+   "source": "alternate"
+  },
+  {
+   "index": 2,
+   "enabled": [
+    "operator"
+   ],
+   "blocked": {},
+   "finished": [],
+   "requested": null,
+   "chosen": "operator",
+   "source": "alternate"
+  }
+ ],
+ "records": [
+  {
+   "seq": 0,
+   "actor": "operator",
+   "kind": "transaction_enter",
+   "sql": "BEGIN",
+   "statement_id": "a8402858d4f1",
+   "params": null,
+   "provenance": {
+    "app_version": "procrastinate-3.4.0",
+    "actor": "operator",
+    "handler": "migrate",
+    "invocation_id": "procr_B:operator",
+    "migration_phase": "",
+    "logical_op": 0,
+    "session": {
+     "backend_pid": 420
+    },
+    "task": "ds-actor-operator",
+    "on_behalf_of": null,
+    "call_site": "../app/src/deployspecter/experimental/thirdparty/procrastinate_adapter.py:142:p_migrate",
+    "framework_entry": null,
+    "txn": "operator:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 0,
+   "decision": 0,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 9.22,
+   "completed_ms": 10.28
+  },
+  {
+   "seq": 1,
+   "actor": "operator",
+   "kind": "execute",
+   "sql": "-- Append new event type to reflect transition from failed -> todo ALTER TYPE procrastinate_job_event_type ADD VALUE 'retried' AFTER 'scheduled'; -- Procedure to retry failed jobs CREATE FUNCTION procrastinate_retry_job_v2( job_id bigint, retry_at timestamp with time zone, new_priority integer, new_queue_name character varying, new_lock character varying ) RETURNS void LANGUAGE plpgsql AS $$ DECLARE _job_id bigint; _abort_requested boolean; _current_status procrastinate_job_status; BEGIN SELECT status, abort_requested FROM procrastinate_jobs WHERE id = job_id AND status IN ('doing', 'failed') FOR UPDATE INTO _current_status, _abort_requested; IF _current_status = 'doing' AND _abort_requested THEN UPDATE procrastinate_jobs SET status = 'failed'::procrastinate_job_status WHERE id = job_id AND status = 'doing' RETURNING id INTO _job_id; ELSE UPDATE procrastinate_jobs SET status = 'todo'::procrastinate_job_status, attempts = attempts + 1, scheduled_at = retry_at, priority = COALESCE(new_priority, priority), queue_name = COALESCE(new_queue_name, queue_name), lock = COALESCE(new_lock, lock) WHERE id = job_id AND status IN ('doing', 'failed') RETURNING id INTO _job_id; END IF; IF _job_id IS NULL THEN RAISE 'Job was not found or has an invalid status to retry (job id: %)', job_id; END IF; END; $$;",
+   "statement_id": "352b66e619c3",
+   "params": null,
+   "provenance": {
+    "app_version": "procrastinate-3.4.0",
+    "actor": "operator",
+    "handler": "migrate",
+    "invocation_id": "procr_B:operator",
+    "migration_phase": "",
+    "logical_op": 1,
+    "session": {
+     "backend_pid": 420
+    },
+    "task": "ds-actor-operator",
+    "on_behalf_of": null,
+    "call_site": "../app/src/deployspecter/experimental/thirdparty/procrastinate_adapter.py:143:p_migrate",
+    "framework_entry": null,
+    "txn": "operator:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 1,
+   "decision": 1,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 10.36,
+   "completed_ms": 62.11
+  },
+  {
+   "seq": 2,
+   "actor": "operator",
+   "kind": "transaction_exit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "procrastinate-3.4.0",
+    "actor": "operator",
+    "handler": "migrate",
+    "invocation_id": "procr_B:operator",
+    "migration_phase": "",
+    "logical_op": 2,
+    "session": {
+     "backend_pid": 420
+    },
+    "task": "ds-actor-operator",
+    "on_behalf_of": null,
+    "call_site": "../app/src/deployspecter/experimental/thirdparty/procrastinate_adapter.py:142:p_migrate",
+    "framework_entry": null,
+    "txn": "operator:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 2,
+   "decision": 2,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 62.17,
+   "completed_ms": 112.05
+  }
+ ],
+ "actors": {
+  "operator": {
+   "handler": "procrastinate-3.4.0.migrate",
+   "args": {
+    "migration": {
+     "str": 50,
+     "sha256": "80248ea3b9f1"
+    }
+   },
+   "state": "finished",
+   "result": {
+    "version": {
+     "str": 5,
+     "sha256": "1ec555427828"
+    },
+    "migration": {
+     "str": 50,
+     "sha256": "80248ea3b9f1"
+    },
+    "sha256": {
+     "str": 64,
+     "sha256": "c2a753b60bae"
+    }
+   },
+   "exception": null,
+   "exception_class": null,
+   "backend_pid": 420,
+   "transactions": 1
+  }
+ },
+ "outcome": "completed",
+ "diagnostics": [],
+ "migration_phase": "",
+ "fingerprint": "d721bc8202384588be643e96d96e3de2cbc0ee5d8d8ce3410dee328a031f6b98"
+}
