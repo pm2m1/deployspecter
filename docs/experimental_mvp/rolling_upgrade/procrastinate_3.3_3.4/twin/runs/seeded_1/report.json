@@ -1,0 +1,3085 @@
+{
+ "case": "procrastinate-3.3.0-3.4.0",
+ "twin": true,
+ "nonblind": true,
+ "exploratory_development": true,
+ "policy": {
+  "kind": "seeded",
+  "seed": 1
+ },
+ "code_revision": {
+  "head": "c23e259302f9f445a9c64ed8a1c99a1a84ff8aca",
+  "dirty": false
+ },
+ "model": "src/deployspecter/experimental/twin/procrastinate_twin.py",
+ "model_sha256": "a54a83fa13bf0ded055d11defc831616a8ce905b899a504c61f24eec9a5b5afa",
+ "frozen_sha256": {
+  "case": "775685f1ea256a8fdb6e65501bcb1c19b7fa5dfc84f00c4b4eb61184acca8520",
+  "checker": "9c9a59d35219e7c4d05e8710e3c67ad3b53807f7d7bd5578a59c4effe1edd6f5"
+ },
+ "images": {
+  "A": [
+   "ds-mvp-iso:c1cb43a112468b9f",
+   "sha256:a3c6accbee722873d1d02eaf8073d914cec2f77a95f449fcd182fa90b9664278"
+  ],
+  "B": [
+   "ds-mvp-iso:ccd1c3bc627bed2f",
+   "sha256:39d2e5eb2c5fb541666215106e745336603733879a93555a4ae76b79a3bdffae"
+  ]
+ },
+ "version_identity": {
+  "A": {
+   "version": "3.3.0",
+   "sdist": "procrastinate-3.3.0.tar.gz",
+   "sdist_sha256": "5e03de136e6ea7a2f97e15d9cfc10727b11a3214086844f31b19706068588eb7"
+  },
+  "B": {
+   "version": "3.4.0",
+   "sdist": "procrastinate-3.4.0.tar.gz",
+   "sdist_sha256": "9cd3af413f351c88da40681d3d88b6df8904c8a3423aec87687c0b7eb7d684a4"
+  }
+ },
+ "migrations": {
+  "03.04.00_01_pre_add_retry_failed_job_procedure.sql": {
+   "sha256": "6883b7336508620ba856db4a78558158fe15c8e68b2ea05c60b468e73c311255",
+   "row_modifying_statements_outside_function_bodies": []
+  },
+  "03.04.00_50_post_add_retry_failed_job_procedure.sql": {
+   "sha256": "ac4021eb9d029e08edc9ef7672ae7ea4ef82002858a400cc6b44abd3e79248b2",
+   "row_modifying_statements_outside_function_bodies": []
+  }
+ },
+ "phase_model": [
+  {
+   "id": "T1",
+   "name": "old application on old schema",
+   "runs": [
+    "0a_old_schema",
+    "0b_old_on_old_schema"
+   ],
+   "versions": [
+    "3.3.0"
+   ],
+   "ddl": [
+    "0a_old_schema"
+   ],
+   "entry": "public is empty",
+   "exit": "3.3.0 schema present, no retry_job_v2; every deferred job terminal; no registered worker; catalog unchanged by 0b"
+  },
+  {
+   "id": "T2",
+   "name": "pre-migration (expand), then old code on the expanded schema",
+   "runs": [
+    "1_pre_migration",
+    "2_old_on_pre_schema"
+   ],
+   "versions": [
+    "3.3.0",
+    "3.4.0"
+   ],
+   "ddl": [
+    "1_pre_migration"
+   ],
+   "entry": "catalog equals T1's exit catalog",
+   "exit": "the pre migration is purely additive (nothing removed or changed in the catalog); job rows unchanged by it; old code still runs on it; catalog unchanged by phase 2"
+  },
+  {
+   "id": "T3",
+   "name": "simultaneous old/new execution",
+   "runs": [
+    "3_overlap"
+   ],
+   "versions": [
+    "3.3.0",
+    "3.4.0"
+   ],
+   "ddl": [],
+   "entry": "catalog equals T2's exit catalog",
+   "exit": "both versions executed statements, interleaved in one global grant order; catalog unchanged; no doing job; no registered worker"
+  },
+  {
+   "id": "T4",
+   "name": "background-job interaction: 3.4.0 admin retries of failed jobs while both versions' workers run (no backfill exists in this pair)",
+   "runs": [
+    "T4_background_retry"
+   ],
+   "versions": [
+    "3.3.0",
+    "3.4.0"
+   ],
+   "ddl": [],
+   "entry": "catalog equals T3's exit; at least one failed job (other than n=4, reserved for phase 5)",
+   "exit": "catalog unchanged; no doing job; no registered worker"
+  },
+  {
+   "id": "T5",
+   "name": "safe old-version quiescence (host-verified)",
+   "runs": [],
+   "host_only": true,
+   "versions": [],
+   "ddl": [],
+   "entry": "T4 sound and its containers removed",
+   "exit": "no 3.3.0 container; no client session; no registered worker; no doing job; no foreign lock; no prepared transaction"
+  },
+  {
+   "id": "T6",
+   "name": "post-migration (contract), then the new version alone",
+   "runs": [
+    "4_post_migration",
+    "5_new_only"
+   ],
+   "versions": [
+    "3.4.0"
+   ],
+   "ddl": [
+    "4_post_migration"
+   ],
+   "entry": "T5 quiesced; catalog equals T4's exit",
+   "exit": "post changed only the status-events trigger function; job rows unchanged by it; the trigger records 'retried'; phase 5 used only 3.4.0; every job terminal"
+  },
+  {
+   "id": "T7",
+   "name": "final-state verification",
+   "runs": [
+    "R_fresh_3.4.0_schema"
+   ],
+   "host_only": false,
+   "versions": [
+    "3.4.0"
+   ],
+   "ddl": [
+    "R_fresh_3.4.0_schema"
+   ],
+   "entry": "T6 sound",
+   "exit": "frozen checker: no genuine violation (E1/E2 reported as oracle errors); contract order held; upgraded catalog compared with a fresh 3.4.0 install"
+  }
+ ],
+ "steps": [
+  {
+   "step": "0a_old_schema",
+   "phase": "T1",
+   "entry_catalog_digest": "ce03cf220cc9d866f15b326dec6b96dc7da30cb5041d389e63d440f3ed63e8c9",
+   "entry_state_digest": "7678886c3e32addd663dd313667eaac1e8b66cee6fa05556fc7886439741a380",
+   "verdict": "SOUND",
+   "refusal_reasons": [],
+   "precondition": {
+    "schema_present": false
+   },
+   "versions": {
+    "A": "3.3.0"
+   },
+   "pinned_sources": {
+    "A": {
+     "version": "3.3.0",
+     "procrastinate/sql/queries.sql": "c9b3fb0be4e26bac6612c3a3d4883bdb8e129bac6175362a224e4b7cb643ff9d",
+     "procrastinate/sql/schema.sql": "bcc21931d84c4d61d319719a59d31f5322e180ab5ccd04db1875a1a7b6f59b03",
+     "procrastinate/app.py": "1147f1a56d55a23c396d364183296dc9ffd66bfc3b16d25e2033752276b35797",
+     "procrastinate/worker.py": "c4f6108f93471e145d6ae143d17a7112bc42fd7f9dc12ba102b301847aa421d0",
+     "procrastinate/manager.py": "2e41449c71b9b6ed74b5872fec3e103ddb4597646449dffab11e1e3de2107efe",
+     "procrastinate/psycopg_connector.py": "d93aaa49a39c1c5822c6fb34ddec6121969f454b253159a7abc891ba7d1c4c9e"
+    }
+   },
+   "corroboration": {
+    "ok": true,
+    "matched": 3,
+    "params_compared": 0,
+    "params_mismatched": 0,
+    "params_unchecked": 0,
+    "problems": [],
+    "unchecked_kinds": {}
+   },
+   "window": {
+    "opened_at_grant": null,
+    "closed_at_grant": 0,
+    "grants": 0,
+    "by_version": {},
+    "by_actor": {},
+    "version_switches": 0,
+    "claims_by_version": {}
+   },
+   "teardown": {
+    "containers_removed": true,
+    "network_removed": true,
+    "workdir_removed": true,
+    "protected_unchanged": true
+   },
+   "permitted_operations": {
+    "ddl_allowed": true,
+    "versions": [
+     "3.3.0"
+    ],
+    "violations": []
+   },
+   "provenance": {
+    "actors": {
+     "old_schema": {
+      "process": "A",
+      "versions": [
+       "procrastinate-3.3.0"
+      ],
+      "backend_pid": 170,
+      "transactions": 1,
+      "statements": 2,
+      "errors": 0,
+      "log_pid": 170
+     }
+    },
+    "consistent_with_server_log": true
+   },
+   "interleaving": {
+    "by_version": {
+     "procrastinate-3.3.0": 2
+    },
+    "switches": 0
+   },
+   "exit_catalog_digest": "ca22a6c8356c6dadf047a5800f726b312161933918c5e03a0fd3464c2256be9b",
+   "exit_state_digest": "e552345b2e8c5718c25dabbf418828bbca9c08edfdf9cccb8aea55ae7c61ae2f",
+   "catalog_diff": {
+    "column_order": {
+     "removed": [],
+     "added": [
+      [
+       "procrastinate_events",
+       "id,job_id,type,at"
+      ],
+      [
+       "procrastinate_jobs",
+       "id,queue_name,task_name,priority,lock,queueing_lock,args,status,scheduled_at,attempts,abort_requested,worker_id"
+      ],
+      [
+       "procrastinate_periodic_defers",
+       "id,task_name,defer_timestamp,job_id,periodic_id"
+      ],
+      [
+       "procrastinate_workers",
+       "id,last_heartbeat"
+      ]
+     ]
+    },
+    "columns": {
+     "removed": [],
+     "added": [
+      [
+       "procrastinate_events",
+       "at",
+       "timestamp with time zone",
+       "false",
+       "now()"
+      ],
+      [
+       "procrastinate_events",
+       "id",
+       "bigint",
+       "true",
+       "nextval('procrastinate_events_id_seq'::regclass)"
+      ],
+      [
+       "procrastinate_events",
+       "job_id",
+       "bigint",
+       "true",
+       ""
+      ],
+      [
+       "procrastinate_events",
+       "type",
+       "procrastinate_job_event_type",
+       "false",
+       ""
+      ],
+      [
+       "procrastinate_jobs",
+       "abort_requested",
+       "boolean",
+       "true",
+       "false"
+      ],
+      [
+       "procrastinate_jobs",
+       "args",
+       "jsonb",
+       "true",
+       "'{}'::jsonb"
+      ],
+      [
+       "procrastinate_jobs",
+       "attempts",
+       "integer",
+       "true",
+       "0"
+      ],
+      [
+       "procrastinate_jobs",
+       "id",
+       "bigint",
+       "true",
+       "nextval('procrastinate_jobs_id_seq'::regclass)"
+      ],
+      [
+       "procrastinate_jobs",
+       "lock",
+       "text",
+       "false",
+       ""
+      ],
+      [
+       "procrastinate_jobs",
+       "priority",
+       "integer",
+       "true",
+       "0"
+      ],
+      [
+       "procrastinate_jobs",
+       "queue_name",
+       "character varying(128)",
+       "true",
+       ""
+      ],
+      [
+       "procrastinate_jobs",
+       "queueing_lock",
+       "text",
+       "false",
+       ""
+      ],
+      [
+       "procrastinate_jobs",
+       "scheduled_at",
+       "timestamp with time zone",
+       "false",
+       ""
+      ],
+      [
+       "procrastinate_jobs",
+       "status",
+       "procrastinate_job_status",
+       "true",
+       "'todo'::procrastinate_job_status"
+      ],
+      [
+       "procrastinate_jobs",
+       "task_name",
+       "character varying(128)",
+       "true",
+       ""
+      ],
+      [
+       "procrastinate_jobs",
+       "worker_id",
+       "bigint",
+       "false",
+       ""
+      ],
+      [
+       "procrastinate_periodic_defers",
+       "defer_timestamp",
+       "bigint",
+       "false",
+       ""
+      ],
+      [
+       "procrastinate_periodic_defers",
+       "id",
+       "bigint",
+       "true",
+       "nextval('procrastinate_periodic_defers_id_seq'::regclass)"
+      ],
+      [
+       "procrastinate_periodic_defers",
+       "job_id",
+       "bigint",
+       "false",
+       ""
+      ],
+      [
+       "procrastinate_periodic_defers",
+       "periodic_id",
+       "character varying(128)",
+       "true",
+       "''::character varying"
+      ],
+      [
+       "procrastinate_periodic_defers",
+       "task_name",
+       "character varying(128)",
+       "true",
+       ""
+      ],
+      [
+       "procrastinate_workers",
+       "id",
+       "bigint",
+       "true",
+       ""
+      ],
+      [
+       "procrastinate_workers",
+       "last_heartbeat",
+       "timestamp with time zone",
+       "true",
+       "now()"
+      ]
+     ]
+    },
+    "composites": {
+     "removed": [],
+     "added": [
+      [
+       "procrastinate_job_to_defer_v1",
+       "args",
+       "jsonb"
+      ],
+      [
+       "procrastinate_job_to_defer_v1",
+       "lock",
+       "text"
+      ],
+      [
+       "procrastinate_job_to_defer_v1",
+       "priority",
+       "integer"
+      ],
+      [
+       "procrastinate_job_to_defer_v1",
+       "queue_name",
+       "character varying"
+      ],
+      [
+       "procrastinate_job_to_defer_v1",
+       "queueing_lock",
+       "text"
+      ],
+      [
+       "procrastinate_job_to_defer_v1",
+       "scheduled_at",
+       "timestamp with time zone"
+      ],
+      [
+       "procrastinate_job_to_defer_v1",
+       "task_name",
+       "character varying"
+      ]
+     ]
+    },
+    "constraints": {
+     "removed": [],
+     "added": [
+      [
+       "procrastinate_events",
+       "procrastinate_events_job_id_fkey",
+       "f",
+       "FOREIGN KEY (job_id) REFERENCES procrastinate_jobs(id) ON DELETE CASCADE"
+      ],
+      [
+       "procrastinate_events",
+       "procrastinate_events_pkey",
+       "p",
+       "PRIMARY KEY (id)"
+      ],
+      [
+       "procrastinate_jobs",
+       "check_not_todo_abort_requested",
+       "c",
+       "CHECK ((NOT ((status = 'todo'::procrastinate_job_status) AND (abort_requested = true))))"
+      ],
+      [
+       "procrastinate_jobs",
+       "procrastinate_jobs_pkey",
+       "p",
+       "PRIMARY KEY (id)"
+      ],
+      [
+       "procrastinate_jobs",
+       "procrastinate_jobs_worker_id_fkey",
+       "f",
+       "FOREIGN KEY (worker_id) REFERENCES procrastinate_workers(id) ON DELETE SET NULL"
+      ],
+      [
+       "procrastinate_periodic_defers",
+       "procrastinate_periodic_defers_job_id_fkey",
+       "f",
+       "FOREIGN KEY (job_id) REFERENCES procrastinate_jobs(id)"
+      ],
+      [
+       "procrastinate_periodic_defers",
+       "procrastinate_periodic_defers_pkey",
+       "p",
+       "PRIMARY KEY (id)"
+      ],
+      [
+       "procrastinate_periodic_defers",
+       "procrastinate_periodic_defers_unique",
+       "u",
+       "UNIQUE (task_name, periodic_id, defer_timestamp)"
+      ],
+      [
+       "procrastinate_workers",
+       "procrastinate_workers_pkey",
+       "p",
+       "PRIMARY KEY (id)"
+      ]
+     ]
+    },
+    "enums": {
+     "removed": [],
+     "added": [
+      [
+       "procrastinate_job_event_type",
+       "deferred,started,deferred_for_retry,failed,succeeded,cancelled,abort_requested,aborted,scheduled"
+      ],
+      [
+       "procrastinate_job_status",
+       "todo,doing,succeeded,failed,cancelled,aborting,aborted"
+      ]
+     ]
+    },
+    "functions": {
+     "removed": [],
+     "added": [
+      [
+       "procrastinate_cancel_job_v1",
+       "job_id bigint, abort boolean, delete_job boolean",
+       "bigint",
+       "f",
+       "82c9f315e4f2b927",
+       "ad9922ac764e943b"
+      ],
+      [
+       "procrastinate_defer_jobs_v1",
+       "jobs procrastinate_job_to_defer_v1[]",
+       "bigint[]",
+       "f",
+       "47e8aa769939f59f",
+       "236ff1ae719a0a20"
+      ],
+      [
+       "procrastinate_defer_periodic_job_v2",
+       "_queue_name character varying, _lock character varying, _queueing_lock character varying, _task_name character varying, _priority integer, _periodic_id character varying, _defer_timestamp bigint, _args jsonb",
+       "bigint",
+       "f",
+       "5441e3c09b746755",
+       "a45afc7dfff956b3"
+      ],
+      [
+       "procrastinate_fetch_job_v2",
+       "target_queue_names character varying[], p_worker_id bigint",
+       "procrastinate_jobs",
+       "f",
+       "8193b4d061eaf7a2",
+       "91ad15acf5b3d7f1"
+      ],
+      [
+       "procrastinate_finish_job_v1",
+       "job_id bigint, end_status procrastinate_job_status, delete_job boolean",
+       "void",
+       "f",
+       "e2d27b34bcbe0d3e",
+       "bd85d37335691b7c"
+      ],
+      [
+       "procrastinate_notify_queue_abort_job_v1",
+       "",
+       "trigger",
+       "f",
+       "ff4a5020a3b0f80f",
+       "c73cd713b83b9ec0"
+      ],
+      [
+       "procrastinate_notify_queue_job_inserted_v1",
+       "",
+       "trigger",
+       "f",
+       "945ed201e1e4f405",
+       "2a6476bbbd9e1e32"
+      ],
+      [
+       "procrastinate_prune_stalled_workers_v1",
+       "seconds_since_heartbeat double precision",
+       "TABLE(worker_id bigint)",
+       "f",
+       "4462e0a7706e82b4",
+       "29d8ac10931dc636"
+      ],
+      [
+       "procrastinate_register_worker_v1",
+       "",
+       "TABLE(worker_id bigint)",
+       "f",
+       "f1d7aacd75df6547",
+       "b42cdf791df0532e"
+      ],
+      [
+       "procrastinate_retry_job_v1",
+       "job_id bigint, retry_at timestamp with time zone, new_priority integer, new_queue_name character varying, new_lock character varying",
+       "void",
+       "f",
+       "ce14a7c82f32f79e",
+       "1a7638e8f6c239b8"
+      ],
+      [
+       "procrastinate_trigger_abort_requested_events_procedure_v1",
+       "",
+       "trigger",
+       "f",
+       "2e20aa6813846d26",
+       "31491efe26a0e5dc"
+      ],
+      [
+       "procrastinate_trigger_function_scheduled_events_v1",
+       "",
+       "trigger",
+       "f",
+       "713122df4b02397e",
+       "f5c9db445531762a"
+      ],
+      [
+       "procrastinate_trigger_function_status_events_insert_v1",
+       "",
+       "trigger",
+       "f",
+       "3973091d4a0b5b39",
+       "0e99cb761af6269a"
+      ],
+      [
+       "procrastinate_trigger_function_status_events_update_v1",
+       "",
+       "trigger",
+       "f",
+       "46945ba6ec9d8066",
+       "edc9baae1b12d752"
+      ],
+      [
+       "procrastinate_unlink_periodic_defers_v1",
+       "",
+       "trigger",
+       "f",
+       "7c36fb69992f1160",
+       "10379c0bccf396ec"
+      ],
+      [
+       "procrastinate_unregister_worker_v1",
+       "worker_id bigint",
+       "void",
+       "f",
+       "76644ecb869785f9",
+       "84365d4fa4114d4c"
+      ],
+      [
+       "procrastinate_update_heartbeat_v1",
+       "worker_id bigint",
+       "void",
+       "f",
+       "5fac18d80797eefa",
+       "3378318dee6d7c19"
+      ]
+     ],
+     "changed": [],
+     "whitespace_only": []
+    },
+    "indexes": {
+     "removed": [],
+     "added": [
+      [
+       "procrastinate_events",
+       "procrastinate_events_job_id_fkey_v1",
+       "CREATE INDEX procrastinate_events_job_id_fkey_v1 ON public.procrastinate_events USING btree (job_id)"
+      ],
+      [
+       "procrastinate_events",
+       "procrastinate_events_pkey",
+       "CREATE UNIQUE INDEX procrastinate_events_pkey ON public.procrastinate_events USING btree (id)"
+      ],
+      [
+       "procrastinate_jobs",
+       "idx_procrastinate_jobs_worker_not_null",
+       "CREATE INDEX idx_procrastinate_jobs_worker_not_null ON public.procrastinate_jobs USING btree (worker_id) WHERE ((worker_id IS NOT NULL) AND (status = 'doing'::procrastinate_job_status))"
+      ],
+      [
+       "procrastinate_jobs",
+       "procrastinate_jobs_id_lock_idx_v1",
+       "CREATE INDEX procrastinate_jobs_id_lock_idx_v1 ON public.procrastinate_jobs USING btree (id, lock) WHERE (status = ANY (ARRAY['todo'::procrastinate_job_status, 'doing'::procrastinate_job_status]))"
+      ],
+      [
+       "procrastinate_jobs",
+       "procrastinate_jobs_lock_idx_v1",
+       "CREATE UNIQUE INDEX procrastinate_jobs_lock_idx_v1 ON public.procrastinate_jobs USING btree (lock) WHERE (status = 'doing'::procrastinate_job_status)"
+      ],
+      [
+       "procrastinate_jobs",
+       "procrastinate_jobs_pkey",
+       "CREATE UNIQUE INDEX procrastinate_jobs_pkey ON public.procrastinate_jobs USING btree (id)"
+      ],
+      [
+       "procrastinate_jobs",
+       "procrastinate_jobs_priority_idx_v1",
+       "CREATE INDEX procrastinate_jobs_priority_idx_v1 ON public.procrastinate_jobs USING btree (priority DESC, id) WHERE (status = 'todo'::procrastinate_job_status)"
+      ],
+      [
+       "procrastinate_jobs",
+       "procrastinate_jobs_queue_name_idx_v1",
+       "CREATE INDEX procrastinate_jobs_queue_name_idx_v1 ON public.procrastinate_jobs USING btree (queue_name)"
+      ],
+      [
+       "procrastinate_jobs",
+       "procrastinate_jobs_queueing_lock_idx_v1",
+       "CREATE UNIQUE INDEX procrastinate_jobs_queueing_lock_idx_v1 ON public.procrastinate_jobs USING btree (queueing_lock) WHERE (status = 'todo'::procrastinate_job_status)"
+      ],
+      [
+       "procrastinate_periodic_defers",
+       "procrastinate_periodic_defers_job_id_fkey_v1",
+       "CREATE INDEX procrastinate_periodic_defers_job_id_fkey_v1 ON public.procrastinate_periodic_defers USING btree (job_id)"
+      ],
+      [
+       "procrastinate_periodic_defers",
+       "procrastinate_periodic_defers_pkey",
+       "CREATE UNIQUE INDEX procrastinate_periodic_defers_pkey ON public.procrastinate_periodic_defers USING btree (id)"
+      ],
+      [
+       "procrastinate_periodic_defers",
+       "procrastinate_periodic_defers_unique",
+       "CREATE UNIQUE INDEX procrastinate_periodic_defers_unique ON public.procrastinate_periodic_defers USING btree (task_name, periodic_id, defer_timestamp)"
+      ],
+      [
+       "procrastinate_workers",
+       "idx_procrastinate_workers_last_heartbeat",
+       "CREATE INDEX idx_procrastinate_workers_last_heartbeat ON public.procrastinate_workers USING btree (last_heartbeat)"
+      ],
+      [
+       "procrastinate_workers",
+       "procrastinate_workers_pkey",
+       "CREATE UNIQUE INDEX procrastinate_workers_pkey ON public.procrastinate_workers USING btree (id)"
+      ]
+     ]
+    },
+    "sequences": {
+     "removed": [],
+     "added": [
+      [
+       "procrastinate_events_id_seq",
+       "bigint"
+      ],
+      [
+       "procrastinate_jobs_id_seq",
+       "bigint"
+      ],
+      [
+       "procrastinate_periodic_defers_id_seq",
+       "bigint"
+      ],
+      [
+       "procrastinate_workers_id_seq",
+       "bigint"
+      ]
+     ]
+    },
+    "triggers": {
+     "removed": [],
+     "added": [
+      [
+       "procrastinate_jobs",
+       "procrastinate_jobs_notify_queue_job_aborted_v1",
+       "CREATE TRIGGER procrastinate_jobs_notify_queue_job_aborted_v1 AFTER UPDATE OF abort_requested ON public.procrastinate_jobs FOR EACH ROW WHEN (((old.abort_requested = false) AND (new.abort_requested = true) AND (new.status = 'doing'::procrastinate_job_status))) EXECUTE FUNCTION procrastinate_notify_queue_abort_job_v1()"
+      ],
+      [
+       "procrastinate_jobs",
+       "procrastinate_jobs_notify_queue_job_inserted_v1",
+       "CREATE TRIGGER procrastinate_jobs_notify_queue_job_inserted_v1 AFTER INSERT ON public.procrastinate_jobs FOR EACH ROW WHEN ((new.status = 'todo'::procrastinate_job_status)) EXECUTE FUNCTION procrastinate_notify_queue_job_inserted_v1()"
+      ],
+      [
+       "procrastinate_jobs",
+       "procrastinate_trigger_abort_requested_events_v1",
+       "CREATE TRIGGER procrastinate_trigger_abort_requested_events_v1 AFTER UPDATE OF abort_requested ON public.procrastinate_jobs FOR EACH ROW WHEN ((new.abort_requested = true)) EXECUTE FUNCTION procrastinate_trigger_abort_requested_events_procedure_v1()"
+      ],
+      [
+       "procrastinate_jobs",
+       "procrastinate_trigger_delete_jobs_v1",
+       "CREATE TRIGGER procrastinate_trigger_delete_jobs_v1 BEFORE DELETE ON public.procrastinate_jobs FOR EACH ROW EXECUTE FUNCTION procrastinate_unlink_periodic_defers_v1()"
+      ],
+      [
+       "procrastinate_jobs",
+       "procrastinate_trigger_scheduled_events_v1",
+       "CREATE TRIGGER procrastinate_trigger_scheduled_events_v1 AFTER INSERT OR UPDATE ON public.procrastinate_jobs FOR EACH ROW WHEN (((new.scheduled_at IS NOT NULL) AND (new.status = 'todo'::procrastinate_job_status))) EXECUTE FUNCTION procrastinate_trigger_function_scheduled_events_v1()"
+      ],
+      [
+       "procrastinate_jobs",
+       "procrastinate_trigger_status_events_insert_v1",
+       "CREATE TRIGGER procrastinate_trigger_status_events_insert_v1 AFTER INSERT ON public.procrastinate_jobs FOR EACH ROW WHEN ((new.status = 'todo'::procrastinate_job_status)) EXECUTE FUNCTION procrastinate_trigger_function_status_events_insert_v1()"
+      ],
+      [
+       "procrastinate_jobs",
+       "procrastinate_trigger_status_events_update_v1",
+       "CREATE TRIGGER procrastinate_trigger_status_events_update_v1 AFTER UPDATE OF status ON public.procrastinate_jobs FOR EACH ROW EXECUTE FUNCTION procrastinate_trigger_function_status_events_update_v1()"
+      ]
+     ]
+    }
+   },
+   "outcome": "SOUND",
+   "failures": []
+  },
+  {
+   "step": "0b_old_on_old_schema",
+   "phase": "T1",
+   "entry_catalog_digest": "ca22a6c8356c6dadf047a5800f726b312161933918c5e03a0fd3464c2256be9b",
+   "entry_state_digest": "e552345b2e8c5718c25dabbf418828bbca9c08edfdf9cccb8aea55ae7c61ae2f",
+   "verdict": "SOUND",
+   "refusal_reasons": [],
+   "precondition": {
+    "schema_present": true,
+    "retry_v2": false,
+    "jobs_before": 0
+   },
+   "versions": {
+    "A": "3.3.0"
+   },
+   "pinned_sources": {
+    "A": {
+     "version": "3.3.0",
+     "procrastinate/sql/queries.sql": "c9b3fb0be4e26bac6612c3a3d4883bdb8e129bac6175362a224e4b7cb643ff9d",
+     "procrastinate/sql/schema.sql": "bcc21931d84c4d61d319719a59d31f5322e180ab5ccd04db1875a1a7b6f59b03",
+     "procrastinate/app.py": "1147f1a56d55a23c396d364183296dc9ffd66bfc3b16d25e2033752276b35797",
+     "procrastinate/worker.py": "c4f6108f93471e145d6ae143d17a7112bc42fd7f9dc12ba102b301847aa421d0",
+     "procrastinate/manager.py": "2e41449c71b9b6ed74b5872fec3e103ddb4597646449dffab11e1e3de2107efe",
+     "procrastinate/psycopg_connector.py": "d93aaa49a39c1c5822c6fb34ddec6121969f454b253159a7abc891ba7d1c4c9e"
+    }
+   },
+   "corroboration": {
+    "ok": true,
+    "matched": 51,
+    "params_compared": 36,
+    "params_mismatched": 0,
+    "params_unchecked": 0,
+    "problems": [],
+    "unchecked_kinds": {}
+   },
+   "window": {
+    "opened_at_grant": null,
+    "closed_at_grant": 0,
+    "grants": 0,
+    "by_version": {},
+    "by_actor": {},
+    "version_switches": 0,
+    "claims_by_version": {}
+   },
+   "teardown": {
+    "containers_removed": true,
+    "network_removed": true,
+    "workdir_removed": true,
+    "protected_unchanged": true
+   },
+   "permitted_operations": {
+    "ddl_allowed": false,
+    "versions": [
+     "3.3.0"
+    ],
+    "violations": []
+   },
+   "provenance": {
+    "actors": {
+     "old_defer": {
+      "process": "A",
+      "versions": [
+       "procrastinate-3.3.0"
+      ],
+      "backend_pid": 175,
+      "transactions": 3,
+      "statements": 6,
+      "errors": 0,
+      "log_pid": 175
+     },
+     "old_worker": {
+      "process": "A",
+      "versions": [
+       "procrastinate-3.3.0"
+      ],
+      "backend_pid": 176,
+      "transactions": 14,
+      "statements": 28,
+      "errors": 0,
+      "log_pid": 176
+     }
+    },
+    "consistent_with_server_log": true
+   },
+   "interleaving": {
+    "by_version": {
+     "procrastinate-3.3.0": 34
+    },
+    "switches": 0
+   },
+   "exit_catalog_digest": "ca22a6c8356c6dadf047a5800f726b312161933918c5e03a0fd3464c2256be9b",
+   "exit_state_digest": "263a9d84700bfd6b9213e9479b055a94f34af62cbe6fd82c7affbd37a86a2136",
+   "catalog_diff": {},
+   "outcome": "SOUND",
+   "failures": []
+  },
+  {
+   "step": "1_pre_migration",
+   "phase": "T2",
+   "entry_catalog_digest": "ca22a6c8356c6dadf047a5800f726b312161933918c5e03a0fd3464c2256be9b",
+   "entry_state_digest": "263a9d84700bfd6b9213e9479b055a94f34af62cbe6fd82c7affbd37a86a2136",
+   "verdict": "SOUND",
+   "refusal_reasons": [],
+   "precondition": {
+    "retry_v1": true,
+    "retry_v2": false,
+    "trigger_records_retried": false
+   },
+   "versions": {
+    "B": "3.4.0"
+   },
+   "pinned_sources": {
+    "B": {
+     "version": "3.4.0",
+     "procrastinate/sql/queries.sql": "e6b932bcefe689ed2941f5c885b5ebc7f07913203f8363e9f03762cd59314ed3",
+     "procrastinate/sql/schema.sql": "c796dca40785a84ee434b930b4bc1bb11cc7a6da84ad6330cf6c49e953c902b9",
+     "procrastinate/app.py": "1147f1a56d55a23c396d364183296dc9ffd66bfc3b16d25e2033752276b35797",
+     "procrastinate/worker.py": "c4f6108f93471e145d6ae143d17a7112bc42fd7f9dc12ba102b301847aa421d0",
+     "procrastinate/manager.py": "2e41449c71b9b6ed74b5872fec3e103ddb4597646449dffab11e1e3de2107efe",
+     "procrastinate/psycopg_connector.py": "d93aaa49a39c1c5822c6fb34ddec6121969f454b253159a7abc891ba7d1c4c9e"
+    }
+   },
+   "corroboration": {
+    "ok": true,
+    "matched": 3,
+    "params_compared": 0,
+    "params_mismatched": 0,
+    "params_unchecked": 0,
+    "problems": [],
+    "unchecked_kinds": {}
+   },
+   "window": {
+    "opened_at_grant": null,
+    "closed_at_grant": 0,
+    "grants": 0,
+    "by_version": {},
+    "by_actor": {},
+    "version_switches": 0,
+    "claims_by_version": {}
+   },
+   "teardown": {
+    "containers_removed": true,
+    "network_removed": true,
+    "workdir_removed": true,
+    "protected_unchanged": true
+   },
+   "permitted_operations": {
+    "ddl_allowed": true,
+    "versions": [
+     "3.4.0"
+    ],
+    "violations": []
+   },
+   "provenance": {
+    "actors": {
+     "operator": {
+      "process": "B",
+      "versions": [
+       "procrastinate-3.4.0"
+      ],
+      "backend_pid": 181,
+      "transactions": 1,
+      "statements": 3,
+      "errors": 0,
+      "log_pid": 181
+     }
+    },
+    "consistent_with_server_log": true
+   },
+   "interleaving": {
+    "by_version": {
+     "procrastinate-3.4.0": 3
+    },
+    "switches": 0
+   },
+   "exit_catalog_digest": "13ff51013d4f216e769092329fb54d795505185199e6fbe2390b5d0164b65946",
+   "exit_state_digest": "2f6436e1904b1ab4aa1d0552867b3c6a41514ebc5a040976e7dab4ffe626b574",
+   "catalog_diff": {
+    "enums": {
+     "removed": [
+      [
+       "procrastinate_job_event_type",
+       "deferred,started,deferred_for_retry,failed,succeeded,cancelled,abort_requested,aborted,scheduled"
+      ]
+     ],
+     "added": [
+      [
+       "procrastinate_job_event_type",
+       "deferred,started,deferred_for_retry,failed,succeeded,cancelled,abort_requested,aborted,scheduled,retried"
+      ]
+     ]
+    },
+    "functions": {
+     "removed": [],
+     "added": [
+      [
+       "procrastinate_retry_job_v2",
+       "job_id bigint, retry_at timestamp with time zone, new_priority integer, new_queue_name character varying, new_lock character varying",
+       "void",
+       "f",
+       "2120fa18ea96d8bd",
+       "fdb6442a16585c5e"
+      ]
+     ],
+     "changed": [],
+     "whitespace_only": []
+    }
+   },
+   "outcome": "SOUND",
+   "failures": []
+  },
+  {
+   "step": "2_old_on_pre_schema",
+   "phase": "T2",
+   "entry_catalog_digest": "13ff51013d4f216e769092329fb54d795505185199e6fbe2390b5d0164b65946",
+   "entry_state_digest": "2f6436e1904b1ab4aa1d0552867b3c6a41514ebc5a040976e7dab4ffe626b574",
+   "verdict": "SOUND",
+   "refusal_reasons": [],
+   "precondition": {
+    "retry_v2": true,
+    "trigger_records_retried": false
+   },
+   "versions": {
+    "A": "3.3.0"
+   },
+   "pinned_sources": {
+    "A": {
+     "version": "3.3.0",
+     "procrastinate/sql/queries.sql": "c9b3fb0be4e26bac6612c3a3d4883bdb8e129bac6175362a224e4b7cb643ff9d",
+     "procrastinate/sql/schema.sql": "bcc21931d84c4d61d319719a59d31f5322e180ab5ccd04db1875a1a7b6f59b03",
+     "procrastinate/app.py": "1147f1a56d55a23c396d364183296dc9ffd66bfc3b16d25e2033752276b35797",
+     "procrastinate/worker.py": "c4f6108f93471e145d6ae143d17a7112bc42fd7f9dc12ba102b301847aa421d0",
+     "procrastinate/manager.py": "2e41449c71b9b6ed74b5872fec3e103ddb4597646449dffab11e1e3de2107efe",
+     "procrastinate/psycopg_connector.py": "d93aaa49a39c1c5822c6fb34ddec6121969f454b253159a7abc891ba7d1c4c9e"
+    }
+   },
+   "corroboration": {
+    "ok": true,
+    "matched": 36,
+    "params_compared": 23,
+    "params_mismatched": 0,
+    "params_unchecked": 0,
+    "problems": [],
+    "unchecked_kinds": {}
+   },
+   "window": {
+    "opened_at_grant": null,
+    "closed_at_grant": 0,
+    "grants": 0,
+    "by_version": {},
+    "by_actor": {},
+    "version_switches": 0,
+    "claims_by_version": {}
+   },
+   "teardown": {
+    "containers_removed": true,
+    "network_removed": true,
+    "workdir_removed": true,
+    "protected_unchanged": true
+   },
+   "permitted_operations": {
+    "ddl_allowed": false,
+    "versions": [
+     "3.3.0"
+    ],
+    "violations": []
+   },
+   "provenance": {
+    "actors": {
+     "old_defer": {
+      "process": "A",
+      "versions": [
+       "procrastinate-3.3.0"
+      ],
+      "backend_pid": 186,
+      "transactions": 2,
+      "statements": 4,
+      "errors": 0,
+      "log_pid": 186
+     },
+     "old_worker": {
+      "process": "A",
+      "versions": [
+       "procrastinate-3.3.0"
+      ],
+      "backend_pid": 187,
+      "transactions": 10,
+      "statements": 20,
+      "errors": 0,
+      "log_pid": 187
+     }
+    },
+    "consistent_with_server_log": true
+   },
+   "interleaving": {
+    "by_version": {
+     "procrastinate-3.3.0": 24
+    },
+    "switches": 0
+   },
+   "exit_catalog_digest": "13ff51013d4f216e769092329fb54d795505185199e6fbe2390b5d0164b65946",
+   "exit_state_digest": "4de38842ce3c9946aa490df89e76e52a31d85acbbb06be326cc6b9fcd10c4a60",
+   "catalog_diff": {},
+   "outcome": "SOUND",
+   "failures": []
+  },
+  {
+   "step": "3_overlap",
+   "phase": "T3",
+   "entry_catalog_digest": "13ff51013d4f216e769092329fb54d795505185199e6fbe2390b5d0164b65946",
+   "entry_state_digest": "4de38842ce3c9946aa490df89e76e52a31d85acbbb06be326cc6b9fcd10c4a60",
+   "verdict": "SOUND",
+   "refusal_reasons": [],
+   "precondition": {
+    "retry_v2": true,
+    "trigger_records_retried": false
+   },
+   "versions": {
+    "A": "3.3.0",
+    "B": "3.4.0"
+   },
+   "pinned_sources": {
+    "A": {
+     "version": "3.3.0",
+     "procrastinate/sql/queries.sql": "c9b3fb0be4e26bac6612c3a3d4883bdb8e129bac6175362a224e4b7cb643ff9d",
+     "procrastinate/sql/schema.sql": "bcc21931d84c4d61d319719a59d31f5322e180ab5ccd04db1875a1a7b6f59b03",
+     "procrastinate/app.py": "1147f1a56d55a23c396d364183296dc9ffd66bfc3b16d25e2033752276b35797",
+     "procrastinate/worker.py": "c4f6108f93471e145d6ae143d17a7112bc42fd7f9dc12ba102b301847aa421d0",
+     "procrastinate/manager.py": "2e41449c71b9b6ed74b5872fec3e103ddb4597646449dffab11e1e3de2107efe",
+     "procrastinate/psycopg_connector.py": "d93aaa49a39c1c5822c6fb34ddec6121969f454b253159a7abc891ba7d1c4c9e"
+    },
+    "B": {
+     "version": "3.4.0",
+     "procrastinate/sql/queries.sql": "e6b932bcefe689ed2941f5c885b5ebc7f07913203f8363e9f03762cd59314ed3",
+     "procrastinate/sql/schema.sql": "c796dca40785a84ee434b930b4bc1bb11cc7a6da84ad6330cf6c49e953c902b9",
+     "procrastinate/app.py": "1147f1a56d55a23c396d364183296dc9ffd66bfc3b16d25e2033752276b35797",
+     "procrastinate/worker.py": "c4f6108f93471e145d6ae143d17a7112bc42fd7f9dc12ba102b301847aa421d0",
+     "procrastinate/manager.py": "2e41449c71b9b6ed74b5872fec3e103ddb4597646449dffab11e1e3de2107efe",
+     "procrastinate/psycopg_connector.py": "d93aaa49a39c1c5822c6fb34ddec6121969f454b253159a7abc891ba7d1c4c9e"
+    }
+   },
+   "corroboration": {
+    "ok": true,
+    "matched": 129,
+    "params_compared": 103,
+    "params_mismatched": 0,
+    "params_unchecked": 0,
+    "problems": [],
+    "unchecked_kinds": {}
+   },
+   "window": {
+    "opened_at_grant": 10,
+    "closed_at_grant": 77,
+    "grants": 67,
+    "by_version": {
+     "3.4.0": 40,
+     "3.3.0": 27
+    },
+    "by_actor": {
+     "new_defer": 8,
+     "old_defer": 8,
+     "new_worker": 26,
+     "new_admin": 6,
+     "old_worker": 19
+    },
+    "version_switches": 39,
+    "claims_by_version": {
+     "3.4.0": 7,
+     "3.3.0": 5
+    }
+   },
+   "teardown": {
+    "containers_removed": true,
+    "network_removed": true,
+    "workdir_removed": true,
+    "protected_unchanged": true
+   },
+   "permitted_operations": {
+    "ddl_allowed": false,
+    "versions": [
+     "3.3.0",
+     "3.4.0"
+    ],
+    "violations": []
+   },
+   "provenance": {
+    "actors": {
+     "new_admin": {
+      "process": "B",
+      "versions": [
+       "procrastinate-3.4.0"
+      ],
+      "backend_pid": 197,
+      "transactions": 3,
+      "statements": 6,
+      "errors": 0,
+      "log_pid": 197
+     },
+     "new_defer": {
+      "process": "B",
+      "versions": [
+       "procrastinate-3.4.0"
+      ],
+      "backend_pid": 195,
+      "transactions": 4,
+      "statements": 8,
+      "errors": 0,
+      "log_pid": 195
+     },
+     "new_worker": {
+      "process": "B",
+      "versions": [
+       "procrastinate-3.4.0"
+      ],
+      "backend_pid": 196,
+      "transactions": 18,
+      "statements": 36,
+      "errors": 0,
+      "log_pid": 196
+     },
+     "old_defer": {
+      "process": "A",
+      "versions": [
+       "procrastinate-3.3.0"
+      ],
+      "backend_pid": 192,
+      "transactions": 4,
+      "statements": 8,
+      "errors": 0,
+      "log_pid": 192
+     },
+     "old_worker": {
+      "process": "A",
+      "versions": [
+       "procrastinate-3.3.0"
+      ],
+      "backend_pid": 193,
+      "transactions": 14,
+      "statements": 28,
+      "errors": 0,
+      "log_pid": 193
+     }
+    },
+    "consistent_with_server_log": true
+   },
+   "interleaving": {
+    "by_version": {
+     "procrastinate-3.3.0": 36,
+     "procrastinate-3.4.0": 50
+    },
+    "switches": 46
+   },
+   "exit_catalog_digest": "13ff51013d4f216e769092329fb54d795505185199e6fbe2390b5d0164b65946",
+   "exit_state_digest": "81ef0c08f68045dc3b80841c3c0e1b05e2fe7ad19123ae3e6dad95ab6fc97ac2",
+   "catalog_diff": {},
+   "outcome": "SOUND",
+   "failures": []
+  },
+  {
+   "step": "T4_background_retry",
+   "phase": "T4",
+   "entry_catalog_digest": "13ff51013d4f216e769092329fb54d795505185199e6fbe2390b5d0164b65946",
+   "entry_state_digest": "81ef0c08f68045dc3b80841c3c0e1b05e2fe7ad19123ae3e6dad95ab6fc97ac2",
+   "verdict": "SOUND",
+   "refusal_reasons": [],
+   "precondition": {
+    "retry_v2": true,
+    "trigger_records_retried": false
+   },
+   "versions": {
+    "A": "3.3.0",
+    "B": "3.4.0"
+   },
+   "pinned_sources": {
+    "A": {
+     "version": "3.3.0",
+     "procrastinate/sql/queries.sql": "c9b3fb0be4e26bac6612c3a3d4883bdb8e129bac6175362a224e4b7cb643ff9d",
+     "procrastinate/sql/schema.sql": "bcc21931d84c4d61d319719a59d31f5322e180ab5ccd04db1875a1a7b6f59b03",
+     "procrastinate/app.py": "1147f1a56d55a23c396d364183296dc9ffd66bfc3b16d25e2033752276b35797",
+     "procrastinate/worker.py": "c4f6108f93471e145d6ae143d17a7112bc42fd7f9dc12ba102b301847aa421d0",
+     "procrastinate/manager.py": "2e41449c71b9b6ed74b5872fec3e103ddb4597646449dffab11e1e3de2107efe",
+     "procrastinate/psycopg_connector.py": "d93aaa49a39c1c5822c6fb34ddec6121969f454b253159a7abc891ba7d1c4c9e"
+    },
+    "B": {
+     "version": "3.4.0",
+     "procrastinate/sql/queries.sql": "e6b932bcefe689ed2941f5c885b5ebc7f07913203f8363e9f03762cd59314ed3",
+     "procrastinate/sql/schema.sql": "c796dca40785a84ee434b930b4bc1bb11cc7a6da84ad6330cf6c49e953c902b9",
+     "procrastinate/app.py": "1147f1a56d55a23c396d364183296dc9ffd66bfc3b16d25e2033752276b35797",
+     "procrastinate/worker.py": "c4f6108f93471e145d6ae143d17a7112bc42fd7f9dc12ba102b301847aa421d0",
+     "procrastinate/manager.py": "2e41449c71b9b6ed74b5872fec3e103ddb4597646449dffab11e1e3de2107efe",
+     "procrastinate/psycopg_connector.py": "d93aaa49a39c1c5822c6fb34ddec6121969f454b253159a7abc891ba7d1c4c9e"
+    }
+   },
+   "corroboration": {
+    "ok": true,
+    "matched": 108,
+    "params_compared": 107,
+    "params_mismatched": 0,
+    "params_unchecked": 0,
+    "problems": [],
+    "unchecked_kinds": {}
+   },
+   "window": {
+    "opened_at_grant": 10,
+    "closed_at_grant": 63,
+    "grants": 53,
+    "by_version": {
+     "3.4.0": 35,
+     "3.3.0": 18
+    },
+    "by_actor": {
+     "new_admin": 16,
+     "old_worker": 18,
+     "new_worker": 19
+    },
+    "version_switches": 30,
+    "claims_by_version": {
+     "3.3.0": 9,
+     "3.4.0": 6
+    }
+   },
+   "teardown": {
+    "containers_removed": true,
+    "network_removed": true,
+    "workdir_removed": true,
+    "protected_unchanged": true
+   },
+   "permitted_operations": {
+    "ddl_allowed": false,
+    "versions": [
+     "3.3.0",
+     "3.4.0"
+    ],
+    "violations": []
+   },
+   "provenance": {
+    "actors": {
+     "new_admin": {
+      "process": "B",
+      "versions": [
+       "procrastinate-3.4.0"
+      ],
+      "backend_pid": 205,
+      "transactions": 9,
+      "statements": 18,
+      "errors": 0,
+      "log_pid": 205
+     },
+     "new_worker": {
+      "process": "B",
+      "versions": [
+       "procrastinate-3.4.0"
+      ],
+      "backend_pid": 204,
+      "transactions": 14,
+      "statements": 28,
+      "errors": 0,
+      "log_pid": 204
+     },
+     "old_worker": {
+      "process": "A",
+      "versions": [
+       "procrastinate-3.3.0"
+      ],
+      "backend_pid": 202,
+      "transactions": 13,
+      "statements": 26,
+      "errors": 0,
+      "log_pid": 202
+     }
+    },
+    "consistent_with_server_log": true
+   },
+   "interleaving": {
+    "by_version": {
+     "procrastinate-3.3.0": 26,
+     "procrastinate-3.4.0": 46
+    },
+    "switches": 38
+   },
+   "exit_catalog_digest": "13ff51013d4f216e769092329fb54d795505185199e6fbe2390b5d0164b65946",
+   "exit_state_digest": "eb07f455e8dafec96ecb7fad33e502776ba2fe90eabfd03c2d272bd835118bff",
+   "catalog_diff": {},
+   "outcome": "SOUND",
+   "failures": []
+  },
+  {
+   "step": "T5_quiescence",
+   "phase": "T5",
+   "entry_catalog_digest": "13ff51013d4f216e769092329fb54d795505185199e6fbe2390b5d0164b65946",
+   "entry_state_digest": "eb07f455e8dafec96ecb7fad33e502776ba2fe90eabfd03c2d272bd835118bff",
+   "quiescence": {
+    "quiesced": true,
+    "checks": {
+     "no_old_container": true,
+     "no_client_session": true,
+     "no_registered_worker": true,
+     "no_doing_job": true,
+     "no_foreign_lock": true,
+     "no_prepared_transaction": true
+    },
+    "failed": [],
+    "todo_jobs_left_for_new_version": []
+   },
+   "outcome": "SOUND",
+   "exit_catalog_digest": "13ff51013d4f216e769092329fb54d795505185199e6fbe2390b5d0164b65946",
+   "exit_state_digest": "eb07f455e8dafec96ecb7fad33e502776ba2fe90eabfd03c2d272bd835118bff"
+  },
+  {
+   "step": "4_post_migration",
+   "phase": "T6",
+   "entry_catalog_digest": "13ff51013d4f216e769092329fb54d795505185199e6fbe2390b5d0164b65946",
+   "entry_state_digest": "eb07f455e8dafec96ecb7fad33e502776ba2fe90eabfd03c2d272bd835118bff",
+   "verdict": "SOUND",
+   "refusal_reasons": [],
+   "precondition": {
+    "retry_v2": true,
+    "trigger_records_retried": false
+   },
+   "versions": {
+    "B": "3.4.0"
+   },
+   "pinned_sources": {
+    "B": {
+     "version": "3.4.0",
+     "procrastinate/sql/queries.sql": "e6b932bcefe689ed2941f5c885b5ebc7f07913203f8363e9f03762cd59314ed3",
+     "procrastinate/sql/schema.sql": "c796dca40785a84ee434b930b4bc1bb11cc7a6da84ad6330cf6c49e953c902b9",
+     "procrastinate/app.py": "1147f1a56d55a23c396d364183296dc9ffd66bfc3b16d25e2033752276b35797",
+     "procrastinate/worker.py": "c4f6108f93471e145d6ae143d17a7112bc42fd7f9dc12ba102b301847aa421d0",
+     "procrastinate/manager.py": "2e41449c71b9b6ed74b5872fec3e103ddb4597646449dffab11e1e3de2107efe",
+     "procrastinate/psycopg_connector.py": "d93aaa49a39c1c5822c6fb34ddec6121969f454b253159a7abc891ba7d1c4c9e"
+    }
+   },
+   "corroboration": {
+    "ok": true,
+    "matched": 3,
+    "params_compared": 0,
+    "params_mismatched": 0,
+    "params_unchecked": 0,
+    "problems": [],
+    "unchecked_kinds": {}
+   },
+   "window": {
+    "opened_at_grant": null,
+    "closed_at_grant": 0,
+    "grants": 0,
+    "by_version": {},
+    "by_actor": {},
+    "version_switches": 0,
+    "claims_by_version": {}
+   },
+   "teardown": {
+    "containers_removed": true,
+    "network_removed": true,
+    "workdir_removed": true,
+    "protected_unchanged": true
+   },
+   "permitted_operations": {
+    "ddl_allowed": true,
+    "versions": [
+     "3.4.0"
+    ],
+    "violations": []
+   },
+   "provenance": {
+    "actors": {
+     "operator": {
+      "process": "B",
+      "versions": [
+       "procrastinate-3.4.0"
+      ],
+      "backend_pid": 211,
+      "transactions": 1,
+      "statements": 3,
+      "errors": 0,
+      "log_pid": 211
+     }
+    },
+    "consistent_with_server_log": true
+   },
+   "interleaving": {
+    "by_version": {
+     "procrastinate-3.4.0": 3
+    },
+    "switches": 0
+   },
+   "exit_catalog_digest": "554bf337006d8d8c356a792c346c9c6f623c8008e0512dc6ae49ab0e103bae9d",
+   "exit_state_digest": "e3e42fee44aa36e42436682bea67dbac38de3cb8d6a3fe3069a365e5f3c836b8",
+   "catalog_diff": {
+    "functions": {
+     "removed": [
+      [
+       "procrastinate_trigger_function_status_events_update_v1",
+       "",
+       "trigger",
+       "f",
+       "46945ba6ec9d8066",
+       "edc9baae1b12d752"
+      ]
+     ],
+     "added": [
+      [
+       "procrastinate_trigger_function_status_events_update_v1",
+       "",
+       "trigger",
+       "f",
+       "ed03e3cc0a4716ee",
+       "3fa6b9d4eaee27b9"
+      ]
+     ],
+     "changed": [
+      "procrastinate_trigger_function_status_events_update_v1()"
+     ],
+     "whitespace_only": []
+    }
+   },
+   "outcome": "SOUND",
+   "failures": []
+  },
+  {
+   "step": "5_new_only",
+   "phase": "T6",
+   "entry_catalog_digest": "554bf337006d8d8c356a792c346c9c6f623c8008e0512dc6ae49ab0e103bae9d",
+   "entry_state_digest": "e3e42fee44aa36e42436682bea67dbac38de3cb8d6a3fe3069a365e5f3c836b8",
+   "verdict": "SOUND",
+   "refusal_reasons": [],
+   "precondition": {
+    "retry_v2": true,
+    "trigger_records_retried": true
+   },
+   "versions": {
+    "B": "3.4.0"
+   },
+   "pinned_sources": {
+    "B": {
+     "version": "3.4.0",
+     "procrastinate/sql/queries.sql": "e6b932bcefe689ed2941f5c885b5ebc7f07913203f8363e9f03762cd59314ed3",
+     "procrastinate/sql/schema.sql": "c796dca40785a84ee434b930b4bc1bb11cc7a6da84ad6330cf6c49e953c902b9",
+     "procrastinate/app.py": "1147f1a56d55a23c396d364183296dc9ffd66bfc3b16d25e2033752276b35797",
+     "procrastinate/worker.py": "c4f6108f93471e145d6ae143d17a7112bc42fd7f9dc12ba102b301847aa421d0",
+     "procrastinate/manager.py": "2e41449c71b9b6ed74b5872fec3e103ddb4597646449dffab11e1e3de2107efe",
+     "procrastinate/psycopg_connector.py": "d93aaa49a39c1c5822c6fb34ddec6121969f454b253159a7abc891ba7d1c4c9e"
+    }
+   },
+   "corroboration": {
+    "ok": true,
+    "matched": 51,
+    "params_compared": 47,
+    "params_mismatched": 0,
+    "params_unchecked": 0,
+    "problems": [],
+    "unchecked_kinds": {}
+   },
+   "window": {
+    "opened_at_grant": null,
+    "closed_at_grant": 0,
+    "grants": 0,
+    "by_version": {},
+    "by_actor": {},
+    "version_switches": 0,
+    "claims_by_version": {}
+   },
+   "teardown": {
+    "containers_removed": true,
+    "network_removed": true,
+    "workdir_removed": true,
+    "protected_unchanged": true
+   },
+   "permitted_operations": {
+    "ddl_allowed": false,
+    "versions": [
+     "3.4.0"
+    ],
+    "violations": []
+   },
+   "provenance": {
+    "actors": {
+     "new_admin": {
+      "process": "B",
+      "versions": [
+       "procrastinate-3.4.0"
+      ],
+      "backend_pid": 217,
+      "transactions": 3,
+      "statements": 6,
+      "errors": 0,
+      "log_pid": 217
+     },
+     "new_defer": {
+      "process": "B",
+      "versions": [
+       "procrastinate-3.4.0"
+      ],
+      "backend_pid": 216,
+      "transactions": 2,
+      "statements": 4,
+      "errors": 0,
+      "log_pid": 216
+     },
+     "new_worker": {
+      "process": "B",
+      "versions": [
+       "procrastinate-3.4.0"
+      ],
+      "backend_pid": 218,
+      "transactions": 12,
+      "statements": 24,
+      "errors": 0,
+      "log_pid": 218
+     }
+    },
+    "consistent_with_server_log": true
+   },
+   "interleaving": {
+    "by_version": {
+     "procrastinate-3.4.0": 34
+    },
+    "switches": 0
+   },
+   "exit_catalog_digest": "554bf337006d8d8c356a792c346c9c6f623c8008e0512dc6ae49ab0e103bae9d",
+   "exit_state_digest": "aec8016cd8ff543dafdb683ba6cd032ecc1ac9c770810c4e5c2fa3b9f27baa44",
+   "catalog_diff": {},
+   "outcome": "SOUND",
+   "failures": []
+  },
+  {
+   "step": "T7_final_verification",
+   "phase": "T7",
+   "entry_catalog_digest": "554bf337006d8d8c356a792c346c9c6f623c8008e0512dc6ae49ab0e103bae9d",
+   "entry_state_digest": "aec8016cd8ff543dafdb683ba6cd032ecc1ac9c770810c4e5c2fa3b9f27baa44",
+   "case_checker": {
+    "violations": {
+     "R2": [
+      "n=0: 1 executions but attempts 1",
+      "n=1: 4 executions but attempts 6",
+      "n=2: 3 executions but attempts 4",
+      "n=3: 1 executions but attempts 1",
+      "n=4: 3 executions but attempts 4",
+      "n=5: 1 executions but attempts 1",
+      "n=6: 1 executions but attempts 1",
+      "n=7: 3 executions but attempts 4",
+      "n=8: 2 executions but attempts 2",
+      "n=9: 1 executions but attempts 1",
+      "n=10: 2 executions but attempts 2",
+      "n=11: 1 executions but attempts 1",
+      "n=12: 2 executions but attempts 2",
+      "n=13: 1 executions but attempts 1",
+      "n=14: 2 executions but attempts 2"
+     ],
+     "R5": [
+      "admin retry of n=7: before {'status': 'failed', 'attempts': 2}, after {'status': 'doing', 'attempts': 3}"
+     ]
+    },
+    "quiescent": true,
+    "executions": {
+     "0": [
+      "3.3.0"
+     ],
+     "1": [
+      "3.3.0",
+      "3.3.0",
+      "3.4.0",
+      "3.4.0"
+     ],
+     "2": [
+      "3.3.0",
+      "3.3.0",
+      "3.4.0"
+     ],
+     "3": [
+      "3.3.0"
+     ],
+     "4": [
+      "3.3.0",
+      "3.3.0",
+      "3.4.0"
+     ],
+     "5": [
+      "3.3.0"
+     ],
+     "6": [
+      "3.4.0"
+     ],
+     "7": [
+      "3.4.0",
+      "3.4.0",
+      "3.4.0"
+     ],
+     "8": [
+      "3.4.0",
+      "3.4.0"
+     ],
+     "9": [
+      "3.4.0"
+     ],
+     "10": [
+      "3.3.0",
+      "3.3.0"
+     ],
+     "11": [
+      "3.3.0"
+     ],
+     "12": [
+      "3.3.0",
+      "3.4.0"
+     ],
+     "13": [
+      "3.4.0"
+     ],
+     "14": [
+      "3.4.0",
+      "3.4.0"
+     ]
+    },
+    "events": {
+     "0": [
+      "deferred",
+      "started",
+      "succeeded"
+     ],
+     "1": [
+      "deferred",
+      "started",
+      "scheduled",
+      "deferred_for_retry",
+      "started",
+      "failed",
+      "scheduled",
+      "started",
+      "failed",
+      "scheduled",
+      "started",
+      "failed"
+     ],
+     "2": [
+      "deferred",
+      "started",
+      "scheduled",
+      "deferred_for_retry",
+      "started",
+      "failed",
+      "scheduled",
+      "started",
+      "succeeded"
+     ],
+     "3": [
+      "deferred",
+      "started",
+      "succeeded"
+     ],
+     "4": [
+      "deferred",
+      "started",
+      "scheduled",
+      "deferred_for_retry",
+      "started",
+      "failed",
+      "scheduled",
+      "retried",
+      "started",
+      "failed"
+     ],
+     "5": [
+      "deferred",
+      "started",
+      "succeeded"
+     ],
+     "6": [
+      "deferred",
+      "started",
+      "succeeded"
+     ],
+     "7": [
+      "deferred",
+      "started",
+      "scheduled",
+      "deferred_for_retry",
+      "started",
+      "failed",
+      "scheduled",
+      "started",
+      "failed"
+     ],
+     "8": [
+      "deferred",
+      "started",
+      "scheduled",
+      "deferred_for_retry",
+      "started",
+      "failed"
+     ],
+     "9": [
+      "deferred",
+      "started",
+      "succeeded"
+     ],
+     "10": [
+      "deferred",
+      "started",
+      "scheduled",
+      "deferred_for_retry",
+      "started",
+      "failed"
+     ],
+     "11": [
+      "deferred",
+      "started",
+      "succeeded"
+     ],
+     "12": [
+      "deferred",
+      "started",
+      "scheduled",
+      "deferred_for_retry",
+      "scheduled",
+      "started",
+      "failed"
+     ],
+     "13": [
+      "deferred",
+      "started",
+      "succeeded"
+     ],
+     "14": [
+      "deferred",
+      "started",
+      "scheduled",
+      "deferred_for_retry",
+      "started",
+      "failed"
+     ]
+    },
+    "admin_retries": [
+     {
+      "n": 1,
+      "id": 2,
+      "before": {
+       "status": "failed",
+       "attempts": 2
+      },
+      "ok": true,
+      "after": {
+       "status": "todo",
+       "attempts": 3
+      }
+     },
+     {
+      "n": 1,
+      "id": 2,
+      "before": {
+       "status": "failed",
+       "attempts": 4
+      },
+      "ok": true,
+      "after": {
+       "status": "todo",
+       "attempts": 5
+      }
+     },
+     {
+      "n": 2,
+      "id": 3,
+      "before": {
+       "status": "failed",
+       "attempts": 2
+      },
+      "ok": true,
+      "after": {
+       "status": "todo",
+       "attempts": 3
+      }
+     },
+     {
+      "n": 7,
+      "id": 10,
+      "before": {
+       "status": "failed",
+       "attempts": 2
+      },
+      "ok": true,
+      "after": {
+       "status": "doing",
+       "attempts": 3
+      }
+     },
+     {
+      "n": 4,
+      "id": 5,
+      "before": {
+       "status": "failed",
+       "attempts": 2
+      },
+      "ok": true,
+      "after": {
+       "status": "todo",
+       "attempts": 3
+      }
+     }
+    ]
+   },
+   "classification": {
+    "genuine_violations": [],
+    "oracle_error_E1": [
+     "n=0: 1 executions but attempts 1",
+     "n=1: 4 executions but attempts 6",
+     "n=2: 3 executions but attempts 4",
+     "n=3: 1 executions but attempts 1",
+     "n=4: 3 executions but attempts 4",
+     "n=5: 1 executions but attempts 1",
+     "n=6: 1 executions but attempts 1",
+     "n=7: 3 executions but attempts 4",
+     "n=8: 2 executions but attempts 2",
+     "n=9: 1 executions but attempts 1",
+     "n=10: 2 executions but attempts 2",
+     "n=11: 1 executions but attempts 1",
+     "n=12: 2 executions but attempts 2",
+     "n=13: 1 executions but attempts 1",
+     "n=14: 2 executions but attempts 2"
+    ],
+    "oracle_error_E2": [
+     "admin retry of n=7: before {'status': 'failed', 'attempts': 2}, after {'status': 'doing', 'attempts': 3}"
+    ]
+   },
+   "erratum_E1": {
+    "relation_holds": 15,
+    "bound_holds": 15,
+    "jobs": 15,
+    "rows": [
+     {
+      "n": 0,
+      "attempts": 1,
+      "executions": 1,
+      "admin_retries": 0,
+      "relation_holds": true,
+      "documented_bound_holds": true
+     },
+     {
+      "n": 1,
+      "attempts": 6,
+      "executions": 4,
+      "admin_retries": 2,
+      "relation_holds": true,
+      "documented_bound_holds": true
+     },
+     {
+      "n": 2,
+      "attempts": 4,
+      "executions": 3,
+      "admin_retries": 1,
+      "relation_holds": true,
+      "documented_bound_holds": true
+     },
+     {
+      "n": 3,
+      "attempts": 1,
+      "executions": 1,
+      "admin_retries": 0,
+      "relation_holds": true,
+      "documented_bound_holds": true
+     },
+     {
+      "n": 4,
+      "attempts": 4,
+      "executions": 3,
+      "admin_retries": 1,
+      "relation_holds": true,
+      "documented_bound_holds": true
+     },
+     {
+      "n": 9,
+      "attempts": 1,
+      "executions": 1,
+      "admin_retries": 0,
+      "relation_holds": true,
+      "documented_bound_holds": true
+     },
+     {
+      "n": 5,
+      "attempts": 1,
+      "executions": 1,
+      "admin_retries": 0,
+      "relation_holds": true,
+      "documented_bound_holds": true
+     },
+     {
+      "n": 10,
+      "attempts": 2,
+      "executions": 2,
+      "admin_retries": 0,
+      "relation_holds": true,
+      "documented_bound_holds": true
+     },
+     {
+      "n": 6,
+      "attempts": 1,
+      "executions": 1,
+      "admin_retries": 0,
+      "relation_holds": true,
+      "documented_bound_holds": true
+     },
+     {
+      "n": 7,
+      "attempts": 4,
+      "executions": 3,
+      "admin_retries": 1,
+      "relation_holds": true,
+      "documented_bound_holds": true
+     },
+     {
+      "n": 8,
+      "attempts": 2,
+      "executions": 2,
+      "admin_retries": 0,
+      "relation_holds": true,
+      "documented_bound_holds": true
+     },
+     {
+      "n": 11,
+      "attempts": 1,
+      "executions": 1,
+      "admin_retries": 0,
+      "relation_holds": true,
+      "documented_bound_holds": true
+     },
+     {
+      "n": 12,
+      "attempts": 2,
+      "executions": 2,
+      "admin_retries": 0,
+      "relation_holds": true,
+      "documented_bound_holds": true
+     },
+     {
+      "n": 13,
+      "attempts": 1,
+      "executions": 1,
+      "admin_retries": 0,
+      "relation_holds": true,
+      "documented_bound_holds": true
+     },
+     {
+      "n": 14,
+      "attempts": 2,
+      "executions": 2,
+      "admin_retries": 0,
+      "relation_holds": true,
+      "documented_bound_holds": true
+     }
+    ],
+    "r2_entries_in_frozen_checker": 15
+   },
+   "contract_order": {
+    "post_after_quiescence": true
+   },
+   "final_catalog_digest": "554bf337006d8d8c356a792c346c9c6f623c8008e0512dc6ae49ab0e103bae9d",
+   "final_state_digest": "aec8016cd8ff543dafdb683ba6cd032ecc1ac9c770810c4e5c2fa3b9f27baa44",
+   "outcome": "SOUND"
+  },
+  {
+   "step": "R_fresh_3.4.0_schema",
+   "phase": "T7",
+   "entry_catalog_digest": "ce03cf220cc9d866f15b326dec6b96dc7da30cb5041d389e63d440f3ed63e8c9",
+   "entry_state_digest": "7678886c3e32addd663dd313667eaac1e8b66cee6fa05556fc7886439741a380",
+   "verdict": "SOUND",
+   "refusal_reasons": [],
+   "precondition": {
+    "schema_present": false
+   },
+   "versions": {
+    "B": "3.4.0"
+   },
+   "pinned_sources": {
+    "B": {
+     "version": "3.4.0",
+     "procrastinate/sql/queries.sql": "e6b932bcefe689ed2941f5c885b5ebc7f07913203f8363e9f03762cd59314ed3",
+     "procrastinate/sql/schema.sql": "c796dca40785a84ee434b930b4bc1bb11cc7a6da84ad6330cf6c49e953c902b9",
+     "procrastinate/app.py": "1147f1a56d55a23c396d364183296dc9ffd66bfc3b16d25e2033752276b35797",
+     "procrastinate/worker.py": "c4f6108f93471e145d6ae143d17a7112bc42fd7f9dc12ba102b301847aa421d0",
+     "procrastinate/manager.py": "2e41449c71b9b6ed74b5872fec3e103ddb4597646449dffab11e1e3de2107efe",
+     "procrastinate/psycopg_connector.py": "d93aaa49a39c1c5822c6fb34ddec6121969f454b253159a7abc891ba7d1c4c9e"
+    }
+   },
+   "corroboration": {
+    "ok": true,
+    "matched": 3,
+    "params_compared": 0,
+    "params_mismatched": 0,
+    "params_unchecked": 0,
+    "problems": [],
+    "unchecked_kinds": {}
+   },
+   "window": {
+    "opened_at_grant": null,
+    "closed_at_grant": 0,
+    "grants": 0,
+    "by_version": {},
+    "by_actor": {},
+    "version_switches": 0,
+    "claims_by_version": {}
+   },
+   "teardown": {
+    "containers_removed": true,
+    "network_removed": true,
+    "workdir_removed": true,
+    "protected_unchanged": true
+   },
+   "permitted_operations": {
+    "ddl_allowed": true,
+    "versions": [
+     "3.4.0"
+    ],
+    "violations": []
+   },
+   "provenance": {
+    "actors": {
+     "new_schema": {
+      "process": "B",
+      "versions": [
+       "procrastinate-3.4.0"
+      ],
+      "backend_pid": 225,
+      "transactions": 1,
+      "statements": 2,
+      "errors": 0,
+      "log_pid": 225
+     }
+    },
+    "consistent_with_server_log": true
+   },
+   "interleaving": {
+    "by_version": {
+     "procrastinate-3.4.0": 2
+    },
+    "switches": 0
+   },
+   "exit_catalog_digest": "554bf337006d8d8c356a792c346c9c6f623c8008e0512dc6ae49ab0e103bae9d",
+   "exit_state_digest": "16f573db761dc7e4755ad8f6f73e47fd3469fd116981af242e6ff9ded4e99530",
+   "catalog_diff": {
+    "column_order": {
+     "removed": [],
+     "added": [
+      [
+       "procrastinate_events",
+       "id,job_id,type,at"
+      ],
+      [
+       "procrastinate_jobs",
+       "id,queue_name,task_name,priority,lock,queueing_lock,args,status,scheduled_at,attempts,abort_requested,worker_id"
+      ],
+      [
+       "procrastinate_periodic_defers",
+       "id,task_name,defer_timestamp,job_id,periodic_id"
+      ],
+      [
+       "procrastinate_workers",
+       "id,last_heartbeat"
+      ]
+     ]
+    },
+    "columns": {
+     "removed": [],
+     "added": [
+      [
+       "procrastinate_events",
+       "at",
+       "timestamp with time zone",
+       "false",
+       "now()"
+      ],
+      [
+       "procrastinate_events",
+       "id",
+       "bigint",
+       "true",
+       "nextval('procrastinate_events_id_seq'::regclass)"
+      ],
+      [
+       "procrastinate_events",
+       "job_id",
+       "bigint",
+       "true",
+       ""
+      ],
+      [
+       "procrastinate_events",
+       "type",
+       "procrastinate_job_event_type",
+       "false",
+       ""
+      ],
+      [
+       "procrastinate_jobs",
+       "abort_requested",
+       "boolean",
+       "true",
+       "false"
+      ],
+      [
+       "procrastinate_jobs",
+       "args",
+       "jsonb",
+       "true",
+       "'{}'::jsonb"
+      ],
+      [
+       "procrastinate_jobs",
+       "attempts",
+       "integer",
+       "true",
+       "0"
+      ],
+      [
+       "procrastinate_jobs",
+       "id",
+       "bigint",
+       "true",
+       "nextval('procrastinate_jobs_id_seq'::regclass)"
+      ],
+      [
+       "procrastinate_jobs",
+       "lock",
+       "text",
+       "false",
+       ""
+      ],
+      [
+       "procrastinate_jobs",
+       "priority",
+       "integer",
+       "true",
+       "0"
+      ],
+      [
+       "procrastinate_jobs",
+       "queue_name",
+       "character varying(128)",
+       "true",
+       ""
+      ],
+      [
+       "procrastinate_jobs",
+       "queueing_lock",
+       "text",
+       "false",
+       ""
+      ],
+      [
+       "procrastinate_jobs",
+       "scheduled_at",
+       "timestamp with time zone",
+       "false",
+       ""
+      ],
+      [
+       "procrastinate_jobs",
+       "status",
+       "procrastinate_job_status",
+       "true",
+       "'todo'::procrastinate_job_status"
+      ],
+      [
+       "procrastinate_jobs",
+       "task_name",
+       "character varying(128)",
+       "true",
+       ""
+      ],
+      [
+       "procrastinate_jobs",
+       "worker_id",
+       "bigint",
+       "false",
+       ""
+      ],
+      [
+       "procrastinate_periodic_defers",
+       "defer_timestamp",
+       "bigint",
+       "false",
+       ""
+      ],
+      [
+       "procrastinate_periodic_defers",
+       "id",
+       "bigint",
+       "true",
+       "nextval('procrastinate_periodic_defers_id_seq'::regclass)"
+      ],
+      [
+       "procrastinate_periodic_defers",
+       "job_id",
+       "bigint",
+       "false",
+       ""
+      ],
+      [
+       "procrastinate_periodic_defers",
+       "periodic_id",
+       "character varying(128)",
+       "true",
+       "''::character varying"
+      ],
+      [
+       "procrastinate_periodic_defers",
+       "task_name",
+       "character varying(128)",
+       "true",
+       ""
+      ],
+      [
+       "procrastinate_workers",
+       "id",
+       "bigint",
+       "true",
+       ""
+      ],
+      [
+       "procrastinate_workers",
+       "last_heartbeat",
+       "timestamp with time zone",
+       "true",
+       "now()"
+      ]
+     ]
+    },
+    "composites": {
+     "removed": [],
+     "added": [
+      [
+       "procrastinate_job_to_defer_v1",
+       "args",
+       "jsonb"
+      ],
+      [
+       "procrastinate_job_to_defer_v1",
+       "lock",
+       "text"
+      ],
+      [
+       "procrastinate_job_to_defer_v1",
+       "priority",
+       "integer"
+      ],
+      [
+       "procrastinate_job_to_defer_v1",
+       "queue_name",
+       "character varying"
+      ],
+      [
+       "procrastinate_job_to_defer_v1",
+       "queueing_lock",
+       "text"
+      ],
+      [
+       "procrastinate_job_to_defer_v1",
+       "scheduled_at",
+       "timestamp with time zone"
+      ],
+      [
+       "procrastinate_job_to_defer_v1",
+       "task_name",
+       "character varying"
+      ]
+     ]
+    },
+    "constraints": {
+     "removed": [],
+     "added": [
+      [
+       "procrastinate_events",
+       "procrastinate_events_job_id_fkey",
+       "f",
+       "FOREIGN KEY (job_id) REFERENCES procrastinate_jobs(id) ON DELETE CASCADE"
+      ],
+      [
+       "procrastinate_events",
+       "procrastinate_events_pkey",
+       "p",
+       "PRIMARY KEY (id)"
+      ],
+      [
+       "procrastinate_jobs",
+       "check_not_todo_abort_requested",
+       "c",
+       "CHECK ((NOT ((status = 'todo'::procrastinate_job_status) AND (abort_requested = true))))"
+      ],
+      [
+       "procrastinate_jobs",
+       "procrastinate_jobs_pkey",
+       "p",
+       "PRIMARY KEY (id)"
+      ],
+      [
+       "procrastinate_jobs",
+       "procrastinate_jobs_worker_id_fkey",
+       "f",
+       "FOREIGN KEY (worker_id) REFERENCES procrastinate_workers(id) ON DELETE SET NULL"
+      ],
+      [
+       "procrastinate_periodic_defers",
+       "procrastinate_periodic_defers_job_id_fkey",
+       "f",
+       "FOREIGN KEY (job_id) REFERENCES procrastinate_jobs(id)"
+      ],
+      [
+       "procrastinate_periodic_defers",
+       "procrastinate_periodic_defers_pkey",
+       "p",
+       "PRIMARY KEY (id)"
+      ],
+      [
+       "procrastinate_periodic_defers",
+       "procrastinate_periodic_defers_unique",
+       "u",
+       "UNIQUE (task_name, periodic_id, defer_timestamp)"
+      ],
+      [
+       "procrastinate_workers",
+       "procrastinate_workers_pkey",
+       "p",
+       "PRIMARY KEY (id)"
+      ]
+     ]
+    },
+    "enums": {
+     "removed": [],
+     "added": [
+      [
+       "procrastinate_job_event_type",
+       "deferred,started,deferred_for_retry,failed,succeeded,cancelled,abort_requested,aborted,scheduled,retried"
+      ],
+      [
+       "procrastinate_job_status",
+       "todo,doing,succeeded,failed,cancelled,aborting,aborted"
+      ]
+     ]
+    },
+    "functions": {
+     "removed": [],
+     "added": [
+      [
+       "procrastinate_cancel_job_v1",
+       "job_id bigint, abort boolean, delete_job boolean",
+       "bigint",
+       "f",
+       "82c9f315e4f2b927",
+       "ad9922ac764e943b"
+      ],
+      [
+       "procrastinate_defer_jobs_v1",
+       "jobs procrastinate_job_to_defer_v1[]",
+       "bigint[]",
+       "f",
+       "47e8aa769939f59f",
+       "236ff1ae719a0a20"
+      ],
+      [
+       "procrastinate_defer_periodic_job_v2",
+       "_queue_name character varying, _lock character varying, _queueing_lock character varying, _task_name character varying, _priority integer, _periodic_id character varying, _defer_timestamp bigint, _args jsonb",
+       "bigint",
+       "f",
+       "5441e3c09b746755",
+       "a45afc7dfff956b3"
+      ],
+      [
+       "procrastinate_fetch_job_v2",
+       "target_queue_names character varying[], p_worker_id bigint",
+       "procrastinate_jobs",
+       "f",
+       "8193b4d061eaf7a2",
+       "91ad15acf5b3d7f1"
+      ],
+      [
+       "procrastinate_finish_job_v1",
+       "job_id bigint, end_status procrastinate_job_status, delete_job boolean",
+       "void",
+       "f",
+       "e2d27b34bcbe0d3e",
+       "bd85d37335691b7c"
+      ],
+      [
+       "procrastinate_notify_queue_abort_job_v1",
+       "",
+       "trigger",
+       "f",
+       "ff4a5020a3b0f80f",
+       "c73cd713b83b9ec0"
+      ],
+      [
+       "procrastinate_notify_queue_job_inserted_v1",
+       "",
+       "trigger",
+       "f",
+       "945ed201e1e4f405",
+       "2a6476bbbd9e1e32"
+      ],
+      [
+       "procrastinate_prune_stalled_workers_v1",
+       "seconds_since_heartbeat double precision",
+       "TABLE(worker_id bigint)",
+       "f",
+       "4462e0a7706e82b4",
+       "29d8ac10931dc636"
+      ],
+      [
+       "procrastinate_register_worker_v1",
+       "",
+       "TABLE(worker_id bigint)",
+       "f",
+       "f1d7aacd75df6547",
+       "b42cdf791df0532e"
+      ],
+      [
+       "procrastinate_retry_job_v1",
+       "job_id bigint, retry_at timestamp with time zone, new_priority integer, new_queue_name character varying, new_lock character varying",
+       "void",
+       "f",
+       "ce14a7c82f32f79e",
+       "1a7638e8f6c239b8"
+      ],
+      [
+       "procrastinate_retry_job_v2",
+       "job_id bigint, retry_at timestamp with time zone, new_priority integer, new_queue_name character varying, new_lock character varying",
+       "void",
+       "f",
+       "2120fa18ea96d8bd",
+       "fdb6442a16585c5e"
+      ],
+      [
+       "procrastinate_trigger_abort_requested_events_procedure_v1",
+       "",
+       "trigger",
+       "f",
+       "2e20aa6813846d26",
+       "31491efe26a0e5dc"
+      ],
+      [
+       "procrastinate_trigger_function_scheduled_events_v1",
+       "",
+       "trigger",
+       "f",
+       "713122df4b02397e",
+       "f5c9db445531762a"
+      ],
+      [
+       "procrastinate_trigger_function_status_events_insert_v1",
+       "",
+       "trigger",
+       "f",
+       "3973091d4a0b5b39",
+       "0e99cb761af6269a"
+      ],
+      [
+       "procrastinate_trigger_function_status_events_update_v1",
+       "",
+       "trigger",
+       "f",
+       "ed03e3cc0a4716ee",
+       "3fa6b9d4eaee27b9"
+      ],
+      [
+       "procrastinate_unlink_periodic_defers_v1",
+       "",
+       "trigger",
+       "f",
+       "7c36fb69992f1160",
+       "10379c0bccf396ec"
+      ],
+      [
+       "procrastinate_unregister_worker_v1",
+       "worker_id bigint",
+       "void",
+       "f",
+       "76644ecb869785f9",
+       "84365d4fa4114d4c"
+      ],
+      [
+       "procrastinate_update_heartbeat_v1",
+       "worker_id bigint",
+       "void",
+       "f",
+       "5fac18d80797eefa",
+       "3378318dee6d7c19"
+      ]
+     ],
+     "changed": [],
+     "whitespace_only": []
+    },
+    "indexes": {
+     "removed": [],
+     "added": [
+      [
+       "procrastinate_events",
+       "procrastinate_events_job_id_fkey_v1",
+       "CREATE INDEX procrastinate_events_job_id_fkey_v1 ON public.procrastinate_events USING btree (job_id)"
+      ],
+      [
+       "procrastinate_events",
+       "procrastinate_events_pkey",
+       "CREATE UNIQUE INDEX procrastinate_events_pkey ON public.procrastinate_events USING btree (id)"
+      ],
+      [
+       "procrastinate_jobs",
+       "idx_procrastinate_jobs_worker_not_null",
+       "CREATE INDEX idx_procrastinate_jobs_worker_not_null ON public.procrastinate_jobs USING btree (worker_id) WHERE ((worker_id IS NOT NULL) AND (status = 'doing'::procrastinate_job_status))"
+      ],
+      [
+       "procrastinate_jobs",
+       "procrastinate_jobs_id_lock_idx_v1",
+       "CREATE INDEX procrastinate_jobs_id_lock_idx_v1 ON public.procrastinate_jobs USING btree (id, lock) WHERE (status = ANY (ARRAY['todo'::procrastinate_job_status, 'doing'::procrastinate_job_status]))"
+      ],
+      [
+       "procrastinate_jobs",
+       "procrastinate_jobs_lock_idx_v1",
+       "CREATE UNIQUE INDEX procrastinate_jobs_lock_idx_v1 ON public.procrastinate_jobs USING btree (lock) WHERE (status = 'doing'::procrastinate_job_status)"
+      ],
+      [
+       "procrastinate_jobs",
+       "procrastinate_jobs_pkey",
+       "CREATE UNIQUE INDEX procrastinate_jobs_pkey ON public.procrastinate_jobs USING btree (id)"
+      ],
+      [
+       "procrastinate_jobs",
+       "procrastinate_jobs_priority_idx_v1",
+       "CREATE INDEX procrastinate_jobs_priority_idx_v1 ON public.procrastinate_jobs USING btree (priority DESC, id) WHERE (status = 'todo'::procrastinate_job_status)"
+      ],
+      [
+       "procrastinate_jobs",
+       "procrastinate_jobs_queue_name_idx_v1",
+       "CREATE INDEX procrastinate_jobs_queue_name_idx_v1 ON public.procrastinate_jobs USING btree (queue_name)"
+      ],
+      [
+       "procrastinate_jobs",
+       "procrastinate_jobs_queueing_lock_idx_v1",
+       "CREATE UNIQUE INDEX procrastinate_jobs_queueing_lock_idx_v1 ON public.procrastinate_jobs USING btree (queueing_lock) WHERE (status = 'todo'::procrastinate_job_status)"
+      ],
+      [
+       "procrastinate_periodic_defers",
+       "procrastinate_periodic_defers_job_id_fkey_v1",
+       "CREATE INDEX procrastinate_periodic_defers_job_id_fkey_v1 ON public.procrastinate_periodic_defers USING btree (job_id)"
+      ],
+      [
+       "procrastinate_periodic_defers",
+       "procrastinate_periodic_defers_pkey",
+       "CREATE UNIQUE INDEX procrastinate_periodic_defers_pkey ON public.procrastinate_periodic_defers USING btree (id)"
+      ],
+      [
+       "procrastinate_periodic_defers",
+       "procrastinate_periodic_defers_unique",
+       "CREATE UNIQUE INDEX procrastinate_periodic_defers_unique ON public.procrastinate_periodic_defers USING btree (task_name, periodic_id, defer_timestamp)"
+      ],
+      [
+       "procrastinate_workers",
+       "idx_procrastinate_workers_last_heartbeat",
+       "CREATE INDEX idx_procrastinate_workers_last_heartbeat ON public.procrastinate_workers USING btree (last_heartbeat)"
+      ],
+      [
+       "procrastinate_workers",
+       "procrastinate_workers_pkey",
+       "CREATE UNIQUE INDEX procrastinate_workers_pkey ON public.procrastinate_workers USING btree (id)"
+      ]
+     ]
+    },
+    "sequences": {
+     "removed": [],
+     "added": [
+      [
+       "procrastinate_events_id_seq",
+       "bigint"
+      ],
+      [
+       "procrastinate_jobs_id_seq",
+       "bigint"
+      ],
+      [
+       "procrastinate_periodic_defers_id_seq",
+       "bigint"
+      ],
+      [
+       "procrastinate_workers_id_seq",
+       "bigint"
+      ]
+     ]
+    },
+    "triggers": {
+     "removed": [],
+     "added": [
+      [
+       "procrastinate_jobs",
+       "procrastinate_jobs_notify_queue_job_aborted_v1",
+       "CREATE TRIGGER procrastinate_jobs_notify_queue_job_aborted_v1 AFTER UPDATE OF abort_requested ON public.procrastinate_jobs FOR EACH ROW WHEN (((old.abort_requested = false) AND (new.abort_requested = true) AND (new.status = 'doing'::procrastinate_job_status))) EXECUTE FUNCTION procrastinate_notify_queue_abort_job_v1()"
+      ],
+      [
+       "procrastinate_jobs",
+       "procrastinate_jobs_notify_queue_job_inserted_v1",
+       "CREATE TRIGGER procrastinate_jobs_notify_queue_job_inserted_v1 AFTER INSERT ON public.procrastinate_jobs FOR EACH ROW WHEN ((new.status = 'todo'::procrastinate_job_status)) EXECUTE FUNCTION procrastinate_notify_queue_job_inserted_v1()"
+      ],
+      [
+       "procrastinate_jobs",
+       "procrastinate_trigger_abort_requested_events_v1",
+       "CREATE TRIGGER procrastinate_trigger_abort_requested_events_v1 AFTER UPDATE OF abort_requested ON public.procrastinate_jobs FOR EACH ROW WHEN ((new.abort_requested = true)) EXECUTE FUNCTION procrastinate_trigger_abort_requested_events_procedure_v1()"
+      ],
+      [
+       "procrastinate_jobs",
+       "procrastinate_trigger_delete_jobs_v1",
+       "CREATE TRIGGER procrastinate_trigger_delete_jobs_v1 BEFORE DELETE ON public.procrastinate_jobs FOR EACH ROW EXECUTE FUNCTION procrastinate_unlink_periodic_defers_v1()"
+      ],
+      [
+       "procrastinate_jobs",
+       "procrastinate_trigger_scheduled_events_v1",
+       "CREATE TRIGGER procrastinate_trigger_scheduled_events_v1 AFTER INSERT OR UPDATE ON public.procrastinate_jobs FOR EACH ROW WHEN (((new.scheduled_at IS NOT NULL) AND (new.status = 'todo'::procrastinate_job_status))) EXECUTE FUNCTION procrastinate_trigger_function_scheduled_events_v1()"
+      ],
+      [
+       "procrastinate_jobs",
+       "procrastinate_trigger_status_events_insert_v1",
+       "CREATE TRIGGER procrastinate_trigger_status_events_insert_v1 AFTER INSERT ON public.procrastinate_jobs FOR EACH ROW WHEN ((new.status = 'todo'::procrastinate_job_status)) EXECUTE FUNCTION procrastinate_trigger_function_status_events_insert_v1()"
+      ],
+      [
+       "procrastinate_jobs",
+       "procrastinate_trigger_status_events_update_v1",
+       "CREATE TRIGGER procrastinate_trigger_status_events_update_v1 AFTER UPDATE OF status ON public.procrastinate_jobs FOR EACH ROW EXECUTE FUNCTION procrastinate_trigger_function_status_events_update_v1()"
+      ]
+     ]
+    }
+   },
+   "outcome": "SOUND",
+   "schema_equivalence": {
+    "equal": true,
+    "upgraded_vs_fresh_diff": {},
+    "upgraded_digest": "554bf337006d8d8c356a792c346c9c6f623c8008e0512dc6ae49ab0e103bae9d",
+    "fresh_digest": "554bf337006d8d8c356a792c346c9c6f623c8008e0512dc6ae49ab0e103bae9d"
+   }
+  }
+ ],
+ "backfill": "NOT SUPPORTED: this upgrade pair has no data migration (neither pinned migration has a row-modifying statement outside a function body)",
+ "verdict": "SOUND",
+ "genuine_violations": [],
+ "results": {
+  "0a_old_schema/old_schema": {
+   "version": "3.3.0",
+   "schema_applied": true
+  },
+  "0b_old_on_old_schema/old_defer": {
+   "version": "3.3.0",
+   "pushed": [
+    {
+     "n": 0,
+     "id": 1,
+     "kind": "ok",
+     "version": "3.3.0",
+     "max_attempts": 0
+    },
+    {
+     "n": 1,
+     "id": 2,
+     "kind": "fail",
+     "version": "3.3.0",
+     "max_attempts": 1
+    },
+    {
+     "n": 2,
+     "id": 3,
+     "kind": "flaky",
+     "version": "3.3.0",
+     "max_attempts": 1
+    }
+   ]
+  },
+  "0b_old_on_old_schema/old_worker": {
+   "version": "3.3.0",
+   "handled": [
+    0,
+    1,
+    1,
+    2,
+    2
+   ],
+   "succeeded": [
+    0
+   ],
+   "worker_stopped": true,
+   "stopped_by": "drained"
+  },
+  "1_pre_migration/operator": {
+   "version": "3.4.0",
+   "migration": "03.04.00_01_pre_add_retry_failed_job_procedure.sql",
+   "sha256": "6883b7336508620ba856db4a78558158fe15c8e68b2ea05c60b468e73c311255"
+  },
+  "2_old_on_pre_schema/old_defer": {
+   "version": "3.3.0",
+   "pushed": [
+    {
+     "n": 3,
+     "id": 4,
+     "kind": "ok",
+     "version": "3.3.0",
+     "max_attempts": 0
+    },
+    {
+     "n": 4,
+     "id": 5,
+     "kind": "fail",
+     "version": "3.3.0",
+     "max_attempts": 1
+    }
+   ]
+  },
+  "2_old_on_pre_schema/old_worker": {
+   "version": "3.3.0",
+   "handled": [
+    3,
+    4,
+    4
+   ],
+   "succeeded": [
+    3
+   ],
+   "worker_stopped": true,
+   "stopped_by": "drained"
+  },
+  "3_overlap/old_defer": {
+   "version": "3.3.0",
+   "pushed": [
+    {
+     "n": 5,
+     "id": 7,
+     "kind": "ok",
+     "version": "3.3.0",
+     "max_attempts": 0
+    },
+    {
+     "n": 6,
+     "id": 9,
+     "kind": "flaky",
+     "version": "3.3.0",
+     "max_attempts": 1
+    },
+    {
+     "n": 7,
+     "id": 10,
+     "kind": "flaky",
+     "version": "3.3.0",
+     "max_attempts": 1
+    },
+    {
+     "n": 8,
+     "id": 11,
+     "kind": "fail",
+     "version": "3.3.0",
+     "max_attempts": 1
+    }
+   ]
+  },
+  "3_overlap/old_worker": {
+   "version": "3.3.0",
+   "handled": [
+    5,
+    10,
+    10,
+    11,
+    12
+   ],
+   "succeeded": [
+    5,
+    11
+   ],
+   "worker_stopped": true,
+   "stopped_by": "signal"
+  },
+  "3_overlap/new_defer": {
+   "version": "3.4.0",
+   "pushed": [
+    {
+     "n": 9,
+     "id": 6,
+     "kind": "ok",
+     "version": "3.4.0",
+     "max_attempts": 0
+    },
+    {
+     "n": 10,
+     "id": 8,
+     "kind": "flaky",
+     "version": "3.4.0",
+     "max_attempts": 1
+    },
+    {
+     "n": 11,
+     "id": 12,
+     "kind": "flaky",
+     "version": "3.4.0",
+     "max_attempts": 1
+    },
+    {
+     "n": 12,
+     "id": 13,
+     "kind": "fail",
+     "version": "3.4.0",
+     "max_attempts": 1
+    }
+   ]
+  },
+  "3_overlap/new_worker": {
+   "version": "3.4.0",
+   "handled": [
+    9,
+    1,
+    6,
+    7,
+    7,
+    8,
+    8
+   ],
+   "succeeded": [
+    9,
+    6
+   ],
+   "worker_stopped": true,
+   "stopped_by": "signal"
+  },
+  "3_overlap/new_admin": {
+   "version": "3.4.0",
+   "retried": [
+    {
+     "n": 1,
+     "id": 2,
+     "before": {
+      "status": "failed",
+      "attempts": 2
+     },
+     "ok": true,
+     "after": {
+      "status": "todo",
+      "attempts": 3
+     }
+    }
+   ]
+  },
+  "T4_background_retry/old_worker": {
+   "version": "3.3.0",
+   "handled": [],
+   "succeeded": [],
+   "worker_stopped": true,
+   "stopped_by": "signal"
+  },
+  "T4_background_retry/new_worker": {
+   "version": "3.4.0",
+   "handled": [
+    12,
+    1,
+    2,
+    7
+   ],
+   "succeeded": [
+    2
+   ],
+   "worker_stopped": true,
+   "stopped_by": "signal"
+  },
+  "T4_background_retry/new_admin": {
+   "version": "3.4.0",
+   "retried": [
+    {
+     "n": 1,
+     "id": 2,
+     "before": {
+      "status": "failed",
+      "attempts": 4
+     },
+     "ok": true,
+     "after": {
+      "status": "todo",
+      "attempts": 5
+     }
+    },
+    {
+     "n": 2,
+     "id": 3,
+     "before": {
+      "status": "failed",
+      "attempts": 2
+     },
+     "ok": true,
+     "after": {
+      "status": "todo",
+      "attempts": 3
+     }
+    },
+    {
+     "n": 7,
+     "id": 10,
+     "before": {
+      "status": "failed",
+      "attempts": 2
+     },
+     "ok": true,
+     "after": {
+      "status": "doing",
+      "attempts": 3
+     }
+    }
+   ]
+  },
+  "4_post_migration/operator": {
+   "version": "3.4.0",
+   "migration": "03.04.00_50_post_add_retry_failed_job_procedure.sql",
+   "sha256": "ac4021eb9d029e08edc9ef7672ae7ea4ef82002858a400cc6b44abd3e79248b2"
+  },
+  "5_new_only/new_defer": {
+   "version": "3.4.0",
+   "pushed": [
+    {
+     "n": 13,
+     "id": 14,
+     "kind": "ok",
+     "version": "3.4.0",
+     "max_attempts": 0
+    },
+    {
+     "n": 14,
+     "id": 15,
+     "kind": "fail",
+     "version": "3.4.0",
+     "max_attempts": 1
+    }
+   ]
+  },
+  "5_new_only/new_admin": {
+   "version": "3.4.0",
+   "retried": [
+    {
+     "n": 4,
+     "id": 5,
+     "before": {
+      "status": "failed",
+      "attempts": 2
+     },
+     "ok": true,
+     "after": {
+      "status": "todo",
+      "attempts": 3
+     }
+    }
+   ]
+  },
+  "5_new_only/new_worker": {
+   "version": "3.4.0",
+   "handled": [
+    4,
+    13,
+    14,
+    14
+   ],
+   "succeeded": [
+    13
+   ],
+   "worker_stopped": true,
+   "stopped_by": "drained"
+  },
+  "R_fresh_3.4.0_schema/new_schema": {
+   "version": "3.4.0",
+   "schema_applied": true
+  }
+ },
+ "teardown_public_schema_reset": true
+}
