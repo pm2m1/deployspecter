@@ -334,8 +334,15 @@ def world(tmp_path, monkeypatch):
 
 def test_the_gate_opens_only_when_everything_holds(world):
     assert run.real_refusals(**world["kw"]) == []
-    with pytest.raises(SystemExit, match="isn't wired"):
-        run.RealExecutor()()
+    # past the seven gates, the executor's own preflight can only refuse more: the fixture's synthetic application
+    # has no reviewed integration, so nothing runs and no result is committed
+    import argparse
+    kw = world["kw"]
+    a = argparse.Namespace(**{k: kw[k] for k in ("registry", "cases_root", "oracle_ledger", "registration", "policy",
+                                                 "results_dir")}, model_manifest=None)
+    with pytest.raises(SystemExit, match="no reviewed integration"):
+        run.real_execute(a, gate=lambda **k: run.real_refusals(**k, protocol=kw["protocol"], frozen=kw["frozen"]))
+    assert not (kw["results_dir"] / "RESULTS_LEDGER.jsonl").exists()
 
 
 def reasons(world, **change):

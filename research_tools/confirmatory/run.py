@@ -20,8 +20,16 @@
 6. a complete resource and retry policy equal to the frozen plan's budgets;
 7. no leakage: no development or held-out application, no archive also in the development registry, and no case id
    or archive sha256 anywhere in the development evidence.
-Even with all seven, the real arm executor is **not wired**: ``RealExecutor`` refuses. Wiring it to the existing
-runners is a reviewed step for after adoption.
+Only when all seven hold does ``real_execute`` run the arm executor (``real_executor``, integration ``chancy-sv/1``).
+Its own preflight can only refuse more:
+* an application without a reviewed integration;
+* an archive that isn't the frozen manifest's;
+* a case without an approved oracle;
+* a Muse arm without the frozen §4 model and prompt manifest.
+
+Results are committed run by run, and the run stops there. The reveal is a separate human step,
+``real-authorize``, with an owner record that isn't SIMULATION, and the seven gates are checked again. Then comes
+``real-score``.
 
 **simulate** runs the whole path on synthetic cases with mock approvals:
 * every artifact is stamped SIMULATION (ids ``sim-…``, the application name ``simulation-app``, a ``SIMULATION``
@@ -269,12 +277,85 @@ def real_refusals(*, registry: Path | None, cases_root: Path | None, oracle_ledg
     return why
 
 
-class RealExecutor:
-    """Not wired. A real arm execution must call the reviewed per-case runners (``research_tools/isolated``) under
-    the locked budgets; that wiring is a reviewed step for after adoption, so it refuses."""
+def _integrations() -> dict[str, Any]:
+    from integrations import chancy_sv
+    return {"chancy": chancy_sv}
 
-    def __call__(self, *a: Any, **k: Any) -> Any:
-        raise Refused("refused: the real arm executor isn't wired (a reviewed step after adoption)")
+
+def _real_inputs(a: Any) -> dict[str, Any]:
+    return dict(registry=a.registry, cases_root=a.cases_root, oracle_ledger=a.oracle_ledger,
+                registration=a.registration, policy=a.policy, results_dir=a.results_dir)
+
+
+def real_execute(a: Any, *, gate: Any = None, integrations: dict[str, Any] | None = None, model: Any = None
+                 ) -> dict[str, Any]:
+    """The real path after the gates: evaluator package → locked budgets → arm execution → committed results. It
+    never authorizes a reveal. ``gate`` defaults to ``real_refusals``; nothing below it runs if it refuses."""
+    import real_executor as rx
+    import sealed_evaluation as se
+    why = (gate or real_refusals)(**_real_inputs(a))
+    if why:
+        raise Refused("refused: " + "; ".join(why))
+    results = a.results_dir
+    w = Writer([results], simulation=False)
+    cases, _ = _registry_cases(a.registry)
+    root = a.cases_root or a.registry.parent / "cases"
+    pkg = results / "evaluator_package"
+    if not pkg.exists():
+        se.build_package(a.registry, [root / c["case_id"] for c in cases], pkg)
+    lock_path = results / "BUDGET_LOCK.json"
+    lock = check_lock(lock_path) if lock_path.exists() else lock_budgets(w, lock_path)
+    approved = orc.approved(a.oracle_ledger)
+    oracles = {cid: (Path(c["oracle_code"]), c["oracle_code_sha256"]) for cid, c in approved.items()
+               if "oracle_code" in c}
+    manifest = json.loads(a.model_manifest.read_text()) if getattr(a, "model_manifest", None) else None
+    ledger = results / "RESULTS_LEDGER.jsonl"
+    oracle_set = results / "ORACLE_SET.json"  # the approved set, pinned: scoring refuses if it changes afterwards
+    oracle_sha = ci.sha(oracle_set) if oracle_set.exists() else w.json(oracle_set, {
+        "oracles": {k: v[1] for k, v in sorted(oracles.items())}})
+    ex = rx.Executor(package=pkg, lock=lock, arms=list(ARMS), oracles=oracles,
+                     integrations=integrations or _integrations(),
+                     append=lambda r: _append_result(w, ledger, r, oracle_sha=oracle_sha, lock=lock),
+                     committed=lambda: _chain(ledger), workdir=results / "work", write_json=w.json,
+                     model=model, model_manifest=manifest)
+    return ex.run() | {"ledger": str(ledger), "next": "real-authorize (owner), then real-score"}
+
+
+def real_score(a: Any, *, gate: Any = None) -> dict[str, Any]:
+    """Independent scoring after the owner's authorization, with the curator's reveals; then the frozen analysis."""
+    why = (gate or real_refusals)(**_real_inputs(a))
+    if why:
+        raise Refused("refused: " + "; ".join(why))
+    cases, _ = _registry_cases(a.registry)
+    root = a.cases_root or a.registry.parent / "cases"
+    lock_path = a.results_dir / "BUDGET_LOCK.json"
+    rows, voided, triage = score(a.results_dir / "RESULTS_LEDGER.jsonl", [root / c["case_id"] for c in cases],
+                                 a.reveals, a.results_dir / "ORACLE_SET.json", lock_path=lock_path)
+    w = Writer([a.results_dir], simulation=False)
+    w.json(a.results_dir / "TRIAGE_QUEUE.json", {"items": triage})
+    analysis = analyse(rows, voided, check_lock(lock_path))
+    w.json(a.results_dir / "ANALYSIS.json", analysis)
+    return {"runs": len(rows), "voided": voided, "verdicts": {k: v["verdict"] for k, v in
+                                                             analysis["comparisons"].items()}}
+
+
+def real_authorize(a: Any, *, gate: Any = None) -> dict[str, Any]:
+    """The owner's reveal authorization: the gates again, complete results, and a non-SIMULATION owner record."""
+    import real_executor as rx
+    why = (gate or real_refusals)(**_real_inputs(a))
+    if why:
+        raise Refused("refused: " + "; ".join(why))
+    ledger = a.results_dir / "RESULTS_LEDGER.jsonl"
+    if verify_results(ledger):
+        raise Refused("refused: the results ledger is broken")
+    cases, _ = _registry_cases(a.registry)
+    lock = check_lock(a.results_dir / "BUDGET_LOCK.json")
+    expected = [(c["case_id"], arm, r, s) for c in cases for arm in ARMS for r in range(lock["budgets"]["replicates"])
+                for s in ("R1", "R2")]
+    who = rx.authorize_real(_chain(ledger), expected, a.record, ap.role_signers(ap.forms())["owner"])
+    head = [e for e in _chain(ledger) if e["kind"] == "result"][-1]
+    return _authorize(Writer([a.results_dir], simulation=False), ledger, authorizer=who["authorizer"],
+                      oracle_sha=head["oracle_sha256"], lock=lock)
 
 
 # ------------------------------------------------------------------------------------------------ simulation
@@ -619,8 +700,14 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser()
     sub = p.add_subparsers(dest="cmd", required=True)
     r = sub.add_parser("real")
-    for k in ("registry", "cases-root", "oracle-ledger", "registration", "policy", "results-dir"):
-        r.add_argument(f"--{k}", type=Path)
+    ra = sub.add_parser("real-authorize")
+    rs = sub.add_parser("real-score")
+    rs.add_argument("--reveals", type=Path, required=True, help="the curator's reveal directory (outside the repo)")
+    for parser in (r, ra, rs):
+        for k in ("registry", "cases-root", "oracle-ledger", "registration", "policy", "results-dir"):
+            parser.add_argument(f"--{k}", type=Path)
+    r.add_argument("--model-manifest", type=Path, help="the frozen §4 model and prompt manifest (Muse arms)")
+    ra.add_argument("--record", type=Path, required=True, help="the owner's signed reveal authorization (JSON)")
     s = sub.add_parser("simulate")
     s.add_argument("--sim-dir", type=Path, required=True)
     s.add_argument("--private-dir", type=Path, required=True)
@@ -633,8 +720,15 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps({"mode": "real", "refused": bool(why), "reasons": why}, indent=1))
         if why:
             return 3
-        RealExecutor()()
-        return 3
+        print(json.dumps(real_execute(a), indent=1))
+        return 0
+    if a.cmd in ("real-authorize", "real-score"):
+        why = real_refusals(**_real_inputs(a))
+        if why:
+            print(json.dumps({"mode": a.cmd, "refused": True, "reasons": why}, indent=1))
+            return 3
+        print(json.dumps((real_authorize if a.cmd == "real-authorize" else real_score)(a), indent=1, default=str))
+        return 0
     out = simulate(a.sim_dir, a.private_dir, scenario=a.scenario, n_cases=a.cases)
     print(json.dumps({k: out[k] for k in ("scenario", "cases", "runs", "voided", "analysis_verdicts")}, indent=1))
     return 0
