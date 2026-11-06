@@ -72,7 +72,8 @@ def main() -> int:
     for name in ("chancy-git-80f570f.tar", "chancy-git-2895c4a.tar"):
         se.normalize_archive(o.sdists / name, raw / f"norm-{name}")
     oracle = o.out / "oracle" / "sim_chancy_cancel_oracle.py"
-    w.text(oracle, ORACLE)
+    w.check(oracle).parent.mkdir(parents=True, exist_ok=True)  # Python, so a comment banner (not Writer.text's HTML)
+    oracle.write_text(f"# {run.BANNER}\n" + ORACLE)
     sub = {"case_id": "sim-chancy-pair", "application": "chancy", "repository": "https://github.com/TkTech/chancy",
            "split": "development", "revisions": [
                {"archive": str(raw / "norm-chancy-git-80f570f.tar"),
