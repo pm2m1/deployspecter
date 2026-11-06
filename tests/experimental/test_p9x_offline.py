@@ -174,7 +174,7 @@ def test_expression_only_differences_are_narrow():
     idx = ["t", "i", "CREATE INDEX i ON <S>.t USING btree (s) WHERE ((s)::text = ANY ((ARRAY['a'::varchar])::text[]))"]
     rt = ["t", "i", "CREATE INDEX i ON <S>.t USING btree (s) WHERE ((s)::text = ANY (ARRAY[('a'::varchar)::text]))"]
     assert catalog.expression_only_differences({"indexes": [idx]}, {"indexes": [rt]}) == [
-        {"kind": "indexes", "object": ["t", "i"], "target": idx[2], "sandbox": rt[2]}]
+        {"kind": "indexes", "object": ["t", "i"], "name": "i", "target": idx[2], "sandbox": rt[2]}]
     assert catalog.expression_only_differences({"indexes": [idx]}, {"indexes": [idx]}) == []
     assert catalog.expression_only_differences({"indexes": [idx]}, {"indexes": [["t", "j", rt[2]]]}) is None
     assert catalog.expression_only_differences({"indexes": [idx]}, {"indexes": []}) is None

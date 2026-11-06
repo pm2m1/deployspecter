@@ -27,7 +27,9 @@ Automatic server-side preparation is off, so every statement is logged the same 
   independent readback, which are database reads, not a log audit.
 * Not audited: the readback session and the Phase 9B sandbox sessions. The sandbox runs in its own database before
   the window.
-* Parameters: compared for str, int, bool and NULL as the server renders them, and float bit-exactly
+* Parameters: compared for str, int, bool and NULL as the server renders them; a parameter cast to
+  ``timestamptz`` (which the server logs through the type's output function) as the same instant to the
+  microsecond (``corroborate.datetime_matches``); and float bit-exactly
   (``corroborate._value_matches``). Any other parameter type is recorded as unchecked, which fails the audit, so it
   can't pass silently.
 """
@@ -43,7 +45,7 @@ from typing import Any
 import psycopg
 from psycopg import sql
 
-from deployspecter.experimental.corroborate import _value_matches
+from deployspecter.experimental.corroborate import _value_matches, datetime_matches
 from deployspecter.live.serverlog import ServerLog, normal_sql
 from deployspecter.research.track_a.gate2a_audit import parse_log, statement
 
@@ -71,10 +73,14 @@ class Journal:
     def pid(self) -> int:
         return self.conn.info.backend_pid
 
-    def execute(self, query: Any, params: Any = None, *, kind: str | None = None) -> Any:
+    def execute(self, query: Any, params: Any = None, *, kind: str | None = None,
+                casts: list[str | None] | None = None) -> Any:
+        """``casts``: each parameter's SQL cast in the statement (``typed.placeholder``), when it has one."""
         text = query.as_string(self.conn) if isinstance(query, sql.Composable) else str(query)
         entry = {"seq": len(self.entries), "kind": kind or self.kind, "text": text,
                  "params": list(params) if params is not None else [], "outcome": "ok"}
+        if casts is not None:
+            entry["casts"] = list(casts)
         self.entries.append(entry)
         try:
             return self.conn.execute(query, params)
@@ -96,6 +102,14 @@ class Journal:
             raise
         self.entries.append({"seq": len(self.entries), "kind": "boundary", "text": "COMMIT", "params": [],
                              "outcome": "ok"})
+
+
+def _instant_us(text: str) -> int:
+    import datetime as dt
+    t = dt.datetime.fromisoformat(text)
+    if t.tzinfo is None:
+        raise ValueError("a timestamptz parameter without an offset")
+    return (t - dt.datetime(1970, 1, 1, tzinfo=dt.UTC)) // dt.timedelta(microseconds=1)
 
 
 def server_rendering(v: Any) -> str | None:
@@ -210,7 +224,23 @@ def reconcile(data: bytes, *, start: str, end: str, journal: list[dict[str, Any]
             problems.append(f"statement {e['seq']}: logged {normal_sql(text)[:70]!r}, "
                             f"sent {normal_sql(e['text'])[:70]!r}")
             continue
+        casts = e.get("casts") or []
         for n, v in enumerate(e["params"], start=1):
+            cast = casts[n - 1] if n - 1 < len(casts) else None
+            if cast == "timestamptz" and isinstance(v, str):
+                # PostgreSQL infers the parameter's type from the cast and logs it through timestamptz's output
+                # function (session TimeZone UTC): compared as the same instant, exactly to the microsecond
+                lg = logged.get(n)
+                verdict = None
+                if lg and lg.startswith("'") and lg.endswith("'"):
+                    verdict = datetime_matches(lg[1:-1], {"timestamptz_us": _instant_us(v)})
+                if verdict is None:
+                    params_unchecked += 1
+                elif not verdict:
+                    problems.append(f"statement {e['seq']} parameter ${n}: logged {lg!r}, sent instant {v!r}")
+                else:
+                    params_checked += 1
+                continue
             if isinstance(v, float):  # bit-exact, by the corroborator's own float rule
                 verdict = _value_matches(logged.get(n) or "NULL", v)
                 if verdict is None:

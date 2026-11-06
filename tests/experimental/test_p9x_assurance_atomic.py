@@ -20,14 +20,17 @@ PORT = 55441
 pytestmark = pytest.mark.skipif(not SECRET.exists(), reason="the disposable MVP PostgreSQL isn't running")
 
 DDL = """
-CREATE TABLE items (id int PRIMARY KEY, label text NOT NULL, w double precision, d jsonb);
+CREATE TABLE items (id int PRIMARY KEY, label text NOT NULL, w double precision, d jsonb, at timestamptz,
+                    u uuid);
 CREATE TABLE audit (item int NOT NULL, label text NOT NULL);
 CREATE FUNCTION audit_item() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN INSERT INTO audit (item, label) VALUES (NEW.id, NEW.label); RETURN NEW; END $$;
 CREATE TRIGGER items_audit AFTER INSERT ON items FOR EACH ROW EXECUTE FUNCTION audit_item();
 """
 ROWS = [("items", {"id": TV("int", i), "label": TV("str", f"it's {i}"), "w": TV("float", 0.1 * i),
-                   "d": TV("jsonb", f'{{"n": {i}}}')}) for i in (1, 2, 3)]
+                   "d": TV("jsonb", f'{{"n": {i}}}'),
+                   "at": TV("timestamptz", f"2026-01-0{i}T01:02:03.000004+00:00"),
+                   "u": TV("uuid", f"00000000-0000-0000-0000-00000000000{i}")}) for i in (1, 2, 3)]
 
 
 @pytest.fixture(scope="module")
@@ -79,7 +82,7 @@ def test_the_construction_session_is_reconciled_with_the_server_log(target, sand
     p = o.provenance
     assert p["ok"] and p["problems"] == [] and p["params_unchecked"] == 0
     assert p["by_kind"]["construction"] == 3 and p["by_kind"]["boundary"] == 2 and p["by_kind"]["admin"] > 5
-    assert p["params_checked"] >= 12  # 3 rows x 4 typed values, plus the admin statements' parameters
+    assert p["params_checked"] >= 18  # 3 rows x 6 typed values (timestamptz by instant), plus admin
     texts = [e["text"] for e in p["journal"]]
     assert texts[0] == "BEGIN" and texts[-1] == "COMMIT"
     assert [e["kind"] for e in p["journal"] if e["text"].startswith("INSERT")] == ["construction"] * 3
@@ -182,3 +185,41 @@ def test_failed_construction_leaves_no_partial_state(target, sandbox, schema, st
     assert state(target, schema) == EMPTY
     prov = getattr(info.value, "provenance", None) or getattr(info.value.__context__, "provenance", None)
     assert prov is not None  # the attempt's own server-log record is kept with the failure
+
+
+def _csvlog(rows):
+    """Synthetic csvlog rows: (pid, message, detail, application), 26 columns each."""
+    import csv
+    import io
+    buf = io.StringIO()
+    w = csv.writer(buf, lineterminator="\n")
+    for pid, msg, det, app in rows:
+        cells = [""] * 26
+        cells[0], cells[1], cells[2], cells[3] = "2026-01-01 00:00:00.000 UTC", "u", "d", str(pid)
+        cells[11], cells[12], cells[13], cells[14], cells[22], cells[23] = "LOG", "00000", msg, det, app, \
+            "client backend"
+        w.writerow(cells)
+    return buf.getvalue().encode()
+
+
+def test_a_timestamptz_parameter_is_reconciled_as_the_same_instant_not_loosely():
+    assert provenance._instant_us("2026-01-01T05:30:00+05:30") == provenance._instant_us("2026-01-01T00:00:00+00:00")
+    j = [{"seq": 0, "kind": "construction", "text": "SELECT %s::timestamptz", "params": ["2026-01-01T00:00:00+00:00"],
+          "casts": ["timestamptz"], "outcome": "ok"}]
+
+    def log(value):
+        app = provenance.APPLICATION
+        return _csvlog([(2, "statement: SELECT 'S'", "", "a"),
+                        (1, f"connection authorized: user=u database=d application_name={app}", "", app),
+                        (1, "execute <unnamed>: SELECT $1::timestamptz", f"parameters: $1 = '{value}'", app),
+                        (1, "disconnection: session time: 0:00:00.001", "", app),
+                        (2, "statement: SELECT 'E'", "", "a")])
+    kw = {"start": "S", "end": "E", "journal": j, "construct_pid": 1, "audit_pid": 2, "user": "u", "database": "d"}
+    same = provenance.reconcile(log("2026-01-01 00:00:00+00"), **kw)
+    other_zone = provenance.reconcile(log("2026-01-01 05:30:00+05:30"), **kw)
+    later = provenance.reconcile(log("2026-01-01 00:00:00.000001+00"), **kw)
+    as_text = provenance.reconcile(log("2026-01-01 00:00:00+00"), **{**kw, "journal": [dict(j[0], casts=[None])]})
+    assert same["ok"], same["problems"]
+    assert other_zone["ok"], other_zone["problems"]
+    assert not later["ok"] and any("instant" in p for p in later["problems"])
+    assert not as_text["ok"]  # without the cast, the text must be exact

@@ -192,7 +192,9 @@ def _write(conninfo: dict[str, Any], schema: str, rows: list[tuple[str, dict[str
                     j.execute(sql.SQL("INSERT INTO {}.{} ({}) VALUES ({})").format(
                         sql.Identifier(schema), sql.Identifier(table), sql.SQL(", ").join(map(sql.Identifier, cols)),
                         sql.SQL(", ").join(typed.placeholder(vals[c]) for c in cols)),
-                        [typed.param(vals[c]) for c in cols], kind="construction")
+                        [typed.param(vals[c]) for c in cols], kind="construction",
+                        casts=[vals[c].tag if vals[c].tag in ("uuid", "timestamptz", "json", "jsonb") else None
+                               for c in cols])
                     hook("on_insert", k)
                 hook("before_verify")
                 added, removed = delta(before, snapshot(j, schema))

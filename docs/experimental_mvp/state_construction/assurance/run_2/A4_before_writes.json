@@ -1,0 +1,266 @@
+{
+ "as_expected": true,
+ "journal": [
+  {
+   "kind": "boundary",
+   "outcome": "ok",
+   "params": [],
+   "seq": 0,
+   "text": "BEGIN"
+  },
+  {
+   "kind": "admin",
+   "outcome": "ok",
+   "params": [],
+   "seq": 1,
+   "text": "SET LOCAL TIME ZONE 'UTC'"
+  },
+  {
+   "kind": "admin",
+   "outcome": "ok",
+   "params": [
+    "ds_p9x_assure"
+   ],
+   "seq": 2,
+   "text": "SELECT set_config('search_path', %s, true)"
+  },
+  {
+   "kind": "admin",
+   "outcome": "ok",
+   "params": [
+    "ds_p9x_assure"
+   ],
+   "seq": 3,
+   "text": "SELECT tablename::text FROM pg_tables WHERE schemaname = %s ORDER BY 1"
+  },
+  {
+   "kind": "admin",
+   "outcome": "ok",
+   "params": [],
+   "seq": 4,
+   "text": "LOCK TABLE \"ds_p9x_assure\".\"audit\" IN SHARE ROW EXCLUSIVE MODE"
+  },
+  {
+   "kind": "admin",
+   "outcome": "ok",
+   "params": [],
+   "seq": 5,
+   "text": "LOCK TABLE \"ds_p9x_assure\".\"items\" IN SHARE ROW EXCLUSIVE MODE"
+  },
+  {
+   "kind": "admin",
+   "outcome": "ok",
+   "params": [],
+   "seq": 6,
+   "text": "SELECT current_setting('search_path')"
+  },
+  {
+   "kind": "admin",
+   "outcome": "ok",
+   "params": [],
+   "seq": 7,
+   "text": "SET search_path = \"ds_p9x_assure\""
+  },
+  {
+   "kind": "admin",
+   "outcome": "ok",
+   "params": [
+    "ds_p9x_assure"
+   ],
+   "seq": 8,
+   "text": "SELECT c.relname::text, c.relkind::text FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = %s AND c.relkind NOT IN ('i', 'I', 't', 'c') ORDER BY 1"
+  },
+  {
+   "kind": "admin",
+   "outcome": "ok",
+   "params": [
+    "ds_p9x_assure"
+   ],
+   "seq": 9,
+   "text": "SELECT c.relname::text, a.attnum, a.attname::text, format_type(a.atttypid, a.atttypmod), a.attnotnull, pg_get_expr(d.adbin, d.adrelid), a.attidentity::text, a.attgenerated::text FROM pg_attribute a JOIN pg_class c ON c.oid = a.attrelid JOIN pg_namespace n ON n.oid = c.relnamespace LEFT JOIN pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum WHERE n.nspname = %s AND c.relkind = 'r' AND a.attnum > 0 AND NOT a.attisdropped ORDER BY 1, 2"
+  },
+  {
+   "kind": "admin",
+   "outcome": "ok",
+   "params": [
+    "ds_p9x_assure"
+   ],
+   "seq": 10,
+   "text": "SELECT c.relname::text, k.conname::text, k.contype::text, pg_get_constraintdef(k.oid), k.condeferrable FROM pg_constraint k JOIN pg_class c ON c.oid = k.conrelid JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = %s ORDER BY 1, 2"
+  },
+  {
+   "kind": "admin",
+   "outcome": "ok",
+   "params": [
+    "ds_p9x_assure"
+   ],
+   "seq": 11,
+   "text": "SELECT t.relname::text, i.relname::text, pg_get_indexdef(i.oid) FROM pg_index x JOIN pg_class i ON i.oid = x.indexrelid JOIN pg_class t ON t.oid = x.indrelid JOIN pg_namespace n ON n.oid = t.relnamespace WHERE n.nspname = %s AND NOT EXISTS (SELECT 1 FROM pg_constraint k WHERE k.conindid = x.indexrelid) ORDER BY 1, 2"
+  },
+  {
+   "kind": "admin",
+   "outcome": "ok",
+   "params": [
+    "ds_p9x_assure"
+   ],
+   "seq": 12,
+   "text": "SELECT c.relname::text, t.tgname::text, pg_get_triggerdef(t.oid), t.tgtype::int, t.tgconstraint <> 0, t.tgdeferrable, p.proname::text, t.tgenabled::text FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid JOIN pg_namespace n ON n.oid = c.relnamespace JOIN pg_proc p ON p.oid = t.tgfoid WHERE n.nspname = %s AND NOT t.tgisinternal ORDER BY 1, 2"
+  },
+  {
+   "kind": "admin",
+   "outcome": "ok",
+   "params": [
+    "ds_p9x_assure"
+   ],
+   "seq": 13,
+   "text": "SELECT p.proname::text, pg_get_function_identity_arguments(p.oid), l.lanname::text, p.provolatile::text, p.prosrc, pg_get_functiondef(p.oid), p.prokind::text FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace JOIN pg_language l ON l.oid = p.prolang WHERE n.nspname = %s ORDER BY 1, 2"
+  },
+  {
+   "kind": "admin",
+   "outcome": "ok",
+   "params": [
+    "ds_p9x_assure"
+   ],
+   "seq": 14,
+   "text": "SELECT t.typname::text, array_agg(e.enumlabel::text ORDER BY e.enumsortorder) FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace JOIN pg_enum e ON e.enumtypid = t.oid WHERE n.nspname = %s GROUP BY 1 ORDER BY 1"
+  },
+  {
+   "kind": "admin",
+   "outcome": "ok",
+   "params": [
+    "ds_p9x_assure"
+   ],
+   "seq": 15,
+   "text": "SELECT t.typname::text, array_agg(a.attname::text || ' ' || format_type(a.atttypid, a.atttypmod) ORDER BY a.attnum) FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace JOIN pg_class c ON c.oid = t.typrelid AND c.relkind = 'c' JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped WHERE n.nspname = %s GROUP BY 1 ORDER BY 1"
+  },
+  {
+   "kind": "admin",
+   "outcome": "ok",
+   "params": [
+    "ds_p9x_assure"
+   ],
+   "seq": 16,
+   "text": "SELECT t.typname::text FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace WHERE n.nspname = %s AND t.typtype = 'd'"
+  },
+  {
+   "kind": "admin",
+   "outcome": "ok",
+   "params": [
+    "ds_p9x_assure"
+   ],
+   "seq": 17,
+   "text": "SELECT sequencename::text, data_type::text, start_value, min_value, max_value, increment_by, cycle, cache_size FROM pg_sequences WHERE schemaname = %s ORDER BY 1"
+  },
+  {
+   "kind": "admin",
+   "outcome": "ok",
+   "params": [
+    "ds_p9x_assure"
+   ],
+   "seq": 18,
+   "text": "SELECT s.relname::text, t.relname::text, a.attname::text FROM pg_depend d JOIN pg_class s ON s.oid = d.objid AND s.relkind = 'S' JOIN pg_class t ON t.oid = d.refobjid JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = d.refobjsubid JOIN pg_namespace n ON n.oid = s.relnamespace WHERE n.nspname = %s AND d.deptype = 'i' ORDER BY 1"
+  },
+  {
+   "kind": "admin",
+   "outcome": "ok",
+   "params": [
+    "ds_p9x_assure"
+   ],
+   "seq": 19,
+   "text": "SELECT s.relname::text, t.relname::text, a.attname::text FROM pg_depend d JOIN pg_class s ON s.oid = d.objid AND s.relkind = 'S' JOIN pg_class t ON t.oid = d.refobjid JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = d.refobjsubid JOIN pg_namespace n ON n.oid = s.relnamespace WHERE n.nspname = %s AND d.deptype = 'a' ORDER BY 1"
+  },
+  {
+   "kind": "admin",
+   "outcome": "ok",
+   "params": [
+    "ds_p9x_assure"
+   ],
+   "seq": 20,
+   "text": "SELECT c.relname::text FROM pg_inherits i JOIN pg_class c ON c.oid = i.inhrelid JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = %s"
+  },
+  {
+   "kind": "admin",
+   "outcome": "ok",
+   "params": [
+    "ds_p9x_assure"
+   ],
+   "seq": 21,
+   "text": "SELECT c.relname::text, r.rulename::text FROM pg_rewrite r JOIN pg_class c ON c.oid = r.ev_class JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = %s AND r.rulename <> '_RETURN'"
+  },
+  {
+   "kind": "admin",
+   "outcome": "ok",
+   "params": [
+    "ds_p9x_assure"
+   ],
+   "seq": 22,
+   "text": "SELECT c.relname::text, p.polname::text FROM pg_policy p JOIN pg_class c ON c.oid = p.polrelid JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = %s"
+  },
+  {
+   "kind": "admin",
+   "outcome": "ok",
+   "params": [
+    "ds_p9x_assure"
+   ],
+   "seq": 23,
+   "text": "SELECT set_config('search_path', %s, false)"
+  },
+  {
+   "kind": "admin",
+   "outcome": "ok",
+   "params": [
+    "ds_p9x_assure"
+   ],
+   "seq": 24,
+   "text": "SELECT tablename::text FROM pg_tables WHERE schemaname = %s ORDER BY 1"
+  },
+  {
+   "kind": "admin",
+   "outcome": "ok",
+   "params": [],
+   "seq": 25,
+   "text": "SELECT to_jsonb(t) FROM \"ds_p9x_assure\".\"audit\" t"
+  },
+  {
+   "kind": "admin",
+   "outcome": "ok",
+   "params": [],
+   "seq": 26,
+   "text": "SELECT to_jsonb(t) FROM \"ds_p9x_assure\".\"items\" t"
+  },
+  {
+   "kind": "boundary",
+   "outcome": "sent",
+   "params": [],
+   "seq": 27,
+   "text": "ROLLBACK"
+  }
+ ],
+ "provenance": {
+  "by_kind": {
+   "admin": 26,
+   "boundary": 2
+  },
+  "construct_pid": 1086,
+  "journal_sha256": "d28d845e7a3740cd9194edff4ae55fb7e4541a0666b977bc8cb03c1ee914a403",
+  "journaled": 28,
+  "matched": 28,
+  "ok": true,
+  "params_checked": 19,
+  "params_unchecked": 0,
+  "problems": []
+ },
+ "raised": "Injected: injected",
+ "stage": "before_writes",
+ "target_after": {
+  "audit": 0,
+  "construct_sessions": 0,
+  "items": 0,
+  "locks": 0
+ },
+ "traceback_tail": [
+  "  File \"/Users/kiyo/Desktop/dsr-fin-a/research_tools/p9x_assurance.py\", line 159, in fail",
+  "    raise Injected(\"injected\")",
+  "Injected: injected"
+ ]
+}
