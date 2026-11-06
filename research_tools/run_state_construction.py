@@ -60,6 +60,7 @@ def doc_with(change: Any) -> dict[str, Any]:
 
 def reservations(target: hz.Target, out: Path, password: str) -> list[dict[str, Any]]:
     def two_holders(d: dict[str, Any]) -> None:  # an extra state goal: one reservation already held (serial id)
+        d["state_goals"][0]["constraints"][2]["value"] = {"type": "int", "value": 1}  # reserved = the held seat (R1)
         d["state_goals"].append({"entity": "reservation", "label": "held", "count": 1, "constraints": [
             {"field": "event_id", "op": "eq", "value": {"type": "int", "value": 1}},
             {"field": "holder", "op": "eq", "value": {"type": "str", "value": "carol"}},
@@ -394,9 +395,10 @@ def main() -> int:
         cleanup["public_objects"] = admin.execute(
             "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
             "WHERE n.nspname = 'public'").fetchone()[0]
+        mine = ("chancy_capture",) if a.mode == "chancy" else ("ds_run",)  # only schemas this mode creates
         cleanup["leftover_schemas"] = [r[0] for r in admin.execute(
-            "SELECT nspname::text FROM pg_namespace WHERE nspname LIKE 'ds_sc_%' OR nspname IN ('ds_run', "
-            "'chancy_capture')").fetchall()]
+            "SELECT nspname::text FROM pg_namespace WHERE nspname LIKE 'ds\\_sc\\_%%' OR nspname = ANY(%s)",
+            (list(mine),)).fetchall()]
         admin.close()
     ok = all(r.get("as_expected") for r in results)
     summary = {"mode": a.mode, "results": results, "cleanup": cleanup, "all_as_expected": ok}
