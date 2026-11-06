@@ -10,7 +10,7 @@ they are independent (`templates/participation_declaration.md`), and sends the b
    `shasum -a 256 -c docs/experimental_mvp/handoff/send/SHA256SUMS_curator_v3` (or `SHA256SUMS_oracle_v3`).
    Every line must say OK. If a file changed since the list was made, regenerate the list and review the change
    before sending.
-3. Recommended: decide on the owner-form gap first (`protocol/OWNER_DECISIONS.md`, "A gap in the forms").
+3. The owner-form gap is closed: `OWNER_APPROVAL.md` now has PROPOSED lines #6–#8 (2026-11-06), still unsigned.
 4. Send only the files listed below, at their repository paths, as one archive or as a link to this commit. Never
    send results directories, ledgers or reveal files.
 5. Record the send date, the bundle and its checksum file against adoption step 1 in
@@ -27,7 +27,7 @@ ced262114f944f8eda3c7cad4691d41ff7dd593692401c7236905c71b945f189  docs/experimen
 ad5ea33111ac56e1f7f65228e770856095538e9fe013a514d16a1f0b9b246cd0  docs/experimental_mvp/protocol/AMENDMENT_003_ADOPTION_CANDIDATE.md
 d9b346362bb1e6ed3be8ed9738eaed2f6067dbdd966159c1edc2e2e2dd25d37e  docs/experimental_mvp/protocol/approval/CANDIDATE_SHA256
 7316ff86bafae056d6dcb59c8894e215ebac05d64b831e0195bddef7ebccd74b  docs/experimental_mvp/protocol/approval/CURATOR_ACCEPTANCE.md
-fc6136a4c4de9ee2ccd97ef7bbb107567bbfa03acd4934972845cb0580c32a4a  docs/experimental_mvp/protocol/OWNER_DECISIONS.md
+e65fd3ba5d70b17ebabfb0697a75a61f9fe209f668ff0a4fcc620cec87eb8092  docs/experimental_mvp/protocol/OWNER_DECISIONS.md
 f8d4a243f5fe3e01911193aedb000db40e94b77912eef0a579ff0c8669ab8ab8  docs/experimental_mvp/CORPUS_MANIFEST.json
 3eaa449eca5ca944e1b07a58ce3c6e36e114636b88d8c4e82a686812c8a808f5  research_tools/corpus_select.py
 92d926781731dd97d59da5e27adb7fd81b6a4280264313aa90bf3fbe61fcd5a6  research_tools/corpus_intake.py

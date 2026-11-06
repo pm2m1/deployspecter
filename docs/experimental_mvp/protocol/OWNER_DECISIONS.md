@@ -31,6 +31,8 @@ written, the owner's approval of the independence rulings would be implicit.
 signs*. The forms are not part of the hashed candidate, so its sha256 is unaffected. Until then, the owner's
 consent to #6–#8 is **unrecorded**, and adoption step 3 cannot be complete.
 
+**Update 2026-11-06:** at the owner's request, lines #6, #7 and #8 (marked PROPOSED) were added to `OWNER_APPROVAL.md`. Nothing is signed or accepted; the owner's consent is recorded only when the form is signed.
+
 ## Corpus and selection
 
 | # | Proposed ruling (binding text) | Why | If accepted / if rejected | Approval action |

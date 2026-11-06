@@ -14,6 +14,9 @@ I approve the rulings marked below, as written in the candidate with this sha256
 | #3 | [ ] approve  [ ] amend (attach text)  [ ] reject |
 | #4 | [ ] approve  [ ] amend (attach text)  [ ] reject |
 | #5 | [ ] approve  [ ] amend (attach text)  [ ] reject |
+| #6 | [ ] approve  [ ] amend (attach text)  [ ] reject (PROPOSED; co-decided with the named curator) |
+| #7 | [ ] approve  [ ] amend (attach text)  [ ] reject (PROPOSED; co-decided with the named oracle author and reviewer) |
+| #8 | [ ] approve  [ ] amend (attach text)  [ ] reject (PROPOSED; co-decided with the named triage reviewers and adjudicator) |
 | #9 | [ ] approve  [ ] amend (attach text)  [ ] reject |
 | #10 | [ ] approve  [ ] amend (attach text)  [ ] reject |
 | #11 | [ ] approve  [ ] amend (attach text)  [ ] reject |
@@ -38,3 +41,5 @@ An "amend" or "reject" on any line means a new candidate, with a new sha256, and
 | | | | |
 
 *Status: unsigned. No person has been named or contacted for this role.*
+
+*Lines #6–#8 were added on 2026-11-06 at the owner's request, so the owner's consent to the independence rulings is recorded explicitly. Every ruling on this form is PROPOSED until signed. Adding lines does not change the candidate or its sha256.*
