@@ -133,7 +133,9 @@ def run(handle: dict[str, Any], workload: dict[str, Any], seed: int, out: Path, 
     target = hz.Target("127.0.0.1", 55441, "ds_mvp", SECRET.read_text().strip())
     out.mkdir(parents=True)
     pre = rh.setup(target, handle["image"], out)
-    if not (pre.get("isolation_ok") and (pre.get("corroboration") or {}).get("ok")):
+    # an errored setup actor can still leave an isolated, corroborated (short) log: require its own result too
+    if not (pre.get("isolation_ok") and (pre.get("corroboration") or {}).get("ok")) or \
+            not isinstance((pre.get("raw_results") or {}).get("setup"), dict):
         return {"verdict": "REFUSED", "seed": seed, "corroboration": pre.get("corroboration"),
                 "reason": "the setup wasn't isolated and corroborated"}
     s = {**spec(workload), "expect_schema": handle["expect_schema"]}

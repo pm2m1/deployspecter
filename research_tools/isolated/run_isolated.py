@@ -57,6 +57,7 @@ RUNTIME_FLAGS = ["--read-only", "--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=64m
                  "512m", "--cpus", "1", "--ulimit", "nofile=256:256", "--user", "65534:65534"]
 PAYLOAD = ["deployspecter/__init__.py", "deployspecter/experimental/__init__.py",
            "deployspecter/experimental/stepping.py", "deployspecter/experimental/stepping_async.py",
+           "deployspecter/experimental/jsonb_text.py",  # stepping.sanitize's jsonb normalization (inside too)
            "deployspecter/experimental/oracle.py", "deployspecter/experimental/apps/__init__.py",
            "deployspecter/experimental/apps/reservations_mixed.py",
            "deployspecter/experimental/apps/reservations_mixed_async.py",
