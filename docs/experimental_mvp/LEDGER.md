@@ -283,3 +283,39 @@ Account balance was not checked through the API. The Responses API returns per-r
     - Ruff clean.
 
 **Meta usage in this increment:** 1 call, $0.019367 estimated (pilot manifest ceiling $2.00).
+
+## Increment 15 (2026-11-07): confirmatory executor, jsonb logging, onboarding readiness, root suite with a database
+
+87. **Oracle acceptance template** (owner-authorized): separate unsigned Oracle author and Oracle reviewer rows.
+    The candidate hash is unchanged, the form gap is gone, all 24 decisions stay PROPOSED, and the checksum is
+    refreshed.
+88. **Real confirmatory executor `ds-confirm-exec/1`**, wired behind the unchanged seven gates.
+    - Integration `chancy-sv/1`.
+    - Results committed run by run; no retried runs; the same seeds for every arm; the locked budgets enforced.
+    - Interruption marker and duplicate-free resume.
+    - Reveal only through `real-authorize` (non-SIMULATION owner record), then `real-score`.
+    - Real mode refuses here (exit 3).
+    - SIMULATION live rehearsal attempt 4: buggy revision VIOLATED, fixed revision HOLDS, 0 mismatched. The real
+      authorization refused the SIMULATION record.
+    - Attempts 1–3 preserved: the payload defect, a rehearsal-script banner, and the analysis on the reduced arm set.
+89. **Payload defect** (from item 90, found by the rehearsal): `jsonb_text.py` was missing from the isolated
+    payload, so every str parameter raised ImportError inside the container. Fixed. `chancy-sv/1` also requires
+    the setup actor's own result.
+90. **jsonb parameter logging: CONFIRMED.**
+    - PostgreSQL 16 logs jsonb-typed parameters normalized, which reproduced a false mismatch (3/5).
+    - Exact jsonb comparison for JSON-container str parameters; the normalizer agrees with PostgreSQL on 60 vectors.
+    - After the fix: 5/5, 0 mismatched.
+91. **Onboarding study readiness.** An operator dry run of one assigned session (DRYRUN, not a participant):
+    validate, a live corroborated run, measure, allocate, a blind bundle, then the analysis, which excluded it.
+    Recruitment notice and participation guide written, not sent. The study is NOT RUN.
+92. **Root suite with the disposable cluster (55441):** attempt 1 failed (new probes read the password at import;
+    fixed); attempt 2 exit 0: 1905 passed, 164 skipped. 163 of the skips need the Gate 2B `ds_live_disposable`
+    cluster, which wasn't started.
+93. **Acceptance** (`reliability/acceptance_final_2`):
+    - core 848 passed;
+    - isolated 14 passed (images rebuilt with the payload fix);
+    - root without `DATABASE_URL`: 1746 passed, with 322 failing only because it is unset;
+    - Ruff on the source trees clean. `docs/` holds preserved evidence, including the broken oracle files of
+      failed attempts.
+
+**Meta usage in this increment:** none.

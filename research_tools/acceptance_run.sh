@@ -10,7 +10,9 @@ mkdir -p "$OUT"
 git rev-parse HEAD > "$OUT/git_revision"; git status --porcelain --untracked-files=no > "$OUT/git_dirty"
 ENV="env -u MODEL_API_KEY -u DATABASE_URL DS_THIRDPARTY_SDIST_DIR=$SD"
 LOCK=".venv/bin/python research_tools/pg_lock.py --"
-.venv/bin/ruff check . > "$OUT/ruff.txt" 2>&1; echo $? > "$OUT/ruff_exit_status"
+# source trees only: docs/ holds preserved evidence (session snapshots, failed attempts kept byte-for-byte),
+# which may legitimately be broken Python
+.venv/bin/ruff check src tests research_tools > "$OUT/ruff.txt" 2>&1; echo $? > "$OUT/ruff_exit_status"
 $ENV .venv/bin/python research_tools/stress_snapshot.py "$OUT/snapshot_before.json"
 $LOCK $ENV .venv/bin/python -m pytest tests/experimental -q -p no:cacheprovider -rfE --junitxml="$OUT/core_junit.xml" \
   > "$OUT/core_stdout.txt" 2> "$OUT/core_stderr.txt"; echo $? > "$OUT/core_exit_status"
