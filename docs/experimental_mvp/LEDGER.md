@@ -199,3 +199,32 @@ Account balance was not checked through the API. The Responses API returns per-r
 67. **External one-page overview** (`handoff/send/OVERVIEW.md`) and a blank participation and conflict-of-interest declaration (not sent).
 
 **Meta usage in this increment:** none ($0).
+
+## Increment 12 (2026-11-06): parallel completion sprint (four worktrees, one serialized disposable PostgreSQL)
+
+68. **State construction (A).** COMPLETE WITH SUPPORTED-SCOPE LIMITATIONS (`state_construction/README.md`).
+    - **Reservations pipeline:** WorkloadSpec v2 → goals → Phase 9B constructor → exact typed writes → independent re-read → stepped handlers → corroboration → oracle.
+    - **Chancy narrow path:** Chancy's unmodified worker consumed the constructed state.
+    - **Fixtures:** 17/17.
+    - **Constructor source:** copied byte-identically and sha256-pinned from uncommitted files in `deployspecter-trigger-aware-dev`. No private terms were copied.
+    - **BLOCKED:** json/jsonb and NaN in Phase 9B; WorkloadSpec v2 registries for third-party apps; live-catalog mode in the shared database; procrastinate.
+69. **Muse contribution, B1–B5 (B).**
+    - Frozen manifest `234a12ff…`.
+    - 13 Meta calls, estimated $0.270384.
+    - **Results:** Q1 matched or underperformed; Q2 favourable but not established (paired sign test p = 0.25 at a common budget); Q3 matched; Q4 not answerable.
+    - A1 is a post-outcome analysis amendment; the frozen analysis stays primary.
+70. **Invariants (C).** ds-invariant/1, an eight-check validator. No genuine new property. Chancy mutants: 4/8 killed by the deterministic candidates and 1/8 by Muse's; 2 Muse candidates were invalid. Procrastinate mutants are BLOCKED.
+71. **Paired evaluation (D).** Censoring-aware analysis with a budget-mismatch refusal; every comparison is INSUFFICIENT SAMPLE. The onboarding framework is implemented; the study was NOT RUN.
+72. **Digital twin (E).** Seven phases, 4 runs. Seeded_2's exit 1 was a classifier bug in the twin, preserved and reclassified. Upgraded schema = fresh 3.4.0 install. Backfill is NOT SUPPORTED: there is none in this pair.
+73. **Reliability (F).**
+    - Teardown-under-SIGINT defect demonstrated and fixed. The regression fails on the unfixed runner (independently confirmed).
+    - The original failure stays UNRESOLVED.
+    - Hostile-grade isolation is BLOCKED ON ENVIRONMENT.
+74. **Readiness (G).** `OWNER_DECISIONS.md` covers all 24 decisions. `OWNER_APPROVAL.md` has no lines for #6–#8 that the owner co-decides; this needs the owner's authorization. v3 bundles have checksums, not sent. Evaluator-access tests pass.
+75. **Integrated acceptance** (`reliability/acceptance_1/`):
+    - core 549 passed;
+    - isolated 13 passed;
+    - root 1746 passed, with 322 failing only because `DATABASE_URL` is unset;
+    - Ruff clean.
+
+**Meta usage in this increment:** 13 calls, $0.270384 estimated (ceiling $15).
