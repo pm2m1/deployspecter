@@ -1,0 +1,115 @@
+{
+ "protocol": "ds-coord/1",
+ "outcome": "completed",
+ "reason": null,
+ "policy": {
+  "kind": "alternate"
+ },
+ "gates": [],
+ "stop": {
+  "key": "succeeded",
+  "covers": [],
+  "after_s": 45
+ },
+ "processes": {
+  "B": {
+   "version": "3.4.0",
+   "run_id": "procr_B",
+   "monitor_pid": 28660,
+   "actors": {
+    "operator": {
+     "backend_pid": 28661,
+     "handler": "procrastinate-3.4.0.migrate"
+    }
+   },
+   "bye": "completed"
+  }
+ },
+ "decisions": [
+  {
+   "decision": 0,
+   "grant": 0,
+   "epoch": 1,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "operator",
+   "source": "alternate",
+   "enabled": [
+    "operator"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "a8402858d4f1",
+   "sql": "BEGIN",
+   "t_ms": 24.67
+  },
+  {
+   "decision": 1,
+   "grant": 1,
+   "epoch": 2,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "operator",
+   "source": "alternate",
+   "enabled": [
+    "operator"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "6317687c8100",
+   "sql": "DROP TRIGGER IF EXISTS procrastinate_trigger_status_events_update_v1 ON procrastinate_jobs; DROP FUNCTION IF EXISTS public.procrastinate_trigger_function_status_events_update_v1; CREATE FUNCTION public.procrastinate_trigger_function_status_events_update_v1() RETURNS trigger LANGUAGE plpgsql AS $func",
+   "t_ms": 78.74
+  },
+  {
+   "decision": 2,
+   "grant": 2,
+   "epoch": 3,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "operator",
+   "source": "alternate",
+   "enabled": [
+    "operator"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 130.42
+  }
+ ],
+ "statements": {
+  "a8402858d4f1": "BEGIN",
+  "6317687c8100": "DROP TRIGGER IF EXISTS procrastinate_trigger_status_events_update_v1 ON procrastinate_jobs; DROP FUNCTION IF EXISTS public.procrastinate_trigger_function_status_events_update_v1; CREATE FUNCTION public.procrastinate_trigger_function_status_events_update_v1() RETURNS trigger LANGUAGE plpgsql AS $function$ BEGIN WITH t AS ( SELECT CASE WHEN OLD.status = 'todo'::procrastinate_job_status AND NEW.status = 'doing'::procrastinate_job_status THEN 'started'::procrastinate_job_event_type WHEN OLD.status = 'doing'::procrastinate_job_status AND NEW.status = 'todo'::procrastinate_job_status THEN 'deferred_for_retry'::procrastinate_job_event_type WHEN OLD.status = 'doing'::procrastinate_job_status AND NEW.status = 'failed'::procrastinate_job_status THEN 'failed'::procrastinate_job_event_type WHEN OLD.status = 'doing'::procrastinate_job_status AND NEW.status = 'succeeded'::procrastinate_job_status THEN 'succeeded'::procrastinate_job_event_type WHEN OLD.status = 'todo'::procrastinate_job_status AND ( NEW.status = 'cancelled'::procrastinate_job_status OR NEW.status = 'failed'::procrastinate_job_status OR NEW.status = 'succeeded'::procrastinate_job_status ) THEN 'cancelled'::procrastinate_job_event_type WHEN OLD.status = 'doing'::procrastinate_job_status AND NEW.status = 'aborted'::procrastinate_job_status THEN 'aborted'::procrastinate_job_event_type WHEN OLD.status = 'failed'::procrastinate_job_status AND NEW.status = 'todo'::procrastinate_job_status THEN 'retried'::procrastinate_job_event_type ELSE NULL END as event_type ) INSERT INTO procrastinate_events(job_id, type) SELECT NEW.id, t.event_type FROM t WHERE t.event_type IS NOT NULL; RETURN NEW; END; $function$; CREATE TRIGGER procrastinate_trigger_status_events_update_v1 AFTER UPDATE OF status ON procrastinate_jobs FOR EACH ROW EXECUTE PROCEDURE procrastinate_trigger_function_status_events_update_v1();",
+  "79663c1d3b43": "COMMIT"
+ },
+ "events": [
+  {
+   "event": "start",
+   "t_ms": 24.31,
+   "pids": {
+    "28661": "operator"
+   }
+  },
+  {
+   "event": "stop",
+   "why": "covered",
+   "at_grant": 0,
+   "t_ms": 24.58
+  },
+  {
+   "event": "bye",
+   "process": "B",
+   "t_ms": 192.3
+  },
+  {
+   "event": "end",
+   "t_ms": 192.31
+  }
+ ],
+ "grants": 3,
+ "elapsed_ms": 192.31
+}
