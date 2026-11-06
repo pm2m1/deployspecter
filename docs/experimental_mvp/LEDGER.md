@@ -253,3 +253,33 @@ Account balance was not checked through the API. The Responses API returns per-r
     - Ruff clean.
 
 **Meta usage in this increment:** none.
+
+## Increment 14 (2026-11-06): Phase 9B assurance, onboarding pilot, confirmatory readiness
+
+80. **Phase 9B assurance (ds-p9x/1.1).**
+    - A1: an identity-marker `same_v1.1` fixes a v1 defect (stored-vs-stored text comparisons). It is
+      property-tested equal to the original on non-jsonb inputs.
+    - A2: expression equivalence on parsed node trees (R0–R1). Different predicates, constants and defaults are
+      refused.
+    - A3: construction session reconciled with the csvlog. A timestamptz rendering defect was found by
+      `chancy_4_assurance` (exit 1, preserved) and fixed.
+    - A4: injected failures at six stages, with no partial state.
+    - Chancy reproduced (`chancy_5_assurance`). procrastinate still `refused_triggers`.
+84. **Onboarding pilot (NONBLIND EXPLORATORY, single AI operator, n = 1 per condition).**
+    - Apps: saq 0.26.5 (D) and taskiq-postgresql 0.4.0 (M), new and pinned. Manifest `5b0d35e4…` frozen first.
+    - Both reached S1–S3.
+    - D took 304 s with 11 interventions; M took 823 s with 17. The condition is confounded with the app.
+    - Muse: 1 call, $0.019367, proposal rejected.
+    - The participant study is packaged but NOT RUN (needs independent participants).
+85. **Confirmatory readiness (Track C).**
+    - Generated approval dashboard: 24 PROPOSED, role-bound; the owner can't stand in for independent roles.
+    - New form gap: #7 needs separate oracle-author and oracle-reviewer rows.
+    - intake v2, hash-chained oracle review, and an orchestrator whose real mode refuses here (exit 3, 31 reasons).
+    - SIMULATION rehearsal, with difference and null scenarios.
+86. **Acceptance** (`reliability/acceptance_final_1`):
+    - core 766 passed;
+    - isolated 14 passed;
+    - root 1746 passed, with 322 failing only because `DATABASE_URL` is unset;
+    - Ruff clean.
+
+**Meta usage in this increment:** 1 call, $0.019367 estimated (pilot manifest ceiling $2.00).

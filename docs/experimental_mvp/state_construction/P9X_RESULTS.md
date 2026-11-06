@@ -127,3 +127,26 @@ implementation detail.
 - **The construction session is not server-log corroborated.** It is checked by the change comparison and the
   readback; the worker phase is corroborated.
 - Live-catalog fingerprints cover the schema only, not other schemas the application might use.
+
+## Erratum and update (2026-11-06, assurance sprint: ds-p9x/1.1)
+
+**A1 defect in v1.** `same_v1` gave jsonb semantics to *any* string equal to a registered jsonb text. Phase 9B also
+compares stored values with each other (`state_constructor.py` lines 481 and 489). A stored text value equal to a
+registered jsonb text could therefore be compared by the jsonb rule instead of the original one.
+- **Fix (v1.1):** requested jsonb values are `JsonbText` markers, and only marked arguments get jsonb semantics.
+  Property-based tests show `same_v1.1` ≡ the original `_same` on every non-jsonb input.
+- **Earlier runs:** `chancy_2` and `chancy_3` ran on v1. They are preserved unchanged.
+- **Reproduced on v1.1:** `chancy_5_assurance`, with the same outcomes plus the construction-session server-log
+  audit (44/44 and 48/48 statements; 38 and 110 parameters checked; 0 unchecked).
+
+**Also in v1.1:**
+- **catalog/1.1:** expression differences must be established on PostgreSQL's parsed node trees under two
+  documented rules. Text similarity is no longer enough.
+- **Construction-session provenance:** reconciled with the csvlog.
+- **Injected-failure atomicity:** tested.
+
+Details: `state_construction/assurance/README.md`.
+
+**Correction to "Remaining limits" above:** the construction session is now server-log audited for statements,
+parameters, transaction boundaries and session identity. Row effects, the readback session and the sandbox sessions
+are still not log-audited; they rest on the database readback.
