@@ -1,0 +1,782 @@
+[
+ [
+  "mc_res_w_r0#0",
+  {
+   "actors": [
+    {
+     "arguments": [
+      {
+       "int_value": 1,
+       "kind": "int",
+       "name": "event_id",
+       "str_value": null
+      },
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "alice"
+      },
+      {
+       "int_value": 6,
+       "kind": "int",
+       "name": "qty",
+       "str_value": null
+      }
+     ],
+     "entrypoint": "reserve_seats",
+     "name": "req_alice"
+    },
+    {
+     "arguments": [
+      {
+       "int_value": 1,
+       "kind": "int",
+       "name": "event_id",
+       "str_value": null
+      },
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "bob"
+      },
+      {
+       "int_value": 6,
+       "kind": "int",
+       "name": "qty",
+       "str_value": null
+      }
+     ],
+     "entrypoint": "reserve_seats",
+     "name": "req_bob"
+    }
+   ],
+   "name": "overbook_pair",
+   "rationale": "Two concurrent reserves on same event whose sum exceeds capacity to expose lost-update overbooking.",
+   "state_goals": [
+    {
+     "constraints": [
+      {
+       "field": "id",
+       "int_value": 1,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      },
+      {
+       "field": "reserved",
+       "int_value": 10,
+       "kind": "int",
+       "op": "le",
+       "str_value": null
+      }
+     ],
+     "count": 1,
+     "entity": "event",
+     "label": "evt"
+    },
+    {
+     "constraints": [
+      {
+       "field": "event_id",
+       "int_value": 1,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      }
+     ],
+     "count": 1,
+     "entity": "reservation",
+     "label": "res"
+    },
+    {
+     "constraints": [
+      {
+       "field": "event_id",
+       "int_value": 1,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      }
+     ],
+     "count": 1,
+     "entity": "rejection",
+     "label": "rej"
+    }
+   ]
+  }
+ ],
+ [
+  "mc_res_w_r0#1",
+  {
+   "actors": [
+    {
+     "arguments": [
+      {
+       "int_value": 1,
+       "kind": "int",
+       "name": "event_id",
+       "str_value": null
+      },
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "alice"
+      },
+      {
+       "int_value": 4,
+       "kind": "int",
+       "name": "qty",
+       "str_value": null
+      }
+     ],
+     "entrypoint": "reserve_seats",
+     "name": "req_a"
+    },
+    {
+     "arguments": [
+      {
+       "int_value": 1,
+       "kind": "int",
+       "name": "event_id",
+       "str_value": null
+      },
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "bob"
+      },
+      {
+       "int_value": 4,
+       "kind": "int",
+       "name": "qty",
+       "str_value": null
+      }
+     ],
+     "entrypoint": "reserve_seats",
+     "name": "req_b"
+    },
+    {
+     "arguments": [
+      {
+       "int_value": 1,
+       "kind": "int",
+       "name": "event_id",
+       "str_value": null
+      },
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "carol"
+      },
+      {
+       "int_value": 4,
+       "kind": "int",
+       "name": "qty",
+       "str_value": null
+      }
+     ],
+     "entrypoint": "reserve_seats",
+     "name": "req_c"
+    }
+   ],
+   "name": "triple_contention",
+   "rationale": "Three-way reserve contention where only two should fit to test atomic check-and-update under concurrency.",
+   "state_goals": [
+    {
+     "constraints": [
+      {
+       "field": "id",
+       "int_value": 1,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      }
+     ],
+     "count": 1,
+     "entity": "event",
+     "label": "evt"
+    },
+    {
+     "constraints": [
+      {
+       "field": "event_id",
+       "int_value": 1,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      }
+     ],
+     "count": 2,
+     "entity": "reservation",
+     "label": "res"
+    },
+    {
+     "constraints": [
+      {
+       "field": "event_id",
+       "int_value": 1,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      }
+     ],
+     "count": 1,
+     "entity": "rejection",
+     "label": "rej"
+    }
+   ]
+  }
+ ],
+ [
+  "mc_res_w_r0#2",
+  {
+   "actors": [
+    {
+     "arguments": [
+      {
+       "int_value": 1,
+       "kind": "int",
+       "name": "event_id",
+       "str_value": null
+      },
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "alice"
+      },
+      {
+       "int_value": 5,
+       "kind": "int",
+       "name": "qty",
+       "str_value": null
+      }
+     ],
+     "entrypoint": "reserve_seats",
+     "name": "reserver"
+    },
+    {
+     "arguments": [
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "alice"
+      }
+     ],
+     "entrypoint": "release_seats",
+     "name": "releaser"
+    }
+   ],
+   "name": "reserve_release_race",
+   "rationale": "Reserve and release for same holder race to test read-modify-write on reserved counter.",
+   "state_goals": [
+    {
+     "constraints": [
+      {
+       "field": "id",
+       "int_value": 1,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      },
+      {
+       "field": "reserved",
+       "int_value": 0,
+       "kind": "int",
+       "op": "ge",
+       "str_value": null
+      }
+     ],
+     "count": 1,
+     "entity": "event",
+     "label": "evt"
+    },
+    {
+     "constraints": [
+      {
+       "field": "event_id",
+       "int_value": 1,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      }
+     ],
+     "count": 1,
+     "entity": "reservation",
+     "label": "res"
+    }
+   ]
+  }
+ ],
+ [
+  "mc_res_w_r0#3",
+  {
+   "actors": [
+    {
+     "arguments": [
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "alice"
+      }
+     ],
+     "entrypoint": "release_seats",
+     "name": "rel_a"
+    },
+    {
+     "arguments": [
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "alice"
+      }
+     ],
+     "entrypoint": "release_seats",
+     "name": "rel_b"
+    }
+   ],
+   "name": "double_release_same",
+   "rationale": "Two concurrent releases of same holder to test idempotence and double decrement of reserved.",
+   "state_goals": [
+    {
+     "constraints": [
+      {
+       "field": "id",
+       "int_value": 1,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      },
+      {
+       "field": "reserved",
+       "int_value": 0,
+       "kind": "int",
+       "op": "ge",
+       "str_value": null
+      }
+     ],
+     "count": 1,
+     "entity": "event",
+     "label": "evt"
+    }
+   ]
+  }
+ ],
+ [
+  "mc_res_w_r0#4",
+  {
+   "actors": [
+    {
+     "arguments": [
+      {
+       "int_value": 1,
+       "kind": "int",
+       "name": "event_id",
+       "str_value": null
+      },
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "alice"
+      },
+      {
+       "int_value": 3,
+       "kind": "int",
+       "name": "qty",
+       "str_value": null
+      }
+     ],
+     "entrypoint": "reserve_seats",
+     "name": "req_a"
+    },
+    {
+     "arguments": [
+      {
+       "int_value": 2,
+       "kind": "int",
+       "name": "event_id",
+       "str_value": null
+      },
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "bob"
+      },
+      {
+       "int_value": 3,
+       "kind": "int",
+       "name": "qty",
+       "str_value": null
+      }
+     ],
+     "entrypoint": "reserve_seats",
+     "name": "req_b"
+    }
+   ],
+   "name": "isolated_events",
+   "rationale": "Reserves on different events should not interfere and both succeed without cross-row anomalies.",
+   "state_goals": [
+    {
+     "constraints": [
+      {
+       "field": "event_id",
+       "int_value": 1,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      }
+     ],
+     "count": 1,
+     "entity": "reservation",
+     "label": "res_e1"
+    },
+    {
+     "constraints": [
+      {
+       "field": "event_id",
+       "int_value": 2,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      }
+     ],
+     "count": 1,
+     "entity": "reservation",
+     "label": "res_e2"
+    },
+    {
+     "constraints": [
+      {
+       "field": "id",
+       "int_value": 1,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      }
+     ],
+     "count": 1,
+     "entity": "event",
+     "label": "evt1"
+    }
+   ]
+  }
+ ],
+ [
+  "mc_res_w_r0#5",
+  {
+   "actors": [
+    {
+     "arguments": [
+      {
+       "int_value": 1,
+       "kind": "int",
+       "name": "event_id",
+       "str_value": null
+      },
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "alice"
+      },
+      {
+       "int_value": 5,
+       "kind": "int",
+       "name": "qty",
+       "str_value": null
+      }
+     ],
+     "entrypoint": "reserve_seats",
+     "name": "req_alice"
+    },
+    {
+     "arguments": [
+      {
+       "int_value": 1,
+       "kind": "int",
+       "name": "event_id",
+       "str_value": null
+      },
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "bob"
+      },
+      {
+       "int_value": 5,
+       "kind": "int",
+       "name": "qty",
+       "str_value": null
+      }
+     ],
+     "entrypoint": "reserve_seats",
+     "name": "req_bob"
+    },
+    {
+     "arguments": [
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "carol"
+      }
+     ],
+     "entrypoint": "release_seats",
+     "name": "rel_carol"
+    }
+   ],
+   "name": "burst_with_release",
+   "rationale": "Two fitting reserves plus unrelated release to test exact-capacity fill with background delete path.",
+   "state_goals": [
+    {
+     "constraints": [
+      {
+       "field": "id",
+       "int_value": 1,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      },
+      {
+       "field": "reserved",
+       "int_value": 10,
+       "kind": "int",
+       "op": "le",
+       "str_value": null
+      }
+     ],
+     "count": 1,
+     "entity": "event",
+     "label": "evt"
+    },
+    {
+     "constraints": [
+      {
+       "field": "event_id",
+       "int_value": 1,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      }
+     ],
+     "count": 2,
+     "entity": "reservation",
+     "label": "res"
+    }
+   ]
+  }
+ ],
+ [
+  "mc_res_w_r0#6",
+  {
+   "actors": [
+    {
+     "arguments": [
+      {
+       "int_value": 1,
+       "kind": "int",
+       "name": "event_id",
+       "str_value": null
+      },
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "alice"
+      },
+      {
+       "int_value": 8,
+       "kind": "int",
+       "name": "qty",
+       "str_value": null
+      }
+     ],
+     "entrypoint": "reserve_seats",
+     "name": "req_a"
+    },
+    {
+     "arguments": [
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "bob"
+      }
+     ],
+     "entrypoint": "release_seats",
+     "name": "rel_b"
+    }
+   ],
+   "name": "reserve_vs_release",
+   "rationale": "Large reserve racing with release of different holder to test freeing capacity versus capacity check.",
+   "state_goals": [
+    {
+     "constraints": [
+      {
+       "field": "id",
+       "int_value": 1,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      }
+     ],
+     "count": 1,
+     "entity": "event",
+     "label": "evt"
+    },
+    {
+     "constraints": [
+      {
+       "field": "holder",
+       "int_value": null,
+       "kind": "str",
+       "op": "eq",
+       "str_value": "bob"
+      }
+     ],
+     "count": 1,
+     "entity": "reservation",
+     "label": "res_bob"
+    },
+    {
+     "constraints": [
+      {
+       "field": "event_id",
+       "int_value": 1,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      }
+     ],
+     "count": 1,
+     "entity": "rejection",
+     "label": "rej"
+    }
+   ]
+  }
+ ],
+ [
+  "mc_res_w_r0#7",
+  {
+   "actors": [
+    {
+     "arguments": [
+      {
+       "int_value": 1,
+       "kind": "int",
+       "name": "event_id",
+       "str_value": null
+      },
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "alice"
+      },
+      {
+       "int_value": 6,
+       "kind": "int",
+       "name": "qty",
+       "str_value": null
+      }
+     ],
+     "entrypoint": "reserve_seats",
+     "name": "req_alice"
+    },
+    {
+     "arguments": [
+      {
+       "int_value": 1,
+       "kind": "int",
+       "name": "event_id",
+       "str_value": null
+      },
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "bob"
+      },
+      {
+       "int_value": 6,
+       "kind": "int",
+       "name": "qty",
+       "str_value": null
+      }
+     ],
+     "entrypoint": "reserve_seats",
+     "name": "req_bob"
+    },
+    {
+     "arguments": [
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "alice"
+      }
+     ],
+     "entrypoint": "release_seats",
+     "name": "rel_alice"
+    }
+   ],
+   "name": "mixed_cancel_race",
+   "rationale": "Two overbooking reserves plus cancel of one reserver to test delete versus insert interleavings.",
+   "state_goals": [
+    {
+     "constraints": [
+      {
+       "field": "id",
+       "int_value": 1,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      }
+     ],
+     "count": 1,
+     "entity": "event",
+     "label": "evt"
+    },
+    {
+     "constraints": [
+      {
+       "field": "event_id",
+       "int_value": 1,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      }
+     ],
+     "count": 1,
+     "entity": "reservation",
+     "label": "res"
+    },
+    {
+     "constraints": [
+      {
+       "field": "event_id",
+       "int_value": 1,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      }
+     ],
+     "count": 1,
+     "entity": "rejection",
+     "label": "rej"
+    }
+   ]
+  }
+ ]
+]

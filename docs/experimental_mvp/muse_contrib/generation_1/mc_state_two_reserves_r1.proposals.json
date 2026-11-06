@@ -1,0 +1,48 @@
+[
+ [
+  "mc_state_two_reserves_r1#0",
+  {
+   "capacity": 3,
+   "rationale": "Empty event where one qty=2 fits but two do not (2<=3<4). Classic overbooking race: check-then-insert can let both jack and jill succeed with reserved=4>capacity.",
+   "reservations": [],
+   "reserved": 0
+  }
+ ],
+ [
+  "mc_state_two_reserves_r1#1",
+  {
+   "capacity": 4,
+   "rationale": "Empty event exactly fitting both requests (2+2=4). Both should commit with reserved=4; exposes lost update (reserved=2) or spurious rejection under concurrent increments.",
+   "reservations": [],
+   "reserved": 0
+  }
+ ],
+ [
+  "mc_state_two_reserves_r1#2",
+  {
+   "capacity": 5,
+   "rationale": "Near-full event with existing reservation sum matching reserved (3/5). Only one more qty=2 fits (remaining=2); second must reject. Tests contended read-modify-write of reserved plus inserts.",
+   "reservations": [
+    {
+     "holder": "sam",
+     "qty": 3
+    }
+   ],
+   "reserved": 3
+  }
+ ],
+ [
+  "mc_state_two_reserves_r1#3",
+  {
+   "capacity": 3,
+   "rationale": "Almost-full event with reserved=2/3 (remaining=1). Neither qty=2 should succeed; both must reject. Exposes false success / overbooking to 4-6 when availability check races.",
+   "reservations": [
+    {
+     "holder": "bob",
+     "qty": 2
+    }
+   ],
+   "reserved": 2
+  }
+ ]
+]

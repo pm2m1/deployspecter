@@ -1,0 +1,48 @@
+[
+ [
+  "mc_state_two_reserves_r0#0",
+  {
+   "capacity": 3,
+   "rationale": "Empty with 3 free but 4 requested: each qty-2 fits alone but both together overbook to 4/3. Classic check-then-insert race should be exposed.",
+   "reservations": [],
+   "reserved": 0
+  }
+ ],
+ [
+  "mc_state_two_reserves_r0#1",
+  {
+   "capacity": 4,
+   "rationale": "Empty exact fit: 4 free for 4 requested so both should succeed. Concurrent read-modify-write can lose one counter update leaving reserved=2 with two rows, exposing reserved vs sum divergence.",
+   "reservations": [],
+   "reserved": 0
+  }
+ ],
+ [
+  "mc_state_two_reserves_r0#2",
+  {
+   "capacity": 5,
+   "rationale": "Nearly full with prior holder amy 3, leaving 2 free: only one qty-2 should succeed. Stale read of reserved/sum can overbook to 7/5.",
+   "reservations": [
+    {
+     "holder": "amy",
+     "qty": 3
+    }
+   ],
+   "reserved": 3
+  }
+ ],
+ [
+  "mc_state_two_reserves_r0#3",
+  {
+   "capacity": 2,
+   "rationale": "Full with prior holder jack 2, leaving 0 free: both qty-2 should be rejected. Any insert overbooks and second jack row tests duplicate-holder and unique-constraint races.",
+   "reservations": [
+    {
+     "holder": "jack",
+     "qty": 2
+    }
+   ],
+   "reserved": 2
+  }
+ ]
+]

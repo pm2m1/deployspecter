@@ -1,0 +1,386 @@
+[
+ [
+  "mc_inv_chancy#0",
+  {
+   "domain": "chancy_jobs",
+   "id": "s_le_e",
+   "kind": "row",
+   "lhs": [],
+   "op": null,
+   "require": [
+    {
+     "left": {
+      "bool_value": null,
+      "col": "successes",
+      "fk": null,
+      "int_value": null,
+      "kind": "col",
+      "str_value": null,
+      "table": "jobs"
+     },
+     "op": "le",
+     "right": {
+      "bool_value": null,
+      "col": "executions",
+      "fk": null,
+      "int_value": null,
+      "kind": "col",
+      "str_value": null,
+      "table": "jobs"
+     }
+    }
+   ],
+   "rhs": [],
+   "statement": "successes never exceed executions",
+   "table": "jobs",
+   "where": []
+  }
+ ],
+ [
+  "mc_inv_chancy#1",
+  {
+   "domain": "chancy_jobs",
+   "id": "s_le_1",
+   "kind": "row",
+   "lhs": [],
+   "op": null,
+   "require": [
+    {
+     "left": {
+      "bool_value": null,
+      "col": "successes",
+      "fk": null,
+      "int_value": null,
+      "kind": "col",
+      "str_value": null,
+      "table": "jobs"
+     },
+     "op": "le",
+     "right": {
+      "bool_value": null,
+      "col": null,
+      "fk": null,
+      "int_value": 1,
+      "kind": "int",
+      "str_value": null,
+      "table": null
+     }
+    }
+   ],
+   "rhs": [],
+   "statement": "each job succeeds at most once",
+   "table": "jobs",
+   "where": []
+  }
+ ],
+ [
+  "mc_inv_chancy#2",
+  {
+   "domain": "chancy_jobs",
+   "id": "e_le_max",
+   "kind": "row",
+   "lhs": [],
+   "op": null,
+   "require": [
+    {
+     "left": {
+      "bool_value": null,
+      "col": "executions",
+      "fk": null,
+      "int_value": null,
+      "kind": "col",
+      "str_value": null,
+      "table": "jobs"
+     },
+     "op": "le",
+     "right": {
+      "bool_value": null,
+      "col": "max_attempts",
+      "fk": null,
+      "int_value": null,
+      "kind": "col",
+      "str_value": null,
+      "table": "jobs"
+     }
+    }
+   ],
+   "rhs": [],
+   "statement": "executions never exceed max_attempts",
+   "table": "jobs",
+   "where": []
+  }
+ ],
+ [
+  "mc_inv_chancy#3",
+  {
+   "domain": "chancy_jobs",
+   "id": "succeed_has_succ",
+   "kind": "row",
+   "lhs": [],
+   "op": null,
+   "require": [
+    {
+     "left": {
+      "bool_value": null,
+      "col": "successes",
+      "fk": null,
+      "int_value": null,
+      "kind": "col",
+      "str_value": null,
+      "table": "jobs"
+     },
+     "op": "ge",
+     "right": {
+      "bool_value": null,
+      "col": null,
+      "fk": null,
+      "int_value": 1,
+      "kind": "int",
+      "str_value": null,
+      "table": null
+     }
+    }
+   ],
+   "rhs": [],
+   "statement": "succeeded jobs succeeded at least once",
+   "table": "jobs",
+   "where": [
+    {
+     "left": {
+      "bool_value": null,
+      "col": "state",
+      "fk": null,
+      "int_value": null,
+      "kind": "col",
+      "str_value": null,
+      "table": "jobs"
+     },
+     "op": "eq",
+     "right": {
+      "bool_value": null,
+      "col": null,
+      "fk": null,
+      "int_value": null,
+      "kind": "str",
+      "str_value": "succeeded",
+      "table": null
+     }
+    }
+   ]
+  }
+ ],
+ [
+  "mc_inv_chancy#4",
+  {
+   "domain": "chancy_jobs",
+   "id": "fail_no_succ",
+   "kind": "row",
+   "lhs": [],
+   "op": null,
+   "require": [
+    {
+     "left": {
+      "bool_value": null,
+      "col": "successes",
+      "fk": null,
+      "int_value": null,
+      "kind": "col",
+      "str_value": null,
+      "table": "jobs"
+     },
+     "op": "eq",
+     "right": {
+      "bool_value": null,
+      "col": null,
+      "fk": null,
+      "int_value": 0,
+      "kind": "int",
+      "str_value": null,
+      "table": null
+     }
+    }
+   ],
+   "rhs": [],
+   "statement": "failed jobs never succeeded",
+   "table": "jobs",
+   "where": [
+    {
+     "left": {
+      "bool_value": null,
+      "col": "state",
+      "fk": null,
+      "int_value": null,
+      "kind": "col",
+      "str_value": null,
+      "table": "jobs"
+     },
+     "op": "eq",
+     "right": {
+      "bool_value": null,
+      "col": null,
+      "fk": null,
+      "int_value": null,
+      "kind": "str",
+      "str_value": "failed",
+      "table": null
+     }
+    }
+   ]
+  }
+ ],
+ [
+  "mc_inv_chancy#5",
+  {
+   "domain": "chancy_jobs",
+   "id": "pend_no_exec",
+   "kind": "row",
+   "lhs": [],
+   "op": null,
+   "require": [
+    {
+     "left": {
+      "bool_value": null,
+      "col": "executions",
+      "fk": null,
+      "int_value": null,
+      "kind": "col",
+      "str_value": null,
+      "table": "jobs"
+     },
+     "op": "eq",
+     "right": {
+      "bool_value": null,
+      "col": null,
+      "fk": null,
+      "int_value": 0,
+      "kind": "int",
+      "str_value": null,
+      "table": null
+     }
+    }
+   ],
+   "rhs": [],
+   "statement": "pending jobs never executed",
+   "table": "jobs",
+   "where": [
+    {
+     "left": {
+      "bool_value": null,
+      "col": "state",
+      "fk": null,
+      "int_value": null,
+      "kind": "col",
+      "str_value": null,
+      "table": "jobs"
+     },
+     "op": "eq",
+     "right": {
+      "bool_value": null,
+      "col": null,
+      "fk": null,
+      "int_value": null,
+      "kind": "str",
+      "str_value": "pending",
+      "table": null
+     }
+    }
+   ]
+  }
+ ],
+ [
+  "mc_inv_chancy#6",
+  {
+   "domain": "chancy_jobs",
+   "id": "cancel_no_succ",
+   "kind": "row",
+   "lhs": [],
+   "op": null,
+   "require": [
+    {
+     "left": {
+      "bool_value": null,
+      "col": "successes",
+      "fk": null,
+      "int_value": null,
+      "kind": "col",
+      "str_value": null,
+      "table": "jobs"
+     },
+     "op": "eq",
+     "right": {
+      "bool_value": null,
+      "col": null,
+      "fk": null,
+      "int_value": 0,
+      "kind": "int",
+      "str_value": null,
+      "table": null
+     }
+    }
+   ],
+   "rhs": [],
+   "statement": "cancelled jobs never succeeded",
+   "table": "jobs",
+   "where": [
+    {
+     "left": {
+      "bool_value": null,
+      "col": "cancelled",
+      "fk": null,
+      "int_value": null,
+      "kind": "col",
+      "str_value": null,
+      "table": "jobs"
+     },
+     "op": "eq",
+     "right": {
+      "bool_value": true,
+      "col": null,
+      "fk": null,
+      "int_value": null,
+      "kind": "bool",
+      "str_value": null,
+      "table": null
+     }
+    }
+   ]
+  }
+ ],
+ [
+  "mc_inv_chancy#7",
+  {
+   "domain": "chancy_jobs",
+   "id": "succ_count_le_succ_sum",
+   "kind": "aggregate",
+   "lhs": [
+    {
+     "col": null,
+     "filter_col": "state",
+     "filter_str": "succeeded",
+     "int_value": null,
+     "kind": "count",
+     "sign": 1,
+     "state": "final",
+     "table": "jobs"
+    }
+   ],
+   "op": "le",
+   "require": [],
+   "rhs": [
+    {
+     "col": "successes",
+     "filter_col": null,
+     "filter_str": null,
+     "int_value": null,
+     "kind": "sum",
+     "sign": 1,
+     "state": "final",
+     "table": "jobs"
+    }
+   ],
+   "statement": "number of succeeded jobs does not exceed total successes",
+   "table": null,
+   "where": []
+  }
+ ]
+]

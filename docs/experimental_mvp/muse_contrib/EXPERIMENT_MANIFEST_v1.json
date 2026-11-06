@@ -1,0 +1,3000 @@
+{
+ "analysis_rules": {
+  "Q1": "per case, B3 vs the better of B1/B2: improved if B3 detects where neither does, or every B3 replicate needs strictly fewer schedules to first detection than both; underperformed if B3 fails to detect where B1 or B2 detects, or every replicate needs more; else matched. Validity, fixed-version violations and cost reported beside.",
+  "Q2": "per actor set and target, B5 vs B4 with the same rule.",
+  "Q3": "invariant candidates classified by invariants.validator; Muse improved if at least one Muse candidate kills a mutant or defective build that no deterministic candidate kills, matched if its useful classes are a subset, underperformed if it has no useful candidate where the deterministic set does. A 'genuine new property' needs documentary review: never claimed here.",
+  "Q4": "not measured here (onboarding is a separate workstream); reported as not answerable.",
+  "statistics": "descriptive only: the sample (3 cases, 2 replicates) supports no inferential claim."
+ },
+ "arm_names": "B1 curated, B2 strong systematic deterministic (greedy pairwise coverage), B3 Muse workloads, B4 identical workload + deterministic state, B5 identical workload + Muse state (same constructor). Not the frozen protocol's A-G/R arms.",
+ "budgets": {
+  "chancy": {
+   "seeds": [
+    0,
+    1,
+    2
+   ],
+   "trees": [
+    "defective",
+    "reference"
+   ],
+   "workloads_per_arm": 3
+  },
+  "chancy_mutants": {
+   "seeds": [
+    0,
+    1
+   ],
+   "workloads": [
+    0,
+    2
+   ]
+  },
+  "muse_estimated_usd_ceiling": 5.0,
+  "procrastinate": {
+   "policy": {
+    "kind": "alternate"
+   },
+   "workloads_per_arm": 3
+  },
+  "reservations": {
+   "builds": [
+    "buggy",
+    "fixed",
+    "corrected"
+   ],
+   "schedules": 20,
+   "workloads_per_arm": 6
+  },
+  "reservations_mutants": {
+   "builds": [
+    "mutant_no_reservation_lock",
+    "mutant_no_guard",
+    "mutant_no_event_lock",
+    "mutant_off_by_one"
+   ],
+   "on": [
+    "B1",
+    "B4"
+   ],
+   "schedules": 20
+  },
+  "reservations_state": {
+   "builds": [
+    "buggy",
+    "fixed",
+    "corrected"
+   ],
+   "schedules": 20,
+   "states_per_arm": 3
+  }
+ },
+ "cases": {
+  "chancy-2895c4a": {
+   "defective": "chancy-git-80f570f.tar (fix parent)",
+   "known_defect": true,
+   "oracle": "historical_oracles.chancy_2895c4a (H0-H2, frozen)",
+   "reference": "chancy-git-2895c4a.tar (fix commit)"
+  },
+  "procrastinate-3.3-3.4": {
+   "known_defect": false,
+   "oracle": "frozen case checker, after errata E1 and E2",
+   "releases": [
+    "procrastinate-3.3.0.tar.gz",
+    "procrastinate-3.4.0.tar.gz"
+   ]
+  },
+  "reservations": {
+   "builds": "buggy (lock_row off), fixed (lock_row on; still has the release defect), corrected (reference)",
+   "known_defect": true,
+   "oracle": "R1, R2 (frozen properties) + R5",
+   "targets": {
+    "buggy-vs-corrected": "buggy",
+    "fixed-vs-corrected": "fixed"
+   }
+  }
+ },
+ "code": {
+  "files_sha256": {
+   "research_tools/muse_contrib/analyze.py": "31b44da9da4c893e622e5b842bfd9c4c8fd01df1fff432c26ddaacbff8d1f4d1",
+   "research_tools/muse_contrib/chancy_runner.py": "884075e97679f6b0c7c5dd5fd367e2fbece664c2ac63a69ef20feaa235e03c62",
+   "research_tools/muse_contrib/experiment.py": "d1afd107ce2b3c106ee98b304fae46f0cf10ea4d37a62825bc07afe913a86d4c",
+   "src/deployspecter/experimental/invariants/language.py": "838ca1ed03b1ac2deb2d44e5201b44a53f8cb97238d9fb3a5afc23c488b79ed3",
+   "src/deployspecter/experimental/invariants/validator.py": "6998852849c61da9a06f510a5164ebb2c02e7e0d712a27026d980684cfe1d21e",
+   "src/deployspecter/experimental/muse_contrib/candidates.py": "f3bc58d99b8b7bca2e13fbbf94c7c1603d86f4a0cb1e4635f0e853e077102b14",
+   "src/deployspecter/experimental/muse_contrib/chancy.py": "4c3a9017244865411a5d6ce42ede1aa326e86c02b44761735ab5146622a83bc9",
+   "src/deployspecter/experimental/muse_contrib/greedy.py": "138519d6569e17a0b24e9d470e7aca42dfdd460dfaf79ae643cf896818644dcf",
+   "src/deployspecter/experimental/muse_contrib/observe.py": "9c5666b22424f8a82457c72c29c3e88bac983354eeddcb1aff299a0e9b882fef",
+   "src/deployspecter/experimental/muse_contrib/prompts.py": "7ffe7c81f58ea59e64ee930ec254517c02904a3e44646e2276c394d8a7d98f72",
+   "src/deployspecter/experimental/muse_contrib/reservations.py": "ce638d35d8f9c8b492a975725e49b4509954508e4151fecf2383bba2279d2492"
+  },
+  "revision_at_freeze": "af14c900c130ff510339d6159e48cd3b800090a7"
+ },
+ "deterministic_inputs": {
+  "chancy": {
+   "B1": [
+    {
+     "cancel": [
+      0
+     ],
+     "max_attempts": 1,
+     "ns": [
+      0
+     ],
+     "workers": 1
+    },
+    {
+     "cancel": [
+      0
+     ],
+     "max_attempts": 2,
+     "ns": [
+      0,
+      1
+     ],
+     "workers": 1
+    },
+    {
+     "cancel": [
+      0,
+      1
+     ],
+     "max_attempts": 1,
+     "ns": [
+      0,
+      1
+     ],
+     "workers": 2
+    }
+   ],
+   "B2": [
+    {
+     "cancel": [],
+     "max_attempts": 1,
+     "ns": [
+      0
+     ],
+     "workers": 1
+    },
+    {
+     "cancel": [
+      0
+     ],
+     "max_attempts": 2,
+     "ns": [
+      0
+     ],
+     "workers": 2
+    },
+    {
+     "cancel": [
+      0,
+      1
+     ],
+     "max_attempts": 3,
+     "ns": [
+      0,
+      1
+     ],
+     "workers": 1
+    }
+   ]
+  },
+  "chancy_mutants": {
+   "base": "git-2895c4a",
+   "existing": [
+    "abl_no_fence",
+    "abl_cancel_keeps_claim",
+    "abl_no_claim_assignment",
+    "no_skip_locked_claim"
+   ],
+   "new": {
+    "mc_cancel_keeps_state": [
+     "chancy/app.py",
+     "SET state = 'failed', claim_id = NULL, completed_at = NOW()",
+     "SET claim_id = NULL, completed_at = NOW()",
+     "cancel_job no longer marks the job failed"
+    ],
+    "mc_claim_ignores_budget": [
+     "chancy/worker.py",
+     "attempts < max_attempts",
+     "attempts <= max_attempts",
+     "the claim query allows one attempt beyond max_attempts"
+    ],
+    "mc_claim_takes_failed": [
+     "chancy/worker.py",
+     "(state = 'pending' OR state = 'retrying')",
+     "(state = 'pending' OR state = 'retrying' OR state = 'failed')",
+     "the claim query no longer excludes failed (e.g. cancelled) jobs"
+    ],
+    "mc_completion_drops_attempts": [
+     "chancy/worker.py",
+     "attempts = %(attempts)s,",
+     "",
+     "the completion update no longer records the attempt count"
+    ]
+   }
+  },
+  "invariant_candidates": {
+   "chancy_jobs": [
+    {
+     "domain": "chancy_jobs",
+     "id": "D-C1",
+     "kind": "row",
+     "lhs": [],
+     "op": null,
+     "require": [
+      {
+       "left": {
+        "bool_value": null,
+        "col": "state",
+        "fk": null,
+        "int_value": null,
+        "kind": "col",
+        "str_value": null,
+        "table": null
+       },
+       "op": "eq",
+       "right": {
+        "bool_value": null,
+        "col": null,
+        "fk": null,
+        "int_value": null,
+        "kind": "str",
+        "str_value": "failed",
+        "table": null
+       }
+      }
+     ],
+     "rhs": [],
+     "statement": "a job whose cancellation updated its row ends failed",
+     "table": "jobs",
+     "where": [
+      {
+       "left": {
+        "bool_value": null,
+        "col": "cancelled",
+        "fk": null,
+        "int_value": null,
+        "kind": "col",
+        "str_value": null,
+        "table": null
+       },
+       "op": "eq",
+       "right": {
+        "bool_value": true,
+        "col": null,
+        "fk": null,
+        "int_value": null,
+        "kind": "bool",
+        "str_value": null,
+        "table": null
+       }
+      }
+     ]
+    },
+    {
+     "domain": "chancy_jobs",
+     "id": "D-C2",
+     "kind": "row",
+     "lhs": [],
+     "op": null,
+     "require": [
+      {
+       "left": {
+        "bool_value": null,
+        "col": "has_claim_id",
+        "fk": null,
+        "int_value": null,
+        "kind": "col",
+        "str_value": null,
+        "table": null
+       },
+       "op": "eq",
+       "right": {
+        "bool_value": false,
+        "col": null,
+        "fk": null,
+        "int_value": null,
+        "kind": "bool",
+        "str_value": null,
+        "table": null
+       }
+      }
+     ],
+     "rhs": [],
+     "statement": "a cancelled job keeps no claim",
+     "table": "jobs",
+     "where": [
+      {
+       "left": {
+        "bool_value": null,
+        "col": "cancelled",
+        "fk": null,
+        "int_value": null,
+        "kind": "col",
+        "str_value": null,
+        "table": null
+       },
+       "op": "eq",
+       "right": {
+        "bool_value": true,
+        "col": null,
+        "fk": null,
+        "int_value": null,
+        "kind": "bool",
+        "str_value": null,
+        "table": null
+       }
+      },
+      {
+       "left": {
+        "bool_value": null,
+        "col": "has_claim_id",
+        "fk": null,
+        "int_value": null,
+        "kind": "col",
+        "str_value": null,
+        "table": null
+       },
+       "op": "ne",
+       "right": {
+        "bool_value": null,
+        "col": null,
+        "fk": null,
+        "int_value": null,
+        "kind": "null",
+        "str_value": null,
+        "table": null
+       }
+      }
+     ]
+    },
+    {
+     "domain": "chancy_jobs",
+     "id": "D-C3",
+     "kind": "row",
+     "lhs": [],
+     "op": null,
+     "require": [
+      {
+       "left": {
+        "bool_value": null,
+        "col": "completed",
+        "fk": null,
+        "int_value": null,
+        "kind": "col",
+        "str_value": null,
+        "table": null
+       },
+       "op": "eq",
+       "right": {
+        "bool_value": true,
+        "col": null,
+        "fk": null,
+        "int_value": null,
+        "kind": "bool",
+        "str_value": null,
+        "table": null
+       }
+      }
+     ],
+     "rhs": [],
+     "statement": "a succeeded job is completed",
+     "table": "jobs",
+     "where": [
+      {
+       "left": {
+        "bool_value": null,
+        "col": "state",
+        "fk": null,
+        "int_value": null,
+        "kind": "col",
+        "str_value": null,
+        "table": null
+       },
+       "op": "eq",
+       "right": {
+        "bool_value": null,
+        "col": null,
+        "fk": null,
+        "int_value": null,
+        "kind": "str",
+        "str_value": "succeeded",
+        "table": null
+       }
+      }
+     ]
+    },
+    {
+     "domain": "chancy_jobs",
+     "id": "D-C4",
+     "kind": "row",
+     "lhs": [],
+     "op": null,
+     "require": [
+      {
+       "left": {
+        "bool_value": null,
+        "col": "attempts",
+        "fk": null,
+        "int_value": null,
+        "kind": "col",
+        "str_value": null,
+        "table": null
+       },
+       "op": "le",
+       "right": {
+        "bool_value": null,
+        "col": "max_attempts",
+        "fk": null,
+        "int_value": null,
+        "kind": "col",
+        "str_value": null,
+        "table": null
+       }
+      }
+     ],
+     "rhs": [],
+     "statement": "a job never records more attempts than it allows",
+     "table": "jobs",
+     "where": []
+    },
+    {
+     "domain": "chancy_jobs",
+     "id": "D-C5",
+     "kind": "row",
+     "lhs": [],
+     "op": null,
+     "require": [
+      {
+       "left": {
+        "bool_value": null,
+        "col": "executions",
+        "fk": null,
+        "int_value": null,
+        "kind": "col",
+        "str_value": null,
+        "table": null
+       },
+       "op": "le",
+       "right": {
+        "bool_value": null,
+        "col": null,
+        "fk": null,
+        "int_value": 1,
+        "kind": "int",
+        "str_value": null,
+        "table": null
+       }
+      }
+     ],
+     "rhs": [],
+     "statement": "a cancelled job's handler runs at most once",
+     "table": "jobs",
+     "where": [
+      {
+       "left": {
+        "bool_value": null,
+        "col": "cancelled",
+        "fk": null,
+        "int_value": null,
+        "kind": "col",
+        "str_value": null,
+        "table": null
+       },
+       "op": "eq",
+       "right": {
+        "bool_value": true,
+        "col": null,
+        "fk": null,
+        "int_value": null,
+        "kind": "bool",
+        "str_value": null,
+        "table": null
+       }
+      }
+     ]
+    },
+    {
+     "domain": "chancy_jobs",
+     "id": "D-C6",
+     "kind": "row",
+     "lhs": [],
+     "op": null,
+     "require": [
+      {
+       "left": {
+        "bool_value": null,
+        "col": "attempts",
+        "fk": null,
+        "int_value": null,
+        "kind": "col",
+        "str_value": null,
+        "table": null
+       },
+       "op": "ge",
+       "right": {
+        "bool_value": null,
+        "col": null,
+        "fk": null,
+        "int_value": 1,
+        "kind": "int",
+        "str_value": null,
+        "table": null
+       }
+      }
+     ],
+     "rhs": [],
+     "statement": "a succeeded job records at least one attempt",
+     "table": "jobs",
+     "where": [
+      {
+       "left": {
+        "bool_value": null,
+        "col": "state",
+        "fk": null,
+        "int_value": null,
+        "kind": "col",
+        "str_value": null,
+        "table": null
+       },
+       "op": "eq",
+       "right": {
+        "bool_value": null,
+        "col": null,
+        "fk": null,
+        "int_value": null,
+        "kind": "str",
+        "str_value": "succeeded",
+        "table": null
+       }
+      }
+     ]
+    },
+    {
+     "domain": "chancy_jobs",
+     "id": "D-C7",
+     "kind": "row",
+     "lhs": [],
+     "op": null,
+     "require": [
+      {
+       "left": {
+        "bool_value": null,
+        "col": "successes",
+        "fk": null,
+        "int_value": null,
+        "kind": "col",
+        "str_value": null,
+        "table": null
+       },
+       "op": "le",
+       "right": {
+        "bool_value": null,
+        "col": "executions",
+        "fk": null,
+        "int_value": null,
+        "kind": "col",
+        "str_value": null,
+        "table": null
+       }
+      }
+     ],
+     "rhs": [],
+     "statement": "a job's handler never succeeds more often than it runs",
+     "table": "jobs",
+     "where": []
+    },
+    {
+     "domain": "chancy_jobs",
+     "id": "X-C-taut",
+     "kind": "aggregate",
+     "lhs": [
+      {
+       "col": null,
+       "filter_col": null,
+       "filter_str": null,
+       "int_value": null,
+       "kind": "count",
+       "sign": 1,
+       "state": "final",
+       "table": "jobs"
+      }
+     ],
+     "op": "ge",
+     "require": [],
+     "rhs": [
+      {
+       "col": null,
+       "filter_col": null,
+       "filter_str": null,
+       "int_value": 0,
+       "kind": "int",
+       "sign": 1,
+       "state": "final",
+       "table": null
+      }
+     ],
+     "statement": "CONTROL (tautology): the number of jobs is never negative",
+     "table": null,
+     "where": []
+    },
+    {
+     "domain": "chancy_jobs",
+     "id": "X-C-false",
+     "kind": "row",
+     "lhs": [],
+     "op": null,
+     "require": [
+      {
+       "left": {
+        "bool_value": null,
+        "col": "state",
+        "fk": null,
+        "int_value": null,
+        "kind": "col",
+        "str_value": null,
+        "table": null
+       },
+       "op": "eq",
+       "right": {
+        "bool_value": null,
+        "col": null,
+        "fk": null,
+        "int_value": null,
+        "kind": "str",
+        "str_value": "succeeded",
+        "table": null
+       }
+      }
+     ],
+     "rhs": [],
+     "statement": "CONTROL (false): every job ends succeeded",
+     "table": "jobs",
+     "where": []
+    }
+   ],
+   "reservations": [
+    {
+     "domain": "reservations",
+     "id": "D-R1",
+     "kind": "row",
+     "lhs": [],
+     "op": null,
+     "require": [
+      {
+       "left": {
+        "bool_value": null,
+        "col": "reserved",
+        "fk": null,
+        "int_value": null,
+        "kind": "col",
+        "str_value": null,
+        "table": null
+       },
+       "op": "eq",
+       "right": {
+        "bool_value": null,
+        "col": "qty",
+        "fk": "event_id",
+        "int_value": null,
+        "kind": "child_sum",
+        "str_value": null,
+        "table": "reservations"
+       }
+      }
+     ],
+     "rhs": [],
+     "statement": "an event's reserved counter equals the seats in its reservations",
+     "table": "events",
+     "where": []
+    },
+    {
+     "domain": "reservations",
+     "id": "D-R2",
+     "kind": "row",
+     "lhs": [],
+     "op": null,
+     "require": [
+      {
+       "left": {
+        "bool_value": null,
+        "col": "qty",
+        "fk": "event_id",
+        "int_value": null,
+        "kind": "child_sum",
+        "str_value": null,
+        "table": "reservations"
+       },
+       "op": "le",
+       "right": {
+        "bool_value": null,
+        "col": "capacity",
+        "fk": null,
+        "int_value": null,
+        "kind": "col",
+        "str_value": null,
+        "table": null
+       }
+      }
+     ],
+     "rhs": [],
+     "statement": "an event's reservations never hold more seats than its capacity",
+     "table": "events",
+     "where": []
+    },
+    {
+     "domain": "reservations",
+     "id": "D-R3",
+     "kind": "row",
+     "lhs": [],
+     "op": null,
+     "require": [
+      {
+       "left": {
+        "bool_value": null,
+        "col": "reserved",
+        "fk": null,
+        "int_value": null,
+        "kind": "col",
+        "str_value": null,
+        "table": null
+       },
+       "op": "le",
+       "right": {
+        "bool_value": null,
+        "col": "capacity",
+        "fk": null,
+        "int_value": null,
+        "kind": "col",
+        "str_value": null,
+        "table": null
+       }
+      }
+     ],
+     "rhs": [],
+     "statement": "an event's reserved counter never exceeds its capacity",
+     "table": "events",
+     "where": []
+    },
+    {
+     "domain": "reservations",
+     "id": "D-R4",
+     "kind": "row",
+     "lhs": [],
+     "op": null,
+     "require": [
+      {
+       "left": {
+        "bool_value": null,
+        "col": "qty",
+        "fk": null,
+        "int_value": null,
+        "kind": "col",
+        "str_value": null,
+        "table": null
+       },
+       "op": "ge",
+       "right": {
+        "bool_value": null,
+        "col": null,
+        "fk": null,
+        "int_value": 1,
+        "kind": "int",
+        "str_value": null,
+        "table": null
+       }
+      }
+     ],
+     "rhs": [],
+     "statement": "every reservation holds at least one seat",
+     "table": "reservations",
+     "where": []
+    },
+    {
+     "domain": "reservations",
+     "id": "D-R5",
+     "kind": "aggregate",
+     "lhs": [
+      {
+       "col": null,
+       "filter_col": null,
+       "filter_str": null,
+       "int_value": null,
+       "kind": "count",
+       "sign": 1,
+       "state": "final",
+       "table": "reservations"
+      }
+     ],
+     "op": "eq",
+     "require": [],
+     "rhs": [
+      {
+       "col": null,
+       "filter_col": null,
+       "filter_str": null,
+       "int_value": null,
+       "kind": "count",
+       "sign": 1,
+       "state": "initial",
+       "table": "reservations"
+      },
+      {
+       "col": null,
+       "filter_col": "status",
+       "filter_str": "reserved",
+       "int_value": null,
+       "kind": "count",
+       "sign": 1,
+       "state": "final",
+       "table": "calls"
+      },
+      {
+       "col": null,
+       "filter_col": "status",
+       "filter_str": "released",
+       "int_value": null,
+       "kind": "count",
+       "sign": -1,
+       "state": "final",
+       "table": "calls"
+      }
+     ],
+     "statement": "reservations after = before + callers told reserved - callers told released",
+     "table": null,
+     "where": []
+    },
+    {
+     "domain": "reservations",
+     "id": "D-R6",
+     "kind": "aggregate",
+     "lhs": [
+      {
+       "col": "capacity",
+       "filter_col": null,
+       "filter_str": null,
+       "int_value": null,
+       "kind": "sum",
+       "sign": 1,
+       "state": "final",
+       "table": "events"
+      }
+     ],
+     "op": "eq",
+     "require": [],
+     "rhs": [
+      {
+       "col": "capacity",
+       "filter_col": null,
+       "filter_str": null,
+       "int_value": null,
+       "kind": "sum",
+       "sign": 1,
+       "state": "initial",
+       "table": "events"
+      }
+     ],
+     "statement": "capacities never change",
+     "table": null,
+     "where": []
+    },
+    {
+     "domain": "reservations",
+     "id": "D-R7",
+     "kind": "aggregate",
+     "lhs": [
+      {
+       "col": null,
+       "filter_col": null,
+       "filter_str": null,
+       "int_value": null,
+       "kind": "count",
+       "sign": 1,
+       "state": "final",
+       "table": "rejections"
+      },
+      {
+       "col": null,
+       "filter_col": null,
+       "filter_str": null,
+       "int_value": null,
+       "kind": "count",
+       "sign": -1,
+       "state": "initial",
+       "table": "rejections"
+      }
+     ],
+     "op": "eq",
+     "require": [],
+     "rhs": [
+      {
+       "col": null,
+       "filter_col": "status",
+       "filter_str": "rejected",
+       "int_value": null,
+       "kind": "count",
+       "sign": 1,
+       "state": "final",
+       "table": "calls"
+      }
+     ],
+     "statement": "each caller told rejected left exactly one new rejection row",
+     "table": null,
+     "where": []
+    },
+    {
+     "domain": "reservations",
+     "id": "X-R-taut",
+     "kind": "aggregate",
+     "lhs": [
+      {
+       "col": null,
+       "filter_col": null,
+       "filter_str": null,
+       "int_value": null,
+       "kind": "count",
+       "sign": 1,
+       "state": "final",
+       "table": "events"
+      }
+     ],
+     "op": "ge",
+     "require": [],
+     "rhs": [
+      {
+       "col": null,
+       "filter_col": null,
+       "filter_str": null,
+       "int_value": 0,
+       "kind": "int",
+       "sign": 1,
+       "state": "final",
+       "table": null
+      }
+     ],
+     "statement": "CONTROL (tautology): the number of events is never negative",
+     "table": null,
+     "where": []
+    },
+    {
+     "domain": "reservations",
+     "id": "X-R-false",
+     "kind": "row",
+     "lhs": [],
+     "op": null,
+     "require": [
+      {
+       "left": {
+        "bool_value": null,
+        "col": "reserved",
+        "fk": null,
+        "int_value": null,
+        "kind": "col",
+        "str_value": null,
+        "table": null
+       },
+       "op": "eq",
+       "right": {
+        "bool_value": null,
+        "col": null,
+        "fk": null,
+        "int_value": 0,
+        "kind": "int",
+        "str_value": null,
+        "table": null
+       }
+      }
+     ],
+     "rhs": [],
+     "statement": "CONTROL (false): every event has no seats reserved",
+     "table": "events",
+     "where": []
+    }
+   ]
+  },
+  "procrastinate": {
+   "B1": [
+    {
+     "admin": [
+      1
+     ],
+     "new_jobs": [
+      {
+       "kind": "ok"
+      },
+      {
+       "fail_in": "3.3.0",
+       "kind": "flaky"
+      },
+      {
+       "fail_in": "3.4.0",
+       "kind": "flaky"
+      },
+      {
+       "kind": "fail"
+      }
+     ],
+     "old_jobs": [
+      {
+       "kind": "ok"
+      },
+      {
+       "fail_in": "3.3.0",
+       "kind": "flaky"
+      },
+      {
+       "fail_in": "3.4.0",
+       "kind": "flaky"
+      },
+      {
+       "kind": "fail"
+      }
+     ]
+    },
+    {
+     "admin": [
+      1,
+      2
+     ],
+     "new_jobs": [
+      {
+       "fail_in": "3.3.0",
+       "kind": "flaky"
+      },
+      {
+       "fail_in": "3.3.0",
+       "kind": "flaky"
+      }
+     ],
+     "old_jobs": [
+      {
+       "fail_in": "3.4.0",
+       "kind": "flaky"
+      },
+      {
+       "fail_in": "3.4.0",
+       "kind": "flaky"
+      }
+     ]
+    },
+    {
+     "admin": [
+      1,
+      2
+     ],
+     "new_jobs": [
+      {
+       "kind": "fail"
+      },
+      {
+       "kind": "ok"
+      }
+     ],
+     "old_jobs": [
+      {
+       "kind": "fail"
+      },
+      {
+       "fail_in": "3.4.0",
+       "kind": "flaky"
+      }
+     ]
+    }
+   ],
+   "B2": [
+    {
+     "admin": [],
+     "new_jobs": [
+      {
+       "kind": "ok"
+      },
+      {
+       "fail_in": "3.3.0",
+       "kind": "flaky"
+      }
+     ],
+     "old_jobs": [
+      {
+       "kind": "ok"
+      },
+      {
+       "kind": "fail"
+      }
+     ]
+    },
+    {
+     "admin": [],
+     "new_jobs": [
+      {
+       "kind": "fail"
+      },
+      {
+       "fail_in": "3.4.0",
+       "kind": "flaky"
+      }
+     ],
+     "old_jobs": [
+      {
+       "kind": "fail"
+      },
+      {
+       "fail_in": "3.3.0",
+       "kind": "flaky"
+      }
+     ]
+    },
+    {
+     "admin": [],
+     "new_jobs": [
+      {
+       "fail_in": "3.3.0",
+       "kind": "flaky"
+      },
+      {
+       "kind": "ok"
+      }
+     ],
+     "old_jobs": [
+      {
+       "fail_in": "3.3.0",
+       "kind": "flaky"
+      },
+      {
+       "fail_in": "3.4.0",
+       "kind": "flaky"
+      }
+     ]
+    }
+   ]
+  },
+  "reservations": {
+   "B1": [
+    [
+     "curated#0",
+     {
+      "actors": [
+       {
+        "application_version": "v1",
+        "arguments": [
+         {
+          "name": "event_id",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "name": "holder",
+          "value": {
+           "type": "str",
+           "value": "alice"
+          }
+         },
+         {
+          "name": "qty",
+          "value": {
+           "type": "int",
+           "value": 2
+          }
+         }
+        ],
+        "entrypoint": "reserve_seats",
+        "name": "a",
+        "role": "request"
+       },
+       {
+        "application_version": "v1",
+        "arguments": [
+         {
+          "name": "event_id",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "name": "holder",
+          "value": {
+           "type": "str",
+           "value": "bob"
+          }
+         },
+         {
+          "name": "qty",
+          "value": {
+           "type": "int",
+           "value": 2
+          }
+         }
+        ],
+        "entrypoint": "reserve_seats",
+        "name": "b",
+        "role": "request"
+       }
+      ],
+      "application": "reservations",
+      "name": "track_a_two_buyers",
+      "provenance": {
+       "author": "track_a_harness",
+       "origin": "hand_written"
+      },
+      "rationale": "Two concurrent reservations for the same event, which together exceed its capacity.",
+      "schema_version": 2,
+      "state_goals": [
+       {
+        "constraints": [
+         {
+          "field": "id",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "field": "capacity",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 3
+          }
+         },
+         {
+          "field": "reserved",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 0
+          }
+         }
+        ],
+        "count": 1,
+        "entity": "event",
+        "label": "event_one"
+       }
+      ]
+     }
+    ],
+    [
+     "curated#1",
+     {
+      "actors": [
+       {
+        "application_version": "v1",
+        "arguments": [
+         {
+          "name": "holder",
+          "value": {
+           "type": "str",
+           "value": "jack"
+          }
+         }
+        ],
+        "entrypoint": "release_seats",
+        "name": "a",
+        "role": "request"
+       },
+       {
+        "application_version": "v1",
+        "arguments": [
+         {
+          "name": "holder",
+          "value": {
+           "type": "str",
+           "value": "jack"
+          }
+         }
+        ],
+        "entrypoint": "release_seats",
+        "name": "b",
+        "role": "request"
+       }
+      ],
+      "application": "reservations",
+      "name": "dup_one",
+      "provenance": {
+       "author": "mvp_release_evidence",
+       "origin": "hand_written"
+      },
+      "rationale": "Two concurrent reservations for the same event, which together exceed its capacity.",
+      "schema_version": 2,
+      "state_goals": [
+       {
+        "constraints": [
+         {
+          "field": "id",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "field": "capacity",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 10
+          }
+         },
+         {
+          "field": "reserved",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 4
+          }
+         }
+        ],
+        "count": 1,
+        "entity": "event",
+        "label": "event_one"
+       },
+       {
+        "constraints": [
+         {
+          "field": "event_id",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "field": "holder",
+          "op": "eq",
+          "value": {
+           "type": "str",
+           "value": "jack"
+          }
+         },
+         {
+          "field": "qty",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 4
+          }
+         }
+        ],
+        "count": 1,
+        "entity": "reservation",
+        "label": "jack_0"
+       }
+      ]
+     }
+    ],
+    [
+     "curated#2",
+     {
+      "actors": [
+       {
+        "application_version": "v1",
+        "arguments": [
+         {
+          "name": "holder",
+          "value": {
+           "type": "str",
+           "value": "jack"
+          }
+         }
+        ],
+        "entrypoint": "release_seats",
+        "name": "a",
+        "role": "request"
+       },
+       {
+        "application_version": "v1",
+        "arguments": [
+         {
+          "name": "holder",
+          "value": {
+           "type": "str",
+           "value": "jack"
+          }
+         }
+        ],
+        "entrypoint": "release_seats",
+        "name": "b",
+        "role": "request"
+       }
+      ],
+      "application": "reservations",
+      "name": "dup_two",
+      "provenance": {
+       "author": "mvp_release_evidence",
+       "origin": "hand_written"
+      },
+      "rationale": "Two concurrent reservations for the same event, which together exceed its capacity.",
+      "schema_version": 2,
+      "state_goals": [
+       {
+        "constraints": [
+         {
+          "field": "id",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "field": "capacity",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 10
+          }
+         },
+         {
+          "field": "reserved",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 8
+          }
+         }
+        ],
+        "count": 1,
+        "entity": "event",
+        "label": "event_one"
+       },
+       {
+        "constraints": [
+         {
+          "field": "event_id",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "field": "holder",
+          "op": "eq",
+          "value": {
+           "type": "str",
+           "value": "jack"
+          }
+         },
+         {
+          "field": "qty",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 4
+          }
+         }
+        ],
+        "count": 1,
+        "entity": "reservation",
+        "label": "jack_0"
+       },
+       {
+        "constraints": [
+         {
+          "field": "event_id",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "field": "holder",
+          "op": "eq",
+          "value": {
+           "type": "str",
+           "value": "jack"
+          }
+         },
+         {
+          "field": "qty",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 4
+          }
+         }
+        ],
+        "count": 1,
+        "entity": "reservation",
+        "label": "jack_1"
+       }
+      ]
+     }
+    ],
+    [
+     "curated#3",
+     {
+      "actors": [
+       {
+        "application_version": "v1",
+        "arguments": [
+         {
+          "name": "holder",
+          "value": {
+           "type": "str",
+           "value": "jack"
+          }
+         }
+        ],
+        "entrypoint": "release_seats",
+        "name": "a",
+        "role": "request"
+       },
+       {
+        "application_version": "v1",
+        "arguments": [
+         {
+          "name": "holder",
+          "value": {
+           "type": "str",
+           "value": "jill"
+          }
+         }
+        ],
+        "entrypoint": "release_seats",
+        "name": "b",
+        "role": "request"
+       }
+      ],
+      "application": "reservations",
+      "name": "indep",
+      "provenance": {
+       "author": "mvp_release_evidence",
+       "origin": "hand_written"
+      },
+      "rationale": "Two concurrent reservations for the same event, which together exceed its capacity.",
+      "schema_version": 2,
+      "state_goals": [
+       {
+        "constraints": [
+         {
+          "field": "id",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "field": "capacity",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 10
+          }
+         },
+         {
+          "field": "reserved",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 5
+          }
+         }
+        ],
+        "count": 1,
+        "entity": "event",
+        "label": "event_one"
+       },
+       {
+        "constraints": [
+         {
+          "field": "event_id",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "field": "holder",
+          "op": "eq",
+          "value": {
+           "type": "str",
+           "value": "jack"
+          }
+         },
+         {
+          "field": "qty",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 3
+          }
+         }
+        ],
+        "count": 1,
+        "entity": "reservation",
+        "label": "jack_0"
+       },
+       {
+        "constraints": [
+         {
+          "field": "event_id",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "field": "holder",
+          "op": "eq",
+          "value": {
+           "type": "str",
+           "value": "jill"
+          }
+         },
+         {
+          "field": "qty",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 2
+          }
+         }
+        ],
+        "count": 1,
+        "entity": "reservation",
+        "label": "jill_0"
+       }
+      ]
+     }
+    ],
+    [
+     "curated#4",
+     {
+      "actors": [
+       {
+        "application_version": "v1",
+        "arguments": [
+         {
+          "name": "event_id",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "name": "holder",
+          "value": {
+           "type": "str",
+           "value": "jack"
+          }
+         },
+         {
+          "name": "qty",
+          "value": {
+           "type": "int",
+           "value": 2
+          }
+         }
+        ],
+        "entrypoint": "reserve_seats",
+        "name": "a",
+        "role": "request"
+       },
+       {
+        "application_version": "v1",
+        "arguments": [
+         {
+          "name": "holder",
+          "value": {
+           "type": "str",
+           "value": "jack"
+          }
+         }
+        ],
+        "entrypoint": "release_seats",
+        "name": "b",
+        "role": "request"
+       }
+      ],
+      "application": "reservations",
+      "name": "res_rel",
+      "provenance": {
+       "author": "mvp_release_evidence",
+       "origin": "hand_written"
+      },
+      "rationale": "Two concurrent reservations for the same event, which together exceed its capacity.",
+      "schema_version": 2,
+      "state_goals": [
+       {
+        "constraints": [
+         {
+          "field": "id",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "field": "capacity",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 10
+          }
+         },
+         {
+          "field": "reserved",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 0
+          }
+         }
+        ],
+        "count": 1,
+        "entity": "event",
+        "label": "event_one"
+       }
+      ]
+     }
+    ],
+    [
+     "curated#5",
+     {
+      "actors": [
+       {
+        "application_version": "v1",
+        "arguments": [
+         {
+          "name": "holder",
+          "value": {
+           "type": "str",
+           "value": "nobody"
+          }
+         }
+        ],
+        "entrypoint": "release_seats",
+        "name": "a",
+        "role": "request"
+       },
+       {
+        "application_version": "v1",
+        "arguments": [
+         {
+          "name": "holder",
+          "value": {
+           "type": "str",
+           "value": "jack"
+          }
+         }
+        ],
+        "entrypoint": "release_seats",
+        "name": "b",
+        "role": "request"
+       }
+      ],
+      "application": "reservations",
+      "name": "unknown",
+      "provenance": {
+       "author": "mvp_release_evidence",
+       "origin": "hand_written"
+      },
+      "rationale": "Two concurrent reservations for the same event, which together exceed its capacity.",
+      "schema_version": 2,
+      "state_goals": [
+       {
+        "constraints": [
+         {
+          "field": "id",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "field": "capacity",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 10
+          }
+         },
+         {
+          "field": "reserved",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         }
+        ],
+        "count": 1,
+        "entity": "event",
+        "label": "event_one"
+       },
+       {
+        "constraints": [
+         {
+          "field": "event_id",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "field": "holder",
+          "op": "eq",
+          "value": {
+           "type": "str",
+           "value": "jack"
+          }
+         },
+         {
+          "field": "qty",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         }
+        ],
+        "count": 1,
+        "entity": "reservation",
+        "label": "jack_0"
+       }
+      ]
+     }
+    ]
+   ],
+   "B2": [
+    [
+     "systematic#0",
+     {
+      "actors": [
+       {
+        "application_version": "v1",
+        "arguments": [
+         {
+          "name": "holder",
+          "value": {
+           "type": "str",
+           "value": "jack"
+          }
+         }
+        ],
+        "entrypoint": "release_seats",
+        "name": "a",
+        "role": "request"
+       },
+       {
+        "application_version": "v1",
+        "arguments": [
+         {
+          "name": "holder",
+          "value": {
+           "type": "str",
+           "value": "jack"
+          }
+         }
+        ],
+        "entrypoint": "release_seats",
+        "name": "b",
+        "role": "request"
+       }
+      ],
+      "application": "reservations",
+      "name": "grid_0",
+      "provenance": {
+       "author": "ds_mc_grid",
+       "origin": "deterministic_baseline"
+      },
+      "rationale": "Two concurrent reservations for the same event, which together exceed its capacity.",
+      "schema_version": 2,
+      "state_goals": [
+       {
+        "constraints": [
+         {
+          "field": "id",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "field": "capacity",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 4
+          }
+         },
+         {
+          "field": "reserved",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 0
+          }
+         }
+        ],
+        "count": 1,
+        "entity": "event",
+        "label": "event_one"
+       }
+      ]
+     }
+    ],
+    [
+     "systematic#1",
+     {
+      "actors": [
+       {
+        "application_version": "v1",
+        "arguments": [
+         {
+          "name": "holder",
+          "value": {
+           "type": "str",
+           "value": "jack"
+          }
+         }
+        ],
+        "entrypoint": "release_seats",
+        "name": "a",
+        "role": "request"
+       },
+       {
+        "application_version": "v1",
+        "arguments": [
+         {
+          "name": "event_id",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "name": "holder",
+          "value": {
+           "type": "str",
+           "value": "jill"
+          }
+         },
+         {
+          "name": "qty",
+          "value": {
+           "type": "int",
+           "value": 2
+          }
+         }
+        ],
+        "entrypoint": "reserve_seats",
+        "name": "b",
+        "role": "request"
+       }
+      ],
+      "application": "reservations",
+      "name": "grid_1",
+      "provenance": {
+       "author": "ds_mc_grid",
+       "origin": "deterministic_baseline"
+      },
+      "rationale": "Two concurrent reservations for the same event, which together exceed its capacity.",
+      "schema_version": 2,
+      "state_goals": [
+       {
+        "constraints": [
+         {
+          "field": "id",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "field": "capacity",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 10
+          }
+         },
+         {
+          "field": "reserved",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 2
+          }
+         }
+        ],
+        "count": 1,
+        "entity": "event",
+        "label": "event_one"
+       },
+       {
+        "constraints": [
+         {
+          "field": "event_id",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "field": "holder",
+          "op": "eq",
+          "value": {
+           "type": "str",
+           "value": "jack"
+          }
+         },
+         {
+          "field": "qty",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 2
+          }
+         }
+        ],
+        "count": 1,
+        "entity": "reservation",
+        "label": "jack_0"
+       }
+      ]
+     }
+    ],
+    [
+     "systematic#2",
+     {
+      "actors": [
+       {
+        "application_version": "v1",
+        "arguments": [
+         {
+          "name": "event_id",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "name": "holder",
+          "value": {
+           "type": "str",
+           "value": "jack"
+          }
+         },
+         {
+          "name": "qty",
+          "value": {
+           "type": "int",
+           "value": 2
+          }
+         }
+        ],
+        "entrypoint": "reserve_seats",
+        "name": "a",
+        "role": "request"
+       },
+       {
+        "application_version": "v1",
+        "arguments": [
+         {
+          "name": "event_id",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "name": "holder",
+          "value": {
+           "type": "str",
+           "value": "jack"
+          }
+         },
+         {
+          "name": "qty",
+          "value": {
+           "type": "int",
+           "value": 2
+          }
+         }
+        ],
+        "entrypoint": "reserve_seats",
+        "name": "b",
+        "role": "request"
+       }
+      ],
+      "application": "reservations",
+      "name": "grid_2",
+      "provenance": {
+       "author": "ds_mc_grid",
+       "origin": "deterministic_baseline"
+      },
+      "rationale": "Two concurrent reservations for the same event, which together exceed its capacity.",
+      "schema_version": 2,
+      "state_goals": [
+       {
+        "constraints": [
+         {
+          "field": "id",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "field": "capacity",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 4
+          }
+         },
+         {
+          "field": "reserved",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 4
+          }
+         }
+        ],
+        "count": 1,
+        "entity": "event",
+        "label": "event_one"
+       },
+       {
+        "constraints": [
+         {
+          "field": "event_id",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "field": "holder",
+          "op": "eq",
+          "value": {
+           "type": "str",
+           "value": "jack"
+          }
+         },
+         {
+          "field": "qty",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 2
+          }
+         }
+        ],
+        "count": 1,
+        "entity": "reservation",
+        "label": "jack_0"
+       },
+       {
+        "constraints": [
+         {
+          "field": "event_id",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "field": "holder",
+          "op": "eq",
+          "value": {
+           "type": "str",
+           "value": "jack"
+          }
+         },
+         {
+          "field": "qty",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 2
+          }
+         }
+        ],
+        "count": 1,
+        "entity": "reservation",
+        "label": "jack_1"
+       }
+      ]
+     }
+    ],
+    [
+     "systematic#3",
+     {
+      "actors": [
+       {
+        "application_version": "v1",
+        "arguments": [
+         {
+          "name": "event_id",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "name": "holder",
+          "value": {
+           "type": "str",
+           "value": "jack"
+          }
+         },
+         {
+          "name": "qty",
+          "value": {
+           "type": "int",
+           "value": 2
+          }
+         }
+        ],
+        "entrypoint": "reserve_seats",
+        "name": "a",
+        "role": "request"
+       },
+       {
+        "application_version": "v1",
+        "arguments": [
+         {
+          "name": "event_id",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "name": "holder",
+          "value": {
+           "type": "str",
+           "value": "jill"
+          }
+         },
+         {
+          "name": "qty",
+          "value": {
+           "type": "int",
+           "value": 2
+          }
+         }
+        ],
+        "entrypoint": "reserve_seats",
+        "name": "b",
+        "role": "request"
+       }
+      ],
+      "application": "reservations",
+      "name": "grid_3",
+      "provenance": {
+       "author": "ds_mc_grid",
+       "origin": "deterministic_baseline"
+      },
+      "rationale": "Two concurrent reservations for the same event, which together exceed its capacity.",
+      "schema_version": 2,
+      "state_goals": [
+       {
+        "constraints": [
+         {
+          "field": "id",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "field": "capacity",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 10
+          }
+         },
+         {
+          "field": "reserved",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 0
+          }
+         }
+        ],
+        "count": 1,
+        "entity": "event",
+        "label": "event_one"
+       }
+      ]
+     }
+    ],
+    [
+     "systematic#4",
+     {
+      "actors": [
+       {
+        "application_version": "v1",
+        "arguments": [
+         {
+          "name": "holder",
+          "value": {
+           "type": "str",
+           "value": "jack"
+          }
+         }
+        ],
+        "entrypoint": "release_seats",
+        "name": "a",
+        "role": "request"
+       },
+       {
+        "application_version": "v1",
+        "arguments": [
+         {
+          "name": "holder",
+          "value": {
+           "type": "str",
+           "value": "jack"
+          }
+         }
+        ],
+        "entrypoint": "release_seats",
+        "name": "b",
+        "role": "request"
+       }
+      ],
+      "application": "reservations",
+      "name": "grid_4",
+      "provenance": {
+       "author": "ds_mc_grid",
+       "origin": "deterministic_baseline"
+      },
+      "rationale": "Two concurrent reservations for the same event, which together exceed its capacity.",
+      "schema_version": 2,
+      "state_goals": [
+       {
+        "constraints": [
+         {
+          "field": "id",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "field": "capacity",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 10
+          }
+         },
+         {
+          "field": "reserved",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 5
+          }
+         }
+        ],
+        "count": 1,
+        "entity": "event",
+        "label": "event_one"
+       },
+       {
+        "constraints": [
+         {
+          "field": "event_id",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "field": "holder",
+          "op": "eq",
+          "value": {
+           "type": "str",
+           "value": "jack"
+          }
+         },
+         {
+          "field": "qty",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 2
+          }
+         }
+        ],
+        "count": 1,
+        "entity": "reservation",
+        "label": "jack_0"
+       },
+       {
+        "constraints": [
+         {
+          "field": "event_id",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "field": "holder",
+          "op": "eq",
+          "value": {
+           "type": "str",
+           "value": "jill"
+          }
+         },
+         {
+          "field": "qty",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 3
+          }
+         }
+        ],
+        "count": 1,
+        "entity": "reservation",
+        "label": "jill_0"
+       }
+      ]
+     }
+    ],
+    [
+     "systematic#5",
+     {
+      "actors": [
+       {
+        "application_version": "v1",
+        "arguments": [
+         {
+          "name": "holder",
+          "value": {
+           "type": "str",
+           "value": "jack"
+          }
+         }
+        ],
+        "entrypoint": "release_seats",
+        "name": "a",
+        "role": "request"
+       },
+       {
+        "application_version": "v1",
+        "arguments": [
+         {
+          "name": "holder",
+          "value": {
+           "type": "str",
+           "value": "jill"
+          }
+         }
+        ],
+        "entrypoint": "release_seats",
+        "name": "b",
+        "role": "request"
+       }
+      ],
+      "application": "reservations",
+      "name": "grid_5",
+      "provenance": {
+       "author": "ds_mc_grid",
+       "origin": "deterministic_baseline"
+      },
+      "rationale": "Two concurrent reservations for the same event, which together exceed its capacity.",
+      "schema_version": 2,
+      "state_goals": [
+       {
+        "constraints": [
+         {
+          "field": "id",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "field": "capacity",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 4
+          }
+         },
+         {
+          "field": "reserved",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 4
+          }
+         }
+        ],
+        "count": 1,
+        "entity": "event",
+        "label": "event_one"
+       },
+       {
+        "constraints": [
+         {
+          "field": "event_id",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "field": "holder",
+          "op": "eq",
+          "value": {
+           "type": "str",
+           "value": "jack"
+          }
+         },
+         {
+          "field": "qty",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 2
+          }
+         }
+        ],
+        "count": 1,
+        "entity": "reservation",
+        "label": "jack_0"
+       },
+       {
+        "constraints": [
+         {
+          "field": "event_id",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 1
+          }
+         },
+         {
+          "field": "holder",
+          "op": "eq",
+          "value": {
+           "type": "str",
+           "value": "jack"
+          }
+         },
+         {
+          "field": "qty",
+          "op": "eq",
+          "value": {
+           "type": "int",
+           "value": 2
+          }
+         }
+        ],
+        "count": 1,
+        "entity": "reservation",
+        "label": "jack_1"
+       }
+      ]
+     }
+    ]
+   ]
+  },
+  "reservations_state": {
+   "B4": {
+    "reserve_and_release": [
+     {
+      "capacity": 2,
+      "rationale": "grid none capacity 2",
+      "reservations": [],
+      "reserved": 0
+     },
+     {
+      "capacity": 2,
+      "rationale": "grid jack_2 capacity 2",
+      "reservations": [
+       {
+        "holder": "jack",
+        "qty": 2
+       }
+      ],
+      "reserved": 2
+     },
+     {
+      "capacity": 10,
+      "rationale": "grid jack_2_2 capacity 10",
+      "reservations": [
+       {
+        "holder": "jack",
+        "qty": 2
+       },
+       {
+        "holder": "jack",
+        "qty": 2
+       }
+      ],
+      "reserved": 4
+     }
+    ],
+    "two_releases_same_holder": [
+     {
+      "capacity": 2,
+      "rationale": "grid none capacity 2",
+      "reservations": [],
+      "reserved": 0
+     },
+     {
+      "capacity": 2,
+      "rationale": "grid jack_2 capacity 2",
+      "reservations": [
+       {
+        "holder": "jack",
+        "qty": 2
+       }
+      ],
+      "reserved": 2
+     },
+     {
+      "capacity": 10,
+      "rationale": "grid jack_2_2 capacity 10",
+      "reservations": [
+       {
+        "holder": "jack",
+        "qty": 2
+       },
+       {
+        "holder": "jack",
+        "qty": 2
+       }
+      ],
+      "reserved": 4
+     }
+    ],
+    "two_reserves": [
+     {
+      "capacity": 2,
+      "rationale": "grid none capacity 2",
+      "reservations": [],
+      "reserved": 0
+     },
+     {
+      "capacity": 2,
+      "rationale": "grid jack_2 capacity 2",
+      "reservations": [
+       {
+        "holder": "jack",
+        "qty": 2
+       }
+      ],
+      "reserved": 2
+     },
+     {
+      "capacity": 10,
+      "rationale": "grid jack_2_2 capacity 10",
+      "reservations": [
+       {
+        "holder": "jack",
+        "qty": 2
+       },
+       {
+        "holder": "jack",
+        "qty": 2
+       }
+      ],
+      "reserved": 4
+     }
+    ]
+   },
+   "actor_sets": {
+    "reserve_and_release": [
+     {
+      "application_version": "v1",
+      "arguments": [
+       {
+        "name": "event_id",
+        "value": {
+         "type": "int",
+         "value": 1
+        }
+       },
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "jack"
+        }
+       },
+       {
+        "name": "qty",
+        "value": {
+         "type": "int",
+         "value": 2
+        }
+       }
+      ],
+      "entrypoint": "reserve_seats",
+      "name": "a",
+      "role": "request"
+     },
+     {
+      "application_version": "v1",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "jack"
+        }
+       }
+      ],
+      "entrypoint": "release_seats",
+      "name": "b",
+      "role": "request"
+     }
+    ],
+    "two_releases_same_holder": [
+     {
+      "application_version": "v1",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "jack"
+        }
+       }
+      ],
+      "entrypoint": "release_seats",
+      "name": "a",
+      "role": "request"
+     },
+     {
+      "application_version": "v1",
+      "arguments": [
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "jack"
+        }
+       }
+      ],
+      "entrypoint": "release_seats",
+      "name": "b",
+      "role": "request"
+     }
+    ],
+    "two_reserves": [
+     {
+      "application_version": "v1",
+      "arguments": [
+       {
+        "name": "event_id",
+        "value": {
+         "type": "int",
+         "value": 1
+        }
+       },
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "jack"
+        }
+       },
+       {
+        "name": "qty",
+        "value": {
+         "type": "int",
+         "value": 2
+        }
+       }
+      ],
+      "entrypoint": "reserve_seats",
+      "name": "a",
+      "role": "request"
+     },
+     {
+      "application_version": "v1",
+      "arguments": [
+       {
+        "name": "event_id",
+        "value": {
+         "type": "int",
+         "value": 1
+        }
+       },
+       {
+        "name": "holder",
+        "value": {
+         "type": "str",
+         "value": "jill"
+        }
+       },
+       {
+        "name": "qty",
+        "value": {
+         "type": "int",
+         "value": 2
+        }
+       }
+      ],
+      "entrypoint": "reserve_seats",
+      "name": "b",
+      "role": "request"
+     }
+    ]
+   }
+  }
+ },
+ "exploratory": true,
+ "frozen_at": "2026-11-05T23:37:07Z",
+ "model": {
+  "max_output_tokens": 16000,
+  "name": "muse-spark-1.3 (config default; MODEL_NAME unset)",
+  "pricing": "estimated at Meta's published standard rates, $1.25 input and $4.25 output per MTok; not billing data",
+  "reasoning_effort": "medium",
+  "sampling": "provider defaults (no temperature or seed)",
+  "store": false
+ },
+ "nonblind": true,
+ "outcomes": {
+  "detected": "at least one sound run on the defective build violates the case oracle (chancy: case checker VIOLATED; reservations: any R1/R2/R5 violation)",
+  "first_detection_schedule": "1-based cumulative index, over the arm's workloads in order, of the first detecting schedule on the defective build; null when not detected (censored at schedules_used)",
+  "fixed_version_violation": "any oracle violation on the reference build (or, for procrastinate, any violation after errata)",
+  "invalid_proposals": "proposals rejected by validation (B3/B5)",
+  "no_verdict": "chancy runs whose H0 sanity check fails count as schedules used, never as detection",
+  "refused": "runs refused (corroboration, isolation, or a constructed state the harness refuses)",
+  "schedules_used": "schedules executed on the defective build"
+ },
+ "prompts": [
+  {
+   "instructions": "You design test workloads for a PostgreSQL-backed job queue library. Each workload is executed for real by the library's own code, under a deterministic scheduler that grants every database statement of every actor in one global order and tries different orders; the jobs' rows are then read back from the database and checked independently. Propose workloads likely to expose data-integrity problems in how the library handles jobs that are worked on and cancelled concurrently. You cannot write SQL or code. Every proposal must satisfy the stated constraints exactly, or it is rejected. Return JSON only.",
+   "label": "mc_chancy_w_r0",
+   "n": 6,
+   "prompt": "chancy_workloads",
+   "purpose": "B3 chancy-2895c4a workloads, replicate 0",
+   "sha256": "1972c57ae87c41775f1cff4437edcc85390fef491196ba479a204f3844ec734e",
+   "text": "Propose exactly 6 different workloads.\n\nContext (JSON):\n{\n \"actors\": {\n  \"producer\": \"pushes `jobs` jobs, numbered 0..jobs-1, to one queue with the given max_attempts through the library's public push, then requests cancellation of the jobs listed in `cancel` through the library's public cancel_job\",\n  \"workers\": \"`workers` workers (1 or 2) of the same release process that queue, each on its own database session\"\n },\n \"constraints\": {\n  \"cancel\": \"distinct job numbers, each < jobs (may be empty)\",\n  \"jobs\": \"1..3\",\n  \"max_attempts\": \"1..3\",\n  \"workers\": \"1..2\"\n },\n \"handler\": \"every job's handler returns normally\",\n \"scheduler\": \"no producer statement runs before every worker has polled the queue once; a cancellation statement runs only after some worker has claimed a job; seeded policies decide the remaining order\",\n \"system\": \"a job queue library on PostgreSQL, one release deployed by its documented single-version procedure (every worker runs the same release)\"\n}"
+  },
+  {
+   "instructions": "You design test workloads for a PostgreSQL-backed job queue library. Each workload is executed for real by the library's own code, under a deterministic scheduler that grants every database statement of every actor in one global order and tries different orders; the jobs' rows are then read back from the database and checked independently. Propose workloads likely to expose data-integrity problems in how the library handles jobs that are worked on and cancelled concurrently. You cannot write SQL or code. Every proposal must satisfy the stated constraints exactly, or it is rejected. Return JSON only.",
+   "label": "mc_chancy_w_r1",
+   "n": 6,
+   "prompt": "chancy_workloads",
+   "purpose": "B3 chancy-2895c4a workloads, replicate 1",
+   "sha256": "1972c57ae87c41775f1cff4437edcc85390fef491196ba479a204f3844ec734e",
+   "text": "Propose exactly 6 different workloads.\n\nContext (JSON):\n{\n \"actors\": {\n  \"producer\": \"pushes `jobs` jobs, numbered 0..jobs-1, to one queue with the given max_attempts through the library's public push, then requests cancellation of the jobs listed in `cancel` through the library's public cancel_job\",\n  \"workers\": \"`workers` workers (1 or 2) of the same release process that queue, each on its own database session\"\n },\n \"constraints\": {\n  \"cancel\": \"distinct job numbers, each < jobs (may be empty)\",\n  \"jobs\": \"1..3\",\n  \"max_attempts\": \"1..3\",\n  \"workers\": \"1..2\"\n },\n \"handler\": \"every job's handler returns normally\",\n \"scheduler\": \"no producer statement runs before every worker has polled the queue once; a cancellation statement runs only after some worker has claimed a job; seeded policies decide the remaining order\",\n \"system\": \"a job queue library on PostgreSQL, one release deployed by its documented single-version procedure (every worker runs the same release)\"\n}"
+  },
+  {
+   "instructions": "You design test workloads for a blue-green upgrade of a PostgreSQL-backed task queue library, during the window in which its old and new releases run at the same time on one schema. Your workloads are executed for real by the actual library and the database's final state is checked independently. Propose workloads likely to expose problems in how jobs deferred, executed, retried or administered by one release are handled by the other. You cannot write SQL or code. Every proposal must satisfy the stated constraints exactly, or it is rejected. Return JSON only.",
+   "label": "mc_procr_w_r0",
+   "n": 5,
+   "prompt": "procrastinate_workloads",
+   "purpose": "B3 procrastinate overlap workloads, replicate 0",
+   "sha256": "3cd840ca24be4ade3c1bd438efe3a357d8a2e09f8d720f9ff95b74af783babc1",
+   "text": "Propose exactly 5 different workloads.\n\nContext (JSON):\n{\n \"constraints\": {\n  \"admin_retry\": \"a subset of [1, 2]; each id at most once\",\n  \"fail_in\": \"one of 3.3.0 or 3.4.0 for kind flaky, else 'none'\",\n  \"kind\": [\n   \"ok\",\n   \"flaky\",\n   \"fail\"\n  ],\n  \"new_jobs\": \"0..4 items\",\n  \"old_jobs\": \"0..4 items\",\n  \"total jobs\": \"1..6\"\n },\n \"earlier_failed_jobs\": {\n  \"1\": \"a job that always fails (failed before the overlap)\",\n  \"2\": \"a flaky job that failed under the old release before the overlap\"\n },\n \"overlap_window\": \"an old-release producer defers old_jobs and a new-release producer defers new_jobs while one old-release worker and one new-release worker both process the same queue; the new release's administrator may retry earlier failed jobs\",\n \"system\": \"a task queue library on PostgreSQL, upgraded from release 3.3.0 (old) to 3.4.0 (new) by its documented blue-green procedure: a pre-migration, then both releases run together, then the old release stops and a post-migration is applied\",\n \"task_kinds\": {\n  \"fail\": \"always raises; retried once, then failed\",\n  \"flaky\": \"raises when executed by the release named in fail_in, returns normally otherwise; retried once\",\n  \"ok\": \"returns normally\"\n }\n}"
+  },
+  {
+   "instructions": "You design concurrency test workloads, including the initial database state they need, for a small Python service. A deterministic scheduler will run your invocations concurrently and try different interleavings of their database operations; an independent checker then inspects the final state. You may only invoke the listed handlers with the listed argument types; you cannot write SQL or code. Every proposal must satisfy the stated constraints exactly, or it is rejected. Return JSON only.",
+   "label": "mc_res_w_r0",
+   "n": 8,
+   "prompt": "reservations_planner",
+   "purpose": "B3 reservations workloads, replicate 0",
+   "sha256": "b133eab8d51bb1dd0e3a328ce5dfa42b93baa22d1d42eb1ee69edac12dc64d60",
+   "text": "Propose exactly 8 different workloads.\n\nContext (JSON):\n{\n \"argument_contracts\": [\n  {\n   \"arguments\": [\n    {\n     \"constraints\": [\n      {\n       \"kind\": \"int\",\n       \"maximum\": 1000,\n       \"minimum\": 1\n      }\n     ],\n     \"name\": \"event_id\"\n    },\n    {\n     \"constraints\": [\n      {\n       \"charset\": \"lower_identifier\",\n       \"kind\": \"str\",\n       \"max_length\": 16,\n       \"min_length\": 1\n      }\n     ],\n     \"name\": \"holder\"\n    },\n    {\n     \"constraints\": [\n      {\n       \"kind\": \"int\",\n       \"maximum\": 10,\n       \"minimum\": 1\n      }\n     ],\n     \"name\": \"qty\"\n    }\n   ],\n   \"entrypoint\": \"reserve_seats\",\n   \"roles\": [\n    \"request\"\n   ],\n   \"versions\": [\n    \"v1\"\n   ]\n  },\n  {\n   \"arguments\": [\n    {\n     \"constraints\": [\n      {\n       \"charset\": \"lower_identifier\",\n       \"kind\": \"str\",\n       \"max_length\": 16,\n       \"min_length\": 1\n      }\n     ],\n     \"name\": \"holder\"\n    }\n   ],\n   \"entrypoint\": \"release_seats\",\n   \"roles\": [\n    \"request\"\n   ],\n   \"versions\": [\n    \"v1\"\n   ]\n  }\n ],\n \"constraints\": {\n  \"actors\": \"2 to 3 actors with unique names matching ^[a-z][a-z0-9_]{0,15}$, application version v1, role request\",\n  \"name\": \"a lowercase identifier\",\n  \"state_goals\": \"1 to 4 goals; entity is one listed; count 1 to 3; each constraint is a field, an op and a typed value (kind none only with is_null/not_null)\"\n },\n \"entities\": [\n  {\n   \"columns\": [\n    {\n     \"column\": \"id\",\n     \"field\": \"id\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"capacity\",\n     \"field\": \"capacity\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"reserved\",\n     \"field\": \"reserved\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    }\n   ],\n   \"entity\": \"event\",\n   \"primary_key\": [\n    \"id\"\n   ],\n   \"table\": \"events\"\n  },\n  {\n   \"columns\": [\n    {\n     \"column\": \"id\",\n     \"field\": \"id\",\n     \"has_default\": true,\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"event_id\",\n     \"field\": \"event_id\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"collation\": \"deterministic\",\n     \"column\": \"holder\",\n     \"field\": \"holder\",\n     \"nullable\": false,\n     \"pg_type\": \"text\"\n    },\n    {\n     \"column\": \"qty\",\n     \"field\": \"qty\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    }\n   ],\n   \"entity\": \"reservation\",\n   \"foreign_keys\": [\n    {\n     \"field\": \"event_id\",\n     \"references_entity\": \"event\",\n     \"references_field\": \"id\"\n    }\n   ],\n   \"primary_key\": [\n    \"id\"\n   ],\n   \"table\": \"reservations\"\n  },\n  {\n   \"columns\": [\n    {\n     \"column\": \"id\",\n     \"field\": \"id\",\n     \"has_default\": true,\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"event_id\",\n     \"field\": \"event_id\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"collation\": \"deterministic\",\n     \"column\": \"holder\",\n     \"field\": \"holder\",\n     \"nullable\": false,\n     \"pg_type\": \"text\"\n    },\n    {\n     \"column\": \"seats_available\",\n     \"field\": \"seats_available\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    }\n   ],\n   \"entity\": \"rejection\",\n   \"primary_key\": [\n    \"id\"\n   ],\n   \"table\": \"rejections\"\n  }\n ],\n \"may_send_sql\": {\n  \"release_seats\": [\n   \"SELECT id, event_id, qty FROM reservations WHERE holder = %s ORDER BY id\",\n   \"SELECT reserved FROM events WHERE id = %s\",\n   \"UPDATE events SET reserved = %s WHERE id = %s\",\n   \"DELETE FROM reservations WHERE id = %s\"\n  ],\n  \"reserve_seats\": [\n   \"SELECT capacity, reserved FROM events WHERE id = %s\",\n   \"INSERT INTO rejections (event_id, holder, seats_available) VALUES (%s, %s, %s)\",\n   \"UPDATE events SET reserved = %s WHERE id = %s\",\n   \"INSERT INTO reservations (event_id, holder, qty) VALUES (%s, %s, %s)\"\n  ]\n },\n \"registry\": [\n  {\n   \"arguments\": [\n    {\n     \"name\": \"event_id\",\n     \"types\": [\n      \"int\"\n     ]\n    },\n    {\n     \"name\": \"holder\",\n     \"types\": [\n      \"str\"\n     ]\n    },\n    {\n     \"name\": \"qty\",\n     \"types\": [\n      \"int\"\n     ]\n    }\n   ],\n   \"id\": \"reserve_seats\",\n   \"max_instances\": 3,\n   \"operation\": \"live_app.reservations:reserve_seats\",\n   \"roles\": [\n    \"request\"\n   ],\n   \"versions\": [\n    \"v1\"\n   ]\n  },\n  {\n   \"arguments\": [\n    {\n     \"name\": \"holder\",\n     \"types\": [\n      \"str\"\n     ]\n    }\n   ],\n   \"id\": \"release_seats\",\n   \"max_instances\": 2,\n   \"operation\": \"live_app.reservations:release_seats\",\n   \"roles\": [\n    \"request\"\n   ],\n   \"versions\": [\n    \"v1\"\n   ]\n  }\n ]\n}"
+  },
+  {
+   "instructions": "You design concurrency test workloads, including the initial database state they need, for a small Python service. A deterministic scheduler will run your invocations concurrently and try different interleavings of their database operations; an independent checker then inspects the final state. You may only invoke the listed handlers with the listed argument types; you cannot write SQL or code. Every proposal must satisfy the stated constraints exactly, or it is rejected. Return JSON only.",
+   "label": "mc_res_w_r1",
+   "n": 8,
+   "prompt": "reservations_planner",
+   "purpose": "B3 reservations workloads, replicate 1",
+   "sha256": "b133eab8d51bb1dd0e3a328ce5dfa42b93baa22d1d42eb1ee69edac12dc64d60",
+   "text": "Propose exactly 8 different workloads.\n\nContext (JSON):\n{\n \"argument_contracts\": [\n  {\n   \"arguments\": [\n    {\n     \"constraints\": [\n      {\n       \"kind\": \"int\",\n       \"maximum\": 1000,\n       \"minimum\": 1\n      }\n     ],\n     \"name\": \"event_id\"\n    },\n    {\n     \"constraints\": [\n      {\n       \"charset\": \"lower_identifier\",\n       \"kind\": \"str\",\n       \"max_length\": 16,\n       \"min_length\": 1\n      }\n     ],\n     \"name\": \"holder\"\n    },\n    {\n     \"constraints\": [\n      {\n       \"kind\": \"int\",\n       \"maximum\": 10,\n       \"minimum\": 1\n      }\n     ],\n     \"name\": \"qty\"\n    }\n   ],\n   \"entrypoint\": \"reserve_seats\",\n   \"roles\": [\n    \"request\"\n   ],\n   \"versions\": [\n    \"v1\"\n   ]\n  },\n  {\n   \"arguments\": [\n    {\n     \"constraints\": [\n      {\n       \"charset\": \"lower_identifier\",\n       \"kind\": \"str\",\n       \"max_length\": 16,\n       \"min_length\": 1\n      }\n     ],\n     \"name\": \"holder\"\n    }\n   ],\n   \"entrypoint\": \"release_seats\",\n   \"roles\": [\n    \"request\"\n   ],\n   \"versions\": [\n    \"v1\"\n   ]\n  }\n ],\n \"constraints\": {\n  \"actors\": \"2 to 3 actors with unique names matching ^[a-z][a-z0-9_]{0,15}$, application version v1, role request\",\n  \"name\": \"a lowercase identifier\",\n  \"state_goals\": \"1 to 4 goals; entity is one listed; count 1 to 3; each constraint is a field, an op and a typed value (kind none only with is_null/not_null)\"\n },\n \"entities\": [\n  {\n   \"columns\": [\n    {\n     \"column\": \"id\",\n     \"field\": \"id\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"capacity\",\n     \"field\": \"capacity\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"reserved\",\n     \"field\": \"reserved\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    }\n   ],\n   \"entity\": \"event\",\n   \"primary_key\": [\n    \"id\"\n   ],\n   \"table\": \"events\"\n  },\n  {\n   \"columns\": [\n    {\n     \"column\": \"id\",\n     \"field\": \"id\",\n     \"has_default\": true,\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"event_id\",\n     \"field\": \"event_id\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"collation\": \"deterministic\",\n     \"column\": \"holder\",\n     \"field\": \"holder\",\n     \"nullable\": false,\n     \"pg_type\": \"text\"\n    },\n    {\n     \"column\": \"qty\",\n     \"field\": \"qty\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    }\n   ],\n   \"entity\": \"reservation\",\n   \"foreign_keys\": [\n    {\n     \"field\": \"event_id\",\n     \"references_entity\": \"event\",\n     \"references_field\": \"id\"\n    }\n   ],\n   \"primary_key\": [\n    \"id\"\n   ],\n   \"table\": \"reservations\"\n  },\n  {\n   \"columns\": [\n    {\n     \"column\": \"id\",\n     \"field\": \"id\",\n     \"has_default\": true,\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"event_id\",\n     \"field\": \"event_id\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"collation\": \"deterministic\",\n     \"column\": \"holder\",\n     \"field\": \"holder\",\n     \"nullable\": false,\n     \"pg_type\": \"text\"\n    },\n    {\n     \"column\": \"seats_available\",\n     \"field\": \"seats_available\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    }\n   ],\n   \"entity\": \"rejection\",\n   \"primary_key\": [\n    \"id\"\n   ],\n   \"table\": \"rejections\"\n  }\n ],\n \"may_send_sql\": {\n  \"release_seats\": [\n   \"SELECT id, event_id, qty FROM reservations WHERE holder = %s ORDER BY id\",\n   \"SELECT reserved FROM events WHERE id = %s\",\n   \"UPDATE events SET reserved = %s WHERE id = %s\",\n   \"DELETE FROM reservations WHERE id = %s\"\n  ],\n  \"reserve_seats\": [\n   \"SELECT capacity, reserved FROM events WHERE id = %s\",\n   \"INSERT INTO rejections (event_id, holder, seats_available) VALUES (%s, %s, %s)\",\n   \"UPDATE events SET reserved = %s WHERE id = %s\",\n   \"INSERT INTO reservations (event_id, holder, qty) VALUES (%s, %s, %s)\"\n  ]\n },\n \"registry\": [\n  {\n   \"arguments\": [\n    {\n     \"name\": \"event_id\",\n     \"types\": [\n      \"int\"\n     ]\n    },\n    {\n     \"name\": \"holder\",\n     \"types\": [\n      \"str\"\n     ]\n    },\n    {\n     \"name\": \"qty\",\n     \"types\": [\n      \"int\"\n     ]\n    }\n   ],\n   \"id\": \"reserve_seats\",\n   \"max_instances\": 3,\n   \"operation\": \"live_app.reservations:reserve_seats\",\n   \"roles\": [\n    \"request\"\n   ],\n   \"versions\": [\n    \"v1\"\n   ]\n  },\n  {\n   \"arguments\": [\n    {\n     \"name\": \"holder\",\n     \"types\": [\n      \"str\"\n     ]\n    }\n   ],\n   \"id\": \"release_seats\",\n   \"max_instances\": 2,\n   \"operation\": \"live_app.reservations:release_seats\",\n   \"roles\": [\n    \"request\"\n   ],\n   \"versions\": [\n    \"v1\"\n   ]\n  }\n ]\n}"
+  },
+  {
+   "instructions": "You choose the initial database state for a concurrency test of a small Python reservations service. The test's invocations are fixed and given; a deterministic scheduler will run them concurrently and try different interleavings of their database operations, and an independent checker then inspects the final state. Propose initial states likely to expose data-integrity problems under those invocations. You cannot write SQL or code, or change the invocations. The state is checked by a deterministic planner and refused if it can't be built exactly. Return JSON only.",
+   "label": "mc_state_two_reserves_r0",
+   "n": 4,
+   "prompt": "reservations_state:two_reserves",
+   "purpose": "B5 states for actor set two_reserves, replicate 0",
+   "sha256": "e209af3faa3998695345a379cec90bc7fe066e805abe722e4b1561fbdb6b14e7",
+   "text": "Propose exactly 4 different initial states.\n\nContext (JSON):\n{\n \"constraints\": {\n  \"capacity\": \"1..20\",\n  \"holder\": \"a lowercase identifier\",\n  \"qty\": \"1..10\",\n  \"reservations\": \"0..4 items\",\n  \"reserved\": \"0..40\"\n },\n \"entities\": [\n  {\n   \"columns\": [\n    {\n     \"column\": \"id\",\n     \"field\": \"id\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"capacity\",\n     \"field\": \"capacity\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"reserved\",\n     \"field\": \"reserved\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    }\n   ],\n   \"entity\": \"event\",\n   \"primary_key\": [\n    \"id\"\n   ],\n   \"table\": \"events\"\n  },\n  {\n   \"columns\": [\n    {\n     \"column\": \"id\",\n     \"field\": \"id\",\n     \"has_default\": true,\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"event_id\",\n     \"field\": \"event_id\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"collation\": \"deterministic\",\n     \"column\": \"holder\",\n     \"field\": \"holder\",\n     \"nullable\": false,\n     \"pg_type\": \"text\"\n    },\n    {\n     \"column\": \"qty\",\n     \"field\": \"qty\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    }\n   ],\n   \"entity\": \"reservation\",\n   \"foreign_keys\": [\n    {\n     \"field\": \"event_id\",\n     \"references_entity\": \"event\",\n     \"references_field\": \"id\"\n    }\n   ],\n   \"primary_key\": [\n    \"id\"\n   ],\n   \"table\": \"reservations\"\n  },\n  {\n   \"columns\": [\n    {\n     \"column\": \"id\",\n     \"field\": \"id\",\n     \"has_default\": true,\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"event_id\",\n     \"field\": \"event_id\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"collation\": \"deterministic\",\n     \"column\": \"holder\",\n     \"field\": \"holder\",\n     \"nullable\": false,\n     \"pg_type\": \"text\"\n    },\n    {\n     \"column\": \"seats_available\",\n     \"field\": \"seats_available\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    }\n   ],\n   \"entity\": \"rejection\",\n   \"primary_key\": [\n    \"id\"\n   ],\n   \"table\": \"rejections\"\n  }\n ],\n \"invocations\": [\n  {\n   \"actor\": \"a\",\n   \"args\": {\n    \"event_id\": 1,\n    \"holder\": \"jack\",\n    \"qty\": 2\n   },\n   \"handler\": \"reserve_seats\"\n  },\n  {\n   \"actor\": \"b\",\n   \"args\": {\n    \"event_id\": 1,\n    \"holder\": \"jill\",\n    \"qty\": 2\n   },\n   \"handler\": \"reserve_seats\"\n  }\n ],\n \"state_shape\": \"one event with id 1 (its capacity and its reserved counter) and its reservations, each a holder and a qty; reservation ids are assigned by the planner\"\n}"
+  },
+  {
+   "instructions": "You choose the initial database state for a concurrency test of a small Python reservations service. The test's invocations are fixed and given; a deterministic scheduler will run them concurrently and try different interleavings of their database operations, and an independent checker then inspects the final state. Propose initial states likely to expose data-integrity problems under those invocations. You cannot write SQL or code, or change the invocations. The state is checked by a deterministic planner and refused if it can't be built exactly. Return JSON only.",
+   "label": "mc_state_two_reserves_r1",
+   "n": 4,
+   "prompt": "reservations_state:two_reserves",
+   "purpose": "B5 states for actor set two_reserves, replicate 1",
+   "sha256": "e209af3faa3998695345a379cec90bc7fe066e805abe722e4b1561fbdb6b14e7",
+   "text": "Propose exactly 4 different initial states.\n\nContext (JSON):\n{\n \"constraints\": {\n  \"capacity\": \"1..20\",\n  \"holder\": \"a lowercase identifier\",\n  \"qty\": \"1..10\",\n  \"reservations\": \"0..4 items\",\n  \"reserved\": \"0..40\"\n },\n \"entities\": [\n  {\n   \"columns\": [\n    {\n     \"column\": \"id\",\n     \"field\": \"id\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"capacity\",\n     \"field\": \"capacity\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"reserved\",\n     \"field\": \"reserved\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    }\n   ],\n   \"entity\": \"event\",\n   \"primary_key\": [\n    \"id\"\n   ],\n   \"table\": \"events\"\n  },\n  {\n   \"columns\": [\n    {\n     \"column\": \"id\",\n     \"field\": \"id\",\n     \"has_default\": true,\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"event_id\",\n     \"field\": \"event_id\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"collation\": \"deterministic\",\n     \"column\": \"holder\",\n     \"field\": \"holder\",\n     \"nullable\": false,\n     \"pg_type\": \"text\"\n    },\n    {\n     \"column\": \"qty\",\n     \"field\": \"qty\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    }\n   ],\n   \"entity\": \"reservation\",\n   \"foreign_keys\": [\n    {\n     \"field\": \"event_id\",\n     \"references_entity\": \"event\",\n     \"references_field\": \"id\"\n    }\n   ],\n   \"primary_key\": [\n    \"id\"\n   ],\n   \"table\": \"reservations\"\n  },\n  {\n   \"columns\": [\n    {\n     \"column\": \"id\",\n     \"field\": \"id\",\n     \"has_default\": true,\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"event_id\",\n     \"field\": \"event_id\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"collation\": \"deterministic\",\n     \"column\": \"holder\",\n     \"field\": \"holder\",\n     \"nullable\": false,\n     \"pg_type\": \"text\"\n    },\n    {\n     \"column\": \"seats_available\",\n     \"field\": \"seats_available\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    }\n   ],\n   \"entity\": \"rejection\",\n   \"primary_key\": [\n    \"id\"\n   ],\n   \"table\": \"rejections\"\n  }\n ],\n \"invocations\": [\n  {\n   \"actor\": \"a\",\n   \"args\": {\n    \"event_id\": 1,\n    \"holder\": \"jack\",\n    \"qty\": 2\n   },\n   \"handler\": \"reserve_seats\"\n  },\n  {\n   \"actor\": \"b\",\n   \"args\": {\n    \"event_id\": 1,\n    \"holder\": \"jill\",\n    \"qty\": 2\n   },\n   \"handler\": \"reserve_seats\"\n  }\n ],\n \"state_shape\": \"one event with id 1 (its capacity and its reserved counter) and its reservations, each a holder and a qty; reservation ids are assigned by the planner\"\n}"
+  },
+  {
+   "instructions": "You choose the initial database state for a concurrency test of a small Python reservations service. The test's invocations are fixed and given; a deterministic scheduler will run them concurrently and try different interleavings of their database operations, and an independent checker then inspects the final state. Propose initial states likely to expose data-integrity problems under those invocations. You cannot write SQL or code, or change the invocations. The state is checked by a deterministic planner and refused if it can't be built exactly. Return JSON only.",
+   "label": "mc_state_two_releases_same_holder_r0",
+   "n": 4,
+   "prompt": "reservations_state:two_releases_same_holder",
+   "purpose": "B5 states for actor set two_releases_same_holder, replicate 0",
+   "sha256": "68f01af9f57f9fb259b826443750e992b14dc5959e9b66ac4e7a7f0f80b86aee",
+   "text": "Propose exactly 4 different initial states.\n\nContext (JSON):\n{\n \"constraints\": {\n  \"capacity\": \"1..20\",\n  \"holder\": \"a lowercase identifier\",\n  \"qty\": \"1..10\",\n  \"reservations\": \"0..4 items\",\n  \"reserved\": \"0..40\"\n },\n \"entities\": [\n  {\n   \"columns\": [\n    {\n     \"column\": \"id\",\n     \"field\": \"id\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"capacity\",\n     \"field\": \"capacity\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"reserved\",\n     \"field\": \"reserved\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    }\n   ],\n   \"entity\": \"event\",\n   \"primary_key\": [\n    \"id\"\n   ],\n   \"table\": \"events\"\n  },\n  {\n   \"columns\": [\n    {\n     \"column\": \"id\",\n     \"field\": \"id\",\n     \"has_default\": true,\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"event_id\",\n     \"field\": \"event_id\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"collation\": \"deterministic\",\n     \"column\": \"holder\",\n     \"field\": \"holder\",\n     \"nullable\": false,\n     \"pg_type\": \"text\"\n    },\n    {\n     \"column\": \"qty\",\n     \"field\": \"qty\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    }\n   ],\n   \"entity\": \"reservation\",\n   \"foreign_keys\": [\n    {\n     \"field\": \"event_id\",\n     \"references_entity\": \"event\",\n     \"references_field\": \"id\"\n    }\n   ],\n   \"primary_key\": [\n    \"id\"\n   ],\n   \"table\": \"reservations\"\n  },\n  {\n   \"columns\": [\n    {\n     \"column\": \"id\",\n     \"field\": \"id\",\n     \"has_default\": true,\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"event_id\",\n     \"field\": \"event_id\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"collation\": \"deterministic\",\n     \"column\": \"holder\",\n     \"field\": \"holder\",\n     \"nullable\": false,\n     \"pg_type\": \"text\"\n    },\n    {\n     \"column\": \"seats_available\",\n     \"field\": \"seats_available\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    }\n   ],\n   \"entity\": \"rejection\",\n   \"primary_key\": [\n    \"id\"\n   ],\n   \"table\": \"rejections\"\n  }\n ],\n \"invocations\": [\n  {\n   \"actor\": \"a\",\n   \"args\": {\n    \"holder\": \"jack\"\n   },\n   \"handler\": \"release_seats\"\n  },\n  {\n   \"actor\": \"b\",\n   \"args\": {\n    \"holder\": \"jack\"\n   },\n   \"handler\": \"release_seats\"\n  }\n ],\n \"state_shape\": \"one event with id 1 (its capacity and its reserved counter) and its reservations, each a holder and a qty; reservation ids are assigned by the planner\"\n}"
+  },
+  {
+   "instructions": "You choose the initial database state for a concurrency test of a small Python reservations service. The test's invocations are fixed and given; a deterministic scheduler will run them concurrently and try different interleavings of their database operations, and an independent checker then inspects the final state. Propose initial states likely to expose data-integrity problems under those invocations. You cannot write SQL or code, or change the invocations. The state is checked by a deterministic planner and refused if it can't be built exactly. Return JSON only.",
+   "label": "mc_state_two_releases_same_holder_r1",
+   "n": 4,
+   "prompt": "reservations_state:two_releases_same_holder",
+   "purpose": "B5 states for actor set two_releases_same_holder, replicate 1",
+   "sha256": "68f01af9f57f9fb259b826443750e992b14dc5959e9b66ac4e7a7f0f80b86aee",
+   "text": "Propose exactly 4 different initial states.\n\nContext (JSON):\n{\n \"constraints\": {\n  \"capacity\": \"1..20\",\n  \"holder\": \"a lowercase identifier\",\n  \"qty\": \"1..10\",\n  \"reservations\": \"0..4 items\",\n  \"reserved\": \"0..40\"\n },\n \"entities\": [\n  {\n   \"columns\": [\n    {\n     \"column\": \"id\",\n     \"field\": \"id\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"capacity\",\n     \"field\": \"capacity\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"reserved\",\n     \"field\": \"reserved\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    }\n   ],\n   \"entity\": \"event\",\n   \"primary_key\": [\n    \"id\"\n   ],\n   \"table\": \"events\"\n  },\n  {\n   \"columns\": [\n    {\n     \"column\": \"id\",\n     \"field\": \"id\",\n     \"has_default\": true,\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"event_id\",\n     \"field\": \"event_id\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"collation\": \"deterministic\",\n     \"column\": \"holder\",\n     \"field\": \"holder\",\n     \"nullable\": false,\n     \"pg_type\": \"text\"\n    },\n    {\n     \"column\": \"qty\",\n     \"field\": \"qty\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    }\n   ],\n   \"entity\": \"reservation\",\n   \"foreign_keys\": [\n    {\n     \"field\": \"event_id\",\n     \"references_entity\": \"event\",\n     \"references_field\": \"id\"\n    }\n   ],\n   \"primary_key\": [\n    \"id\"\n   ],\n   \"table\": \"reservations\"\n  },\n  {\n   \"columns\": [\n    {\n     \"column\": \"id\",\n     \"field\": \"id\",\n     \"has_default\": true,\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"event_id\",\n     \"field\": \"event_id\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"collation\": \"deterministic\",\n     \"column\": \"holder\",\n     \"field\": \"holder\",\n     \"nullable\": false,\n     \"pg_type\": \"text\"\n    },\n    {\n     \"column\": \"seats_available\",\n     \"field\": \"seats_available\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    }\n   ],\n   \"entity\": \"rejection\",\n   \"primary_key\": [\n    \"id\"\n   ],\n   \"table\": \"rejections\"\n  }\n ],\n \"invocations\": [\n  {\n   \"actor\": \"a\",\n   \"args\": {\n    \"holder\": \"jack\"\n   },\n   \"handler\": \"release_seats\"\n  },\n  {\n   \"actor\": \"b\",\n   \"args\": {\n    \"holder\": \"jack\"\n   },\n   \"handler\": \"release_seats\"\n  }\n ],\n \"state_shape\": \"one event with id 1 (its capacity and its reserved counter) and its reservations, each a holder and a qty; reservation ids are assigned by the planner\"\n}"
+  },
+  {
+   "instructions": "You choose the initial database state for a concurrency test of a small Python reservations service. The test's invocations are fixed and given; a deterministic scheduler will run them concurrently and try different interleavings of their database operations, and an independent checker then inspects the final state. Propose initial states likely to expose data-integrity problems under those invocations. You cannot write SQL or code, or change the invocations. The state is checked by a deterministic planner and refused if it can't be built exactly. Return JSON only.",
+   "label": "mc_state_reserve_and_release_r0",
+   "n": 4,
+   "prompt": "reservations_state:reserve_and_release",
+   "purpose": "B5 states for actor set reserve_and_release, replicate 0",
+   "sha256": "cd97f1caa5b21e0d33f3b74333ee369498b4144a9714aee9cef8e59d633659f8",
+   "text": "Propose exactly 4 different initial states.\n\nContext (JSON):\n{\n \"constraints\": {\n  \"capacity\": \"1..20\",\n  \"holder\": \"a lowercase identifier\",\n  \"qty\": \"1..10\",\n  \"reservations\": \"0..4 items\",\n  \"reserved\": \"0..40\"\n },\n \"entities\": [\n  {\n   \"columns\": [\n    {\n     \"column\": \"id\",\n     \"field\": \"id\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"capacity\",\n     \"field\": \"capacity\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"reserved\",\n     \"field\": \"reserved\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    }\n   ],\n   \"entity\": \"event\",\n   \"primary_key\": [\n    \"id\"\n   ],\n   \"table\": \"events\"\n  },\n  {\n   \"columns\": [\n    {\n     \"column\": \"id\",\n     \"field\": \"id\",\n     \"has_default\": true,\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"event_id\",\n     \"field\": \"event_id\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"collation\": \"deterministic\",\n     \"column\": \"holder\",\n     \"field\": \"holder\",\n     \"nullable\": false,\n     \"pg_type\": \"text\"\n    },\n    {\n     \"column\": \"qty\",\n     \"field\": \"qty\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    }\n   ],\n   \"entity\": \"reservation\",\n   \"foreign_keys\": [\n    {\n     \"field\": \"event_id\",\n     \"references_entity\": \"event\",\n     \"references_field\": \"id\"\n    }\n   ],\n   \"primary_key\": [\n    \"id\"\n   ],\n   \"table\": \"reservations\"\n  },\n  {\n   \"columns\": [\n    {\n     \"column\": \"id\",\n     \"field\": \"id\",\n     \"has_default\": true,\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"event_id\",\n     \"field\": \"event_id\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"collation\": \"deterministic\",\n     \"column\": \"holder\",\n     \"field\": \"holder\",\n     \"nullable\": false,\n     \"pg_type\": \"text\"\n    },\n    {\n     \"column\": \"seats_available\",\n     \"field\": \"seats_available\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    }\n   ],\n   \"entity\": \"rejection\",\n   \"primary_key\": [\n    \"id\"\n   ],\n   \"table\": \"rejections\"\n  }\n ],\n \"invocations\": [\n  {\n   \"actor\": \"a\",\n   \"args\": {\n    \"event_id\": 1,\n    \"holder\": \"jack\",\n    \"qty\": 2\n   },\n   \"handler\": \"reserve_seats\"\n  },\n  {\n   \"actor\": \"b\",\n   \"args\": {\n    \"holder\": \"jack\"\n   },\n   \"handler\": \"release_seats\"\n  }\n ],\n \"state_shape\": \"one event with id 1 (its capacity and its reserved counter) and its reservations, each a holder and a qty; reservation ids are assigned by the planner\"\n}"
+  },
+  {
+   "instructions": "You choose the initial database state for a concurrency test of a small Python reservations service. The test's invocations are fixed and given; a deterministic scheduler will run them concurrently and try different interleavings of their database operations, and an independent checker then inspects the final state. Propose initial states likely to expose data-integrity problems under those invocations. You cannot write SQL or code, or change the invocations. The state is checked by a deterministic planner and refused if it can't be built exactly. Return JSON only.",
+   "label": "mc_state_reserve_and_release_r1",
+   "n": 4,
+   "prompt": "reservations_state:reserve_and_release",
+   "purpose": "B5 states for actor set reserve_and_release, replicate 1",
+   "sha256": "cd97f1caa5b21e0d33f3b74333ee369498b4144a9714aee9cef8e59d633659f8",
+   "text": "Propose exactly 4 different initial states.\n\nContext (JSON):\n{\n \"constraints\": {\n  \"capacity\": \"1..20\",\n  \"holder\": \"a lowercase identifier\",\n  \"qty\": \"1..10\",\n  \"reservations\": \"0..4 items\",\n  \"reserved\": \"0..40\"\n },\n \"entities\": [\n  {\n   \"columns\": [\n    {\n     \"column\": \"id\",\n     \"field\": \"id\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"capacity\",\n     \"field\": \"capacity\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"reserved\",\n     \"field\": \"reserved\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    }\n   ],\n   \"entity\": \"event\",\n   \"primary_key\": [\n    \"id\"\n   ],\n   \"table\": \"events\"\n  },\n  {\n   \"columns\": [\n    {\n     \"column\": \"id\",\n     \"field\": \"id\",\n     \"has_default\": true,\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"event_id\",\n     \"field\": \"event_id\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"collation\": \"deterministic\",\n     \"column\": \"holder\",\n     \"field\": \"holder\",\n     \"nullable\": false,\n     \"pg_type\": \"text\"\n    },\n    {\n     \"column\": \"qty\",\n     \"field\": \"qty\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    }\n   ],\n   \"entity\": \"reservation\",\n   \"foreign_keys\": [\n    {\n     \"field\": \"event_id\",\n     \"references_entity\": \"event\",\n     \"references_field\": \"id\"\n    }\n   ],\n   \"primary_key\": [\n    \"id\"\n   ],\n   \"table\": \"reservations\"\n  },\n  {\n   \"columns\": [\n    {\n     \"column\": \"id\",\n     \"field\": \"id\",\n     \"has_default\": true,\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"column\": \"event_id\",\n     \"field\": \"event_id\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    },\n    {\n     \"collation\": \"deterministic\",\n     \"column\": \"holder\",\n     \"field\": \"holder\",\n     \"nullable\": false,\n     \"pg_type\": \"text\"\n    },\n    {\n     \"column\": \"seats_available\",\n     \"field\": \"seats_available\",\n     \"nullable\": false,\n     \"pg_type\": \"integer\"\n    }\n   ],\n   \"entity\": \"rejection\",\n   \"primary_key\": [\n    \"id\"\n   ],\n   \"table\": \"rejections\"\n  }\n ],\n \"invocations\": [\n  {\n   \"actor\": \"a\",\n   \"args\": {\n    \"event_id\": 1,\n    \"holder\": \"jack\",\n    \"qty\": 2\n   },\n   \"handler\": \"reserve_seats\"\n  },\n  {\n   \"actor\": \"b\",\n   \"args\": {\n    \"holder\": \"jack\"\n   },\n   \"handler\": \"release_seats\"\n  }\n ],\n \"state_shape\": \"one event with id 1 (its capacity and its reserved counter) and its reservations, each a holder and a qty; reservation ids are assigned by the planner\"\n}"
+  },
+  {
+   "instructions": "You state invariant hypotheses: properties a correct version of the described application should keep in every database state it reaches, written in the given restricted JSON grammar over the given tables. Each hypothesis is checked by a deterministic validator against real runs of the application; it is data, never executed as code. Hypotheses that are false for the correct version, or that can never be false, are rejected. Return JSON only.",
+   "label": "mc_inv_res",
+   "n": 8,
+   "prompt": "invariants:reservations",
+   "purpose": "invariant hypotheses, reservations",
+   "sha256": "fc8f2bc24ab24b173c2b411dac6065ede5e01f3b65eae6bbb99ade10b4ae1072",
+   "text": "Propose exactly 8 different invariant hypotheses for this application.\n\nApplication: a small Python reservations service: reserve_seats(event_id, holder, qty) reserves qty seats for holder if the event has that many free, else records a rejection and returns status 'rejected'; on success it adds a reservation and returns 'reserved'. release_seats(holder) releases one reservation the holder has and returns 'released', or returns 'nothing_held'. Tables: events, reservations, rejections, and `calls`: one row per handler call in the run with the status it returned.\n\nGrammar and tables (JSON):\n{\n \"aggregate_terms\": {\n  \"count\": \"count of rows, same filter\",\n  \"int\": \"a constant int_value\",\n  \"sum\": \"sum of an int column of `table` in the initial or final state, optionally over rows whose str column filter_col equals filter_str\"\n },\n \"bounds\": {\n  \"conditions\": 4,\n  \"terms_per_side\": 4\n },\n \"domain\": {\n  \"calls\": {\n   \"actor\": {\n    \"nullable\": false,\n    \"type\": \"str\"\n   },\n   \"handler\": {\n    \"nullable\": false,\n    \"type\": \"str\"\n   },\n   \"id\": {\n    \"nullable\": false,\n    \"type\": \"int\"\n   },\n   \"status\": {\n    \"nullable\": true,\n    \"type\": \"str\"\n   }\n  },\n  \"events\": {\n   \"capacity\": {\n    \"nullable\": false,\n    \"type\": \"int\"\n   },\n   \"id\": {\n    \"nullable\": false,\n    \"type\": \"int\"\n   },\n   \"reserved\": {\n    \"nullable\": false,\n    \"type\": \"int\"\n   }\n  },\n  \"rejections\": {\n   \"event_id\": {\n    \"nullable\": false,\n    \"type\": \"int\"\n   },\n   \"holder\": {\n    \"nullable\": false,\n    \"type\": \"str\"\n   },\n   \"id\": {\n    \"nullable\": false,\n    \"type\": \"int\"\n   },\n   \"seats_available\": {\n    \"nullable\": false,\n    \"type\": \"int\"\n   }\n  },\n  \"reservations\": {\n   \"event_id\": {\n    \"nullable\": false,\n    \"type\": \"int\"\n   },\n   \"holder\": {\n    \"nullable\": false,\n    \"type\": \"str\"\n   },\n   \"id\": {\n    \"nullable\": false,\n    \"type\": \"int\"\n   },\n   \"qty\": {\n    \"nullable\": false,\n    \"type\": \"int\"\n   }\n  }\n },\n \"kinds\": {\n  \"aggregate\": \"sum(sign * aggregate) over lhs compared by op with the same over rhs; where and require are empty and table is null\",\n  \"row\": \"for every row of `table` satisfying all `where` conditions, every `require` condition holds; lhs and rhs are empty and op is null\"\n },\n \"language\": \"ds-invariant/1\",\n \"null_semantics\": \"eq/ne compare NULL like a value; an ordering comparison with NULL is false\",\n \"terms\": {\n  \"child_count\": \"count of rows of `table` whose `fk` equals this row's id\",\n  \"child_sum\": \"sum of `col` over rows of `table` whose `fk` equals this row's id\",\n  \"col\": \"a column of the row (col)\",\n  \"int|str|bool\": \"a constant (int_value|str_value|bool_value)\",\n  \"null\": \"NULL\"\n },\n \"unused_fields\": \"null\"\n}\n\nSet domain to 'reservations' in every hypothesis, and give each a short unique id."
+  },
+  {
+   "instructions": "You state invariant hypotheses: properties a correct version of the described application should keep in every database state it reaches, written in the given restricted JSON grammar over the given tables. Each hypothesis is checked by a deterministic validator against real runs of the application; it is data, never executed as code. Hypotheses that are false for the correct version, or that can never be false, are rejected. Return JSON only.",
+   "label": "mc_inv_chancy",
+   "n": 8,
+   "prompt": "invariants:chancy_jobs",
+   "purpose": "invariant hypotheses, chancy jobs",
+   "sha256": "4dddb9fdf7eb3a35184607686b54d55d6eec835500f3db4b88366af2844c37f2",
+   "text": "Propose exactly 8 different invariant hypotheses for this application.\n\nApplication: a PostgreSQL-backed job queue library. A producer pushes jobs (each with max_attempts) and may cancel them through the public cancel_job; workers claim jobs, run their handler and record the outcome. The `jobs` table is one row per job read back after the run, plus: cancelled (the producer's cancel_job updated the row), executions (times its handler ran) and successes (times its handler returned normally). Job states are pending, running, retrying, succeeded, failed.\n\nGrammar and tables (JSON):\n{\n \"aggregate_terms\": {\n  \"count\": \"count of rows, same filter\",\n  \"int\": \"a constant int_value\",\n  \"sum\": \"sum of an int column of `table` in the initial or final state, optionally over rows whose str column filter_col equals filter_str\"\n },\n \"bounds\": {\n  \"conditions\": 4,\n  \"terms_per_side\": 4\n },\n \"domain\": {\n  \"jobs\": {\n   \"attempts\": {\n    \"nullable\": false,\n    \"type\": \"int\"\n   },\n   \"cancelled\": {\n    \"nullable\": false,\n    \"type\": \"bool\"\n   },\n   \"completed\": {\n    \"nullable\": false,\n    \"type\": \"bool\"\n   },\n   \"errors\": {\n    \"nullable\": false,\n    \"type\": \"int\"\n   },\n   \"executions\": {\n    \"nullable\": false,\n    \"type\": \"int\"\n   },\n   \"has_claim_id\": {\n    \"nullable\": true,\n    \"type\": \"bool\"\n   },\n   \"id\": {\n    \"nullable\": false,\n    \"type\": \"int\"\n   },\n   \"max_attempts\": {\n    \"nullable\": false,\n    \"type\": \"int\"\n   },\n   \"n\": {\n    \"nullable\": false,\n    \"type\": \"int\"\n   },\n   \"state\": {\n    \"nullable\": false,\n    \"type\": \"str\"\n   },\n   \"successes\": {\n    \"nullable\": false,\n    \"type\": \"int\"\n   },\n   \"taken\": {\n    \"nullable\": false,\n    \"type\": \"bool\"\n   }\n  }\n },\n \"kinds\": {\n  \"aggregate\": \"sum(sign * aggregate) over lhs compared by op with the same over rhs; where and require are empty and table is null\",\n  \"row\": \"for every row of `table` satisfying all `where` conditions, every `require` condition holds; lhs and rhs are empty and op is null\"\n },\n \"language\": \"ds-invariant/1\",\n \"null_semantics\": \"eq/ne compare NULL like a value; an ordering comparison with NULL is false\",\n \"terms\": {\n  \"child_count\": \"count of rows of `table` whose `fk` equals this row's id\",\n  \"child_sum\": \"sum of `col` over rows of `table` whose `fk` equals this row's id\",\n  \"col\": \"a column of the row (col)\",\n  \"int|str|bool\": \"a constant (int_value|str_value|bool_value)\",\n  \"null\": \"NULL\"\n },\n \"unused_fields\": \"null\"\n}\n\nSet domain to 'chancy_jobs' in every hypothesis, and give each a short unique id."
+  }
+ ],
+ "selection_rules": {
+  "B3/B5": "proposals are validated in returned order; the first K distinct valid ones (K = the arm's budget) are executed; duplicates and invalid ones are recorded, never repaired or replaced later. For reservations, valid means the unmodified chain returns `bridged` (dry-run snapshot); a live construction failure afterwards counts against the arm.",
+  "replicates": "B3 has two independent Muse calls per case (one for procrastinate); B5 two per actor set. Deterministic arms run once."
+ },
+ "version": "ds-mc-experiment/1"
+}

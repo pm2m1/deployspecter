@@ -1,0 +1,814 @@
+[
+ [
+  "mc_res_w_r1#0",
+  {
+   "actors": [
+    {
+     "arguments": [
+      {
+       "int_value": 1,
+       "kind": "int",
+       "name": "event_id",
+       "str_value": null
+      },
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "alice"
+      },
+      {
+       "int_value": 5,
+       "kind": "int",
+       "name": "qty",
+       "str_value": null
+      }
+     ],
+     "entrypoint": "reserve_seats",
+     "name": "a1"
+    },
+    {
+     "arguments": [
+      {
+       "int_value": 1,
+       "kind": "int",
+       "name": "event_id",
+       "str_value": null
+      },
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "bob"
+      },
+      {
+       "int_value": 5,
+       "kind": "int",
+       "name": "qty",
+       "str_value": null
+      }
+     ],
+     "entrypoint": "reserve_seats",
+     "name": "a2"
+    }
+   ],
+   "name": "oversell_two",
+   "rationale": "Two concurrent reserves of 5 on capacity 8: at most one should succeed; naive read-modify-write can oversell to 10.",
+   "state_goals": [
+    {
+     "constraints": [
+      {
+       "field": "id",
+       "int_value": 1,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      },
+      {
+       "field": "capacity",
+       "int_value": 8,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      },
+      {
+       "field": "reserved",
+       "int_value": 0,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      }
+     ],
+     "count": 1,
+     "entity": "event",
+     "label": "ev"
+    }
+   ]
+  }
+ ],
+ [
+  "mc_res_w_r1#1",
+  {
+   "actors": [
+    {
+     "arguments": [
+      {
+       "int_value": 1,
+       "kind": "int",
+       "name": "event_id",
+       "str_value": null
+      },
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "alice"
+      },
+      {
+       "int_value": 4,
+       "kind": "int",
+       "name": "qty",
+       "str_value": null
+      }
+     ],
+     "entrypoint": "reserve_seats",
+     "name": "a1"
+    },
+    {
+     "arguments": [
+      {
+       "int_value": 1,
+       "kind": "int",
+       "name": "event_id",
+       "str_value": null
+      },
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "bob"
+      },
+      {
+       "int_value": 4,
+       "kind": "int",
+       "name": "qty",
+       "str_value": null
+      }
+     ],
+     "entrypoint": "reserve_seats",
+     "name": "a2"
+    },
+    {
+     "arguments": [
+      {
+       "int_value": 1,
+       "kind": "int",
+       "name": "event_id",
+       "str_value": null
+      },
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "carol"
+      },
+      {
+       "int_value": 4,
+       "kind": "int",
+       "name": "qty",
+       "str_value": null
+      }
+     ],
+     "entrypoint": "reserve_seats",
+     "name": "a3"
+    }
+   ],
+   "name": "oversell_three",
+   "rationale": "Three concurrent reserves of 4 on capacity 10: at most two should succeed; exposes triple oversell and lost update on reserved.",
+   "state_goals": [
+    {
+     "constraints": [
+      {
+       "field": "id",
+       "int_value": 1,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      },
+      {
+       "field": "capacity",
+       "int_value": 10,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      },
+      {
+       "field": "reserved",
+       "int_value": 0,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      }
+     ],
+     "count": 1,
+     "entity": "event",
+     "label": "ev"
+    }
+   ]
+  }
+ ],
+ [
+  "mc_res_w_r1#2",
+  {
+   "actors": [
+    {
+     "arguments": [
+      {
+       "int_value": 1,
+       "kind": "int",
+       "name": "event_id",
+       "str_value": null
+      },
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "alice"
+      },
+      {
+       "int_value": 5,
+       "kind": "int",
+       "name": "qty",
+       "str_value": null
+      }
+     ],
+     "entrypoint": "reserve_seats",
+     "name": "a1"
+    },
+    {
+     "arguments": [
+      {
+       "int_value": 1,
+       "kind": "int",
+       "name": "event_id",
+       "str_value": null
+      },
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "bob"
+      },
+      {
+       "int_value": 5,
+       "kind": "int",
+       "name": "qty",
+       "str_value": null
+      }
+     ],
+     "entrypoint": "reserve_seats",
+     "name": "a2"
+    }
+   ],
+   "name": "exact_fill_race",
+   "rationale": "Two reserves of 5 exactly fill capacity 10: both should succeed with reserved 10; lost update leaves reserved 5 while two reservations exist.",
+   "state_goals": [
+    {
+     "constraints": [
+      {
+       "field": "id",
+       "int_value": 1,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      },
+      {
+       "field": "capacity",
+       "int_value": 10,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      },
+      {
+       "field": "reserved",
+       "int_value": 0,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      }
+     ],
+     "count": 1,
+     "entity": "event",
+     "label": "ev"
+    }
+   ]
+  }
+ ],
+ [
+  "mc_res_w_r1#3",
+  {
+   "actors": [
+    {
+     "arguments": [
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "alice"
+      }
+     ],
+     "entrypoint": "release_seats",
+     "name": "r1"
+    },
+    {
+     "arguments": [
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "bob"
+      }
+     ],
+     "entrypoint": "release_seats",
+     "name": "r2"
+    }
+   ],
+   "name": "concurrent_releases",
+   "rationale": "Two concurrent releases of different holders on same event: both decrements must apply; concurrent read-modify-write can lose one update.",
+   "state_goals": [
+    {
+     "constraints": [
+      {
+       "field": "id",
+       "int_value": 1,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      },
+      {
+       "field": "capacity",
+       "int_value": 10,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      },
+      {
+       "field": "reserved",
+       "int_value": 8,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      }
+     ],
+     "count": 1,
+     "entity": "event",
+     "label": "ev"
+    },
+    {
+     "constraints": [
+      {
+       "field": "event_id",
+       "int_value": 1,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      },
+      {
+       "field": "holder",
+       "int_value": null,
+       "kind": "str",
+       "op": "eq",
+       "str_value": "alice"
+      },
+      {
+       "field": "qty",
+       "int_value": 3,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      }
+     ],
+     "count": 1,
+     "entity": "reservation",
+     "label": "resa"
+    },
+    {
+     "constraints": [
+      {
+       "field": "event_id",
+       "int_value": 1,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      },
+      {
+       "field": "holder",
+       "int_value": null,
+       "kind": "str",
+       "op": "eq",
+       "str_value": "bob"
+      },
+      {
+       "field": "qty",
+       "int_value": 5,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      }
+     ],
+     "count": 1,
+     "entity": "reservation",
+     "label": "resb"
+    }
+   ]
+  }
+ ],
+ [
+  "mc_res_w_r1#4",
+  {
+   "actors": [
+    {
+     "arguments": [
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "alice"
+      }
+     ],
+     "entrypoint": "release_seats",
+     "name": "r1"
+    },
+    {
+     "arguments": [
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "alice"
+      }
+     ],
+     "entrypoint": "release_seats",
+     "name": "r2"
+    }
+   ],
+   "name": "double_release_same",
+   "rationale": "Two concurrent releases of the same holder: second should be no-op; naive double read can subtract twice and drive reserved negative.",
+   "state_goals": [
+    {
+     "constraints": [
+      {
+       "field": "id",
+       "int_value": 1,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      },
+      {
+       "field": "capacity",
+       "int_value": 10,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      },
+      {
+       "field": "reserved",
+       "int_value": 5,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      }
+     ],
+     "count": 1,
+     "entity": "event",
+     "label": "ev"
+    },
+    {
+     "constraints": [
+      {
+       "field": "event_id",
+       "int_value": 1,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      },
+      {
+       "field": "holder",
+       "int_value": null,
+       "kind": "str",
+       "op": "eq",
+       "str_value": "alice"
+      },
+      {
+       "field": "qty",
+       "int_value": 5,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      }
+     ],
+     "count": 1,
+     "entity": "reservation",
+     "label": "resa"
+    }
+   ]
+  }
+ ],
+ [
+  "mc_res_w_r1#5",
+  {
+   "actors": [
+    {
+     "arguments": [
+      {
+       "int_value": 1,
+       "kind": "int",
+       "name": "event_id",
+       "str_value": null
+      },
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "alice"
+      },
+      {
+       "int_value": 4,
+       "kind": "int",
+       "name": "qty",
+       "str_value": null
+      }
+     ],
+     "entrypoint": "reserve_seats",
+     "name": "a1"
+    },
+    {
+     "arguments": [
+      {
+       "int_value": 1,
+       "kind": "int",
+       "name": "event_id",
+       "str_value": null
+      },
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "alice"
+      },
+      {
+       "int_value": 4,
+       "kind": "int",
+       "name": "qty",
+       "str_value": null
+      }
+     ],
+     "entrypoint": "reserve_seats",
+     "name": "a2"
+    }
+   ],
+   "name": "same_holder_race",
+   "rationale": "Same holder reserves twice concurrently on capacity 6: at most one qty 4 should succeed; tests duplicate holder rows and oversell.",
+   "state_goals": [
+    {
+     "constraints": [
+      {
+       "field": "id",
+       "int_value": 1,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      },
+      {
+       "field": "capacity",
+       "int_value": 6,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      },
+      {
+       "field": "reserved",
+       "int_value": 0,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      }
+     ],
+     "count": 1,
+     "entity": "event",
+     "label": "ev"
+    }
+   ]
+  }
+ ],
+ [
+  "mc_res_w_r1#6",
+  {
+   "actors": [
+    {
+     "arguments": [
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "alice"
+      }
+     ],
+     "entrypoint": "release_seats",
+     "name": "r1"
+    },
+    {
+     "arguments": [
+      {
+       "int_value": 1,
+       "kind": "int",
+       "name": "event_id",
+       "str_value": null
+      },
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "bob"
+      },
+      {
+       "int_value": 8,
+       "kind": "int",
+       "name": "qty",
+       "str_value": null
+      }
+     ],
+     "entrypoint": "reserve_seats",
+     "name": "w1"
+    }
+   ],
+   "name": "release_enables_reserve",
+   "rationale": "Release of 6 enables a reserve of 8 on capacity 10: reserve must succeed only if release commits first; race can cause oversell or spurious rejection.",
+   "state_goals": [
+    {
+     "constraints": [
+      {
+       "field": "id",
+       "int_value": 1,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      },
+      {
+       "field": "capacity",
+       "int_value": 10,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      },
+      {
+       "field": "reserved",
+       "int_value": 6,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      }
+     ],
+     "count": 1,
+     "entity": "event",
+     "label": "ev"
+    },
+    {
+     "constraints": [
+      {
+       "field": "event_id",
+       "int_value": 1,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      },
+      {
+       "field": "holder",
+       "int_value": null,
+       "kind": "str",
+       "op": "eq",
+       "str_value": "alice"
+      },
+      {
+       "field": "qty",
+       "int_value": 6,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      }
+     ],
+     "count": 1,
+     "entity": "reservation",
+     "label": "resa"
+    }
+   ]
+  }
+ ],
+ [
+  "mc_res_w_r1#7",
+  {
+   "actors": [
+    {
+     "arguments": [
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "alice"
+      }
+     ],
+     "entrypoint": "release_seats",
+     "name": "r1"
+    },
+    {
+     "arguments": [
+      {
+       "int_value": 1,
+       "kind": "int",
+       "name": "event_id",
+       "str_value": null
+      },
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "bob"
+      },
+      {
+       "int_value": 6,
+       "kind": "int",
+       "name": "qty",
+       "str_value": null
+      }
+     ],
+     "entrypoint": "reserve_seats",
+     "name": "w1"
+    },
+    {
+     "arguments": [
+      {
+       "int_value": 1,
+       "kind": "int",
+       "name": "event_id",
+       "str_value": null
+      },
+      {
+       "int_value": null,
+       "kind": "str",
+       "name": "holder",
+       "str_value": "carol"
+      },
+      {
+       "int_value": 6,
+       "kind": "int",
+       "name": "qty",
+       "str_value": null
+      }
+     ],
+     "entrypoint": "reserve_seats",
+     "name": "w2"
+    }
+   ],
+   "name": "mixed_release_reserves",
+   "rationale": "One release of 4 plus two competing reserves of 6 on capacity 10: after release only one reserve should succeed; tests admission plus lost update.",
+   "state_goals": [
+    {
+     "constraints": [
+      {
+       "field": "id",
+       "int_value": 1,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      },
+      {
+       "field": "capacity",
+       "int_value": 10,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      },
+      {
+       "field": "reserved",
+       "int_value": 4,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      }
+     ],
+     "count": 1,
+     "entity": "event",
+     "label": "ev"
+    },
+    {
+     "constraints": [
+      {
+       "field": "event_id",
+       "int_value": 1,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      },
+      {
+       "field": "holder",
+       "int_value": null,
+       "kind": "str",
+       "op": "eq",
+       "str_value": "alice"
+      },
+      {
+       "field": "qty",
+       "int_value": 4,
+       "kind": "int",
+       "op": "eq",
+       "str_value": null
+      }
+     ],
+     "count": 1,
+     "entity": "reservation",
+     "label": "resa"
+    }
+   ]
+  }
+ ]
+]

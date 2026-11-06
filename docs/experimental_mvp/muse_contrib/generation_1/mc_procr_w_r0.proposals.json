@@ -1,0 +1,102 @@
+[
+ [
+  "mc_procr_w_r0#0",
+  {
+   "admin_retry": [],
+   "new_jobs": [],
+   "old_jobs": [
+    {
+     "fail_in": "3.3.0",
+     "kind": "flaky"
+    }
+   ],
+   "rationale": "Old producer defers flaky job that fails on old 3.3.0 and succeeds on new; old worker first attempt must fail and be retried to completion by new worker, exposing forward compatibility of old-deferred payload and cross-release retry handoff old-to-new."
+  }
+ ],
+ [
+  "mc_procr_w_r0#1",
+  {
+   "admin_retry": [],
+   "new_jobs": [
+    {
+     "fail_in": "3.4.0",
+     "kind": "flaky"
+    }
+   ],
+   "old_jobs": [],
+   "rationale": "New producer defers flaky job that fails on new 3.4.0 and succeeds on old; new worker first attempt must fail and be retried to completion by old worker, exposing backward compatibility of new-deferred row for old executor and new-to-old retry handoff."
+  }
+ ],
+ [
+  "mc_procr_w_r0#2",
+  {
+   "admin_retry": [
+    2
+   ],
+   "new_jobs": [
+    {
+     "fail_in": "none",
+     "kind": "ok"
+    }
+   ],
+   "old_jobs": [
+    {
+     "fail_in": "none",
+     "kind": "ok"
+    }
+   ],
+   "rationale": "New administrator retries earlier flaky job 2 that failed under old release while both workers concurrently process fresh ok jobs from both producers; success requires new admin to reset pre-migration failed row and either worker to execute it, exposing admin-state handoff and execution race."
+  }
+ ],
+ [
+  "mc_procr_w_r0#3",
+  {
+   "admin_retry": [
+    1
+   ],
+   "new_jobs": [
+    {
+     "fail_in": "none",
+     "kind": "fail"
+    }
+   ],
+   "old_jobs": [
+    {
+     "fail_in": "none",
+     "kind": "fail"
+    }
+   ],
+   "rationale": "Both producers defer always-fail jobs while new administrator retries earlier always-fail job 1; exposes whether retry-once then failed lifecycle, retry counts and terminal failed state are shared consistently or cause lost, duplicated, or incorrectly resurrected executions across releases."
+  }
+ ],
+ [
+  "mc_procr_w_r0#4",
+  {
+   "admin_retry": [
+    1,
+    2
+   ],
+   "new_jobs": [
+    {
+     "fail_in": "3.3.0",
+     "kind": "flaky"
+    },
+    {
+     "fail_in": "3.4.0",
+     "kind": "flaky"
+    }
+   ],
+   "old_jobs": [
+    {
+     "fail_in": "3.3.0",
+     "kind": "flaky"
+    },
+    {
+     "fail_in": "3.4.0",
+     "kind": "flaky"
+    }
+   ],
+   "rationale": "Symmetric cross-version flakies from both producers plus admin retry of both earlier failed jobs maximizes nondeterministic assignment of first attempts and retries to old vs new workers, exposing ownership, visibility and exactly-once handling when defer, execute, retry and administer interleave across releases."
+  }
+ ]
+]
