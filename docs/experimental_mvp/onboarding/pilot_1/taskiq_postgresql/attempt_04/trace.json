@@ -1,0 +1,1130 @@
+{
+ "actors": {
+  "install": {
+   "handler": "onb-pilot.install",
+   "args": {},
+   "state": "finished",
+   "result": {
+    "installed": true,
+    "create_table": {
+     "str": 12,
+     "sha256": "c3e7064f11e0"
+    }
+   },
+   "exception": null,
+   "exception_class": null,
+   "backend_pid": 6636,
+   "transactions": 2
+  },
+  "enqueue": {
+   "handler": "onb-pilot.enqueue",
+   "args": {
+    "jobs": [
+     {
+      "key": {
+       "str": 2,
+       "sha256": "08243666f926"
+      },
+      "task": {
+       "str": 7,
+       "sha256": "98fa6c50b6f0"
+      },
+      "args": {
+       "n": 1
+      }
+     },
+     {
+      "key": {
+       "str": 2,
+       "sha256": "a499068b8f45"
+      },
+      "task": {
+       "str": 7,
+       "sha256": "98fa6c50b6f0"
+      },
+      "args": {
+       "n": 2
+      }
+     },
+     {
+      "key": {
+       "str": 2,
+       "sha256": "e73d2c69dab6"
+      },
+      "task": {
+       "str": 7,
+       "sha256": "98fa6c50b6f0"
+      },
+      "args": {
+       "n": 3
+      }
+     }
+    ]
+   },
+   "state": "finished",
+   "result": {
+    "enqueued": [
+     {
+      "str": 32,
+      "sha256": "c8a905ca3415"
+     },
+     {
+      "str": 32,
+      "sha256": "cb274a614791"
+     },
+     {
+      "str": 32,
+      "sha256": "4752359e685e"
+     }
+    ]
+   },
+   "exception": null,
+   "exception_class": null,
+   "backend_pid": 6638,
+   "transactions": 6
+  },
+  "work": {
+   "handler": "onb-pilot.work",
+   "args": {
+    "expect": 3,
+    "timeout_s": 60.0
+   },
+   "state": "finished",
+   "result": {
+    "processed": 3,
+    "handled": [
+     {
+      "str": 2,
+      "sha256": "08243666f926"
+     },
+     {
+      "str": 2,
+      "sha256": "a499068b8f45"
+     },
+     {
+      "str": 2,
+      "sha256": "e73d2c69dab6"
+     }
+    ]
+   },
+   "exception": null,
+   "exception_class": null,
+   "backend_pid": 6640,
+   "transactions": 4
+  }
+ },
+ "records": [
+  {
+   "seq": 0,
+   "actor": "install",
+   "kind": "execute",
+   "sql": "CREATE TABLE IF NOT EXISTS taskiq_messages (id SERIAL NOT NULL PRIMARY KEY, task_id Uuid NOT NULL, task_name VARCHAR NOT NULL, message BYTEA NOT NULL, labels JSONB NOT NULL, created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW())",
+   "statement_id": "340ce36c6cf4",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "install",
+    "handler": "install",
+    "invocation_id": "onb_pilot_install:install",
+    "migration_phase": "",
+    "logical_op": 0,
+    "session": {
+     "backend_pid": 6636
+    },
+    "task": "ds-actor-install",
+    "on_behalf_of": null,
+    "call_site": "../app/src/taskiq_postgresql/drivers/_psycopg.py:127:create_table",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "native"
+   },
+   "grant": 0,
+   "decision": 0,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 10.96,
+   "completed_ms": 12.19
+  },
+  {
+   "seq": 1,
+   "actor": "install",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "install",
+    "handler": "install",
+    "invocation_id": "onb_pilot_install:install",
+    "migration_phase": "",
+    "logical_op": 1,
+    "session": {
+     "backend_pid": 6636
+    },
+    "task": "ds-actor-install",
+    "on_behalf_of": null,
+    "call_site": "../app/src/taskiq_postgresql/drivers/_psycopg.py:97:connection",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 1,
+   "decision": 1,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 12.23,
+   "completed_ms": 12.28
+  },
+  {
+   "seq": 2,
+   "actor": "install",
+   "kind": "execute",
+   "sql": "CREATE INDEX IF NOT EXISTS taskiq_messages_id_idx ON taskiq_messages USING HASH (id);",
+   "statement_id": "971c8fb97891",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "install",
+    "handler": "install",
+    "invocation_id": "onb_pilot_install:install",
+    "migration_phase": "",
+    "logical_op": 2,
+    "session": {
+     "backend_pid": 6636
+    },
+    "task": "ds-actor-install",
+    "on_behalf_of": null,
+    "call_site": "../app/src/taskiq_postgresql/drivers/_psycopg.py:137:create_index",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "native"
+   },
+   "grant": 2,
+   "decision": 2,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 12.32,
+   "completed_ms": 12.54
+  },
+  {
+   "seq": 3,
+   "actor": "install",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "install",
+    "handler": "install",
+    "invocation_id": "onb_pilot_install:install",
+    "migration_phase": "",
+    "logical_op": 3,
+    "session": {
+     "backend_pid": 6636
+    },
+    "task": "ds-actor-install",
+    "on_behalf_of": null,
+    "call_site": "../app/src/taskiq_postgresql/drivers/_psycopg.py:97:connection",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 3,
+   "decision": 3,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 12.56,
+   "completed_ms": 12.6
+  },
+  {
+   "seq": 0,
+   "actor": "enqueue",
+   "kind": "execute",
+   "sql": "INSERT INTO taskiq_messages (task_id, task_name, message, labels) VALUES ($1, $2, $3, $4) RETURNING id",
+   "statement_id": "41c94f677e2f",
+   "params": [
+    {
+     "str": 32,
+     "sha256": "c8a905ca3415"
+    },
+    {
+     "str": 7,
+     "sha256": "98fa6c50b6f0"
+    },
+    {
+     "bytes": 151,
+     "sha256": "6fb78972781c"
+    },
+    {
+     "str": 2,
+     "sha256": "44136fa355b3"
+    }
+   ],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "enqueue",
+    "handler": "enqueue",
+    "invocation_id": "onb_pilot_enqueue:enqueue",
+    "migration_phase": "",
+    "logical_op": 0,
+    "session": {
+     "backend_pid": 6638
+    },
+    "task": "ds-actor-enqueue",
+    "on_behalf_of": null,
+    "call_site": "../app/src/taskiq_postgresql/drivers/_psycopg.py:149:insert",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "native"
+   },
+   "grant": 1000000,
+   "decision": 0,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    [
+     1
+    ]
+   ],
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 6.17,
+   "completed_ms": 6.68
+  },
+  {
+   "seq": 1,
+   "actor": "enqueue",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "enqueue",
+    "handler": "enqueue",
+    "invocation_id": "onb_pilot_enqueue:enqueue",
+    "migration_phase": "",
+    "logical_op": 1,
+    "session": {
+     "backend_pid": 6638
+    },
+    "task": "ds-actor-enqueue",
+    "on_behalf_of": null,
+    "call_site": "../app/src/taskiq_postgresql/drivers/_psycopg.py:97:connection",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 1000001,
+   "decision": 1,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 6.71,
+   "completed_ms": 6.74
+  },
+  {
+   "seq": 2,
+   "actor": "enqueue",
+   "kind": "execute",
+   "sql": "NOTIFY taskiq, '1'",
+   "statement_id": "e2aefab7b7c2",
+   "params": [],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "enqueue",
+    "handler": "enqueue",
+    "invocation_id": "onb_pilot_enqueue:enqueue",
+    "migration_phase": "",
+    "logical_op": 2,
+    "session": {
+     "backend_pid": 6638
+    },
+    "task": "ds-actor-enqueue",
+    "on_behalf_of": null,
+    "call_site": "../app/src/taskiq_postgresql/drivers/_psycopg.py:289:execute",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "native"
+   },
+   "grant": 1000002,
+   "decision": 2,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 6.77,
+   "completed_ms": 6.89
+  },
+  {
+   "seq": 3,
+   "actor": "enqueue",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "enqueue",
+    "handler": "enqueue",
+    "invocation_id": "onb_pilot_enqueue:enqueue",
+    "migration_phase": "",
+    "logical_op": 3,
+    "session": {
+     "backend_pid": 6638
+    },
+    "task": "ds-actor-enqueue",
+    "on_behalf_of": null,
+    "call_site": "../app/src/taskiq_postgresql/drivers/_psycopg.py:97:connection",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 1000003,
+   "decision": 3,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 6.92,
+   "completed_ms": 6.96
+  },
+  {
+   "seq": 4,
+   "actor": "enqueue",
+   "kind": "execute",
+   "sql": "INSERT INTO taskiq_messages (task_id, task_name, message, labels) VALUES ($1, $2, $3, $4) RETURNING id",
+   "statement_id": "41c94f677e2f",
+   "params": [
+    {
+     "str": 32,
+     "sha256": "cb274a614791"
+    },
+    {
+     "str": 7,
+     "sha256": "98fa6c50b6f0"
+    },
+    {
+     "bytes": 151,
+     "sha256": "56702d1f1c29"
+    },
+    {
+     "str": 2,
+     "sha256": "44136fa355b3"
+    }
+   ],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "enqueue",
+    "handler": "enqueue",
+    "invocation_id": "onb_pilot_enqueue:enqueue",
+    "migration_phase": "",
+    "logical_op": 4,
+    "session": {
+     "backend_pid": 6638
+    },
+    "task": "ds-actor-enqueue",
+    "on_behalf_of": null,
+    "call_site": "../app/src/taskiq_postgresql/drivers/_psycopg.py:149:insert",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "native"
+   },
+   "grant": 1000004,
+   "decision": 4,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    [
+     2
+    ]
+   ],
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 7.03,
+   "completed_ms": 7.22
+  },
+  {
+   "seq": 5,
+   "actor": "enqueue",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "enqueue",
+    "handler": "enqueue",
+    "invocation_id": "onb_pilot_enqueue:enqueue",
+    "migration_phase": "",
+    "logical_op": 5,
+    "session": {
+     "backend_pid": 6638
+    },
+    "task": "ds-actor-enqueue",
+    "on_behalf_of": null,
+    "call_site": "../app/src/taskiq_postgresql/drivers/_psycopg.py:97:connection",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 1000005,
+   "decision": 5,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 7.24,
+   "completed_ms": 7.28
+  },
+  {
+   "seq": 6,
+   "actor": "enqueue",
+   "kind": "execute",
+   "sql": "NOTIFY taskiq, '2'",
+   "statement_id": "84a76a588e28",
+   "params": [],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "enqueue",
+    "handler": "enqueue",
+    "invocation_id": "onb_pilot_enqueue:enqueue",
+    "migration_phase": "",
+    "logical_op": 6,
+    "session": {
+     "backend_pid": 6638
+    },
+    "task": "ds-actor-enqueue",
+    "on_behalf_of": null,
+    "call_site": "../app/src/taskiq_postgresql/drivers/_psycopg.py:289:execute",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "native"
+   },
+   "grant": 1000006,
+   "decision": 6,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 7.31,
+   "completed_ms": 7.42
+  },
+  {
+   "seq": 7,
+   "actor": "enqueue",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "enqueue",
+    "handler": "enqueue",
+    "invocation_id": "onb_pilot_enqueue:enqueue",
+    "migration_phase": "",
+    "logical_op": 7,
+    "session": {
+     "backend_pid": 6638
+    },
+    "task": "ds-actor-enqueue",
+    "on_behalf_of": null,
+    "call_site": "../app/src/taskiq_postgresql/drivers/_psycopg.py:97:connection",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 1000007,
+   "decision": 7,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 7.44,
+   "completed_ms": 7.46
+  },
+  {
+   "seq": 8,
+   "actor": "enqueue",
+   "kind": "execute",
+   "sql": "INSERT INTO taskiq_messages (task_id, task_name, message, labels) VALUES ($1, $2, $3, $4) RETURNING id",
+   "statement_id": "41c94f677e2f",
+   "params": [
+    {
+     "str": 32,
+     "sha256": "4752359e685e"
+    },
+    {
+     "str": 7,
+     "sha256": "98fa6c50b6f0"
+    },
+    {
+     "bytes": 151,
+     "sha256": "aef944013032"
+    },
+    {
+     "str": 2,
+     "sha256": "44136fa355b3"
+    }
+   ],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "enqueue",
+    "handler": "enqueue",
+    "invocation_id": "onb_pilot_enqueue:enqueue",
+    "migration_phase": "",
+    "logical_op": 8,
+    "session": {
+     "backend_pid": 6638
+    },
+    "task": "ds-actor-enqueue",
+    "on_behalf_of": null,
+    "call_site": "../app/src/taskiq_postgresql/drivers/_psycopg.py:149:insert",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "native"
+   },
+   "grant": 1000008,
+   "decision": 8,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    [
+     3
+    ]
+   ],
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 7.53,
+   "completed_ms": 7.68
+  },
+  {
+   "seq": 9,
+   "actor": "enqueue",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "enqueue",
+    "handler": "enqueue",
+    "invocation_id": "onb_pilot_enqueue:enqueue",
+    "migration_phase": "",
+    "logical_op": 9,
+    "session": {
+     "backend_pid": 6638
+    },
+    "task": "ds-actor-enqueue",
+    "on_behalf_of": null,
+    "call_site": "../app/src/taskiq_postgresql/drivers/_psycopg.py:97:connection",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 1000009,
+   "decision": 9,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 7.71,
+   "completed_ms": 7.74
+  },
+  {
+   "seq": 10,
+   "actor": "enqueue",
+   "kind": "execute",
+   "sql": "NOTIFY taskiq, '3'",
+   "statement_id": "f526558201a6",
+   "params": [],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "enqueue",
+    "handler": "enqueue",
+    "invocation_id": "onb_pilot_enqueue:enqueue",
+    "migration_phase": "",
+    "logical_op": 10,
+    "session": {
+     "backend_pid": 6638
+    },
+    "task": "ds-actor-enqueue",
+    "on_behalf_of": null,
+    "call_site": "../app/src/taskiq_postgresql/drivers/_psycopg.py:289:execute",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "native"
+   },
+   "grant": 1000010,
+   "decision": 10,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 7.78,
+   "completed_ms": 7.88
+  },
+  {
+   "seq": 11,
+   "actor": "enqueue",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "enqueue",
+    "handler": "enqueue",
+    "invocation_id": "onb_pilot_enqueue:enqueue",
+    "migration_phase": "",
+    "logical_op": 11,
+    "session": {
+     "backend_pid": 6638
+    },
+    "task": "ds-actor-enqueue",
+    "on_behalf_of": null,
+    "call_site": "../app/src/taskiq_postgresql/drivers/_psycopg.py:97:connection",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 1000011,
+   "decision": 11,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 7.9,
+   "completed_ms": 7.92
+  },
+  {
+   "seq": 0,
+   "actor": "work",
+   "kind": "execute",
+   "sql": "SELECT id FROM taskiq_messages ORDER BY id",
+   "statement_id": "e0ac0acfe0ec",
+   "params": [],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 0,
+    "session": {
+     "backend_pid": 6640
+    },
+    "task": "ds-actor-work",
+    "on_behalf_of": null,
+    "call_site": "../app/src/taskiq_postgresql/drivers/_psycopg.py:289:execute",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "native"
+   },
+   "grant": 2000000,
+   "decision": 0,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 3,
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ]
+   ],
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 5.65,
+   "completed_ms": 6.02
+  },
+  {
+   "seq": 1,
+   "actor": "work",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 1,
+    "session": {
+     "backend_pid": 6640
+    },
+    "task": "ds-actor-work",
+    "on_behalf_of": null,
+    "call_site": "../app/src/taskiq_postgresql/drivers/_psycopg.py:97:connection",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 2000001,
+   "decision": 1,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 6.04,
+   "completed_ms": 6.07
+  },
+  {
+   "seq": 2,
+   "actor": "work",
+   "kind": "execute",
+   "sql": "DELETE FROM taskiq_messages WHERE id = $1 RETURNING message",
+   "statement_id": "90f3df50e415",
+   "params": [
+    1
+   ],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 2,
+    "session": {
+     "backend_pid": 6640
+    },
+    "task": "ds-actor-work",
+    "on_behalf_of": null,
+    "call_site": "../app/src/taskiq_postgresql/drivers/_psycopg.py:209:delete_returning",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "native"
+   },
+   "grant": 2000002,
+   "decision": 2,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    {
+     "message": {
+      "bytes": 151,
+      "sha256": "6fb78972781c"
+     }
+    }
+   ],
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 6.11,
+   "completed_ms": 6.34
+  },
+  {
+   "seq": 3,
+   "actor": "work",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 3,
+    "session": {
+     "backend_pid": 6640
+    },
+    "task": "ds-actor-work",
+    "on_behalf_of": null,
+    "call_site": "../app/src/taskiq_postgresql/drivers/_psycopg.py:97:connection",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 2000003,
+   "decision": 3,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 6.36,
+   "completed_ms": 6.38
+  },
+  {
+   "seq": 4,
+   "actor": "work",
+   "kind": "execute",
+   "sql": "DELETE FROM taskiq_messages WHERE id = $1 RETURNING message",
+   "statement_id": "90f3df50e415",
+   "params": [
+    2
+   ],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 4,
+    "session": {
+     "backend_pid": 6640
+    },
+    "task": "ds-actor-work",
+    "on_behalf_of": null,
+    "call_site": "../app/src/taskiq_postgresql/drivers/_psycopg.py:209:delete_returning",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "native"
+   },
+   "grant": 2000004,
+   "decision": 4,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    {
+     "message": {
+      "bytes": 151,
+      "sha256": "56702d1f1c29"
+     }
+    }
+   ],
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 6.55,
+   "completed_ms": 6.7
+  },
+  {
+   "seq": 5,
+   "actor": "work",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 5,
+    "session": {
+     "backend_pid": 6640
+    },
+    "task": "ds-actor-work",
+    "on_behalf_of": null,
+    "call_site": "../app/src/taskiq_postgresql/drivers/_psycopg.py:97:connection",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 2000005,
+   "decision": 5,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 6.72,
+   "completed_ms": 6.75
+  },
+  {
+   "seq": 6,
+   "actor": "work",
+   "kind": "execute",
+   "sql": "DELETE FROM taskiq_messages WHERE id = $1 RETURNING message",
+   "statement_id": "90f3df50e415",
+   "params": [
+    3
+   ],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 6,
+    "session": {
+     "backend_pid": 6640
+    },
+    "task": "ds-actor-work",
+    "on_behalf_of": null,
+    "call_site": "../app/src/taskiq_postgresql/drivers/_psycopg.py:209:delete_returning",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "native"
+   },
+   "grant": 2000006,
+   "decision": 6,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    {
+     "message": {
+      "bytes": 151,
+      "sha256": "aef944013032"
+     }
+    }
+   ],
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 6.81,
+   "completed_ms": 6.94
+  },
+  {
+   "seq": 7,
+   "actor": "work",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 7,
+    "session": {
+     "backend_pid": 6640
+    },
+    "task": "ds-actor-work",
+    "on_behalf_of": null,
+    "call_site": "../app/src/taskiq_postgresql/drivers/_psycopg.py:97:connection",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 2000007,
+   "decision": 7,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 6.95,
+   "completed_ms": 6.98
+  }
+ ]
+}

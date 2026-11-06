@@ -1,0 +1,120 @@
+{
+ "allowed_resources": {
+  "M_only": [
+   "Muse via research_tools/onboarding/pilot.py muse (JSON proposals; never executed)"
+  ],
+  "both": [
+   "the pinned sdist (source and PKG-INFO), read as data",
+   "PyPI JSON metadata (wheel resolution)",
+   "this repository's harness, code and docs, including existing adapters as examples",
+   "the operator's general knowledge"
+  ]
+ },
+ "analysis": {
+  "code": "onboarding_pilot/analysis.py: table(); descriptive only",
+  "no_inference": true
+ },
+ "apps": [
+  {
+   "app": "saq",
+   "condition": "D",
+   "declared_paths": [
+    "src/deployspecter/experimental/onboarding_pilot/adapters/saq.py",
+    "docs/experimental_mvp/onboarding/pilot_1/saq/spec.json",
+    "docs/experimental_mvp/onboarding/pilot_1/saq/workload.json"
+   ],
+   "sdist": "saq-0.26.5.tar.gz",
+   "sdist_sha256": "75e8664ca1351f46a400d28d0441612be4feb6c51ab206cdfad9dc06fcb42acc",
+   "version": "0.26.5",
+   "why_eligible": "MIT; Postgres queue via psycopg[pool]>=3.2; pure-Python wheel; all dependencies have linux aarch64 cp312 or pure wheels; not previously integrated; not a held-out or frozen development app"
+  },
+  {
+   "app": "taskiq_postgresql",
+   "condition": "M",
+   "declared_paths": [
+    "src/deployspecter/experimental/onboarding_pilot/adapters/taskiq_postgresql.py",
+    "docs/experimental_mvp/onboarding/pilot_1/taskiq_postgresql/spec.json",
+    "docs/experimental_mvp/onboarding/pilot_1/taskiq_postgresql/workload.json"
+   ],
+   "related_pins": {
+    "taskiq-0.13.0.tar.gz": "7d56609a6c5a20b0c9da67e9f310ec9640266f620b8f81880bccd5f16913e687"
+   },
+   "sdist": "taskiq_postgresql-0.4.0.tar.gz",
+   "sdist_sha256": "3e8cda663ec2893adfcf2d1f30447b2c03cc46067622e1f9e1c9a45f4e22731f",
+   "version": "0.4.0",
+   "why_eligible": "MIT; psycopg extra uses psycopg[binary,pool]>=3.2.9; pure-Python wheel; dependencies have usable wheels; not previously integrated"
+  }
+ ],
+ "assignment": {
+  "limits": [
+   "a single operator cannot do both conditions on one app without carry-over, so each app gets one condition",
+   "the second session benefits from familiarity with the harness gained in the first (favours the second condition)",
+   "the two apps differ in difficulty; any difference between conditions is confounded with the app"
+  ],
+  "order": "the D app first, then the M app",
+  "result": {
+   "saq": "D",
+   "taskiq_postgresql": "M"
+  },
+  "rule": "sha256(seed)[0] even -> saq is D, taskiq_postgresql is M; odd -> the reverse",
+  "seed": "onb-pilot-1:saq-0.26.5:taskiq_postgresql-0.4.0",
+  "sha256_first_byte": 16
+ },
+ "budgets": {
+  "max_attempts": 10,
+  "muse": {
+   "condition": "M only; per-call log in the session's muse_calls.jsonl",
+   "max_calls": 3,
+   "max_estimated_usd": 2.0
+  },
+  "wall_clock_seconds": 5400,
+  "work_timeout_s": 60
+ },
+ "code_sha256": {
+  "research_tools/onboarding/fetch_pilot_sdists.py": "2d5f39540d39da669846e52cf3eade68c073f14c5d2964866415a6f86ebdbdbd",
+  "research_tools/onboarding/pilot.py": "b298be198add463af8bd1a7b4f3efd512f089a1c20381c164971a1ca377c1291",
+  "research_tools/onboarding/pilot_inside.py": "57210fa8c0ad89c3f8054a50c4e69c5e495e4f6c286fc0dc66083186ad8beacc",
+  "research_tools/onboarding/pilot_runner.py": "08f54cb1e84849f7e6a7012141e805ce89186a18417be57f10b660e287fbc95f",
+  "src/deployspecter/experimental/onboarding_pilot/__init__.py": "b1d7f6d0f1727f8e841939ff55804ece478ed1192327a1cde263c2ca44a29ad5",
+  "src/deployspecter/experimental/onboarding_pilot/analysis.py": "e201abfad604fe8d9a78e4d0354ba97173d1a94afe3d825a248fb94b732cf9a6",
+  "src/deployspecter/experimental/onboarding_pilot/correctness.py": "c449810f1221fe831da7f480f4fb02abd86daee3b3a484e052910ff8406791e4",
+  "src/deployspecter/experimental/onboarding_pilot/muse_assist.py": "55fb6046e6ea60e08aefce5e50c994614e4f65c3f4ec99ff0113267c43bd331f",
+  "src/deployspecter/experimental/onboarding_pilot/recorder.py": "0b5f908e875e216b07dc74e2036e0a4b24d74c736879051d5a853c8417df337a",
+  "src/deployspecter/experimental/onboarding_pilot/session.py": "faf5c4610cd3ecc93cd16de8788f0adca4d61040b475bb073472742f48da179d",
+  "src/deployspecter/experimental/onboarding_pilot/spec.py": "05d26391dcf831b53a0b5d05b7cd9ac16b391b3e9fdb7b575a3ee14740a617d1"
+ },
+ "excluded": {
+  "chancy, procrastinate, pgqueuer": "already integrated (frozen development apps)",
+  "dbos 3.4.0, hatchet-sdk 1.45.1": "large frameworks (SQLAlchemy, gRPC services); broad new framework work",
+  "django-tasks 0.12.0": "Django ORM backend: would need Django in the runner, broader framework work",
+  "minique, arq": "Redis",
+  "oban 0.7.0": "depends on erlpack 1.0.1, which has no linux aarch64 cp312 wheel; the pinned runner image has no compiler",
+  "pgjobq 0.10.0, taskiq-pg 0.2.0": "asyncpg, not psycopg 3",
+  "pgmq 1.1.4": "needs the pgmq PostgreSQL extension (not in the disposable PostgreSQL 16)",
+  "pq 1.9.1, pgqueue 0.6, dramatiq-pg 0.12.0": "psycopg2, not psycopg 3",
+  "saleor, healthchecks, netbox, authentik": "held out; never read"
+ },
+ "frozen_at": "2026-11-06T16:53:03Z",
+ "label": "NONBLIND EXPLORATORY PILOT: one operator (an AI agent that built this harness and knows the codebase); not an independent participant",
+ "measures": "session.measure (onb-pilot/1): seconds to S1, S2 and S3 and total; interventions (every manual operator action recorded with pilot.py note); proposals and rejections by source; attempts and failures; adapter lines final and revised (declared paths, snapshot diffs); model calls, tokens, est. USD; S3 pass rate on S2 runs",
+ "muse": {
+  "instructions_sha256": "7df1d9c487b0f5a43edd1382f5d865357502580f956b72c7bf9494721f78f446",
+  "prompt_version": "onb-pilot-muse-1",
+  "schema_sha256": "1b69845b728c2b95ee17785a37a50ca0350f6a4ab79066985f275b9894973d31",
+  "settings": "MetaClient via muse.client_from_env_file: reasoning_effort=medium, store=False, max_output_tokens=6000; model name from MODEL_NAME, recorded per call"
+ },
+ "operator": {
+  "id": "integrator-ai",
+  "kind": "developer-ai"
+ },
+ "question": "Does Muse assistance reduce the work to bring a previously unintegrated PostgreSQL job-queue library to S3 under the onb-pilot/1 harness?",
+ "status": "FROZEN before any onboarding work on either app (no source of either app read; selection from PyPI metadata only)",
+ "stopping_rule": "stop at S3, or when a budget is spent (recorded as budget_stop); an unmet milestone is censored at the budget, never imputed",
+ "success": {
+  "S1": "the first spec and workload both accepted by spec.validate (against these pins)",
+  "S2": "the first run whose server-log corroboration is ok with 0 parameters mismatched, isolation ok, teardown complete",
+  "S3": "the first S2 run where the harness recorder saw every enqueued key handled exactly once and every step finished without an exception",
+  "workload": "at least 2 jobs of one declared task with an int argument; the operator's or Muse's, validated identically"
+ },
+ "version": "onb-pilot-manifest/1"
+}
