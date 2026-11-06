@@ -310,3 +310,21 @@ CREATE TRIGGER jobs_ev AFTER INSERT ON jobs FOR EACH ROW EXECUTE FUNCTION ev();"
                                                                            "status": TV("str", "todo")})])
     assert o.status == "refused_triggers" and "events" in json.dumps(o.detail) and "now()" in json.dumps(o.detail)
     assert rows_of(target, schema, "jobs") == [] and rows_of(target, schema, "events") == []
+
+
+def test_an_interruption_during_sandbox_construction_leaves_the_target_untouched(target, sandbox, cleanup,
+                                                                                  monkeypatch):
+    from deployspecter.experimental.phase9b_ext import loader
+    schema = make(target, "sbint", AUDIT_DDL)
+    cleanup.append(schema)
+    real = loader.construct
+
+    def interrupted(*a, **k):
+        real(*a, **k)
+        raise KeyboardInterrupt  # after the sandbox work, before anything reaches the target
+    monkeypatch.setattr(pipeline_v1.loader, "construct", interrupted)
+    with pytest.raises(KeyboardInterrupt):
+        pipeline_v1.construct_on_target(target, sandbox, schema, [("items", {"id": TV("int", 1),
+                                                                             "label": TV("str", "x")})])
+    assert rows_of(target, schema, "items") == [] and rows_of(target, schema, "audit") == []
+    # the module's sandbox fixture still tears the constructor's database and role down (asserted at teardown)

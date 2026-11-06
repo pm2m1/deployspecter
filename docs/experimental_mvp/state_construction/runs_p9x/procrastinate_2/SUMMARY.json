@@ -1,0 +1,344 @@
+{
+ "construction": {
+  "classification": null,
+  "detail": [
+   "procrastinate_jobs.procrastinate_trigger_abort_requested_events_v1: writes procrastinate_events, whose column id defaults to non-deterministic \"nextval('procrastinate_events_id_seq'::regclass)\", writes procrastinate_events, whose column at defaults to non-deterministic 'now()'",
+   "procrastinate_jobs.procrastinate_trigger_delete_jobs_v1: writes procrastinate_periodic_defers, whose column id defaults to non-deterministic \"nextval('procrastinate_periodic_defers_id_seq'::regclass)\"",
+   "procrastinate_jobs.procrastinate_trigger_scheduled_events_v1: writes procrastinate_events, whose column id defaults to non-deterministic \"nextval('procrastinate_events_id_seq'::regclass)\", writes procrastinate_events, whose column at defaults to non-deterministic 'now()'",
+   "procrastinate_jobs.procrastinate_trigger_status_events_insert_v1: writes procrastinate_events, whose column id defaults to non-deterministic \"nextval('procrastinate_events_id_seq'::regclass)\", writes procrastinate_events, whose column at defaults to non-deterministic 'now()'",
+   "procrastinate_jobs.procrastinate_trigger_status_events_update_v1: writes procrastinate_events, whose column id defaults to non-deterministic \"nextval('procrastinate_events_id_seq'::regclass)\", writes procrastinate_events, whose column at defaults to non-deterministic 'now()'"
+  ],
+  "export": {
+   "objects": {
+    "columns": 23,
+    "composites": 1,
+    "constraints": 9,
+    "domains": 0,
+    "enums": 2,
+    "functions": 18,
+    "identity_sequences": 1,
+    "indexes": 9,
+    "inherits": 0,
+    "policies": 0,
+    "relations": 8,
+    "rules": 0,
+    "sequence_owners": 3,
+    "sequences": 4,
+    "triggers": 7
+   },
+   "setup_sql_sha256": "71aa6acee6b1b515abe8a0c211d6b72888e82d99ae5dcf472fb5052e29e8a6a8",
+   "version": "catalog/1"
+  },
+  "fingerprint_sha256": "68eaa3d9710788f42b69526e7aba19944e1978f8c7059df831acfe0f9e44e612",
+  "identity": {
+   "extension": "ds-p9x/1",
+   "jsonb_contract": "jsonb/1",
+   "jsonb_v1_sha256": "a315861eb137fa7b71ba71d923ddca2e8c128bbaf3c26761723230281e54f369",
+   "loader_sha256": "b408000fe31fdcac19be767f9d9d6a9f59679dbe6eaaa3d38b8f7945180ad7e8",
+   "package": "deployspecter._phase9b_ext_v1",
+   "phase9b_sources_sha256": {
+    "seed_feasibility.py": "2684e57fbce8e594ccd82bd02eb3952744613e6eec3e50d25b329d0b6d972152",
+    "state_constructor.py": "bb3fec6c4efa473315c76eb8d923c00ea17373475f05b84a3bc3dd1efd47c397",
+    "triggers.py": "de970dd5d313a2ea4b420a90765e2b457695b780c53819603bc9fa038bb46647"
+   },
+   "substitutions": {
+    "seed_feasibility._same": "deployspecter.experimental.phase9b_ext.loader.same_v1"
+   }
+  },
+  "plan": null,
+  "readback": null,
+  "report": null,
+  "stage": "screen",
+  "status": "refused_triggers",
+  "trace": null,
+  "triggers": {
+   "controlled": {
+    "procrastinate_jobs": [
+     {
+      "enabled": "O",
+      "events": [
+       "UPDATE"
+      ],
+      "function": "procrastinate_notify_queue_abort_job_v1",
+      "row_level": true,
+      "timing": "AFTER",
+      "trigger": "procrastinate_jobs_notify_queue_job_aborted_v1"
+     },
+     {
+      "enabled": "O",
+      "events": [
+       "INSERT"
+      ],
+      "function": "procrastinate_notify_queue_job_inserted_v1",
+      "row_level": true,
+      "timing": "AFTER",
+      "trigger": "procrastinate_jobs_notify_queue_job_inserted_v1"
+     },
+     {
+      "enabled": "O",
+      "events": [
+       "UPDATE"
+      ],
+      "function": "procrastinate_trigger_abort_requested_events_procedure_v1",
+      "row_level": true,
+      "timing": "AFTER",
+      "trigger": "procrastinate_trigger_abort_requested_events_v1"
+     },
+     {
+      "enabled": "O",
+      "events": [
+       "DELETE"
+      ],
+      "function": "procrastinate_unlink_periodic_defers_v1",
+      "row_level": true,
+      "timing": "BEFORE",
+      "trigger": "procrastinate_trigger_delete_jobs_v1"
+     },
+     {
+      "enabled": "O",
+      "events": [
+       "INSERT",
+       "UPDATE"
+      ],
+      "function": "procrastinate_trigger_function_scheduled_events_v1",
+      "row_level": true,
+      "timing": "AFTER",
+      "trigger": "procrastinate_trigger_scheduled_events_v1"
+     },
+     {
+      "enabled": "O",
+      "events": [
+       "INSERT"
+      ],
+      "function": "procrastinate_trigger_function_status_events_insert_v1",
+      "row_level": true,
+      "timing": "AFTER",
+      "trigger": "procrastinate_trigger_status_events_insert_v1"
+     },
+     {
+      "enabled": "O",
+      "events": [
+       "UPDATE"
+      ],
+      "function": "procrastinate_trigger_function_status_events_update_v1",
+      "row_level": true,
+      "timing": "AFTER",
+      "trigger": "procrastinate_trigger_status_events_update_v1"
+     }
+    ]
+   },
+   "notifications": [
+    "procrastinate_jobs_notify_queue_job_aborted_v1: sends a notification (an external effect, not table state)",
+    "procrastinate_jobs_notify_queue_job_inserted_v1: sends a notification (an external effect, not table state)"
+   ],
+   "refused": [
+    "procrastinate_jobs.procrastinate_trigger_abort_requested_events_v1: writes procrastinate_events, whose column id defaults to non-deterministic \"nextval('procrastinate_events_id_seq'::regclass)\", writes procrastinate_events, whose column at defaults to non-deterministic 'now()'",
+    "procrastinate_jobs.procrastinate_trigger_delete_jobs_v1: writes procrastinate_periodic_defers, whose column id defaults to non-deterministic \"nextval('procrastinate_periodic_defers_id_seq'::regclass)\"",
+    "procrastinate_jobs.procrastinate_trigger_scheduled_events_v1: writes procrastinate_events, whose column id defaults to non-deterministic \"nextval('procrastinate_events_id_seq'::regclass)\", writes procrastinate_events, whose column at defaults to non-deterministic 'now()'",
+    "procrastinate_jobs.procrastinate_trigger_status_events_insert_v1: writes procrastinate_events, whose column id defaults to non-deterministic \"nextval('procrastinate_events_id_seq'::regclass)\", writes procrastinate_events, whose column at defaults to non-deterministic 'now()'",
+    "procrastinate_jobs.procrastinate_trigger_status_events_update_v1: writes procrastinate_events, whose column id defaults to non-deterministic \"nextval('procrastinate_events_id_seq'::regclass)\", writes procrastinate_events, whose column at defaults to non-deterministic 'now()'"
+   ]
+  },
+  "write": null
+ },
+ "export": {
+  "objects": {
+   "columns": 23,
+   "composites": 1,
+   "constraints": 9,
+   "domains": 0,
+   "enums": 2,
+   "functions": 18,
+   "identity_sequences": 1,
+   "indexes": 9,
+   "inherits": 0,
+   "policies": 0,
+   "relations": 8,
+   "rules": 0,
+   "sequence_owners": 3,
+   "sequences": 4,
+   "triggers": 7
+  },
+  "setup_sql_sha256": "71aa6acee6b1b515abe8a0c211d6b72888e82d99ae5dcf472fb5052e29e8a6a8",
+  "version": "catalog/1"
+ },
+ "procrastinate_jobs_columns": [
+  [
+   "id",
+   "bigint",
+   "nextval('procrastinate_jobs_id_seq'::regclass)"
+  ],
+  [
+   "queue_name",
+   "character varying",
+   null
+  ],
+  [
+   "task_name",
+   "character varying",
+   null
+  ],
+  [
+   "priority",
+   "integer",
+   "0"
+  ],
+  [
+   "lock",
+   "text",
+   null
+  ],
+  [
+   "queueing_lock",
+   "text",
+   null
+  ],
+  [
+   "args",
+   "jsonb",
+   "'{}'::jsonb"
+  ],
+  [
+   "status",
+   "USER-DEFINED",
+   "'todo'::procrastinate_job_status"
+  ],
+  [
+   "scheduled_at",
+   "timestamp with time zone",
+   null
+  ],
+  [
+   "attempts",
+   "integer",
+   "0"
+  ],
+  [
+   "abort_requested",
+   "boolean",
+   "false"
+  ],
+  [
+   "worker_id",
+   "bigint",
+   null
+  ]
+ ],
+ "result": {
+  "classification": null,
+  "detail": [
+   "procrastinate_jobs.procrastinate_trigger_abort_requested_events_v1: writes procrastinate_events, whose column id defaults to non-deterministic \"nextval('procrastinate_events_id_seq'::regclass)\", writes procrastinate_events, whose column at defaults to non-deterministic 'now()'",
+   "procrastinate_jobs.procrastinate_trigger_delete_jobs_v1: writes procrastinate_periodic_defers, whose column id defaults to non-deterministic \"nextval('procrastinate_periodic_defers_id_seq'::regclass)\"",
+   "procrastinate_jobs.procrastinate_trigger_scheduled_events_v1: writes procrastinate_events, whose column id defaults to non-deterministic \"nextval('procrastinate_events_id_seq'::regclass)\", writes procrastinate_events, whose column at defaults to non-deterministic 'now()'",
+   "procrastinate_jobs.procrastinate_trigger_status_events_insert_v1: writes procrastinate_events, whose column id defaults to non-deterministic \"nextval('procrastinate_events_id_seq'::regclass)\", writes procrastinate_events, whose column at defaults to non-deterministic 'now()'",
+   "procrastinate_jobs.procrastinate_trigger_status_events_update_v1: writes procrastinate_events, whose column id defaults to non-deterministic \"nextval('procrastinate_events_id_seq'::regclass)\", writes procrastinate_events, whose column at defaults to non-deterministic 'now()'"
+  ],
+  "stage": "screen",
+  "status": "refused_triggers"
+ },
+ "sandbox_teardown": {
+  "database_dropped": true,
+  "role_dropped": true
+ },
+ "schema_phase": {
+  "corroboration": {
+   "matched": 3,
+   "ok": true,
+   "params_mismatched": 0,
+   "params_unchecked": 0
+  },
+  "verdict": "SOUND"
+ },
+ "sdist": {
+  "name": "procrastinate-3.4.0.tar.gz",
+  "sha256": "9cd3af413f351c88da40681d3d88b6df8904c8a3423aec87687c0b7eb7d684a4"
+ },
+ "triggers": {
+  "controlled": {
+   "procrastinate_jobs": [
+    {
+     "enabled": "O",
+     "events": [
+      "UPDATE"
+     ],
+     "function": "procrastinate_notify_queue_abort_job_v1",
+     "row_level": true,
+     "timing": "AFTER",
+     "trigger": "procrastinate_jobs_notify_queue_job_aborted_v1"
+    },
+    {
+     "enabled": "O",
+     "events": [
+      "INSERT"
+     ],
+     "function": "procrastinate_notify_queue_job_inserted_v1",
+     "row_level": true,
+     "timing": "AFTER",
+     "trigger": "procrastinate_jobs_notify_queue_job_inserted_v1"
+    },
+    {
+     "enabled": "O",
+     "events": [
+      "UPDATE"
+     ],
+     "function": "procrastinate_trigger_abort_requested_events_procedure_v1",
+     "row_level": true,
+     "timing": "AFTER",
+     "trigger": "procrastinate_trigger_abort_requested_events_v1"
+    },
+    {
+     "enabled": "O",
+     "events": [
+      "DELETE"
+     ],
+     "function": "procrastinate_unlink_periodic_defers_v1",
+     "row_level": true,
+     "timing": "BEFORE",
+     "trigger": "procrastinate_trigger_delete_jobs_v1"
+    },
+    {
+     "enabled": "O",
+     "events": [
+      "INSERT",
+      "UPDATE"
+     ],
+     "function": "procrastinate_trigger_function_scheduled_events_v1",
+     "row_level": true,
+     "timing": "AFTER",
+     "trigger": "procrastinate_trigger_scheduled_events_v1"
+    },
+    {
+     "enabled": "O",
+     "events": [
+      "INSERT"
+     ],
+     "function": "procrastinate_trigger_function_status_events_insert_v1",
+     "row_level": true,
+     "timing": "AFTER",
+     "trigger": "procrastinate_trigger_status_events_insert_v1"
+    },
+    {
+     "enabled": "O",
+     "events": [
+      "UPDATE"
+     ],
+     "function": "procrastinate_trigger_function_status_events_update_v1",
+     "row_level": true,
+     "timing": "AFTER",
+     "trigger": "procrastinate_trigger_status_events_update_v1"
+    }
+   ]
+  },
+  "notifications": [
+   "procrastinate_jobs_notify_queue_job_aborted_v1: sends a notification (an external effect, not table state)",
+   "procrastinate_jobs_notify_queue_job_inserted_v1: sends a notification (an external effect, not table state)"
+  ],
+  "refused": [
+   "procrastinate_jobs.procrastinate_trigger_abort_requested_events_v1: writes procrastinate_events, whose column id defaults to non-deterministic \"nextval('procrastinate_events_id_seq'::regclass)\", writes procrastinate_events, whose column at defaults to non-deterministic 'now()'",
+   "procrastinate_jobs.procrastinate_trigger_delete_jobs_v1: writes procrastinate_periodic_defers, whose column id defaults to non-deterministic \"nextval('procrastinate_periodic_defers_id_seq'::regclass)\"",
+   "procrastinate_jobs.procrastinate_trigger_scheduled_events_v1: writes procrastinate_events, whose column id defaults to non-deterministic \"nextval('procrastinate_events_id_seq'::regclass)\", writes procrastinate_events, whose column at defaults to non-deterministic 'now()'",
+   "procrastinate_jobs.procrastinate_trigger_status_events_insert_v1: writes procrastinate_events, whose column id defaults to non-deterministic \"nextval('procrastinate_events_id_seq'::regclass)\", writes procrastinate_events, whose column at defaults to non-deterministic 'now()'",
+   "procrastinate_jobs.procrastinate_trigger_status_events_update_v1: writes procrastinate_events, whose column id defaults to non-deterministic \"nextval('procrastinate_events_id_seq'::regclass)\", writes procrastinate_events, whose column at defaults to non-deterministic 'now()'"
+  ]
+ }
+}
