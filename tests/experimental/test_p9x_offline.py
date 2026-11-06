@@ -74,16 +74,12 @@ def test_readback_distinguishes_sql_null_from_json_null():
 def test_the_substitution_is_jsonb_aware_and_otherwise_original():
     m = loader.load()
     assert m.state_constructor._same is loader.same_v1 and m.seed_feasibility._same is loader.same_v1
-    token = loader._JSONB.set({'{"n": 1}': {"n": 1}, "null": None, "true": True})
-    try:
-        assert loader.same_v1({"n": 1}, '{"n": 1}') and loader.same_v1('{"n": 1}', {"n": 1})
-        assert not loader.same_v1({"n": 1.0}, '{"n": 1}') and not loader.same_v1({"n": True}, '{"n": 1}')
-        assert not loader.same_v1("true", "true".upper()) and loader.same_v1(True, "true")
-        assert not loader.same_v1(1, "true")
-        assert loader.same_v1("abc", "abc") and loader.same_v1(5, "5")  # unregistered: the original _same
-    finally:
-        loader._JSONB.reset(token)
-    assert not loader.same_v1({"n": 1}, '{"n": 1}')  # outside a construction nothing is registered: original
+    J = loader.JsonbText
+    assert loader.same_v1({"n": 1}, J('{"n": 1}')) and loader.same_v1(J('{"n": 1}'), {"n": 1})
+    assert not loader.same_v1({"n": 1.0}, J('{"n": 1}')) and not loader.same_v1({"n": True}, J('{"n": 1}'))
+    assert loader.same_v1(True, J("true")) and not loader.same_v1(1, J("true"))
+    assert loader.same_v1("abc", "abc") and loader.same_v1(5, "5")  # plain values: the original _same
+    assert not loader.same_v1({"n": 1}, '{"n": 1}')  # a plain requested text never gets jsonb semantics
 
 
 def test_ambiguous_registration_is_refused():
@@ -178,7 +174,7 @@ def test_expression_only_differences_are_narrow():
     idx = ["t", "i", "CREATE INDEX i ON <S>.t USING btree (s) WHERE ((s)::text = ANY ((ARRAY['a'::varchar])::text[]))"]
     rt = ["t", "i", "CREATE INDEX i ON <S>.t USING btree (s) WHERE ((s)::text = ANY (ARRAY[('a'::varchar)::text]))"]
     assert catalog.expression_only_differences({"indexes": [idx]}, {"indexes": [rt]}) == [
-        {"kind": "indexes", "object": ["t", "i"], "target": idx[2], "sandbox": rt[2]}]
+        {"kind": "indexes", "object": ["t", "i"], "name": "i", "target": idx[2], "sandbox": rt[2]}]
     assert catalog.expression_only_differences({"indexes": [idx]}, {"indexes": [idx]}) == []
     assert catalog.expression_only_differences({"indexes": [idx]}, {"indexes": [["t", "j", rt[2]]]}) is None
     assert catalog.expression_only_differences({"indexes": [idx]}, {"indexes": []}) is None

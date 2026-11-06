@@ -19,7 +19,7 @@ from typing import Any
 from deployspecter.experimental.state_construction import phase9b, typed
 from deployspecter.experimental.state_construction.typed import TV, TypedRefused
 
-from . import catalog, execute, jsonb_v1, loader, trace
+from . import catalog, execute, expr_equiv, jsonb_v1, loader, trace
 
 
 @dataclass
@@ -36,6 +36,7 @@ class Outcome:
     report: dict[str, Any] | None = None
     write: dict[str, Any] | None = None
     readback: dict[str, Any] | None = None
+    provenance: dict[str, Any] | None = None
     identity: dict[str, Any] = field(default_factory=loader.identity)
 
     def to_dict(self) -> dict[str, Any]:
@@ -131,7 +132,18 @@ def construct_on_target(target: Any, sandbox: Any, schema: str, rows: list[tuple
             out.status, out.stage = "refused_catalog", "deparse_fixpoint"
             out.detail = {"expression_differences": allowed, "fixpoint": False}
             return out
-        out.export["verified_by"] = "expression-only deparse differences, sandbox re-export is a fixpoint"
+        admin = target.admin()
+        try:
+            established = expr_equiv.establish(admin, schema, sandbox.admin, "ds_run", allowed)
+        finally:
+            admin.close()
+        out.export["expression_equivalence"] = established
+        if not all(e["established"] for e in established):
+            out.status, out.stage = "refused_catalog", "expression_equivalence"
+            out.detail = [e for e in established if not e["established"]]
+            return out
+        out.export["verified_by"] = ("expression-only differences established on parsed node trees (catalog/1.1), "
+                                     "sandbox re-export is a fixpoint")
         out.export["expression_differences"] = allowed
     try:
         seed, registered = loader.seed_rows([(t, {c: execute.plain(tv) for c, tv in v.items()}) for t, v in rows],
@@ -160,8 +172,14 @@ def construct_on_target(target: Any, sandbox: Any, schema: str, rows: list[tuple
                                      target_fp["sha256"], on_insert=on_insert)
     except execute.ExecutionRefused as exc:
         out.status, out.stage, out.detail = "refused_execution", "write", str(exc)
+        out.provenance = getattr(exc, "provenance", None)
         return out
+    out.provenance = w.pop("provenance", None)
     out.write = w
+    if not (out.provenance or {}).get("ok"):
+        # committed, but the construction session isn't accounted for by the server log: the state isn't used
+        out.status, out.stage, out.detail = "refused_provenance", "provenance", (out.provenance or {}).get("problems")
+        return out
     out.readback = execute.readback(target.conninfo(), schema, rows, w["baseline"], report["final_snapshot"])
     if not out.readback["verified"]:
         out.status, out.stage, out.detail = "refused_readback", "readback", out.readback["problems"]

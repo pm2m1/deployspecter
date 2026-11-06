@@ -7,4 +7,4 @@ fingerprint, trigger screen), ``execute`` (target writes and readback), ``trace`
 ``chancy_registry_v1`` (the reviewed Chancy 0.26.0 contract).
 """
 
-VERSION = "ds-p9x/1"
+VERSION = "ds-p9x/1.1"  # 1.1: identity-based same_v1.1 (assurance A1); see loader

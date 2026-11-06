@@ -19,7 +19,8 @@ domains, generated columns, rules, row-level policies, and function bodies that 
 **Fingerprint (``fingerprint``).** A canonical JSON of the same catalog facts with the schema name replaced by
 ``<S>``, and its sha256.
 * Equality between the target and the sandbox (after ``setup_sql``) is what makes an export "verified".
-* One declared exception, ``expression_only_differences``: PostgreSQL's deparse isn't always a fixpoint. A partial
+* One declared exception, ``expression_only_differences``, now gated by ``expr_equiv.establish`` (catalog/1.1, see
+  below): PostgreSQL's deparse isn't always a fixpoint. A partial
   index predicate ``x = ANY ((ARRAY['a'::varchar])::text[])`` comes back as ``x = ANY (ARRAY[('a'::varchar)::text])``
   once recreated from its own ``pg_get_indexdef``. Such a difference is accepted only when it lies in the
   expression text of an index, a CHECK constraint or a column default, and every other attribute of the same
@@ -27,6 +28,10 @@ domains, generated columns, rules, row-level policies, and function bodies that 
   catalog (a fixpoint). It rests on PostgreSQL's documented purpose for ``pg_get_indexdef`` and the other
   ``pg_get_*def`` functions, which is to reconstruct an equivalent object. Triggers, functions, types, tables and
   everything else must match exactly.
+* **catalog/1.1 (assurance A2):** the text allowance alone is no longer sufficient. Each such difference must also
+  be **established on PostgreSQL's parsed node trees**: identical after the two documented rules in ``expr_equiv``
+  (R0: drop source positions and the relabel display flag; R1: an element-wise RelabelType array coercion over a
+  constant array). Stable text after a round trip is not taken as proof; anything not established is refused.
 * Equality between planning time and write time (``execute``, under table locks) is what refuses a catalog change in
   between.
 
@@ -54,7 +59,7 @@ from typing import Any
 
 from psycopg import sql
 
-VERSION = "catalog/1"
+VERSION = "catalog/1.1"  # 1.1: expression differences must be established on parsed node trees
 
 
 class CatalogRefused(RuntimeError):
@@ -175,7 +180,8 @@ def expression_only_differences(target: dict[str, Any], sandbox: dict[str, Any])
                 return None  # a different object, or another attribute differs
             if k == "constraints" and x[2] != "c":
                 return None
-            out.append({"kind": k, "object": x[:2], "target": x[f], "sandbox": y[f]})
+            out.append({"kind": k, "object": x[:2], "name": x[2] if k == "columns" else x[1], "target": x[f],
+                        "sandbox": y[f]})
     return out
 
 
