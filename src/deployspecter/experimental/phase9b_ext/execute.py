@@ -37,7 +37,7 @@ from psycopg import sql
 from deployspecter.experimental.state_construction import typed
 from deployspecter.experimental.state_construction.typed import TV
 
-from . import catalog, jsonb_v1, loader
+from . import catalog, jsonb_v1, loader, provenance
 
 
 class ExecutionRefused(RuntimeError):
@@ -108,45 +108,101 @@ def expected(final_snapshot: dict[str, list[dict[str, Any]]]) -> dict[str, list[
     return {t: sorted(canonical_row(r) for r in rows) for t, rows in final_snapshot.items() if rows}
 
 
+STAGES = ("before_writes", "on_insert", "before_verify", "after_verify")
+
+
 def write_and_verify(conninfo: dict[str, Any], schema: str, rows: list[tuple[str, dict[str, TV]]], order: list[int],
                      final_snapshot: dict[str, list[dict[str, Any]]], planned_fingerprint: str, *,
-                     on_insert: Callable[[int], None] | None = None) -> dict[str, Any]:
-    """Steps 1–6 of the module docstring. Returns the baseline snapshot and what changed; raises ExecutionRefused
-    (after rolling back) otherwise. ``on_insert`` is a test hook, called after each insert."""
-    want = expected(final_snapshot)
-    with psycopg.connect(**conninfo, autocommit=True, application_name="ds_p9x_construct") as conn:
+                     on_insert: Callable[[int], None] | None = None,
+                     hooks: dict[str, Callable[..., None]] | None = None, audit: bool = True) -> dict[str, Any]:
+    """Steps 1–6 of the module docstring, on a journaled session whose provenance is reconciled with the server log
+    (``provenance``; assurance A3). Returns the baseline snapshot, what changed and ``provenance``; raises
+    ExecutionRefused (after rolling back) otherwise, with ``.provenance`` attached.
+
+    ``hooks`` are test hooks for assurance A4, keyed by ``STAGES``: ``before_writes`` (after the fingerprint check),
+    ``on_insert(k)`` (after each insert), ``before_verify`` (after the inserts), ``after_verify`` (after the change
+    check, before COMMIT). ``on_insert`` is kept for the earlier tests."""
+    hooks = dict(hooks or {})
+    if on_insert is not None:
+        hooks["on_insert"] = on_insert
+    holder: list[provenance.Journal] = []
+    aud = provenance.Audit(conninfo) if audit else None
+    prov: dict[str, Any] | None = None
+    try:
+        if aud is not None:
+            aud.open()
         try:
-            with conn.transaction():
-                conn.execute("SET LOCAL TIME ZONE 'UTC'")
+            result = _write(conninfo, schema, rows, order, final_snapshot, planned_fingerprint, hooks, holder)
+        finally:
+            if aud is not None:
+                try:
+                    j = holder[0] if holder else None
+                    data = aud.close(j.pid_at_start if j else None)
+                    prov = provenance.reconcile(
+                        data, start=aud.start, end=aud.end, journal=j.entries if j else [],
+                        construct_pid=j.pid_at_start if j else -1, audit_pid=aud.pid, user=conninfo["user"],
+                        database=conninfo["dbname"])
+                    if j is not None:
+                        prov["journal"] = j.entries
+                except Exception as exc:  # noqa: BLE001 - an audit that can't run is recorded, never passed
+                    prov = {"ok": False, "problems": [f"the audit could not run: {type(exc).__name__}: {exc}"]}
+    except BaseException as exc:
+        exc.provenance = prov  # type: ignore[attr-defined]
+        raise
+    finally:
+        if aud is not None:
+            aud.shutdown()
+    result["provenance"] = prov
+    return result
+
+
+def _write(conninfo: dict[str, Any], schema: str, rows: list[tuple[str, dict[str, TV]]], order: list[int],
+           final_snapshot: dict[str, list[dict[str, Any]]], planned_fingerprint: str,
+           hooks: dict[str, Callable[..., None]], holder: list[Any]) -> dict[str, Any]:
+    want = expected(final_snapshot)
+
+    def hook(stage: str, *args: Any) -> None:
+        if stage in hooks:
+            hooks[stage](*args)
+    with psycopg.connect(**conninfo, autocommit=True, application_name=provenance.APPLICATION,
+                         prepare_threshold=None) as raw:
+        j = provenance.Journal(raw)
+        j.pid_at_start = raw.info.backend_pid  # type: ignore[attr-defined]
+        holder.append(j)
+        try:
+            with j.transaction():
+                j.execute("SET LOCAL TIME ZONE 'UTC'")
                 # the schema's own functions (triggers, defaults) resolve unqualified names through search_path, as
                 # they do for the application; Phase 9B's sandbox runs them with search_path = ds_run likewise
-                conn.execute("SELECT set_config('search_path', %s, true)", (schema,))
-                tables = [r[0] for r in conn.execute(
+                j.execute("SELECT set_config('search_path', %s, true)", (schema,))
+                tables = [r[0] for r in j.execute(
                     "SELECT tablename::text FROM pg_tables WHERE schemaname = %s ORDER BY 1", (schema,)).fetchall()]
                 for t in tables:
-                    conn.execute(sql.SQL("LOCK TABLE {}.{} IN SHARE ROW EXCLUSIVE MODE").format(
+                    j.execute(sql.SQL("LOCK TABLE {}.{} IN SHARE ROW EXCLUSIVE MODE").format(
                         sql.Identifier(schema), sql.Identifier(t)))
-                now = catalog.fingerprint(conn, schema)["sha256"]
+                now = catalog.fingerprint(j, schema)["sha256"]
                 if now != planned_fingerprint:
                     raise ExecutionRefused(f"the catalog changed between planning and execution ({now[:12]} vs "
                                            f"{planned_fingerprint[:12]})")
-                before = snapshot(conn, schema)
+                before = snapshot(j, schema)
+                hook("before_writes")
                 for k, i in enumerate(order):
                     table, vals = rows[i]
                     cols = list(vals)
-                    conn.execute(sql.SQL("INSERT INTO {}.{} ({}) VALUES ({})").format(
+                    j.execute(sql.SQL("INSERT INTO {}.{} ({}) VALUES ({})").format(
                         sql.Identifier(schema), sql.Identifier(table), sql.SQL(", ").join(map(sql.Identifier, cols)),
                         sql.SQL(", ").join(typed.placeholder(vals[c]) for c in cols)),
-                        [typed.param(vals[c]) for c in cols])
-                    if on_insert is not None:
-                        on_insert(k)
-                added, removed = delta(before, snapshot(conn, schema))
+                        [typed.param(vals[c]) for c in cols], kind="construction")
+                    hook("on_insert", k)
+                hook("before_verify")
+                added, removed = delta(before, snapshot(j, schema))
                 if removed:
                     raise ExecutionRefused(f"rows disappeared from the target: {sorted(removed)}")
                 if added != want:
                     raise ExecutionRefused("the target's change isn't the constructor's proven final state: "
                                            f"tables {sorted(added)} vs {sorted(want)}; "
                                            f"first difference {_first_difference(added, want)}")
+                hook("after_verify")
         except psycopg.Error as exc:
             raise ExecutionRefused(f"a write failed and was rolled back: {str(exc).splitlines()[0]}") from exc
     return {"baseline": before, "added": added, "tables_locked": tables, "fingerprint_at_write": now}
