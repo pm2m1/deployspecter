@@ -1,0 +1,295 @@
+{
+ "as_expected": true,
+ "case": "with_held_reservation",
+ "catalog": "dry_run",
+ "construction": {
+  "assumptions": [],
+  "budget_used": {},
+  "classification": "ORIGINAL_VALID",
+  "dependency_evidence": [],
+  "distinct_final_states": 0,
+  "effective_seed": [
+   {
+    "table": "events",
+    "values": [
+     {
+      "column": "capacity",
+      "value": 3
+     },
+     {
+      "column": "id",
+      "value": 1
+     },
+     {
+      "column": "reserved",
+      "value": 1
+     }
+    ]
+   },
+   {
+    "table": "reservations",
+    "values": [
+     {
+      "column": "event_id",
+      "value": 1
+     },
+     {
+      "column": "holder",
+      "value": "carol"
+     },
+     {
+      "column": "qty",
+      "value": 1
+     }
+    ]
+   }
+  ],
+  "effective_seed_sha256": "46d544756e3edba5f8c04cb1ca22c70cf408d556e80f6ce9dff6587e0a05c2da",
+  "evidence": [],
+  "explanation": "The original sequence reaches the state.",
+  "failed_inserts": {},
+  "final_sequences": {},
+  "final_snapshot": {
+   "events": [
+    {
+     "capacity": 3,
+     "id": 1,
+     "reserved": 1
+    }
+   ],
+   "rejections": [],
+   "reservations": [
+    {
+     "event_id": 1,
+     "holder": "carol",
+     "id": 1,
+     "qty": 1
+    }
+   ]
+  },
+  "independent_verification": null,
+  "original_order": [
+   0,
+   1
+  ],
+  "plan": [],
+  "rejected_alternatives": [],
+  "rejected_alternatives_total": 0,
+  "reordered": false,
+  "requested_rows": [
+   {
+    "columns": {
+     "capacity": 3,
+     "id": 1,
+     "reserved": 1
+    },
+    "row_index": 0,
+    "table": "events"
+   },
+   {
+    "columns": {
+     "event_id": 1,
+     "holder": "carol",
+     "qty": 1
+    },
+    "row_index": 1,
+    "table": "reservations"
+   }
+  ],
+  "requested_seed_sha256": "46d544756e3edba5f8c04cb1ca22c70cf408d556e80f6ce9dff6587e0a05c2da",
+  "search_exhaustive": false,
+  "setup_sql_sha256": "3bb29d210ef4f54a2d5f37d5c9c9b9726a00ddc0e194f55655b6fabe0f39e272",
+  "trigger_evidence": [],
+  "valid_plans_found": 0
+ },
+ "detail": {
+  "corroborated": true,
+  "violations": [
+   "R1 event 1: reserved=3 but reservations hold 5",
+   "R2 event 1: 5 seats reserved of capacity 3"
+  ]
+ },
+ "expected_status": "ran",
+ "order": [
+  0,
+  1
+ ],
+ "planning": {
+  "detail": null,
+  "digests": {
+   "bridge_typed": "219c6dd734d3ccd74711b81a3a57acb3296f4189830e478b0c4cf3c91942dc4f",
+   "context": "4d8a0beb0f10837350c076e03e604a0c0c6612bb1bc711f87893f9d1c60813ea",
+   "contracts": "3d9e49c44d729a4845c877a970b28b9ba4ef99e1f61b9047f0676710e078ca54",
+   "plan_identity": "vplan1:cc852b9311e9df5e8bb78c28651e2abe665971b56c699d4eb27c535d49db2a85",
+   "registry": "24250848b1bf84da73f88fff6ab4fe68f949fb51e01415443e9eb7b9f39a6806",
+   "request": "9ec11d3b78e823a3f7e2f84b1c8e2ffb5da57717e291cb8d54e8f41340c1f3f6",
+   "snapshot": "ff7d28f63ec387e94513da45ffd234cc1863b22f910e530034d9fc86dd07415c",
+   "spec": "c367cd0f1b2e1d0a33d6e6f1fd800faffc3d21746136374b1339552fa2af44bd"
+  },
+  "outcome": "bridged",
+  "stage": "bridge",
+  "stages": {
+   "authorize": {
+    "accepted": true,
+    "rejections": 0
+   },
+   "bridge": {
+    "code": null,
+    "outcome": "bridged"
+   },
+   "plan_identity": {
+    "supported": true
+   },
+   "plan_state": {
+    "goals": [
+     {
+      "also_matching_rows": [],
+      "code": null,
+      "entity": "event",
+      "evidence": null,
+      "label": "event_one",
+      "reason": null,
+      "rows": [
+       "event_one#0"
+      ],
+      "status": "planned",
+      "undetermined_rows": []
+     },
+     {
+      "also_matching_rows": [],
+      "code": null,
+      "entity": "reservation",
+      "evidence": null,
+      "label": "held",
+      "reason": null,
+      "rows": [
+       "held#0"
+      ],
+      "status": "planned",
+      "undetermined_rows": []
+     }
+    ],
+    "outcome": "candidate_plan"
+   },
+   "validate_arguments": {
+    "accepted": true,
+    "rejections": 0
+   },
+   "verify_context": {
+    "findings": 0,
+    "outcome": "MATCH"
+   }
+  }
+ },
+ "run": {
+  "bundle": {
+   "chosen": [
+    "a",
+    "b",
+    "a",
+    "b",
+    "a",
+    "b",
+    "a",
+    "a",
+    "b",
+    "b"
+   ],
+   "classification": "oracle_violation",
+   "code_revision": {
+    "dirty": false,
+    "head": "6803398087818e0a0ac3b4cdc43dab5cf585893c"
+   },
+   "corroboration": {
+    "client_texts_matched": 0,
+    "matched": 10,
+    "ok": true,
+    "params_compared": 12,
+    "params_mismatched": 0,
+    "params_unchecked": 0,
+    "problems": [],
+    "sessions": {
+     "28561": "a",
+     "28562": "b"
+    },
+    "unchecked_kinds": {}
+   },
+   "final_state_digest": "1eeb6267a66a098a9f9ec770556f7fc1e0846b104cbbbff2c89c261fd184b84c",
+   "handler_sources": {
+    "a": {
+     "file": "tests/live_app/reservations.py",
+     "function": "ds_mvp_trusted_live_app_reservations.reserve_seats",
+     "sha256": "8d60890d642253f4bf2672d7d48d97e8341930840791e4bacd1b6a0eba8661c1"
+    },
+    "b": {
+     "file": "tests/live_app/reservations.py",
+     "function": "ds_mvp_trusted_live_app_reservations.reserve_seats",
+     "sha256": "8d60890d642253f4bf2672d7d48d97e8341930840791e4bacd1b6a0eba8661c1"
+    }
+   },
+   "handlers": {
+    "a": "v1.reserve_seats",
+    "b": "v1.reserve_seats"
+   },
+   "initial_state_digest": "e90d0e0e3618ecaa36640301c53e464cdd7d6f4cc64044b9ae93bccb94df6ee5",
+   "kind": "EXPERIMENTAL run evidence (not certified Gate A2 evidence)",
+   "oracle_violations": [
+    "R1 event 1: reserved=3 but reservations hold 5",
+    "R2 event 1: 5 seats reserved of capacity 3"
+   ],
+   "outcome": "completed",
+   "run_id": "40d6a28c60ce",
+   "schedule": [
+    "a",
+    "b",
+    "a",
+    "b",
+    "a",
+    "b",
+    "a",
+    "b",
+    "a",
+    "b",
+    "a",
+    "b"
+   ],
+   "trace_fingerprint": "8440424c7be365288cfa2b99623e9c6ca503b64608e367dc950192cd4909eb20",
+   "trace_sha256": "382ca171ac512a3695b48fa5997b7d93f78a093332f1bda5397f52b9dc91bbc7",
+   "variant": "buggy",
+   "versions": {
+    "psycopg": "3.3.6",
+    "sqlalchemy": "2.0.57"
+   },
+   "workload": "track_a_two_buyers",
+   "workload_sha256": "daa137200e3efb54c12930160ed208e04f1a577598f8cf46f4e827e0fbb49335"
+  },
+  "corroboration": {
+   "client_texts_matched": 0,
+   "matched": 10,
+   "ok": true,
+   "params_compared": 12,
+   "params_mismatched": 0,
+   "params_unchecked": 0,
+   "problems": [],
+   "sessions": {
+    "28561": "a",
+    "28562": "b"
+   },
+   "unchecked_kinds": {}
+  },
+  "initial_digest": "e90d0e0e3618ecaa36640301c53e464cdd7d6f4cc64044b9ae93bccb94df6ee5",
+  "violations": [
+   "R1 event 1: reserved=3 but reservations hold 5",
+   "R2 event 1: 5 seats reserved of capacity 3"
+  ]
+ },
+ "stage": "oracle",
+ "status": "ran",
+ "variant": "buggy",
+ "verification": {
+  "catalog": "dry_run",
+  "constructor_snapshot_equal": true,
+  "initial_digest": "e90d0e0e3618ecaa36640301c53e464cdd7d6f4cc64044b9ae93bccb94df6ee5",
+  "typed_exact": []
+ }
+}

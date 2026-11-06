@@ -1,0 +1,184 @@
+{
+ "as_expected": true,
+ "classification": "CONSTRUCTED_EQUIVALENT",
+ "detail": null,
+ "expected_classification": "CONSTRUCTED_EQUIVALENT",
+ "expected_status": "constructed",
+ "fixture": "dependency_order",
+ "order": [
+  1,
+  0
+ ],
+ "report": {
+  "assumptions": [],
+  "budget_used": {
+   "duplicate_states_pruned": 0,
+   "limits": {
+    "max_candidates": 64,
+    "max_operations": 2000,
+    "max_rebuilds": 24,
+    "max_rows": 10,
+    "max_seconds": 15.0
+   },
+   "operations": 2,
+   "plans_evaluated": 1,
+   "rebuilds": 2,
+   "seconds": 0.0068,
+   "stopped_by": null
+  },
+  "classification": "CONSTRUCTED_EQUIVALENT",
+  "dependency_evidence": [
+   {
+    "child_row": 0,
+    "constraint": "child_parent_id_fkey",
+    "parent_row": 1
+   }
+  ],
+  "distinct_final_states": 1,
+  "effective_seed": [
+   {
+    "table": "parent",
+    "values": [
+     {
+      "column": "id",
+      "value": 1
+     }
+    ]
+   },
+   {
+    "table": "child",
+    "values": [
+     {
+      "column": "id",
+      "value": 1
+     },
+     {
+      "column": "parent_id",
+      "value": 1
+     }
+    ]
+   }
+  ],
+  "effective_seed_sha256": "6db1df4b3f277c950a069cf9b3848aff6bf885ab93f4003f2feb2c91cdf546d2",
+  "evidence": [
+   "PostgreSQL reached every requested row after a clean rebuild of 2 insert(s).",
+   "1 valid plan(s) rebuilt, ending in 1 distinct state(s), sequences included.",
+   "The same plan gave the same state when repeated.",
+   "A separate plain-SQL check in its own schema found every requested row and the same snapshot."
+  ],
+  "explanation": "A plan reaches the requested state, and every valid plan agrees on it.",
+  "failed_inserts": {},
+  "final_sequences": {},
+  "final_snapshot": {
+   "child": [
+    {
+     "id": 1,
+     "parent_id": 1
+    }
+   ],
+   "parent": [
+    {
+     "id": 1
+    }
+   ]
+  },
+  "independent_verification": {
+   "problems": [],
+   "snapshot_matches_rebuild": true,
+   "snapshot_sha256": "d5eb572ab6e01145e22b34045b16b4ce359a48c6da36124df497efd993ad9888",
+   "verified": true
+  },
+  "original_order": [
+   0,
+   1
+  ],
+  "plan": [
+   {
+    "action": "insert",
+    "row_index": 1,
+    "state_after": {
+     "child": [],
+     "parent": [
+      {
+       "id": 1
+      }
+     ]
+    },
+    "table": "parent"
+   },
+   {
+    "action": "insert",
+    "row_index": 0,
+    "state_after": {
+     "child": [
+      {
+       "id": 1,
+       "parent_id": 1
+      }
+     ],
+     "parent": [
+      {
+       "id": 1
+      }
+     ]
+    },
+    "table": "child"
+   }
+  ],
+  "rejected_alternatives": [],
+  "rejected_alternatives_total": 0,
+  "reordered": true,
+  "requested_rows": [
+   {
+    "columns": {
+     "id": 1,
+     "parent_id": 1
+    },
+    "row_index": 0,
+    "table": "child"
+   },
+   {
+    "columns": {
+     "id": 1
+    },
+    "row_index": 1,
+    "table": "parent"
+   }
+  ],
+  "requested_seed_sha256": "3fcf064fc5880cdc6e703b2f4296dc73d2d78e162fd4b6e07eb5c162397dafc4",
+  "search_exhaustive": true,
+  "setup_sql_sha256": "d8fe387fb3f942052048f28f4ec6e04186da0cc8bd35c0a36e3f5e5f72824b10",
+  "trigger_evidence": [],
+  "valid_plans_found": 1
+ },
+ "rows": [
+  [
+   "child",
+   {
+    "id": {
+     "tag": "int",
+     "value": 1
+    },
+    "parent_id": {
+     "tag": "int",
+     "value": 1
+    }
+   }
+  ],
+  [
+   "parent",
+   {
+    "id": {
+     "tag": "int",
+     "value": 1
+    }
+   }
+  ]
+ ],
+ "schema": "ds_sc_fx_dependency_order",
+ "status": "constructed",
+ "verification": {
+  "constructor_snapshot_equal": true,
+  "typed_exact": []
+ }
+}

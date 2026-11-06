@@ -1,0 +1,339 @@
+{
+ "as_expected": true,
+ "classification": "CONSTRUCTED_EQUIVALENT",
+ "detail": null,
+ "expected_classification": "CONSTRUCTED_EQUIVALENT",
+ "expected_status": "constructed",
+ "fixture": "trigger_reordering",
+ "order": [
+  1,
+  0
+ ],
+ "report": {
+  "assumptions": [],
+  "budget_used": {
+   "duplicate_states_pruned": 1,
+   "limits": {
+    "max_candidates": 64,
+    "max_operations": 2000,
+    "max_rebuilds": 24,
+    "max_rows": 10,
+    "max_seconds": 15.0
+   },
+   "operations": 13,
+   "plans_evaluated": 3,
+   "rebuilds": 4,
+   "seconds": 0.0251,
+   "stopped_by": null
+  },
+  "classification": "CONSTRUCTED_EQUIVALENT",
+  "dependency_evidence": [],
+  "distinct_final_states": 1,
+  "effective_seed": [
+   {
+    "table": "quotes",
+    "values": [
+     {
+      "column": "sku",
+      "value": 1
+     },
+     {
+      "column": "vendor",
+      "value": 1
+     },
+     {
+      "column": "cents",
+      "value": 10
+     }
+    ]
+   },
+   {
+    "table": "quotes",
+    "values": [
+     {
+      "column": "sku",
+      "value": 1
+     },
+     {
+      "column": "vendor",
+      "value": 2
+     },
+     {
+      "column": "cents",
+      "value": 20
+     }
+    ]
+   }
+  ],
+  "effective_seed_sha256": "89c4892f09b87d958d742c971050c92c1384e7d4403bcfa48b56ec75663365f2",
+  "evidence": [
+   "PostgreSQL reached every requested row after a clean rebuild of 2 insert(s).",
+   "2 valid plan(s) rebuilt, ending in 1 distinct state(s), sequences included.",
+   "The same plan gave the same state when repeated.",
+   "A separate plain-SQL check in its own schema found every requested row and the same snapshot."
+  ],
+  "explanation": "A plan reaches the requested state, and every valid plan agrees on it.",
+  "failed_inserts": {
+   "row 2: 23505 best_quote_pkey": 4
+  },
+  "final_sequences": {},
+  "final_snapshot": {
+   "best_quote": [
+    {
+     "cents": 20,
+     "sku": 1
+    }
+   ],
+   "quotes": [
+    {
+     "cents": 10,
+     "sku": 1,
+     "vendor": 1
+    },
+    {
+     "cents": 20,
+     "sku": 1,
+     "vendor": 2
+    }
+   ]
+  },
+  "independent_verification": {
+   "problems": [],
+   "snapshot_matches_rebuild": true,
+   "snapshot_sha256": "bbad6c9a9d35b5715ff3f7ebf3baa67d4cd239aab2facf8356b2186a6a454b93",
+   "verified": true
+  },
+  "original_order": [
+   0,
+   1,
+   2
+  ],
+  "plan": [
+   {
+    "action": "insert",
+    "row_index": 1,
+    "state_after": {
+     "best_quote": [
+      {
+       "cents": 10,
+       "sku": 1
+      }
+     ],
+     "quotes": [
+      {
+       "cents": 10,
+       "sku": 1,
+       "vendor": 1
+      }
+     ]
+    },
+    "table": "quotes"
+   },
+   {
+    "action": "insert",
+    "row_index": 0,
+    "state_after": {
+     "best_quote": [
+      {
+       "cents": 20,
+       "sku": 1
+      }
+     ],
+     "quotes": [
+      {
+       "cents": 10,
+       "sku": 1,
+       "vendor": 1
+      },
+      {
+       "cents": 20,
+       "sku": 1,
+       "vendor": 2
+      }
+     ]
+    },
+    "table": "quotes"
+   },
+   {
+    "action": "already_present",
+    "row_index": 2,
+    "state_after": {
+     "best_quote": [
+      {
+       "cents": 20,
+       "sku": 1
+      }
+     ],
+     "quotes": [
+      {
+       "cents": 10,
+       "sku": 1,
+       "vendor": 1
+      },
+      {
+       "cents": 20,
+       "sku": 1,
+       "vendor": 2
+      }
+     ]
+    },
+    "table": "best_quote"
+   }
+  ],
+  "rejected_alternatives": [
+   {
+    "reason": "duplicate key value violates unique constraint \"best_quote_pkey\"",
+    "sequence": [
+     "insert: row 0 (quotes)",
+     "insert: row 1 (quotes)",
+     "insert: row 2 (best_quote)"
+    ]
+   },
+   {
+    "reason": "requested state not reached: row 2 asks for {'sku': 1, 'cents': 20} in best_quote, which holds [{'sku': 1, 'cents': 10}]",
+    "sequence": [
+     "insert: row 0 (quotes)",
+     "already present: row 2 (best_quote)",
+     "insert: row 1 (quotes)"
+    ]
+   },
+   {
+    "reason": "duplicate key value violates unique constraint \"best_quote_pkey\"",
+    "sequence": [
+     "insert: row 0 (quotes)",
+     "insert: row 2 (best_quote)"
+    ]
+   },
+   {
+    "reason": "duplicate key value violates unique constraint \"best_quote_pkey\"",
+    "sequence": [
+     "insert: row 1 (quotes)",
+     "insert: row 0 (quotes)",
+     "insert: row 2 (best_quote)"
+    ]
+   },
+   {
+    "reason": "duplicate key value violates unique constraint \"best_quote_pkey\"",
+    "sequence": [
+     "insert: row 1 (quotes)",
+     "insert: row 2 (best_quote)"
+    ]
+   }
+  ],
+  "rejected_alternatives_total": 5,
+  "reordered": true,
+  "requested_rows": [
+   {
+    "columns": {
+     "cents": 20,
+     "sku": 1,
+     "vendor": 2
+    },
+    "row_index": 0,
+    "table": "quotes"
+   },
+   {
+    "columns": {
+     "cents": 10,
+     "sku": 1,
+     "vendor": 1
+    },
+    "row_index": 1,
+    "table": "quotes"
+   },
+   {
+    "columns": {
+     "cents": 20,
+     "sku": 1
+    },
+    "row_index": 2,
+    "table": "best_quote"
+   }
+  ],
+  "requested_seed_sha256": "1e43614bc13d7e3acba4d8bfb9a50a2ae027904b50320462b56b5dea96a1e429",
+  "search_exhaustive": true,
+  "setup_sql_sha256": "d3f2de48822d2e3033fdc1589a24e9cf1fe9796db010cf6b3a7fecdd57c5dccb",
+  "trigger_evidence": [
+   {
+    "deferrable": false,
+    "effect": "understood",
+    "events": [
+     "INSERT"
+    ],
+    "fires": true,
+    "function_definition_sha256": "05838d3a764663283c92d2841df30a0a8f4baa971d52c9c2b790b79875b20f6e",
+    "level": "ROW",
+    "name": "t",
+    "table": "quotes",
+    "targets": [
+     {
+      "operations": [
+       "upsert"
+      ],
+      "qualified_in_source": false,
+      "schema_name": "ds_run",
+      "table": "best_quote"
+     }
+    ],
+    "timing": "AFTER",
+    "unknown_reasons": []
+   }
+  ],
+  "valid_plans_found": 2
+ },
+ "rows": [
+  [
+   "quotes",
+   {
+    "cents": {
+     "tag": "int",
+     "value": 20
+    },
+    "sku": {
+     "tag": "int",
+     "value": 1
+    },
+    "vendor": {
+     "tag": "int",
+     "value": 2
+    }
+   }
+  ],
+  [
+   "quotes",
+   {
+    "cents": {
+     "tag": "int",
+     "value": 10
+    },
+    "sku": {
+     "tag": "int",
+     "value": 1
+    },
+    "vendor": {
+     "tag": "int",
+     "value": 1
+    }
+   }
+  ],
+  [
+   "best_quote",
+   {
+    "cents": {
+     "tag": "int",
+     "value": 20
+    },
+    "sku": {
+     "tag": "int",
+     "value": 1
+    }
+   }
+  ]
+ ],
+ "schema": "ds_sc_fx_trigger_reordering",
+ "status": "constructed",
+ "verification": {
+  "constructor_snapshot_equal": true,
+  "typed_exact": []
+ }
+}
