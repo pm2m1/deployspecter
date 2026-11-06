@@ -55,7 +55,10 @@ def verify_sources(sdist: Path) -> dict[str, Any]:
     sources = {}
     with tarfile.open(sdist) as t:
         for rel, pin in app["sources_sha256"].items():
-            f = t.extractfile(f"chancy-{app['version']}/{rel}")
+            try:
+                f = t.extractfile(f"chancy-{app['version']}/{rel}")
+            except KeyError:
+                f = None  # missing from the archive: a mismatch, reported below
             h = hashlib.sha256(f.read()).hexdigest() if f is not None else None
             sources[rel] = h
             if h != pin:
