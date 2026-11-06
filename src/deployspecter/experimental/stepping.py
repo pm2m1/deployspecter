@@ -111,7 +111,14 @@ def sanitize(value: Any) -> Any:
             return {"type": type(value).__name__}
         return {"json_sha256": hashlib.sha256(canonical.encode()).hexdigest()[:12]}
     if isinstance(value, str):
-        return {"str": len(value), "sha256": hashlib.sha256(value.encode()).hexdigest()[:12]}
+        out = {"str": len(value), "sha256": hashlib.sha256(value.encode()).hexdigest()[:12]}
+        # JSON object or array text that PostgreSQL's jsonb output would rewrite (key order, duplicates, number
+        # forms): also the digest of that rewrite, because the server logs a jsonb-typed parameter normalized
+        # (corroboration/jsonb_logging_probe_1). Any other string's trace entry is unchanged.
+        from . import jsonb_text
+        if jsonb_text.is_container(value) and (norm := jsonb_text.normalize(value)) != value:
+            out["jsonb_sha256"] = hashlib.sha256(norm.encode()).hexdigest()[:12]
+        return out
     if isinstance(value, (bytes, bytearray, memoryview)):
         return {"bytes": len(bytes(value)), "sha256": hashlib.sha256(bytes(value)).hexdigest()[:12]}
     if isinstance(value, (list, tuple)):

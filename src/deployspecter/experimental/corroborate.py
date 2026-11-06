@@ -26,6 +26,7 @@ from typing import Any
 
 from deployspecter.research.track_a.gate2a_audit import parse_log, statement
 
+from . import jsonb_text
 from .stepping import normal_sql
 
 PID, SESSION, LINE, SEVERITY, SQLSTATE, MESSAGE, DETAIL, APP, BACKEND, USER, DB = 3, 5, 6, 11, 12, 13, 14, 22, 23, 1, 2
@@ -337,6 +338,11 @@ def _value_matches(logged: str, want: Any) -> bool | None:
                 want["sha256"]
         if same(text):
             return True
+        if "jsonb_sha256" in want and jsonb_text.is_container(text) and jsonb_text.normalize(text) == text:
+            # The server printed jsonb output (a normalization fixpoint): equal exactly when it is the jsonb
+            # normalization of the text the application sent. A text or json parameter is logged verbatim and
+            # matched above; only a jsonb-typed one can be logged rewritten.
+            return hashlib.sha256(text.encode()).hexdigest()[:12] == want["jsonb_sha256"]
         if _UUID_TEXT.fullmatch(text):
             # A string the server coerced to uuid is logged in uuid's canonical output. Its exact input forms are
             # tried (canonical and 32-hex): a match is the same value; anything else is UNVERIFIED, never accepted.
