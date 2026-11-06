@@ -481,7 +481,7 @@ def test_scoring_refuses_tampering_late_results_and_changed_oracles(sim, tmp_pat
     bad = tmp_path / "L.jsonl"
     lines = led.read_text().splitlines()
     first = json.loads(lines[0])
-    first["run"]["verdict"] = "VIOLATED"
+    first["run"]["schedules_used"] += 1  # always a change to the committed record
     bad.write_text("\n".join([json.dumps(first, sort_keys=True)] + lines[1:]) + "\n")
     with pytest.raises(SystemExit, match="broken"):
         run.score(bad, cases, sim["private"] / "reveals", code, lock_path=s / "BUDGET_LOCK.json")
