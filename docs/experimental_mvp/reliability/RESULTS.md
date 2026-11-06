@@ -2,6 +2,8 @@
 
 ## Verdict: UNRESOLVED INTERMITTENT FAILURE
 
+> **Classification, confirmed 2026-11-06:** the original failure stays **UNRESOLVED**. The signal-handling teardown defect found later (addendum below) is a **confirmed separate finding**, demonstrated and fixed with a regression that fails on the unfixed runner. It is **not** proof that the original failure was explained.
+
 The one failure seen earlier (1 of 13, on 2026-11-06, in the run immediately after the core suite) **did not recur** in 58 bounded, evidence-complete invocations. It was not identified, and it is **not fixed**. No code was changed in response to it, and no regression test was added, because a regression test needs a reproduced cause.
 
 ### The original failure (what is and is not known)

@@ -31,9 +31,29 @@ These are tested statuses, not claims of general support. Every row marked SUPPO
 | A str parameter the server coerced to uuid (Chancy 0.25.1 sends `uuid.hex`) | COMPARED by canonical or 32-hex form | `test_mvp_corroborate_offline.py` (57 vectors in all) | Any other str-to-uuid difference: UNVERIFIED (`str_coerced_uuid`), counted, never accepted |
 | Typed parameters: int, NULL, bool, str, bytea, 1-D arrays, json/jsonb, timestamptz (by instant), timestamp/date/time/timetz (by wall clock and offset), interval (by component), uuid (by digest) | COMPARED EXACTLY | `test_mvp_corroborate_offline.py` (52 vectors at increment 5); live in two session time zones | `infinity`, BC dates, intervals with months and other IntervalStyles: UNVERIFIED, counted, never accepted |
 
+| Typed parameters (2026-11-06): composite-record arrays by `record_in` rules; float8 bit-exact (sign of zero, NaN, infinities) | COMPARED | `tests/experimental/fixtures/pg16_typed_params.json`; `runs_typed_verification`: 0 unchecked | Verified on PG16 only |
+
+## State construction (2026-11-06, NONBLIND, local experimental development only)
+
+| Path | Status | Evidence | Boundary |
+|---|---|---|---|
+| WorkloadSpec v2 → goals → **Phase 9B `construct_state`** (copied byte-identical, sha256-pinned) → exact typed writes → independent re-read → stepped handlers → corroboration → oracle, on the reservations app | SUPPORTED, LIVE-TESTED (trusted synthetic fixture) | `state_construction/runs/reservations`; `phase9b_use_verification_1/use.json`, where 7 live tests reach the copied `construct_state` | Gate 2A's synthetic reservations app only; dry-run catalog, or live catalog when the database has no foreign triggers |
+| Provenance of the copied constructor | VERIFIED | `state_construction/PHASE9B_PROVENANCE.json`: 3 sources byte-identical to the origin's uncommitted files; 10-module closure audited | Owner-approved for local experimental use only; not for publication or upstream merge |
+| Exact typed fixtures (int8 extremes, -0.0, 5e-324, `'NULL'` vs NULL, trigger reordering, dependency order) | SUPPORTED, LIVE-TESTED | `state_construction/runs/fixtures`: 17/17 | |
+| Phase 9B on json/jsonb or NaN values | REFUSED by the constructor, nothing inserted | same | BLOCKED: fixing it means changing the constructor |
+| Chancy 0.26.0 jobs: narrow **direct** constructor, chosen before construction for json/jsonb values, never as a fallback; live-catalog preconditions; the unmodified worker consumes the state | SUPPORTED, LIVE-TESTED (NONBLIND) | `state_construction/runs/chancy` | Not Phase 9B; pinned `chancy_jobs` columns; no triggers, rules, policies, foreign keys or deferrable constraints |
+| WorkloadSpec v2 for third-party apps; procrastinate state construction | NOT SUPPORTED | none | No reviewed registry; procrastinate's schema relies on triggers and functions |
+
+## Supported deployment digital twin (2026-11-06, NONBLIND)
+
+| Path | Status | Evidence | Boundary |
+|---|---|---|---|
+| procrastinate 3.3.0 → 3.4.0: seven phases (old on old, pre, overlap, background retries, verified old-version quiescence, post, final verification), each with checked entry and exit conditions | SUPPORTED, LIVE-TESTED | `rolling_upgrade/procrastinate_3.3_3.4/twin/RESULTS.md`: 4 runs, 0 genuine violations, upgraded schema = fresh 3.4.0 install | One app pair, one documented contract; backfill NOT SUPPORTED (none in this pair) |
+
 ## Isolation
 
 | Mode | Status |
 |---|---|
 | Restricted container: runc, internal network, uid 65534, read-only root, all capabilities dropped, PID and memory limits | SUPPORTED for trusted code and pinned, reviewed third-party code |
 | Hostile-grade isolation (gVisor, microVM) | BLOCKED: only runc is available (`isolation_runtime_scan_2`). No unreviewed application code is run |
+| Isolated-runner teardown under SIGINT/SIGTERM (2026-11-06) | FIXED: signals are deferred during teardown and re-delivered (`signal_safe.py`); the regression fails on the unfixed runner. A separate finding; it does not explain the original intermittent failure (`reliability/RESULTS.md`) |
