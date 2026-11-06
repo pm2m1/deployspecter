@@ -1,0 +1,101 @@
+FFFF.                                                                    [100%]
+=================================== FAILURES ===================================
+____________ test_run_smoke_teardown_completes_when_interrupted[rm] ____________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d0f5b50>
+tmp_path = PosixPath('/private/var/folders/yt/kh85_1j91fqb89wp_73r81n40000gn/T/pytest-of-kiyo/pytest-2077/test_run_smoke_teardown_comple0')
+default_sigint = None, interrupt_on = 'rm'
+
+    @pytest.mark.parametrize("interrupt_on", ["rm", "network disconnect"])
+    def test_run_smoke_teardown_completes_when_interrupted(monkeypatch, tmp_path, default_sigint, interrupt_on):
+        rec = Recorder(interrupt_on)
+        monkeypatch.setattr(ri, "docker", rec)
+        with pytest.raises(KeyboardInterrupt):
+            ri.run_smoke(object(), variant="probe", schedule=[], out=tmp_path, image=("ds-mvp-iso:x", "sha256:x"),
+                         mode="chancy-runtime")
+        assert rec.sent
+>       assert teardown_part(rec.calls) == TEARDOWN  # every teardown command was issued despite the interrupt
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: assert ['rm'] == ['rm', 'netwo... 'network rm']
+E         
+E         Right contains 2 more items, first extra item: 'network disconnect'
+E         Use -v to get more diff
+
+tests/experimental/test_teardown_signal_safety_offline.py:63: AssertionError
+____ test_run_smoke_teardown_completes_when_interrupted[network disconnect] ____
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d115e80>
+tmp_path = PosixPath('/private/var/folders/yt/kh85_1j91fqb89wp_73r81n40000gn/T/pytest-of-kiyo/pytest-2077/test_run_smoke_teardown_comple1')
+default_sigint = None, interrupt_on = 'network disconnect'
+
+    @pytest.mark.parametrize("interrupt_on", ["rm", "network disconnect"])
+    def test_run_smoke_teardown_completes_when_interrupted(monkeypatch, tmp_path, default_sigint, interrupt_on):
+        rec = Recorder(interrupt_on)
+        monkeypatch.setattr(ri, "docker", rec)
+        with pytest.raises(KeyboardInterrupt):
+            ri.run_smoke(object(), variant="probe", schedule=[], out=tmp_path, image=("ds-mvp-iso:x", "sha256:x"),
+                         mode="chancy-runtime")
+        assert rec.sent
+>       assert teardown_part(rec.calls) == TEARDOWN  # every teardown command was issued despite the interrupt
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: assert ['rm', 'network disconnect'] == ['rm', 'netwo... 'network rm']
+E         
+E         Right contains one more item: 'network rm'
+E         Use -v to get more diff
+
+tests/experimental/test_teardown_signal_safety_offline.py:63: AssertionError
+___________ test_coordinated_teardown_completes_when_interrupted[rm] ___________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d1173e0>
+tmp_path = PosixPath('/private/var/folders/yt/kh85_1j91fqb89wp_73r81n40000gn/T/pytest-of-kiyo/pytest-2077/test_coordinated_teardown_comp0')
+default_sigint = None, interrupt_on = 'rm'
+
+    @pytest.mark.parametrize("interrupt_on", ["rm", "network disconnect"])
+    def test_coordinated_teardown_completes_when_interrupted(monkeypatch, tmp_path, default_sigint, interrupt_on):
+        rec = Recorder(interrupt_on)
+        monkeypatch.setattr(ri, "docker", rec)
+        spec = {"processes": {"A": [], "B": []}, "gates": [], "covers": []}
+        with pytest.raises(KeyboardInterrupt):
+            rc.simultaneous(object(), {"A": ("a", "a"), "B": ("b", "b")}, spec, {"kind": "alternate"}, tmp_path,
+                            label="probe")
+        assert rec.sent
+        after = teardown_part(rec.calls)
+>       assert after.count("rm") == 3 and after[-2:] == ["network disconnect", "network rm"]  # 3 containers, then net
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: assert (1 == 3)
+E        +  where 1 = <built-in method count of list object at 0x10d134440>('rm')
+E        +    where <built-in method count of list object at 0x10d134440> = ['rm'].count
+
+tests/experimental/test_teardown_signal_safety_offline.py:76: AssertionError
+___ test_coordinated_teardown_completes_when_interrupted[network disconnect] ___
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d117a10>
+tmp_path = PosixPath('/private/var/folders/yt/kh85_1j91fqb89wp_73r81n40000gn/T/pytest-of-kiyo/pytest-2077/test_coordinated_teardown_comp1')
+default_sigint = None, interrupt_on = 'network disconnect'
+
+    @pytest.mark.parametrize("interrupt_on", ["rm", "network disconnect"])
+    def test_coordinated_teardown_completes_when_interrupted(monkeypatch, tmp_path, default_sigint, interrupt_on):
+        rec = Recorder(interrupt_on)
+        monkeypatch.setattr(ri, "docker", rec)
+        spec = {"processes": {"A": [], "B": []}, "gates": [], "covers": []}
+        with pytest.raises(KeyboardInterrupt):
+            rc.simultaneous(object(), {"A": ("a", "a"), "B": ("b", "b")}, spec, {"kind": "alternate"}, tmp_path,
+                            label="probe")
+        assert rec.sent
+        after = teardown_part(rec.calls)
+>       assert after.count("rm") == 3 and after[-2:] == ["network disconnect", "network rm"]  # 3 containers, then net
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: assert (3 == 3 and ['rm', 'network disconnect'] == ['network dis... 'network rm']
+E        +  where 3 = <built-in method count of list object at 0x10d13f840>('rm')
+E        +    where <built-in method count of list object at 0x10d13f840> = ['rm', 'rm', 'rm', 'network disconnect'].count
+E         
+E         At index 0 diff: 'rm' != 'network disconnect'
+E         Use -v to get more diff)
+
+tests/experimental/test_teardown_signal_safety_offline.py:76: AssertionError
+=========================== short test summary info ============================
+FAILED tests/experimental/test_teardown_signal_safety_offline.py::test_run_smoke_teardown_completes_when_interrupted[rm]
+FAILED tests/experimental/test_teardown_signal_safety_offline.py::test_run_smoke_teardown_completes_when_interrupted[network disconnect]
+FAILED tests/experimental/test_teardown_signal_safety_offline.py::test_coordinated_teardown_completes_when_interrupted[rm]
+FAILED tests/experimental/test_teardown_signal_safety_offline.py::test_coordinated_teardown_completes_when_interrupted[network disconnect]
+4 failed, 1 passed in 0.18s

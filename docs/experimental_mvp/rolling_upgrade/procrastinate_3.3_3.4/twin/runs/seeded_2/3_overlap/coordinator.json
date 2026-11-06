@@ -1,0 +1,2416 @@
+{
+ "protocol": "ds-coord/1",
+ "outcome": "completed",
+ "reason": null,
+ "policy": {
+  "kind": "seeded",
+  "seed": 2
+ },
+ "gates": [
+  {
+   "actor": "old_defer",
+   "match": null,
+   "until": [
+    {
+     "actor": "old_worker",
+     "marker": "fetch",
+     "count": 1
+    },
+    {
+     "actor": "new_worker",
+     "marker": "fetch",
+     "count": 1
+    }
+   ]
+  },
+  {
+   "actor": "new_defer",
+   "match": null,
+   "until": [
+    {
+     "actor": "old_worker",
+     "marker": "fetch",
+     "count": 1
+    },
+    {
+     "actor": "new_worker",
+     "marker": "fetch",
+     "count": 1
+    }
+   ]
+  },
+  {
+   "actor": "new_admin",
+   "match": null,
+   "until": [
+    {
+     "actor": "old_worker",
+     "marker": "fetch",
+     "count": 1
+    },
+    {
+     "actor": "new_worker",
+     "marker": "fetch",
+     "count": 1
+    }
+   ]
+  }
+ ],
+ "stop": {
+  "key": "succeeded",
+  "covers": [
+   5,
+   9
+  ],
+  "after_s": 45,
+  "handled_all": [
+   1,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12
+  ]
+ },
+ "processes": {
+  "B": {
+   "version": "3.4.0",
+   "run_id": "procr_B",
+   "monitor_pid": 253,
+   "actors": {
+    "new_admin": {
+     "backend_pid": 257,
+     "handler": "procrastinate-3.4.0.admin_retry"
+    },
+    "new_defer": {
+     "backend_pid": 254,
+     "handler": "procrastinate-3.4.0.defer"
+    },
+    "new_worker": {
+     "backend_pid": 255,
+     "handler": "procrastinate-3.4.0.work"
+    }
+   },
+   "bye": "completed"
+  },
+  "A": {
+   "version": "3.3.0",
+   "run_id": "procr_A",
+   "monitor_pid": 256,
+   "actors": {
+    "old_defer": {
+     "backend_pid": 258,
+     "handler": "procrastinate-3.3.0.defer"
+    },
+    "old_worker": {
+     "backend_pid": 259,
+     "handler": "procrastinate-3.3.0.work"
+    }
+   },
+   "bye": "completed"
+  }
+ },
+ "decisions": [
+  {
+   "decision": 0,
+   "grant": 0,
+   "epoch": 1,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [
+    "old_defer",
+    "new_admin",
+    "new_defer"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "20ea599ae729",
+   "sql": "SELECT * FROM procrastinate_prune_stalled_workers_v1(%(seconds_since_heartbeat)s)",
+   "t_ms": 33.93
+  },
+  {
+   "decision": 1,
+   "grant": 1,
+   "epoch": 2,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [
+    "old_defer",
+    "new_admin",
+    "new_defer"
+   ],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 85.17
+  },
+  {
+   "decision": 2,
+   "grant": 2,
+   "epoch": 3,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [
+    "old_defer",
+    "new_admin",
+    "new_defer"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "c1f586449d9e",
+   "sql": "SELECT * FROM procrastinate_register_worker_v1()",
+   "t_ms": 138.45
+  },
+  {
+   "decision": 3,
+   "grant": 3,
+   "epoch": 4,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [
+    "old_defer",
+    "new_admin",
+    "new_defer"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "20ea599ae729",
+   "sql": "SELECT * FROM procrastinate_prune_stalled_workers_v1(%(seconds_since_heartbeat)s)",
+   "t_ms": 189.97
+  },
+  {
+   "decision": 4,
+   "grant": 4,
+   "epoch": 5,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [
+    "old_defer",
+    "new_admin",
+    "new_defer"
+   ],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 245.74
+  },
+  {
+   "decision": 5,
+   "grant": 5,
+   "epoch": 6,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [
+    "old_defer",
+    "new_admin",
+    "new_defer"
+   ],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 296.71
+  },
+  {
+   "decision": 6,
+   "grant": 6,
+   "epoch": 7,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [
+    "old_defer",
+    "new_admin",
+    "new_defer"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "c1f586449d9e",
+   "sql": "SELECT * FROM procrastinate_register_worker_v1()",
+   "t_ms": 347.68
+  },
+  {
+   "decision": 7,
+   "grant": 7,
+   "epoch": 8,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [
+    "old_defer",
+    "new_admin",
+    "new_defer"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "f835132a0a32",
+   "sql": "SELECT id, status, task_name, priority, lock, queueing_lock, args, scheduled_at, queue_name, attempts, worker_id FROM procrastinate_fetch_job_v2(%(queues)s::varchar[], %(worker_id)s);",
+   "t_ms": 403.42
+  },
+  {
+   "decision": 8,
+   "grant": 8,
+   "epoch": 9,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [
+    "old_defer",
+    "new_admin",
+    "new_defer"
+   ],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 455.17
+  },
+  {
+   "decision": 9,
+   "grant": 9,
+   "epoch": 10,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [
+    "old_defer",
+    "new_admin",
+    "new_defer"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "f835132a0a32",
+   "sql": "SELECT id, status, task_name, priority, lock, queueing_lock, args, scheduled_at, queue_name, attempts, worker_id FROM procrastinate_fetch_job_v2(%(queues)s::varchar[], %(worker_id)s);",
+   "t_ms": 962.14
+  },
+  {
+   "decision": 10,
+   "grant": 10,
+   "epoch": 11,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [
+    "old_defer",
+    "new_admin",
+    "new_defer"
+   ],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 1015.65
+  },
+  {
+   "decision": 11,
+   "grant": 11,
+   "epoch": 12,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [
+    "old_defer",
+    "new_admin",
+    "new_defer"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "f835132a0a32",
+   "sql": "SELECT id, status, task_name, priority, lock, queueing_lock, args, scheduled_at, queue_name, attempts, worker_id FROM procrastinate_fetch_job_v2(%(queues)s::varchar[], %(worker_id)s);",
+   "t_ms": 1072.42
+  },
+  {
+   "decision": 12,
+   "grant": 12,
+   "epoch": 13,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_admin",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 1129.44
+  },
+  {
+   "decision": 13,
+   "grant": 13,
+   "epoch": 14,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_admin",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_admin",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "6dea9be73c33",
+   "sql": "SELECT id, queue_name, task_name, priority, lock, queueing_lock, args, status, scheduled_at, attempts, abort_requested, worker_id FROM procrastinate_jobs WHERE (%(id)s::bigint IS NULL OR id = %(id)s) AND (%(queue_name)s::varchar IS NULL OR queue_name = %(queue_name)s) AND (%(task_name)s::varchar IS ",
+   "t_ms": 1637.25
+  },
+  {
+   "decision": 14,
+   "grant": 14,
+   "epoch": 15,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_admin",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "f835132a0a32",
+   "sql": "SELECT id, status, task_name, priority, lock, queueing_lock, args, scheduled_at, queue_name, attempts, worker_id FROM procrastinate_fetch_job_v2(%(queues)s::varchar[], %(worker_id)s);",
+   "t_ms": 1690.94
+  },
+  {
+   "decision": 15,
+   "grant": 15,
+   "epoch": 16,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_defer",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_admin",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "c6e63dc79a28",
+   "sql": "SELECT unnest( procrastinate_defer_jobs_v1( %(jobs)s::procrastinate_job_to_defer_v1[] ) ) AS id;",
+   "t_ms": 1745.12
+  },
+  {
+   "decision": 16,
+   "grant": 16,
+   "epoch": 17,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_admin",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 1797.13
+  },
+  {
+   "decision": 17,
+   "grant": 17,
+   "epoch": 18,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_admin",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_admin",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 2300.37
+  },
+  {
+   "decision": 18,
+   "grant": 18,
+   "epoch": 19,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_defer",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_admin",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "c6e63dc79a28",
+   "sql": "SELECT unnest( procrastinate_defer_jobs_v1( %(jobs)s::procrastinate_job_to_defer_v1[] ) ) AS id;",
+   "t_ms": 2354.71
+  },
+  {
+   "decision": 19,
+   "grant": 19,
+   "epoch": 20,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_defer",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_admin",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 2406.83
+  },
+  {
+   "decision": 20,
+   "grant": 20,
+   "epoch": 21,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_admin",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_admin",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "8e4ad4efcf83",
+   "sql": "SELECT procrastinate_retry_job_v2(%(job_id)s, %(retry_at)s, %(new_priority)s, %(new_queue_name)s, %(new_lock)s);",
+   "t_ms": 2459.3
+  },
+  {
+   "decision": 21,
+   "grant": 21,
+   "epoch": 22,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_defer",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_admin",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 2512.6
+  },
+  {
+   "decision": 22,
+   "grant": 22,
+   "epoch": 23,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_admin",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_admin",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 2566.08
+  },
+  {
+   "decision": 23,
+   "grant": 23,
+   "epoch": 24,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_defer",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_admin",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "c6e63dc79a28",
+   "sql": "SELECT unnest( procrastinate_defer_jobs_v1( %(jobs)s::procrastinate_job_to_defer_v1[] ) ) AS id;",
+   "t_ms": 2618.65
+  },
+  {
+   "decision": 24,
+   "grant": 24,
+   "epoch": 25,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_defer",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_admin",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 2672.24
+  },
+  {
+   "decision": 25,
+   "grant": 25,
+   "epoch": 26,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_admin",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "f835132a0a32",
+   "sql": "SELECT id, status, task_name, priority, lock, queueing_lock, args, scheduled_at, queue_name, attempts, worker_id FROM procrastinate_fetch_job_v2(%(queues)s::varchar[], %(worker_id)s);",
+   "t_ms": 2726.85
+  },
+  {
+   "decision": 26,
+   "grant": 26,
+   "epoch": 27,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_admin",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 2781.19
+  },
+  {
+   "decision": 27,
+   "grant": 27,
+   "epoch": 28,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_admin",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 3286.79
+  },
+  {
+   "decision": 28,
+   "grant": 28,
+   "epoch": 29,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_admin",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "f835132a0a32",
+   "sql": "SELECT id, status, task_name, priority, lock, queueing_lock, args, scheduled_at, queue_name, attempts, worker_id FROM procrastinate_fetch_job_v2(%(queues)s::varchar[], %(worker_id)s);",
+   "t_ms": 3344.04
+  },
+  {
+   "decision": 29,
+   "grant": 29,
+   "epoch": 30,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_admin",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 3396.56
+  },
+  {
+   "decision": 30,
+   "grant": 30,
+   "epoch": 31,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_admin",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "46012253eb46",
+   "sql": "SELECT procrastinate_finish_job_v1(%(job_id)s, %(status)s, %(delete_job)s);",
+   "t_ms": 3449.94
+  },
+  {
+   "decision": 31,
+   "grant": 31,
+   "epoch": 32,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_defer",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_admin",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "c6e63dc79a28",
+   "sql": "SELECT unnest( procrastinate_defer_jobs_v1( %(jobs)s::procrastinate_job_to_defer_v1[] ) ) AS id;",
+   "t_ms": 3502.71
+  },
+  {
+   "decision": 32,
+   "grant": 32,
+   "epoch": 33,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_admin",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 3555.6
+  },
+  {
+   "decision": 33,
+   "grant": 33,
+   "epoch": 34,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_admin",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_admin",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "6dea9be73c33",
+   "sql": "SELECT id, queue_name, task_name, priority, lock, queueing_lock, args, status, scheduled_at, attempts, abort_requested, worker_id FROM procrastinate_jobs WHERE (%(id)s::bigint IS NULL OR id = %(id)s) AND (%(queue_name)s::varchar IS NULL OR queue_name = %(queue_name)s) AND (%(task_name)s::varchar IS ",
+   "t_ms": 3607.68
+  },
+  {
+   "decision": 34,
+   "grant": 34,
+   "epoch": 35,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_admin",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "f835132a0a32",
+   "sql": "SELECT id, status, task_name, priority, lock, queueing_lock, args, scheduled_at, queue_name, attempts, worker_id FROM procrastinate_fetch_job_v2(%(queues)s::varchar[], %(worker_id)s);",
+   "t_ms": 3664.27
+  },
+  {
+   "decision": 35,
+   "grant": 35,
+   "epoch": 36,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_admin",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 3717.64
+  },
+  {
+   "decision": 36,
+   "grant": 36,
+   "epoch": 37,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_admin",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "46012253eb46",
+   "sql": "SELECT procrastinate_finish_job_v1(%(job_id)s, %(status)s, %(delete_job)s);",
+   "t_ms": 3770.34
+  },
+  {
+   "decision": 37,
+   "grant": 37,
+   "epoch": 38,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_admin",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 3823.18
+  },
+  {
+   "decision": 38,
+   "grant": 38,
+   "epoch": 39,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_admin",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_admin",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 3876.64
+  },
+  {
+   "decision": 39,
+   "grant": 39,
+   "epoch": 40,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "46012253eb46",
+   "sql": "SELECT procrastinate_finish_job_v1(%(job_id)s, %(status)s, %(delete_job)s);",
+   "t_ms": 3930.17
+  },
+  {
+   "decision": 40,
+   "grant": 40,
+   "epoch": 41,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "f835132a0a32",
+   "sql": "SELECT id, status, task_name, priority, lock, queueing_lock, args, scheduled_at, queue_name, attempts, worker_id FROM procrastinate_fetch_job_v2(%(queues)s::varchar[], %(worker_id)s);",
+   "t_ms": 3986.93
+  },
+  {
+   "decision": 41,
+   "grant": 41,
+   "epoch": 42,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 4040.82
+  },
+  {
+   "decision": 42,
+   "grant": 42,
+   "epoch": 43,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_defer",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "c6e63dc79a28",
+   "sql": "SELECT unnest( procrastinate_defer_jobs_v1( %(jobs)s::procrastinate_job_to_defer_v1[] ) ) AS id;",
+   "t_ms": 4095.19
+  },
+  {
+   "decision": 43,
+   "grant": 43,
+   "epoch": 44,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_defer",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 4146.9
+  },
+  {
+   "decision": 44,
+   "grant": 44,
+   "epoch": 45,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_defer",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "c6e63dc79a28",
+   "sql": "SELECT unnest( procrastinate_defer_jobs_v1( %(jobs)s::procrastinate_job_to_defer_v1[] ) ) AS id;",
+   "t_ms": 4199.7
+  },
+  {
+   "decision": 45,
+   "grant": 45,
+   "epoch": 46,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "46012253eb46",
+   "sql": "SELECT procrastinate_finish_job_v1(%(job_id)s, %(status)s, %(delete_job)s);",
+   "t_ms": 4256.33
+  },
+  {
+   "decision": 46,
+   "grant": 46,
+   "epoch": 47,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 4308.69
+  },
+  {
+   "decision": 47,
+   "grant": 47,
+   "epoch": 48,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 4361.58
+  },
+  {
+   "decision": 48,
+   "grant": 48,
+   "epoch": 49,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "f835132a0a32",
+   "sql": "SELECT id, status, task_name, priority, lock, queueing_lock, args, scheduled_at, queue_name, attempts, worker_id FROM procrastinate_fetch_job_v2(%(queues)s::varchar[], %(worker_id)s);",
+   "t_ms": 4414.75
+  },
+  {
+   "decision": 49,
+   "grant": 49,
+   "epoch": 50,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "f835132a0a32",
+   "sql": "SELECT id, status, task_name, priority, lock, queueing_lock, args, scheduled_at, queue_name, attempts, worker_id FROM procrastinate_fetch_job_v2(%(queues)s::varchar[], %(worker_id)s);",
+   "t_ms": 4469.56
+  },
+  {
+   "decision": 50,
+   "grant": 50,
+   "epoch": 51,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 4521.05
+  },
+  {
+   "decision": 51,
+   "grant": 51,
+   "epoch": 52,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_defer",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_defer",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 4577.64
+  },
+  {
+   "decision": 52,
+   "grant": 52,
+   "epoch": 53,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 4633.68
+  },
+  {
+   "decision": 53,
+   "grant": 53,
+   "epoch": 54,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "8e4ad4efcf83",
+   "sql": "SELECT procrastinate_retry_job_v2(%(job_id)s, %(retry_at)s, %(new_priority)s, %(new_queue_name)s, %(new_lock)s);",
+   "t_ms": 5142.14
+  },
+  {
+   "decision": 54,
+   "grant": 54,
+   "epoch": 55,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 5194.98
+  },
+  {
+   "decision": 55,
+   "grant": 55,
+   "epoch": 56,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "f835132a0a32",
+   "sql": "SELECT id, status, task_name, priority, lock, queueing_lock, args, scheduled_at, queue_name, attempts, worker_id FROM procrastinate_fetch_job_v2(%(queues)s::varchar[], %(worker_id)s);",
+   "t_ms": 5248.68
+  },
+  {
+   "decision": 56,
+   "grant": 56,
+   "epoch": 57,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "f835132a0a32",
+   "sql": "SELECT id, status, task_name, priority, lock, queueing_lock, args, scheduled_at, queue_name, attempts, worker_id FROM procrastinate_fetch_job_v2(%(queues)s::varchar[], %(worker_id)s);",
+   "t_ms": 5306.1
+  },
+  {
+   "decision": 57,
+   "grant": 57,
+   "epoch": 58,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 5364.11
+  },
+  {
+   "decision": 58,
+   "grant": 58,
+   "epoch": 59,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "46012253eb46",
+   "sql": "SELECT procrastinate_finish_job_v1(%(job_id)s, %(status)s, %(delete_job)s);",
+   "t_ms": 5418.36
+  },
+  {
+   "decision": 59,
+   "grant": 59,
+   "epoch": 60,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 5474.85
+  },
+  {
+   "decision": 60,
+   "grant": 60,
+   "epoch": 61,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 5526.4
+  },
+  {
+   "decision": 61,
+   "grant": 61,
+   "epoch": 62,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "8e4ad4efcf83",
+   "sql": "SELECT procrastinate_retry_job_v2(%(job_id)s, %(retry_at)s, %(new_priority)s, %(new_queue_name)s, %(new_lock)s);",
+   "t_ms": 5580.38
+  },
+  {
+   "decision": 62,
+   "grant": 62,
+   "epoch": 63,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 5631.7
+  },
+  {
+   "decision": 63,
+   "grant": 63,
+   "epoch": 64,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "f835132a0a32",
+   "sql": "SELECT id, status, task_name, priority, lock, queueing_lock, args, scheduled_at, queue_name, attempts, worker_id FROM procrastinate_fetch_job_v2(%(queues)s::varchar[], %(worker_id)s);",
+   "t_ms": 5684.8
+  },
+  {
+   "decision": 64,
+   "grant": 64,
+   "epoch": 65,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "f835132a0a32",
+   "sql": "SELECT id, status, task_name, priority, lock, queueing_lock, args, scheduled_at, queue_name, attempts, worker_id FROM procrastinate_fetch_job_v2(%(queues)s::varchar[], %(worker_id)s);",
+   "t_ms": 5739.3
+  },
+  {
+   "decision": 65,
+   "grant": 65,
+   "epoch": 66,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 5794.02
+  },
+  {
+   "decision": 66,
+   "grant": 66,
+   "epoch": 67,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 6297.95
+  },
+  {
+   "decision": 67,
+   "grant": 67,
+   "epoch": 68,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_defer",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 6351.74
+  },
+  {
+   "decision": 68,
+   "grant": 68,
+   "epoch": 69,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "f835132a0a32",
+   "sql": "SELECT id, status, task_name, priority, lock, queueing_lock, args, scheduled_at, queue_name, attempts, worker_id FROM procrastinate_fetch_job_v2(%(queues)s::varchar[], %(worker_id)s);",
+   "t_ms": 6406.72
+  },
+  {
+   "decision": 69,
+   "grant": 69,
+   "epoch": 70,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "46012253eb46",
+   "sql": "SELECT procrastinate_finish_job_v1(%(job_id)s, %(status)s, %(delete_job)s);",
+   "t_ms": 6459.18
+  },
+  {
+   "decision": 70,
+   "grant": 70,
+   "epoch": 71,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_defer",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "c6e63dc79a28",
+   "sql": "SELECT unnest( procrastinate_defer_jobs_v1( %(jobs)s::procrastinate_job_to_defer_v1[] ) ) AS id;",
+   "t_ms": 6512.95
+  },
+  {
+   "decision": 71,
+   "grant": 71,
+   "epoch": 72,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 6564.27
+  },
+  {
+   "decision": 72,
+   "grant": 72,
+   "epoch": 73,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 6615.22
+  },
+  {
+   "decision": 73,
+   "grant": 73,
+   "epoch": 74,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "23b3375dd10c",
+   "sql": "SELECT procrastinate_retry_job_v1(%(job_id)s, %(retry_at)s, %(new_priority)s, %(new_queue_name)s, %(new_lock)s);",
+   "t_ms": 6671.18
+  },
+  {
+   "decision": 74,
+   "grant": 74,
+   "epoch": 75,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 6724.4
+  },
+  {
+   "decision": 75,
+   "grant": 75,
+   "epoch": 76,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "f835132a0a32",
+   "sql": "SELECT id, status, task_name, priority, lock, queueing_lock, args, scheduled_at, queue_name, attempts, worker_id FROM procrastinate_fetch_job_v2(%(queues)s::varchar[], %(worker_id)s);",
+   "t_ms": 6776.06
+  },
+  {
+   "decision": 76,
+   "grant": 76,
+   "epoch": 77,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "f835132a0a32",
+   "sql": "SELECT id, status, task_name, priority, lock, queueing_lock, args, scheduled_at, queue_name, attempts, worker_id FROM procrastinate_fetch_job_v2(%(queues)s::varchar[], %(worker_id)s);",
+   "t_ms": 6828.63
+  },
+  {
+   "decision": 77,
+   "grant": 77,
+   "epoch": 78,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 6881.73
+  },
+  {
+   "decision": 78,
+   "grant": 78,
+   "epoch": 79,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "f835132a0a32",
+   "sql": "SELECT id, status, task_name, priority, lock, queueing_lock, args, scheduled_at, queue_name, attempts, worker_id FROM procrastinate_fetch_job_v2(%(queues)s::varchar[], %(worker_id)s);",
+   "t_ms": 7390.3
+  },
+  {
+   "decision": 79,
+   "grant": 79,
+   "epoch": 80,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 7446.1
+  },
+  {
+   "decision": 80,
+   "grant": 80,
+   "epoch": 81,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "f835132a0a32",
+   "sql": "SELECT id, status, task_name, priority, lock, queueing_lock, args, scheduled_at, queue_name, attempts, worker_id FROM procrastinate_fetch_job_v2(%(queues)s::varchar[], %(worker_id)s);",
+   "t_ms": 7951.24
+  },
+  {
+   "decision": 81,
+   "grant": 81,
+   "epoch": 82,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 8003.94
+  },
+  {
+   "decision": 82,
+   "grant": 82,
+   "epoch": 83,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "f835132a0a32",
+   "sql": "SELECT id, status, task_name, priority, lock, queueing_lock, args, scheduled_at, queue_name, attempts, worker_id FROM procrastinate_fetch_job_v2(%(queues)s::varchar[], %(worker_id)s);",
+   "t_ms": 8508.68
+  },
+  {
+   "decision": 83,
+   "grant": 83,
+   "epoch": 84,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 8560.71
+  },
+  {
+   "decision": 84,
+   "grant": 84,
+   "epoch": 85,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 9064.78
+  },
+  {
+   "decision": 85,
+   "grant": 85,
+   "epoch": 86,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "46012253eb46",
+   "sql": "SELECT procrastinate_finish_job_v1(%(job_id)s, %(status)s, %(delete_job)s);",
+   "t_ms": 9118.24
+  },
+  {
+   "decision": 86,
+   "grant": 86,
+   "epoch": 87,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "f835132a0a32",
+   "sql": "SELECT id, status, task_name, priority, lock, queueing_lock, args, scheduled_at, queue_name, attempts, worker_id FROM procrastinate_fetch_job_v2(%(queues)s::varchar[], %(worker_id)s);",
+   "t_ms": 9174.02
+  },
+  {
+   "decision": 87,
+   "grant": 87,
+   "epoch": 88,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_defer",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 9230.71
+  },
+  {
+   "decision": 88,
+   "grant": 88,
+   "epoch": 89,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 9283.67
+  },
+  {
+   "decision": 89,
+   "grant": 89,
+   "epoch": 90,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 9338.39
+  },
+  {
+   "decision": 90,
+   "grant": 90,
+   "epoch": 91,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "f835132a0a32",
+   "sql": "SELECT id, status, task_name, priority, lock, queueing_lock, args, scheduled_at, queue_name, attempts, worker_id FROM procrastinate_fetch_job_v2(%(queues)s::varchar[], %(worker_id)s);",
+   "t_ms": 9845.53
+  },
+  {
+   "decision": 91,
+   "grant": 91,
+   "epoch": 92,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "f835132a0a32",
+   "sql": "SELECT id, status, task_name, priority, lock, queueing_lock, args, scheduled_at, queue_name, attempts, worker_id FROM procrastinate_fetch_job_v2(%(queues)s::varchar[], %(worker_id)s);",
+   "t_ms": 9899.68
+  },
+  {
+   "decision": 92,
+   "grant": 92,
+   "epoch": 93,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 9952.97
+  },
+  {
+   "decision": 93,
+   "grant": 93,
+   "epoch": 94,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_defer",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "c6e63dc79a28",
+   "sql": "SELECT unnest( procrastinate_defer_jobs_v1( %(jobs)s::procrastinate_job_to_defer_v1[] ) ) AS id;",
+   "t_ms": 10458.66
+  },
+  {
+   "decision": 94,
+   "grant": 94,
+   "epoch": 95,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 10512.1
+  },
+  {
+   "decision": 95,
+   "grant": 95,
+   "epoch": 96,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "f835132a0a32",
+   "sql": "SELECT id, status, task_name, priority, lock, queueing_lock, args, scheduled_at, queue_name, attempts, worker_id FROM procrastinate_fetch_job_v2(%(queues)s::varchar[], %(worker_id)s);",
+   "t_ms": 10566.15
+  },
+  {
+   "decision": 96,
+   "grant": 96,
+   "epoch": 97,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_defer",
+   "source": "seeded",
+   "enabled": [
+    "old_defer",
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 10618.98
+  },
+  {
+   "decision": 97,
+   "grant": 97,
+   "epoch": 98,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "46012253eb46",
+   "sql": "SELECT procrastinate_finish_job_v1(%(job_id)s, %(status)s, %(delete_job)s);",
+   "t_ms": 10676.14
+  },
+  {
+   "decision": 98,
+   "grant": 98,
+   "epoch": 99,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 10727.93
+  },
+  {
+   "decision": 99,
+   "grant": 99,
+   "epoch": 100,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "f835132a0a32",
+   "sql": "SELECT id, status, task_name, priority, lock, queueing_lock, args, scheduled_at, queue_name, attempts, worker_id FROM procrastinate_fetch_job_v2(%(queues)s::varchar[], %(worker_id)s);",
+   "t_ms": 10780.84
+  },
+  {
+   "decision": 100,
+   "grant": 100,
+   "epoch": 101,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 10833.98
+  },
+  {
+   "decision": 101,
+   "grant": 101,
+   "epoch": 102,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 10886.99
+  },
+  {
+   "decision": 102,
+   "grant": 102,
+   "epoch": 103,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "23b3375dd10c",
+   "sql": "SELECT procrastinate_retry_job_v1(%(job_id)s, %(retry_at)s, %(new_priority)s, %(new_queue_name)s, %(new_lock)s);",
+   "t_ms": 10938.77
+  },
+  {
+   "decision": 103,
+   "grant": 103,
+   "epoch": 104,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 10994.19
+  },
+  {
+   "decision": 104,
+   "grant": 104,
+   "epoch": 105,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "5d457810260d",
+   "sql": "SELECT procrastinate_unregister_worker_v1(%(worker_id)s)",
+   "t_ms": 11049.09
+  },
+  {
+   "decision": 105,
+   "grant": 105,
+   "epoch": 106,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "5d457810260d",
+   "sql": "SELECT procrastinate_unregister_worker_v1(%(worker_id)s)",
+   "t_ms": 11102.96
+  },
+  {
+   "decision": 106,
+   "grant": 106,
+   "epoch": 107,
+   "process": "A",
+   "version": "3.3.0",
+   "actor": "old_worker",
+   "source": "seeded",
+   "enabled": [
+    "old_worker",
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 11156.77
+  },
+  {
+   "decision": 107,
+   "grant": 107,
+   "epoch": 108,
+   "process": "B",
+   "version": "3.4.0",
+   "actor": "new_worker",
+   "source": "seeded",
+   "enabled": [
+    "new_worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 11210.34
+  }
+ ],
+ "statements": {
+  "20ea599ae729": "SELECT * FROM procrastinate_prune_stalled_workers_v1(%(seconds_since_heartbeat)s)",
+  "79663c1d3b43": "COMMIT",
+  "c1f586449d9e": "SELECT * FROM procrastinate_register_worker_v1()",
+  "f835132a0a32": "SELECT id, status, task_name, priority, lock, queueing_lock, args, scheduled_at, queue_name, attempts, worker_id FROM procrastinate_fetch_job_v2(%(queues)s::varchar[], %(worker_id)s);",
+  "6dea9be73c33": "SELECT id, queue_name, task_name, priority, lock, queueing_lock, args, status, scheduled_at, attempts, abort_requested, worker_id FROM procrastinate_jobs WHERE (%(id)s::bigint IS NULL OR id = %(id)s) AND (%(queue_name)s::varchar IS NULL OR queue_name = %(queue_name)s) AND (%(task_name)s::varchar IS NULL OR task_name = %(task_name)s) AND (%(status)s::procrastinate_job_status IS NULL OR status = %(status)s) AND (%(lock)s::varchar IS NULL OR lock = %(lock)s) AND (%(queueing_lock)s::varchar IS NULL OR queueing_lock = %(queueing_lock)s) AND (%(worker_id)s::bigint IS NULL OR worker_id = %(worker_id)s) ORDER BY id ASC;",
+  "c6e63dc79a28": "SELECT unnest( procrastinate_defer_jobs_v1( %(jobs)s::procrastinate_job_to_defer_v1[] ) ) AS id;",
+  "8e4ad4efcf83": "SELECT procrastinate_retry_job_v2(%(job_id)s, %(retry_at)s, %(new_priority)s, %(new_queue_name)s, %(new_lock)s);",
+  "46012253eb46": "SELECT procrastinate_finish_job_v1(%(job_id)s, %(status)s, %(delete_job)s);",
+  "23b3375dd10c": "SELECT procrastinate_retry_job_v1(%(job_id)s, %(retry_at)s, %(new_priority)s, %(new_queue_name)s, %(new_lock)s);",
+  "5d457810260d": "SELECT procrastinate_unregister_worker_v1(%(worker_id)s)"
+ },
+ "events": [
+  {
+   "event": "start",
+   "t_ms": 33.63,
+   "pids": {
+    "257": "new_admin",
+    "254": "new_defer",
+    "255": "new_worker",
+    "258": "old_defer",
+    "259": "old_worker"
+   }
+  },
+  {
+   "event": "stop",
+   "why": "covered",
+   "at_grant": 101,
+   "t_ms": 10886.65
+  },
+  {
+   "event": "bye",
+   "process": "A",
+   "t_ms": 11210.71
+  },
+  {
+   "event": "bye",
+   "process": "B",
+   "t_ms": 11272.53
+  },
+  {
+   "event": "end",
+   "t_ms": 11272.54
+  }
+ ],
+ "grants": 108,
+ "elapsed_ms": 11272.54
+}

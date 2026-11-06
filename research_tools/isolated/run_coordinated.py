@@ -42,6 +42,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import run_isolated as ri  # noqa: E402
+from signal_safe import deferred_signals  # noqa: E402
 
 from deployspecter.experimental import chancy_properties as cp  # noqa: E402
 from deployspecter.experimental import harness as hz  # noqa: E402
@@ -325,20 +326,21 @@ def simultaneous(target: hz.Target, images: dict[str, Any], spec: dict[str, Any]
             (out / f"{p}.trace.json").write_text(json.dumps(t, indent=1, default=str))
         (out / "coordinator.json").write_text(json.dumps(coord, indent=1, default=str))
     finally:
-        for n in names.values():
-            ri.docker("rm", "-f", n, check=False)
-        for proc in procs.values():
-            if proc.poll() is None:
-                proc.kill()
-        ri.docker("network", "disconnect", "-f", net, ri.PG_CONTAINER, check=False)
-        ri.docker("network", "rm", net, check=False)
-        shutil.rmtree(work, ignore_errors=True)
-        left = [n for n in names.values() if ri.docker("ps", "-a", "--filter", f"name=^{n}$", "-q",
-                                                       check=False).stdout.strip()]
-        nets = ri.docker("network", "ls", "--filter", f"name={net}", "-q", check=False).stdout.strip()
-        result["teardown"] = {"containers_removed": not left, "network_removed": not nets,
-                              "workdir_removed": not work.exists(),
-                              "protected_unchanged": ri.protected_state() == before}
+        with deferred_signals():  # an interrupt here is held until the teardown is complete (signal_safe.py)
+            for n in names.values():
+                ri.docker("rm", "-f", n, check=False)
+            for proc in procs.values():
+                if proc.poll() is None:
+                    proc.kill()
+            ri.docker("network", "disconnect", "-f", net, ri.PG_CONTAINER, check=False)
+            ri.docker("network", "rm", net, check=False)
+            shutil.rmtree(work, ignore_errors=True)
+            left = [n for n in names.values() if ri.docker("ps", "-a", "--filter", f"name=^{n}$", "-q",
+                                                           check=False).stdout.strip()]
+            nets = ri.docker("network", "ls", "--filter", f"name={net}", "-q", check=False).stdout.strip()
+            result["teardown"] = {"containers_removed": not left, "network_removed": not nets,
+                                  "workdir_removed": not work.exists(),
+                                  "protected_unchanged": ri.protected_state() == before}
     return result
 
 

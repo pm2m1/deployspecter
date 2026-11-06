@@ -57,3 +57,58 @@ A failing attempt, with its preserved evidence. The protocol is:
 4. rerun both stress designs.
 
 Until then, a single isolated-suite failure in a confirmatory run must be preserved and reported, never retried away.
+
+## 2026-11-06 addendum: probes of the two suspected races (`race_probes_1/`, `stress_3_after_teardown_fix/`)
+
+**The original failure is still UNRESOLVED.** Its test name and traceback are lost, so it can't be attributed. A **teardown defect in the suspected area was demonstrated and fixed**. Whether that defect caused the original failure is **not proven**.
+
+### Race 2: `docker run --rm` auto-removal vs the runner's `docker rm -f` / `network rm`. Not demonstrated.
+- **Probe:** `research_tools/probe_teardown_race.py`, 45 iterations, at the runner's exact lifecycle and flags.
+- **Variants:** A, the container exits at once; B, a 0.3 s container; C, no `docker rm -f` at all.
+- **Result:** `rm -f` returned 0 in 30/30 iterations. `network rm` returned 0 in 45/45, **including 15/15 with no `rm -f`**. Nothing was left.
+- **Interpretation:** on this Docker Desktop, `docker run --rm` returns only after the container and its endpoint are gone. `teardown_race/`.
+
+### Race 1: SIGINT timing in `test_an_interrupted_run_still_tears_down`. A defect demonstrated.
+- **Natural timeline** (`interrupt_race/`, 20 attempts):
+  - the container appears about 0.68 s after start and is gone at about 2.47 s;
+  - the runner exits 0 at about 2.72 s, about 2.04 s after the container appears.
+- **Signals at 0–2.0 s after appearance:** 18/18 runs exited by SIGINT (-2), with no leftovers.
+- **A signal at 3.0 s:** the runner had already exited 0, which is the test's `returncode != 0` failure mode. It needs the test's detection latency to exceed about 2 s, against about 0.5 s plus two `docker` calls in normal operation. Not observed in the test itself.
+- **Defect demonstrated.** In the dense probe (`interrupt_race_dense/`), a SIGINT arrived 0.04 s after the container disappeared (delay 1.85 s), inside `run_smoke`'s `finally`:
+  - the KeyboardInterrupt surfaced in `docker network disconnect`;
+  - it skipped `network rm`;
+  - it left network `ds-mvp-iso-5756ea22` **with the disposable PostgreSQL container still attached**.
+
+  The test's `leftovers() == ("", "")` would fail, and so would every later test that checks leftovers. The traceback is in `attempts.jsonl`, and the recorded cleanup in `CLEANUP_OF_LEFTOVER.txt`. The same unguarded teardown exists in `run_coordinated.simultaneous`.
+- **Fix** (`98c8e29`, `research_tools/isolated/signal_safe.py`):
+  - both teardowns run inside `deferred_signals()`;
+  - SIGINT and SIGTERM are held until the teardown completes, then re-delivered once, so the run still ends by the interrupt;
+  - the runner image is unchanged.
+- **Regression** (`tests/experimental/test_teardown_signal_safety_offline.py`): it uses a real SIGINT during teardown with a recording fake `docker`.
+  - On the unfixed runner: **pytest exit 1, 4 failed, 1 passed**. Teardown stopped at the interrupted command. The coordinator independently confirmed this on `e120a92`.
+  - Fixed: **exit 0, 5 passed**.
+- **Limits.** Only the main thread can defer. A terminal Ctrl-C sent to the whole process group can still kill a teardown `docker` child, which then fails visibly.
+
+### After the fix (revision `c825c97`)
+
+| Run | Evidence | Result |
+|---|---|---|
+| Dense interrupt probe | `interrupt_race_dense_after_fix/` | 16/16 attempts, **0 leftovers**, including signals landing 0.0–0.21 s after the container was gone, the teardown window. In 5 attempts the signal arrived after the runner had exited 0 (the test-timing boundary above) |
+| Whole-suite stress (core, then isolated), 3 × 1 attempt | `stress_3_after_teardown_fix/suite_run_{1,2,3}` | core 411 passed (exit 0) ×3; isolated 13 passed (exit 0) ×3 |
+| Targeted interrupt test | `stress_3_after_teardown_fix/interrupt_targeted` | 10/10 exit 0 |
+
+**Per-attempt evidence and state:**
+- Each attempt has stdout and stderr, JUnit, the exit status, the revision, and before/between/after snapshots.
+- No leftover `ds-mvp-iso` container or network, no foreign session, an empty `public` schema, the disposable PostgreSQL never restarted, and the protected container unchanged.
+
+**Suite run 3's wall time** (23:45:52Z → 01:47:27Z) came from gaps *between* processes, consistent with the host being suspended during a usage-limit stop: 43 min before `snapshot_between`, then 70 min. Its tests ran 111.6 s (core) and 107.5 s (isolated), with normal per-test durations.
+
+**Zero failures in 58 + 29 later invocations does not resolve the original failure.**
+
+### Stronger isolation: BLOCKED ON ENVIRONMENT
+Docker Desktop (LinuxKit kernel 7.0.12) offers only `runc`, and its security options are seccomp (builtin) and cgroupns. None of these is installed:
+- `runsc` (gVisor), Kata, Firecracker;
+- Lima or colima, podman, multipass, vfkit, krunvm, qemu, OrbStack, nerdctl or finch;
+- any VM application.
+
+Adding a runtime would mean changing Docker Desktop's shared daemon, which is out of bounds. The boundary stays the restricted runc container.

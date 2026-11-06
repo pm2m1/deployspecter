@@ -47,6 +47,9 @@ from deployspecter.experimental import oracle  # noqa: E402
 from deployspecter.experimental.apps import reservations_mixed as app  # noqa: E402
 from deployspecter.experimental.corroborate import corroborate  # noqa: E402
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from signal_safe import deferred_signals  # noqa: E402
+
 PG_CONTAINER = "deployspecter-mvp-pg"
 PROTECTED_CONTAINER = "deployspecter-pg"
 RUNTIME_FLAGS = ["--read-only", "--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=64m", "--cap-drop", "ALL",
@@ -342,14 +345,16 @@ def run_smoke(target: hz.Target, *, variant: str, schedule: list[str], out: Path
                                       for rel in PAYLOAD})
         (out / f"{variant}.trace.json").write_text(json.dumps(trace, indent=1, default=str))
     finally:
-        docker("rm", "-f", name, check=False)
-        docker("network", "disconnect", "-f", net, PG_CONTAINER, check=False)
-        docker("network", "rm", net, check=False)
-        shutil.rmtree(work, ignore_errors=True)
-        leftovers = docker("ps", "-a", "--filter", f"name={name}", "-q", check=False).stdout.strip()
-        nets = docker("network", "ls", "--filter", f"name={net}", "-q", check=False).stdout.strip()
-        result["teardown"] = {"container_removed": not leftovers, "network_removed": not nets,
-                              "workdir_removed": not work.exists(), "protected_unchanged": protected_state() == before}
+        with deferred_signals():  # an interrupt here is held until the teardown is complete (signal_safe.py)
+            docker("rm", "-f", name, check=False)
+            docker("network", "disconnect", "-f", net, PG_CONTAINER, check=False)
+            docker("network", "rm", net, check=False)
+            shutil.rmtree(work, ignore_errors=True)
+            leftovers = docker("ps", "-a", "--filter", f"name={name}", "-q", check=False).stdout.strip()
+            nets = docker("network", "ls", "--filter", f"name={net}", "-q", check=False).stdout.strip()
+            result["teardown"] = {"container_removed": not leftovers, "network_removed": not nets,
+                                  "workdir_removed": not work.exists(),
+                                  "protected_unchanged": protected_state() == before}
     return result
 
 
