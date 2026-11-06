@@ -11,8 +11,10 @@ prints names unqualified. Supported:
 * functions;
 * triggers.
 
+Identity columns are exported with their own sequence's parameters (the sequence isn't created separately).
+
 **Refused**, rather than approximated: views, materialized views, partitioned or inherited tables, foreign tables,
-domains, identity or generated columns, rules, row-level policies, and function bodies that name the schema itself.
+domains, generated columns, rules, row-level policies, and function bodies that name the schema itself.
 
 **Fingerprint (``fingerprint``).** A canonical JSON of the same catalog facts with the schema name replaced by
 ``<S>``, and its sha256.
@@ -34,7 +36,10 @@ adds refusals for behaviour whose effect can't be proven from a static reading:
 * non-deterministic or session-dependent functions (``random``, the clock functions, ``gen_random_uuid``,
   ``current_setting``, ``txid_current``, …);
 * languages other than ``plpgsql`` and ``sql``;
-* statement-level, constraint (deferrable) and TRUNCATE triggers.
+* statement-level, constraint (deferrable) and TRUNCATE triggers;
+* a trigger whose function inserts into or updates a table with a non-deterministic column default: a clock,
+  random or sequence default, or an identity column. The rows it writes would differ between the sandbox and the
+  target. This is a static over-approximation from the function's text, so it fails closed.
 
 ``pg_notify`` is recorded as an external side effect, not table state, and is not refused. Passing the screen is
 necessary, not sufficient: the constructed state is still verified on the database.
@@ -91,6 +96,11 @@ Q = {
                "WHERE n.nspname = %s AND t.typtype = 'd'",
     "sequences": "SELECT sequencename::text, data_type::text, start_value, min_value, max_value, increment_by, cycle, "
                  "cache_size FROM pg_sequences WHERE schemaname = %s ORDER BY 1",
+    "identity_sequences": "SELECT s.relname::text, t.relname::text, a.attname::text FROM pg_depend d "
+                          "JOIN pg_class s ON s.oid = d.objid AND s.relkind = 'S' "
+                          "JOIN pg_class t ON t.oid = d.refobjid JOIN pg_attribute a ON a.attrelid = t.oid "
+                          "AND a.attnum = d.refobjsubid JOIN pg_namespace n ON n.oid = s.relnamespace "
+                          "WHERE n.nspname = %s AND d.deptype = 'i' ORDER BY 1",
     "sequence_owners": "SELECT s.relname::text, t.relname::text, a.attname::text FROM pg_depend d "
                        "JOIN pg_class s ON s.oid = d.objid AND s.relkind = 'S' JOIN pg_class t ON t.oid = d.refobjid "
                        "JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = d.refobjsubid "
@@ -180,8 +190,8 @@ def export(conn: Any, schema: str) -> dict[str, Any]:
         if c[what]:
             refused.append(f"{what}: {c[what]}")
     for r in c["columns"]:
-        if r[6] or r[7]:
-            refused.append(f"{r[0]}.{r[2]} is an identity or generated column")
+        if r[7]:
+            refused.append(f"{r[0]}.{r[2]} is a generated column")
     for f in c["functions"]:
         if f[6] != "f":
             refused.append(f"{f[0]} is a {f[6]} (only plain functions)")
@@ -195,7 +205,11 @@ def export(conn: Any, schema: str) -> dict[str, Any]:
             sql.Identifier(name), sql.SQL(", ").join(sql.Literal(x) for x in labels)).as_string(conn))
     for name, attrs in c["composites"]:
         out.append(f"CREATE TYPE {sql.Identifier(name).as_string(conn)} AS ({', '.join(attrs)})")
+    identity = {s[0]: (s[1], s[2]) for s in c["identity_sequences"]}
+    seq_params = {s[0]: s for s in c["sequences"]}
     for s in c["sequences"]:
+        if s[0] in identity:
+            continue  # created by its identity column below
         out.append(f"CREATE SEQUENCE {sql.Identifier(s[0]).as_string(conn)} AS {s[1]} START {s[2]} MINVALUE {s[3]} "
                    f"MAXVALUE {s[4]} INCREMENT {s[5]} {'CYCLE' if s[6] else 'NO CYCLE'} CACHE {s[7]}")
     for f in c["functions"]:  # before tables: defaults, checks and triggers may call them
@@ -205,7 +219,15 @@ def export(conn: Any, schema: str) -> dict[str, Any]:
     tables: dict[str, list[str]] = {}
     for r in c["columns"]:
         col = f"{sql.Identifier(r[2]).as_string(conn)} {r[3]}"
-        if r[5] is not None:
+        if r[6]:
+            seq = next((s for s, (t, a) in identity.items() if (t, a) == (r[0], r[2])), None)
+            p = seq_params.get(seq)
+            if p is None:
+                raise CatalogRefused(f"{r[0]}.{r[2]}: identity column without a readable sequence")
+            col += (f" GENERATED {'ALWAYS' if r[6] == 'a' else 'BY DEFAULT'} AS IDENTITY (SEQUENCE NAME "
+                    f"{sql.Identifier(seq).as_string(conn)} START {p[2]} MINVALUE {p[3]} MAXVALUE {p[4]} "
+                    f"INCREMENT {p[5]} {'CYCLE' if p[6] else 'NO CYCLE'} CACHE {p[7]})")
+        elif r[5] is not None:
             col += f" DEFAULT {r[5]}"
         if r[4]:
             col += " NOT NULL"
@@ -213,6 +235,8 @@ def export(conn: Any, schema: str) -> dict[str, Any]:
     for t, cols in tables.items():
         out.append(f"CREATE TABLE {sql.Identifier(t).as_string(conn)} ({', '.join(cols)})")
     for s, t, col in c["sequence_owners"]:
+        if s in identity:
+            continue
         out.append(f"ALTER SEQUENCE {sql.Identifier(s).as_string(conn)} OWNED BY "
                    f"{sql.Identifier(t).as_string(conn)}.{sql.Identifier(col).as_string(conn)}")
     for kind_first in (("p", "u", "c", "x"), ("f",)):
@@ -242,6 +266,10 @@ def screen_triggers(conn: Any, schema: str) -> dict[str, Any]:
     Returns ``{"controlled": {table: [...]}, "refused": [...], "notifications": [...]}``."""
     c = read(conn, schema)
     fns = {f[0]: f for f in c["functions"]}
+    volatile_defaults: dict[str, list[tuple[str, str]]] = {}
+    for r in c["columns"]:
+        if (r[5] is not None and _VOLATILE.search(r[5])) or r[6]:  # a clock, random or sequence default, identity
+            volatile_defaults.setdefault(r[0], []).append((r[2], r[5] or "identity"))
     controlled: dict[str, list[dict[str, Any]]] = {}
     refused, notes = [], []
     for table, name, _definition, tgtype, is_constraint, deferrable, fn, enabled in c["triggers"]:
@@ -267,6 +295,9 @@ def screen_triggers(conn: Any, schema: str) -> dict[str, Any]:
                 why.append("dynamic SQL (EXECUTE)")
             if m := _VOLATILE.search(f[4]):
                 why.append(f"non-deterministic or session-dependent call {m.group(0).strip()!r}")
+            for written in sorted(set(re.findall(r"\b(?:INSERT\s+INTO|UPDATE)\s+(?:\w+\.)?\"?(\w+)\"?", f[4], re.I))):
+                for col in volatile_defaults.get(written, []):
+                    why.append(f"writes {written}, whose column {col[0]} defaults to non-deterministic {col[1]!r}")
             if re.search(r"\bpg_notify\s*\(|\bNOTIFY\b", f[4], re.I):
                 notes.append(f"{name}: sends a notification (an external effect, not table state)")
         if why:

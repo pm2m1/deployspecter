@@ -286,3 +286,27 @@ def test_a_partial_index_whose_deparse_is_not_a_fixpoint_is_accepted_narrowly(ta
     assert o.status == "constructed", (o.status, o.detail)
     assert o.export["verified_by"].startswith("expression-only") and o.export["expression_differences"][0]["kind"] \
         == "indexes"
+
+
+def test_an_identity_column_is_exported_and_constructed(target, sandbox, cleanup):
+    schema = make(target, "ident",
+                  "CREATE TABLE w (id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY, n int NOT NULL)")
+    cleanup.append(schema)
+    o = pipeline_v1.construct_on_target(target, sandbox, schema, [("w", {"n": TV("int", 5)})])
+    assert o.status == "constructed", (o.status, o.detail)
+    assert rows_of(target, schema, "w") == [{"id": 1, "n": 5}]
+
+
+def test_a_trigger_writing_a_table_with_a_clock_default_is_refused(target, sandbox, cleanup):
+    # procrastinate's shape: a status trigger inserts an event whose timestamp column defaults to now()
+    schema = make(target, "clockdef", """
+CREATE TABLE jobs (id int PRIMARY KEY, status text NOT NULL);
+CREATE TABLE events (job int NOT NULL, type text NOT NULL, at timestamptz DEFAULT now());
+CREATE FUNCTION ev() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN INSERT INTO events (job, type) VALUES (NEW.id, NEW.status); RETURN NEW; END $$;
+CREATE TRIGGER jobs_ev AFTER INSERT ON jobs FOR EACH ROW EXECUTE FUNCTION ev();""")
+    cleanup.append(schema)
+    o = pipeline_v1.construct_on_target(target, sandbox, schema, [("jobs", {"id": TV("int", 1),
+                                                                           "status": TV("str", "todo")})])
+    assert o.status == "refused_triggers" and "events" in json.dumps(o.detail) and "now()" in json.dumps(o.detail)
+    assert rows_of(target, schema, "jobs") == [] and rows_of(target, schema, "events") == []
