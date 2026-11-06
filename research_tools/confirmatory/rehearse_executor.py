@@ -127,11 +127,15 @@ def main() -> int:
     rows, voided, triage = run.score(ledger, [case_dir], o.private / "reveals", oracle_set,
                                      lock_path=o.out / "BUDGET_LOCK.json")
     w.json(o.out / "results" / "SCORED.json", {"rows": rows, "voided": voided, "triage": triage})
-    analysis = run.analyse(rows, voided, lock)
-    w.json(o.out / "results" / "ANALYSIS.json", analysis)
     summary["scored"] = [{k: r[k] for k in ("arm", "detected", "first_detection_schedule", "fixed_version_violation",
                                             "refused")} for r in rows]
-    summary["analysis_verdicts"] = {k: v["verdict"] for k, v in analysis["comparisons"].items()}
+    try:  # the frozen analysis needs every arm of its comparisons; this rehearsal ran two of five
+        analysis = run.analyse(rows, voided, lock)
+        w.json(o.out / "results" / "ANALYSIS.json", analysis)
+        summary["analysis_verdicts"] = {k: v["verdict"] for k, v in analysis["comparisons"].items()}
+    except (SystemExit, Exception) as exc:  # paired_eval.Refused is a SystemExit
+        summary["analysis_verdicts"] = {"frozen_analysis": f"refused: {exc} (expected: the rehearsal's reduced scope "
+                                                           f"has no RA-MDS, which the primary comparison needs)"}
     w.json(o.out / "SUMMARY.json", summary)
     print(json.dumps({k: summary[k] for k in ("execution", "scored", "authorize_real_on_simulation_record",
                                               "analysis_verdicts")}, indent=1, default=str))
