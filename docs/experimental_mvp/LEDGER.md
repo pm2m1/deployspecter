@@ -228,3 +228,28 @@ Account balance was not checked through the API. The Responses API returns per-r
     - Ruff clean.
 
 **Meta usage in this increment:** 13 calls, $0.270384 estimated (ceiling $15).
+
+## Increment 13 (2026-11-06): Chancy through the Phase 9B pipeline (ds-p9x/1)
+
+76. **A versioned Phase 9B extension** (`phase9b_ext/`).
+    - The original sources are unmodified and sha256-checked.
+    - One declared substitution: jsonb-aware row attribution.
+    - New contracts: jsonb/1 and catalog/1 (export, fingerprint, trigger screen).
+    - Writes are locked and fingerprint-rechecked, and must equal the proven final state; an independent readback
+      follows; execution is traced.
+    - A reviewed, hash-pinned Chancy 0.26.0 registry.
+77. **Live: Chancy 0.26.0's unmodified worker runs from Phase 9B-constructed states** (`runs_p9x/chancy_2`, and
+    `chancy_3` at the final revision).
+    - Single and multi workloads: `ORIGINAL_VALID`, `construct_state` traced, 24 jsonb cells verified.
+    - Corroborated: 0 mismatched, 0 unchecked parameters. Oracle C1–C4 holds.
+    - Final state equal to the direct constructor's on the compared fields.
+    - Attempt 1 (exit 1, a partial-index deparse refusal) preserved.
+78. **procrastinate 3.4.0: refused with exact reasons.** Attempt 1 on an identity column; attempt 2 on 5 triggers that
+    write `nextval` and `now()` defaults. Upstream SQL unchanged.
+79. **Tests:** 27 live and 55 offline extension tests, plus 1 isolated test. Acceptance (`reliability/regression_p9x_1`):
+    - core 631 passed;
+    - isolated 14 passed;
+    - root 1746 passed, with 322 failing only because `DATABASE_URL` is unset;
+    - Ruff clean.
+
+**Meta usage in this increment:** none.
