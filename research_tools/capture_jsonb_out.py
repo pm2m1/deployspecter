@@ -19,17 +19,23 @@ VECTORS = [
     '"tab\\tnl\\n"', '"q\\"b\\\\"', '"\\u001f"', '"\\/"', '"😀"', '"\\ud83d\\ude00"', "true", "false", "null",
     '[true, false, null, "x", 1.0]', '{"k": "v\\u0000"}', '"\\ud800"', "NaN", "Infinity", "-Infinity", '{"a": 1,}',
     "[1,]", "", "{", "'single'", '"raw\ncontrol"', "01", "1.", ".5", "+1", '{"a": 1} x']
-pw = (Path.home() / ".ds_mvp_pg_password").read_text().strip()
-out = []
-with psycopg.connect(host="127.0.0.1", port=55441, user="ds_mvp", password=pw, dbname="ds_mvp",
-                     autocommit=True) as c:
-    assert c.execute("SELECT current_setting('cluster_name')").fetchone()[0] == "ds_mvp_disposable"
-    version = c.execute("SHOW server_version").fetchone()[0]
-    for v in VECTORS:
-        try:
-            out.append({"input": v, "output": c.execute("SELECT %s::jsonb::text", (v,)).fetchone()[0]})
-        except psycopg.Error as exc:
-            out.append({"input": v, "output": None, "error": str(exc).splitlines()[0]})
-path = REPO / "tests/experimental/fixtures/pg16_jsonb_out.json"
-path.write_text(json.dumps({"server_version": version, "vectors": out}, indent=1, ensure_ascii=False) + "\n")
-print(len(out), "vectors;", sum(o["output"] is None for o in out), "rejected; server", version)
+
+def main() -> None:
+    pw = (Path.home() / ".ds_mvp_pg_password").read_text().strip()
+    out = []
+    with psycopg.connect(host="127.0.0.1", port=55441, user="ds_mvp", password=pw, dbname="ds_mvp",
+                         autocommit=True) as c:
+        assert c.execute("SELECT current_setting('cluster_name')").fetchone()[0] == "ds_mvp_disposable"
+        version = c.execute("SHOW server_version").fetchone()[0]
+        for v in VECTORS:
+            try:
+                out.append({"input": v, "output": c.execute("SELECT %s::jsonb::text", (v,)).fetchone()[0]})
+            except psycopg.Error as exc:
+                out.append({"input": v, "output": None, "error": str(exc).splitlines()[0]})
+    path = REPO / "tests/experimental/fixtures/pg16_jsonb_out.json"
+    path.write_text(json.dumps({"server_version": version, "vectors": out}, indent=1, ensure_ascii=False) + "\n")
+    print(len(out), "vectors;", sum(o["output"] is None for o in out), "rejected; server", version)
+
+
+if __name__ == "__main__":
+    main()
