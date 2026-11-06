@@ -115,10 +115,24 @@ def construct_on_target(target: Any, sandbox: Any, schema: str, rows: list[tuple
     sandbox.admin.execute("SET TIME ZONE 'UTC'")
     sandbox.reset(exp["setup_sql"], [])
     sandbox_fp = catalog.fingerprint(sandbox.admin, "ds_run")
+    out.export["verified_by"] = "identical fingerprints"
     if sandbox_fp["sha256"] != target_fp["sha256"]:
-        out.status, out.stage = "refused_catalog", "sandbox_fingerprint"
-        out.detail = _fp_difference(target_fp["facts"], sandbox_fp["facts"])
-        return out
+        allowed = catalog.expression_only_differences(target_fp["facts"], sandbox_fp["facts"])
+        if allowed is None:
+            out.status, out.stage = "refused_catalog", "sandbox_fingerprint"
+            out.detail = _fp_difference(target_fp["facts"], sandbox_fp["facts"])
+            return out
+        again = catalog.export(sandbox.admin, "ds_run")  # the sandbox's own export must rebuild it exactly
+        sandbox.reset(again["setup_sql"], [])
+        fixpoint = catalog.fingerprint(sandbox.admin, "ds_run")
+        sandbox.reset(exp["setup_sql"], [])
+        if fixpoint["sha256"] != sandbox_fp["sha256"] or \
+                catalog.fingerprint(sandbox.admin, "ds_run")["sha256"] != sandbox_fp["sha256"]:
+            out.status, out.stage = "refused_catalog", "deparse_fixpoint"
+            out.detail = {"expression_differences": allowed, "fixpoint": False}
+            return out
+        out.export["verified_by"] = "expression-only deparse differences, sandbox re-export is a fixpoint"
+        out.export["expression_differences"] = allowed
     try:
         seed, registered = loader.seed_rows([(t, {c: execute.plain(tv) for c, tv in v.items()}) for t, v in rows],
                                             jsonb_cols)

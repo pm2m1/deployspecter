@@ -169,3 +169,24 @@ def test_application_source_hash_mismatch_is_detected(tmp_path):
 def test_the_pinned_sdist_matches_the_registry():
     r = reg.verify_sources(Path(os.environ["DS_THIRDPARTY_SDIST_DIR"]) / "chancy-0.26.0.tar.gz")
     assert r["ok"], r["problems"]
+
+
+# ------------------------------------------------------------------------------------------------ catalog/1 allowance
+
+def test_expression_only_differences_are_narrow():
+    from deployspecter.experimental.phase9b_ext import catalog
+    idx = ["t", "i", "CREATE INDEX i ON <S>.t USING btree (s) WHERE ((s)::text = ANY ((ARRAY['a'::varchar])::text[]))"]
+    rt = ["t", "i", "CREATE INDEX i ON <S>.t USING btree (s) WHERE ((s)::text = ANY (ARRAY[('a'::varchar)::text]))"]
+    assert catalog.expression_only_differences({"indexes": [idx]}, {"indexes": [rt]}) == [
+        {"kind": "indexes", "object": ["t", "i"], "target": idx[2], "sandbox": rt[2]}]
+    assert catalog.expression_only_differences({"indexes": [idx]}, {"indexes": [idx]}) == []
+    assert catalog.expression_only_differences({"indexes": [idx]}, {"indexes": [["t", "j", rt[2]]]}) is None
+    assert catalog.expression_only_differences({"indexes": [idx]}, {"indexes": []}) is None
+    trig = ["t", "tg", "CREATE TRIGGER ...", 5, False, False, "f", "O"]
+    assert catalog.expression_only_differences({"triggers": [trig]}, {"triggers": [trig[:7] + ["D"]]}) is None
+    fk = ["c", "c_fk", "f", "FOREIGN KEY (p) REFERENCES p(id)", False]
+    other_fk = fk[:3] + ["FOREIGN KEY (p) REFERENCES q(id)", False]
+    assert catalog.expression_only_differences({"constraints": [fk]}, {"constraints": [other_fk]}) is None
+    chk = ["t", "t_chk", "c", "CHECK ((n > 0))", False]
+    other = chk[:3] + ["CHECK (n > 0)", False]
+    assert catalog.expression_only_differences({"constraints": [chk]}, {"constraints": [other]})

@@ -273,3 +273,16 @@ def test_a_tampered_construction_digest_is_refused_and_rolled_back(target, sandb
     with pytest.raises(execute.ExecutionRefused, match="proven final state"):
         execute.write_and_verify(target.conninfo(), schema, rows, [0], final, o.fingerprint_sha256)
     assert rows_of(target, schema, "items") == []
+
+
+def test_a_partial_index_whose_deparse_is_not_a_fixpoint_is_accepted_narrowly(target, sandbox, cleanup):
+    # Chancy 0.26.0's own form: a varchar array compared through text[]
+    schema = make(target, "partial", "CREATE TABLE j (id int PRIMARY KEY, state varchar(25) NOT NULL, k text); "
+                                     "CREATE UNIQUE INDEX j_k ON j (k) WHERE k IS NOT NULL AND "
+                                     "state NOT IN ('done', 'failed');")
+    cleanup.append(schema)
+    rows = [("j", {"id": TV("int", 1), "state": TV("str", "pending"), "k": TV("str", "a")})]
+    o = pipeline_v1.construct_on_target(target, sandbox, schema, rows)
+    assert o.status == "constructed", (o.status, o.detail)
+    assert o.export["verified_by"].startswith("expression-only") and o.export["expression_differences"][0]["kind"] \
+        == "indexes"

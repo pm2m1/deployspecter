@@ -17,6 +17,14 @@ domains, identity or generated columns, rules, row-level policies, and function 
 **Fingerprint (``fingerprint``).** A canonical JSON of the same catalog facts with the schema name replaced by
 ``<S>``, and its sha256.
 * Equality between the target and the sandbox (after ``setup_sql``) is what makes an export "verified".
+* One declared exception, ``expression_only_differences``: PostgreSQL's deparse isn't always a fixpoint. A partial
+  index predicate ``x = ANY ((ARRAY['a'::varchar])::text[])`` comes back as ``x = ANY (ARRAY[('a'::varchar)::text])``
+  once recreated from its own ``pg_get_indexdef``. Such a difference is accepted only when it lies in the
+  expression text of an index, a CHECK constraint or a column default, and every other attribute of the same
+  object is identical. The pipeline also requires the sandbox's own re-export to rebuild to exactly the same
+  catalog (a fixpoint). It rests on PostgreSQL's documented purpose for ``pg_get_indexdef`` and the other
+  ``pg_get_*def`` functions, which is to reconstruct an equivalent object. Triggers, functions, types, tables and
+  everything else must match exactly.
 * Equality between planning time and write time (``execute``, under table locks) is what refuses a catalog change in
   between.
 
@@ -131,6 +139,34 @@ def fingerprint(conn: Any, schema: str) -> dict[str, Any]:
     f = facts(conn, schema)
     return {"version": VERSION, "sha256": hashlib.sha256(json.dumps(f, sort_keys=True, default=str).encode())
             .hexdigest(), "facts": f}
+
+
+# Where PostgreSQL's deparse of an expression may legitimately differ after a round trip, and which field holds it:
+# index definitions (partial-index predicates and index expressions), CHECK constraint definitions, column defaults.
+EXPRESSION_FIELDS = {"indexes": 2, "constraints": 3, "columns": 5}
+
+
+def expression_only_differences(target: dict[str, Any], sandbox: dict[str, Any]) -> list[dict[str, Any]] | None:
+    """The differences between two catalogs' facts if **all** of them are in an expression text (see
+    ``EXPRESSION_FIELDS``; constraints: CHECK only) of objects that are otherwise identical, row by row. Otherwise
+    None, which means refuse. An empty list means the catalogs are equal."""
+    out = []
+    for k in sorted(set(target) | set(sandbox)):
+        a, b = target.get(k, []), sandbox.get(k, [])
+        if a == b:
+            continue
+        if k not in EXPRESSION_FIELDS or len(a) != len(b):
+            return None
+        f = EXPRESSION_FIELDS[k]
+        for x, y in zip(a, b, strict=True):
+            if x == y:
+                continue
+            if [v for i, v in enumerate(x) if i != f] != [v for i, v in enumerate(y) if i != f]:
+                return None  # a different object, or another attribute differs
+            if k == "constraints" and x[2] != "c":
+                return None
+            out.append({"kind": k, "object": x[:2], "target": x[f], "sandbox": y[f]})
+    return out
 
 
 def export(conn: Any, schema: str) -> dict[str, Any]:

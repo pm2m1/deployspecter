@@ -1,0 +1,145 @@
+{
+ "comparison": {
+  "equal": false,
+  "fields": [
+   "id",
+   "queue",
+   "func",
+   "state",
+   "attempts",
+   "kwargs",
+   "completed",
+   "has_claim_id"
+  ],
+  "why": "a run produced no final state"
+ },
+ "results": {
+  "direct_comparison": {
+   "as_expected": true,
+   "bound_to_verified_state": true,
+   "corroboration": {
+    "matched": 191,
+    "ok": true,
+    "params_compared": 121,
+    "params_mismatched": 0,
+    "params_unchecked": 0,
+    "problems": [],
+    "sessions": {
+     "362": "worker"
+    }
+   },
+   "handled": [
+    3,
+    0,
+    2,
+    1
+   ],
+   "oracle_violations": [],
+   "sha256": "dc609318c1b0c7726a423fc87547b0e179043c9a85a4c8793f56619df3ef4a18",
+   "status": "ran",
+   "worker_sound": true
+  },
+  "multi": {
+   "as_expected": false,
+   "classification": null,
+   "detail": {
+    "indexes": {
+     "sandbox_only": [
+      [
+       "chancy_jobs",
+       "chancy_idx_jobs_fetch_prune",
+       "CREATE INDEX chancy_idx_jobs_fetch_prune ON <S>.chancy_jobs USING btree (queue, state, attempts, scheduled_at, priority DESC, id DESC) WHERE ((state)::text = ANY (ARRAY[('pending'::character varying)::text, ('retrying'::character varying)::text]))"
+      ],
+      [
+       "chancy_jobs",
+       "chancy_jobs_unique_key",
+       "CREATE UNIQUE INDEX chancy_jobs_unique_key ON <S>.chancy_jobs USING btree (unique_key) WHERE ((unique_key IS NOT NULL) AND ((state)::text <> ALL (ARRAY[('succeeded'::character varying)::text, ('failed'::character varying)::text])))"
+      ]
+     ],
+     "target_only": [
+      [
+       "chancy_jobs",
+       "chancy_idx_jobs_fetch_prune",
+       "CREATE INDEX chancy_idx_jobs_fetch_prune ON <S>.chancy_jobs USING btree (queue, state, attempts, scheduled_at, priority DESC, id DESC) WHERE ((state)::text = ANY ((ARRAY['pending'::character varying, 'retrying'::character varying])::text[]))"
+      ],
+      [
+       "chancy_jobs",
+       "chancy_jobs_unique_key",
+       "CREATE UNIQUE INDEX chancy_jobs_unique_key ON <S>.chancy_jobs USING btree (unique_key) WHERE ((unique_key IS NOT NULL) AND ((state)::text <> ALL ((ARRAY['succeeded'::character varying, 'failed'::character varying])::text[])))"
+      ]
+     ]
+    }
+   },
+   "sha256": "3de9128ea877f719a7880e9f8ebf8ceb61ba668bfe754d2a2b73530f863e1308",
+   "stage": "sandbox_fingerprint",
+   "status": "refused_catalog"
+  },
+  "single": {
+   "as_expected": false,
+   "classification": null,
+   "detail": {
+    "indexes": {
+     "sandbox_only": [
+      [
+       "chancy_jobs",
+       "chancy_idx_jobs_fetch_prune",
+       "CREATE INDEX chancy_idx_jobs_fetch_prune ON <S>.chancy_jobs USING btree (queue, state, attempts, scheduled_at, priority DESC, id DESC) WHERE ((state)::text = ANY (ARRAY[('pending'::character varying)::text, ('retrying'::character varying)::text]))"
+      ],
+      [
+       "chancy_jobs",
+       "chancy_jobs_unique_key",
+       "CREATE UNIQUE INDEX chancy_jobs_unique_key ON <S>.chancy_jobs USING btree (unique_key) WHERE ((unique_key IS NOT NULL) AND ((state)::text <> ALL (ARRAY[('succeeded'::character varying)::text, ('failed'::character varying)::text])))"
+      ]
+     ],
+     "target_only": [
+      [
+       "chancy_jobs",
+       "chancy_idx_jobs_fetch_prune",
+       "CREATE INDEX chancy_idx_jobs_fetch_prune ON <S>.chancy_jobs USING btree (queue, state, attempts, scheduled_at, priority DESC, id DESC) WHERE ((state)::text = ANY ((ARRAY['pending'::character varying, 'retrying'::character varying])::text[]))"
+      ],
+      [
+       "chancy_jobs",
+       "chancy_jobs_unique_key",
+       "CREATE UNIQUE INDEX chancy_jobs_unique_key ON <S>.chancy_jobs USING btree (unique_key) WHERE ((unique_key IS NOT NULL) AND ((state)::text <> ALL ((ARRAY['succeeded'::character varying, 'failed'::character varying])::text[])))"
+      ]
+     ]
+    }
+   },
+   "sha256": "4b4bcd65d73d1d71bbd734aa78da95277a28ff3a5db6dc253678d99b18d6ac01",
+   "stage": "sandbox_fingerprint",
+   "status": "refused_catalog"
+  },
+  "unregistered_handler": {
+   "detail": [
+    "jobs[0].handler 'deployspecter.experimental.thirdparty.chancy_adapter.ds_missing' isn't registered"
+   ],
+   "status": "refused_workload"
+  }
+ },
+ "sandbox_teardown": {
+  "database_dropped": true,
+  "role_dropped": true
+ },
+ "sources": {
+  "adapter_sha256": "b3eb94b196a8d8f83a8ab1522944280312cfc2ff41257803796ac652dd6867bb",
+  "ok": true,
+  "problems": [],
+  "registry_sha256": "309e15f1a467690e7a990926f4b5d39ac9bac49ca68064e057901c275d922fbd",
+  "sdist_sha256": "ac98b9c502d7bdb6f47d53fac1c22b4dc55e6cfcfec84b08b1a0cbaee45aef06",
+  "sources_sha256": {
+   "chancy/app.py": "403e471247c81e0b37560da70e64570b92aa9586ff31826c16316b61deb2cd14",
+   "chancy/job.py": "1f6c851d27b51df2101d362e5946232ae434cc4c07e7f6eafd11e3ed483e1f45",
+   "chancy/migrations/v1.py": "8f5158d5b05dff58e4a53fd70a33446e87383df5bc1742848f0eb0dee696c86f",
+   "chancy/migrations/v2.py": "a6bba21a96f6b59a94b5fdacc649474a5ab422f3bca6756b599255984d1d4a0f",
+   "chancy/migrations/v3.py": "1ff7349a5ad4c5351b8bdd593ee9a1f8634df70bdaabc8571223526513582b76",
+   "chancy/migrations/v4.py": "e84cb48f2d0eec2d5c0456b74038605b4ce9bf0fd92aab1f015bbb457d716930",
+   "chancy/migrations/v5.py": "ed9c082d51a98345e5a5ae63f4aee541d2dfb55728c472d102e8baea7d092c43",
+   "chancy/migrations/v6.py": "f4482da9c9a60af5bfc889c5e1fc3117d59cb1fae72d3eca47c14bc5080a4ade",
+   "chancy/migrations/v7.py": "4a3bb04135602952bd765cbf6cf8364b7fc40335370311bf7d38aa0e0df784c9",
+   "chancy/migrations/v8.py": "e62a70a32961e673fe736c5ede0da45ead237a79c9fdfdf6ce31dd6229f7326c",
+   "chancy/queue.py": "6733cb34b4c7856dcc481ab7a4f34e20855c36feb07dc576e45ef0e39eb15458",
+   "chancy/worker.py": "0f541cbfd5ebce9abe75fd5f6365987333d847aaca352b4e7d8445c56575072a"
+  }
+ },
+ "verdict": "NOT as expected"
+}

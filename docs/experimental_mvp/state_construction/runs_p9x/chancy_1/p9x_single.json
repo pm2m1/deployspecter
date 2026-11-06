@@ -1,0 +1,131 @@
+{
+ "as_expected": false,
+ "attempt": "single",
+ "classification": null,
+ "construction": {
+  "classification": null,
+  "detail": {
+   "indexes": {
+    "sandbox_only": [
+     [
+      "chancy_jobs",
+      "chancy_idx_jobs_fetch_prune",
+      "CREATE INDEX chancy_idx_jobs_fetch_prune ON <S>.chancy_jobs USING btree (queue, state, attempts, scheduled_at, priority DESC, id DESC) WHERE ((state)::text = ANY (ARRAY[('pending'::character varying)::text, ('retrying'::character varying)::text]))"
+     ],
+     [
+      "chancy_jobs",
+      "chancy_jobs_unique_key",
+      "CREATE UNIQUE INDEX chancy_jobs_unique_key ON <S>.chancy_jobs USING btree (unique_key) WHERE ((unique_key IS NOT NULL) AND ((state)::text <> ALL (ARRAY[('succeeded'::character varying)::text, ('failed'::character varying)::text])))"
+     ]
+    ],
+    "target_only": [
+     [
+      "chancy_jobs",
+      "chancy_idx_jobs_fetch_prune",
+      "CREATE INDEX chancy_idx_jobs_fetch_prune ON <S>.chancy_jobs USING btree (queue, state, attempts, scheduled_at, priority DESC, id DESC) WHERE ((state)::text = ANY ((ARRAY['pending'::character varying, 'retrying'::character varying])::text[]))"
+     ],
+     [
+      "chancy_jobs",
+      "chancy_jobs_unique_key",
+      "CREATE UNIQUE INDEX chancy_jobs_unique_key ON <S>.chancy_jobs USING btree (unique_key) WHERE ((unique_key IS NOT NULL) AND ((state)::text <> ALL ((ARRAY['succeeded'::character varying, 'failed'::character varying])::text[])))"
+     ]
+    ]
+   }
+  },
+  "export": {
+   "objects": {
+    "columns": 44,
+    "composites": 0,
+    "constraints": 7,
+    "domains": 0,
+    "enums": 0,
+    "functions": 0,
+    "indexes": 3,
+    "inherits": 0,
+    "policies": 0,
+    "relations": 7,
+    "rules": 0,
+    "sequence_owners": 1,
+    "sequences": 1,
+    "triggers": 0
+   },
+   "setup_sql_sha256": "36db64d711bcb8dd50b033742a240e72512e0bdaeb41ae876914582022b3fd8b",
+   "version": "catalog/1"
+  },
+  "fingerprint_sha256": "5de2c297170a8328c41cd04ebb2f43e3360aa1c5e80792cd27ea4af6659d2905",
+  "identity": {
+   "extension": "ds-p9x/1",
+   "jsonb_contract": "jsonb/1",
+   "jsonb_v1_sha256": "a315861eb137fa7b71ba71d923ddca2e8c128bbaf3c26761723230281e54f369",
+   "loader_sha256": "b408000fe31fdcac19be767f9d9d6a9f59679dbe6eaaa3d38b8f7945180ad7e8",
+   "package": "deployspecter._phase9b_ext_v1",
+   "phase9b_sources_sha256": {
+    "seed_feasibility.py": "2684e57fbce8e594ccd82bd02eb3952744613e6eec3e50d25b329d0b6d972152",
+    "state_constructor.py": "bb3fec6c4efa473315c76eb8d923c00ea17373475f05b84a3bc3dd1efd47c397",
+    "triggers.py": "de970dd5d313a2ea4b420a90765e2b457695b780c53819603bc9fa038bb46647"
+   },
+   "substitutions": {
+    "seed_feasibility._same": "deployspecter.experimental.phase9b_ext.loader.same_v1"
+   }
+  },
+  "plan": null,
+  "readback": null,
+  "report": null,
+  "stage": "sandbox_fingerprint",
+  "status": "refused_catalog",
+  "trace": null,
+  "triggers": {
+   "controlled": {},
+   "notifications": [],
+   "refused": []
+  },
+  "write": null
+ },
+ "constructor": "phase9b_ext ds-p9x/1",
+ "detail": {
+  "indexes": {
+   "sandbox_only": [
+    [
+     "chancy_jobs",
+     "chancy_idx_jobs_fetch_prune",
+     "CREATE INDEX chancy_idx_jobs_fetch_prune ON <S>.chancy_jobs USING btree (queue, state, attempts, scheduled_at, priority DESC, id DESC) WHERE ((state)::text = ANY (ARRAY[('pending'::character varying)::text, ('retrying'::character varying)::text]))"
+    ],
+    [
+     "chancy_jobs",
+     "chancy_jobs_unique_key",
+     "CREATE UNIQUE INDEX chancy_jobs_unique_key ON <S>.chancy_jobs USING btree (unique_key) WHERE ((unique_key IS NOT NULL) AND ((state)::text <> ALL (ARRAY[('succeeded'::character varying)::text, ('failed'::character varying)::text])))"
+    ]
+   ],
+   "target_only": [
+    [
+     "chancy_jobs",
+     "chancy_idx_jobs_fetch_prune",
+     "CREATE INDEX chancy_idx_jobs_fetch_prune ON <S>.chancy_jobs USING btree (queue, state, attempts, scheduled_at, priority DESC, id DESC) WHERE ((state)::text = ANY ((ARRAY['pending'::character varying, 'retrying'::character varying])::text[]))"
+    ],
+    [
+     "chancy_jobs",
+     "chancy_jobs_unique_key",
+     "CREATE UNIQUE INDEX chancy_jobs_unique_key ON <S>.chancy_jobs USING btree (unique_key) WHERE ((unique_key IS NOT NULL) AND ((state)::text <> ALL ((ARRAY['succeeded'::character varying, 'failed'::character varying])::text[])))"
+    ]
+   ]
+  }
+ },
+ "preconditions": [],
+ "setup_sound": true,
+ "stage": "sandbox_fingerprint",
+ "status": "refused_catalog",
+ "workload": {
+  "jobs": [
+   {
+    "handler": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+    "kwargs": {
+     "n": 0
+    },
+    "priority": 0,
+    "queue": "ds_q",
+    "state": "pending"
+   }
+  ],
+  "registry": "chancy-0.26.0/registry-v1"
+ }
+}
