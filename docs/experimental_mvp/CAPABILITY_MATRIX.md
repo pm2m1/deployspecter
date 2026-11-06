@@ -42,7 +42,11 @@ These are tested statuses, not claims of general support. Every row marked SUPPO
 | Exact typed fixtures (int8 extremes, -0.0, 5e-324, `'NULL'` vs NULL, trigger reordering, dependency order) | SUPPORTED, LIVE-TESTED | `state_construction/runs/fixtures`: 17/17 | |
 | Phase 9B on json/jsonb or NaN values | REFUSED by the constructor, nothing inserted | same | BLOCKED: fixing it means changing the constructor |
 | Chancy 0.26.0 jobs: narrow **direct** constructor, chosen before construction for json/jsonb values, never as a fallback; live-catalog preconditions; the unmodified worker consumes the state | SUPPORTED, LIVE-TESTED (NONBLIND) | `state_construction/runs/chancy` | Not Phase 9B; pinned `chancy_jobs` columns; no triggers, rules, policies, foreign keys or deferrable constraints |
-| WorkloadSpec v2 for third-party apps; procrastinate state construction | NOT SUPPORTED | none | No reviewed registry; procrastinate's schema relies on triggers and functions |
+| WorkloadSpec v2 for third-party apps | NOT SUPPORTED | none | No reviewed WorkloadSpec registry (ds-p9x/1 has its own Chancy registry, below) |
+| **Chancy 0.26.0 through the Phase 9B pipeline (ds-p9x/1)**: registry-validated workload → Phase 9B `construct_state` (extension instance, one declared jsonb-aware substitution, traced) → locked typed writes equal to the proven final state → independent readback → Chancy's unmodified worker → corroboration → oracle C1–C4 | SUPPORTED, LIVE-TESTED (NONBLIND) | `state_construction/P9X_RESULTS.md`; `runs_p9x/chancy_2`, `chancy_3` | One application and one registry; jsonb/1 integers only; ≤ 10 seed rows; the construction session is checked by readback, not by the server log |
+| jsonb/1 (objects, arrays, strings, booleans, safe integers, JSON null vs SQL NULL) | SUPPORTED, LIVE-TESTED | `test_p9x_live.py`, `test_p9x_offline.py` | Duplicate keys, NaN or Infinity, fractions or exponents, integers beyond 2^53−1 and `\u0000` are refused |
+| Trigger-aware construction (catalog/1 export, fingerprint, screen, write-time recheck) | SUPPORTED for provable row triggers; REFUSED otherwise | `test_p9x_live.py` (27 tests) | Dynamic SQL, volatile calls, statement-level or deferrable triggers, and triggers writing clock or sequence defaults are refused |
+| procrastinate 3.4.0 state construction through ds-p9x/1 | REFUSED (exact) | `runs_p9x/procrastinate_2` | 5 triggers write `nextval` and `now()` defaults; needs declared semantics for such columns |
 
 ## Supported deployment digital twin (2026-11-06, NONBLIND)
 
