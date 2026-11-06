@@ -1,0 +1,527 @@
+{
+ "as_expected": true,
+ "attempt": "single",
+ "bound_to_verified_state": true,
+ "classification": "ORIGINAL_VALID",
+ "constructed_rows": [
+  {
+   "attempts": 0,
+   "claim_id": null,
+   "completed_at": null,
+   "created_at": "2026-01-01T00:00:00+00:00",
+   "errors": [],
+   "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+   "id": "3193246d-6996-5af7-badf-732b28a2ea96",
+   "kwargs": {
+    "n": 0
+   },
+   "limits": [],
+   "max_attempts": 1,
+   "meta": {},
+   "priority": 0,
+   "queue": "ds_q",
+   "scheduled_at": "2026-01-01T00:00:00+00:00",
+   "started_at": null,
+   "state": "pending",
+   "taken_by": null,
+   "unique_key": null
+  }
+ ],
+ "construction": {
+  "classification": "ORIGINAL_VALID",
+  "detail": null,
+  "export": {
+   "expression_differences": [
+    {
+     "kind": "indexes",
+     "object": [
+      "chancy_jobs",
+      "chancy_idx_jobs_fetch_prune"
+     ],
+     "sandbox": "CREATE INDEX chancy_idx_jobs_fetch_prune ON <S>.chancy_jobs USING btree (queue, state, attempts, scheduled_at, priority DESC, id DESC) WHERE ((state)::text = ANY (ARRAY[('pending'::character varying)::text, ('retrying'::character varying)::text]))",
+     "target": "CREATE INDEX chancy_idx_jobs_fetch_prune ON <S>.chancy_jobs USING btree (queue, state, attempts, scheduled_at, priority DESC, id DESC) WHERE ((state)::text = ANY ((ARRAY['pending'::character varying, 'retrying'::character varying])::text[]))"
+    },
+    {
+     "kind": "indexes",
+     "object": [
+      "chancy_jobs",
+      "chancy_jobs_unique_key"
+     ],
+     "sandbox": "CREATE UNIQUE INDEX chancy_jobs_unique_key ON <S>.chancy_jobs USING btree (unique_key) WHERE ((unique_key IS NOT NULL) AND ((state)::text <> ALL (ARRAY[('succeeded'::character varying)::text, ('failed'::character varying)::text])))",
+     "target": "CREATE UNIQUE INDEX chancy_jobs_unique_key ON <S>.chancy_jobs USING btree (unique_key) WHERE ((unique_key IS NOT NULL) AND ((state)::text <> ALL ((ARRAY['succeeded'::character varying, 'failed'::character varying])::text[])))"
+    }
+   ],
+   "objects": {
+    "columns": 44,
+    "composites": 0,
+    "constraints": 7,
+    "domains": 0,
+    "enums": 0,
+    "functions": 0,
+    "indexes": 3,
+    "inherits": 0,
+    "policies": 0,
+    "relations": 7,
+    "rules": 0,
+    "sequence_owners": 1,
+    "sequences": 1,
+    "triggers": 0
+   },
+   "setup_sql_sha256": "36db64d711bcb8dd50b033742a240e72512e0bdaeb41ae876914582022b3fd8b",
+   "verified_by": "expression-only deparse differences, sandbox re-export is a fixpoint",
+   "version": "catalog/1"
+  },
+  "fingerprint_sha256": "5de2c297170a8328c41cd04ebb2f43e3360aa1c5e80792cd27ea4af6659d2905",
+  "identity": {
+   "extension": "ds-p9x/1",
+   "jsonb_contract": "jsonb/1",
+   "jsonb_v1_sha256": "a315861eb137fa7b71ba71d923ddca2e8c128bbaf3c26761723230281e54f369",
+   "loader_sha256": "b408000fe31fdcac19be767f9d9d6a9f59679dbe6eaaa3d38b8f7945180ad7e8",
+   "package": "deployspecter._phase9b_ext_v1",
+   "phase9b_sources_sha256": {
+    "seed_feasibility.py": "2684e57fbce8e594ccd82bd02eb3952744613e6eec3e50d25b329d0b6d972152",
+    "state_constructor.py": "bb3fec6c4efa473315c76eb8d923c00ea17373475f05b84a3bc3dd1efd47c397",
+    "triggers.py": "de970dd5d313a2ea4b420a90765e2b457695b780c53819603bc9fa038bb46647"
+   },
+   "substitutions": {
+    "seed_feasibility._same": "deployspecter.experimental.phase9b_ext.loader.same_v1"
+   }
+  },
+  "plan": {
+   "catalog_fingerprint_sha256": "5de2c297170a8328c41cd04ebb2f43e3360aa1c5e80792cd27ea4af6659d2905",
+   "classification": "ORIGINAL_VALID",
+   "constructor_final_snapshot_sha256": "e41b80625ef924fc6653a52ad6b6eaf2f23de11d8e9b70026b0771149af99f6d",
+   "identity": {
+    "extension": "ds-p9x/1",
+    "jsonb_contract": "jsonb/1",
+    "jsonb_v1_sha256": "a315861eb137fa7b71ba71d923ddca2e8c128bbaf3c26761723230281e54f369",
+    "loader_sha256": "b408000fe31fdcac19be767f9d9d6a9f59679dbe6eaaa3d38b8f7945180ad7e8",
+    "package": "deployspecter._phase9b_ext_v1",
+    "phase9b_sources_sha256": {
+     "seed_feasibility.py": "2684e57fbce8e594ccd82bd02eb3952744613e6eec3e50d25b329d0b6d972152",
+     "state_constructor.py": "bb3fec6c4efa473315c76eb8d923c00ea17373475f05b84a3bc3dd1efd47c397",
+     "triggers.py": "de970dd5d313a2ea4b420a90765e2b457695b780c53819603bc9fa038bb46647"
+    },
+    "substitutions": {
+     "seed_feasibility._same": "deployspecter.experimental.phase9b_ext.loader.same_v1"
+    }
+   },
+   "inserts": [
+    {
+     "row": 0,
+     "table": "chancy_jobs",
+     "values": {
+      "attempts": {
+       "tag": "int",
+       "value": 0
+      },
+      "claim_id": {
+       "tag": "null",
+       "value": null
+      },
+      "completed_at": {
+       "tag": "null",
+       "value": null
+      },
+      "created_at": {
+       "tag": "timestamptz",
+       "value": "2026-01-01T00:00:00+00:00"
+      },
+      "errors": {
+       "tag": "jsonb",
+       "value": "[]"
+      },
+      "func": {
+       "tag": "str",
+       "value": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job"
+      },
+      "id": {
+       "tag": "uuid",
+       "value": "3193246d-6996-5af7-badf-732b28a2ea96"
+      },
+      "kwargs": {
+       "tag": "jsonb",
+       "value": "{\"n\": 0}"
+      },
+      "limits": {
+       "tag": "jsonb",
+       "value": "[]"
+      },
+      "max_attempts": {
+       "tag": "int",
+       "value": 1
+      },
+      "meta": {
+       "tag": "jsonb",
+       "value": "{}"
+      },
+      "priority": {
+       "tag": "int",
+       "value": 0
+      },
+      "queue": {
+       "tag": "str",
+       "value": "ds_q"
+      },
+      "scheduled_at": {
+       "tag": "timestamptz",
+       "value": "2026-01-01T00:00:00+00:00"
+      },
+      "started_at": {
+       "tag": "null",
+       "value": null
+      },
+      "state": {
+       "tag": "str",
+       "value": "pending"
+      },
+      "taken_by": {
+       "tag": "null",
+       "value": null
+      },
+      "unique_key": {
+       "tag": "null",
+       "value": null
+      }
+     }
+    }
+   ],
+   "setup_sql_sha256": "36db64d711bcb8dd50b033742a240e72512e0bdaeb41ae876914582022b3fd8b",
+   "sha256": "1d732ec145aee447c59d52359e969e9021712ad9a0cc6154233a1507b6816a4a"
+  },
+  "readback": {
+   "jsonb_cells_checked": 4,
+   "problems": [],
+   "rows_checked": 1,
+   "verified": true
+  },
+  "report": {
+   "assumptions": [],
+   "budget_used": {},
+   "classification": "ORIGINAL_VALID",
+   "dependency_evidence": [],
+   "distinct_final_states": 0,
+   "effective_seed": [
+    {
+     "table": "chancy_jobs",
+     "values": [
+      {
+       "column": "id",
+       "value": "3193246d-6996-5af7-badf-732b28a2ea96"
+      },
+      {
+       "column": "queue",
+       "value": "ds_q"
+      },
+      {
+       "column": "func",
+       "value": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job"
+      },
+      {
+       "column": "kwargs",
+       "value": "{\"n\": 0}"
+      },
+      {
+       "column": "limits",
+       "value": "[]"
+      },
+      {
+       "column": "meta",
+       "value": "{}"
+      },
+      {
+       "column": "state",
+       "value": "pending"
+      },
+      {
+       "column": "priority",
+       "value": 0
+      },
+      {
+       "column": "attempts",
+       "value": 0
+      },
+      {
+       "column": "max_attempts",
+       "value": 1
+      },
+      {
+       "column": "taken_by",
+       "value": null
+      },
+      {
+       "column": "created_at",
+       "value": "2026-01-01T00:00:00+00:00"
+      },
+      {
+       "column": "started_at",
+       "value": null
+      },
+      {
+       "column": "completed_at",
+       "value": null
+      },
+      {
+       "column": "scheduled_at",
+       "value": "2026-01-01T00:00:00+00:00"
+      },
+      {
+       "column": "unique_key",
+       "value": null
+      },
+      {
+       "column": "errors",
+       "value": "[]"
+      },
+      {
+       "column": "claim_id",
+       "value": null
+      }
+     ]
+    }
+   ],
+   "effective_seed_sha256": "e9839fb867247c712f8408adecaf196673972a90358e63e8d52d3f803f4ac9fa",
+   "evidence": [],
+   "explanation": "The original sequence reaches the state.",
+   "failed_inserts": {},
+   "final_sequences": {},
+   "final_snapshot": {
+    "chancy_jobs": [
+     {
+      "attempts": 0,
+      "claim_id": null,
+      "completed_at": null,
+      "created_at": "2026-01-01T00:00:00+00:00",
+      "errors": [],
+      "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+      "id": "3193246d-6996-5af7-badf-732b28a2ea96",
+      "kwargs": {
+       "n": 0
+      },
+      "limits": [],
+      "max_attempts": 1,
+      "meta": {},
+      "priority": 0,
+      "queue": "ds_q",
+      "scheduled_at": "2026-01-01T00:00:00+00:00",
+      "started_at": null,
+      "state": "pending",
+      "taken_by": null,
+      "unique_key": null
+     }
+    ],
+    "chancy_leader": [],
+    "chancy_queue_rate_limits": [],
+    "chancy_queues": [],
+    "chancy_schema_version": [],
+    "chancy_workers": []
+   },
+   "independent_verification": null,
+   "original_order": [
+    0
+   ],
+   "plan": [],
+   "rejected_alternatives": [],
+   "rejected_alternatives_total": 0,
+   "reordered": false,
+   "requested_rows": [
+    {
+     "columns": {
+      "attempts": 0,
+      "claim_id": null,
+      "completed_at": null,
+      "created_at": "2026-01-01T00:00:00+00:00",
+      "errors": "[]",
+      "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+      "id": "3193246d-6996-5af7-badf-732b28a2ea96",
+      "kwargs": "{\"n\": 0}",
+      "limits": "[]",
+      "max_attempts": 1,
+      "meta": "{}",
+      "priority": 0,
+      "queue": "ds_q",
+      "scheduled_at": "2026-01-01T00:00:00+00:00",
+      "started_at": null,
+      "state": "pending",
+      "taken_by": null,
+      "unique_key": null
+     },
+     "row_index": 0,
+     "table": "chancy_jobs"
+    }
+   ],
+   "requested_seed_sha256": "e9839fb867247c712f8408adecaf196673972a90358e63e8d52d3f803f4ac9fa",
+   "search_exhaustive": false,
+   "setup_sql_sha256": "36db64d711bcb8dd50b033742a240e72512e0bdaeb41ae876914582022b3fd8b",
+   "trigger_evidence": [],
+   "valid_plans_found": 0
+  },
+  "stage": null,
+  "status": "constructed",
+  "trace": {
+   "all": {
+    "deployspecter._phase9b_ext_v1.seed_feasibility.<genexpr>": 62,
+    "deployspecter._phase9b_ext_v1.seed_feasibility.<module>": 48,
+    "deployspecter._phase9b_ext_v1.seed_feasibility.SeedContext": 1,
+    "deployspecter._phase9b_ext_v1.seed_feasibility.SeedDiagnostic": 1,
+    "deployspecter._phase9b_ext_v1.seed_feasibility.SeedReport": 1,
+    "deployspecter._phase9b_ext_v1.seed_feasibility.SeedStep": 1,
+    "deployspecter._phase9b_ext_v1.seed_feasibility.SeedTransformation": 1,
+    "deployspecter._phase9b_ext_v1.seed_feasibility.__create_fn__": 3,
+    "deployspecter._phase9b_ext_v1.seed_feasibility.__init__": 1,
+    "deployspecter._phase9b_ext_v1.seed_feasibility._attribute": 1,
+    "deployspecter._phase9b_ext_v1.seed_feasibility._diff": 1,
+    "deployspecter._phase9b_ext_v1.seed_feasibility._finish": 1,
+    "deployspecter._phase9b_ext_v1.seed_feasibility._key": 4,
+    "deployspecter._phase9b_ext_v1.seed_feasibility._merge_fired": 1,
+    "deployspecter._phase9b_ext_v1.seed_feasibility._read_state": 3,
+    "deployspecter._phase9b_ext_v1.seed_feasibility._row_dict": 4,
+    "deployspecter._phase9b_ext_v1.seed_feasibility._same": 42,
+    "deployspecter._phase9b_ext_v1.seed_feasibility.check_seed": 1,
+    "deployspecter._phase9b_ext_v1.seed_feasibility.read_context": 1,
+    "deployspecter._phase9b_ext_v1.seed_feasibility.seed_sha256": 5,
+    "deployspecter._phase9b_ext_v1.state_constructor.<genexpr>": 19,
+    "deployspecter._phase9b_ext_v1.state_constructor.<module>": 40,
+    "deployspecter._phase9b_ext_v1.state_constructor.Alternative": 1,
+    "deployspecter._phase9b_ext_v1.state_constructor.ConstructionBudget": 1,
+    "deployspecter._phase9b_ext_v1.state_constructor.ConstructionReport": 1,
+    "deployspecter._phase9b_ext_v1.state_constructor.PlanStep": 1,
+    "deployspecter._phase9b_ext_v1.state_constructor._Candidate": 1,
+    "deployspecter._phase9b_ext_v1.state_constructor._Search": 1,
+    "deployspecter._phase9b_ext_v1.state_constructor.__create_fn__": 9,
+    "deployspecter._phase9b_ext_v1.state_constructor.__init__": 1,
+    "deployspecter._phase9b_ext_v1.state_constructor._fired_by_seed": 1,
+    "deployspecter._phase9b_ext_v1.state_constructor._matches": 1,
+    "deployspecter._phase9b_ext_v1.state_constructor._trigger_evidence": 1,
+    "deployspecter._phase9b_ext_v1.state_constructor.accept_as_is": 1,
+    "deployspecter._phase9b_ext_v1.state_constructor.assign_rows": 1,
+    "deployspecter._phase9b_ext_v1.state_constructor.construct_state": 1,
+    "deployspecter._phase9b_ext_v1.state_constructor.finish": 1,
+    "deployspecter._phase9b_ext_v1.state_constructor.place": 1,
+    "deployspecter._phase9b_ext_v1.triggers.<module>": 30,
+    "deployspecter._phase9b_ext_v1.triggers.TriggerInfo": 1,
+    "deployspecter._phase9b_ext_v1.triggers.TriggerTarget": 1,
+    "deployspecter._phase9b_ext_v1.triggers._Parsed": 1,
+    "deployspecter._phase9b_ext_v1.triggers.fired_closure": 2,
+    "deployspecter._phase9b_ext_v1.triggers.read_triggers": 1,
+    "deployspecter.experimental.phase9b_ext.jsonb_v1.<genexpr>": 15,
+    "deployspecter.experimental.phase9b_ext.jsonb_v1.equal": 15,
+    "deployspecter.experimental.phase9b_ext.loader.construct": 1,
+    "deployspecter.experimental.phase9b_ext.loader.load": 1,
+    "deployspecter.experimental.phase9b_ext.loader.same_v1": 54,
+    "deployspecter.experimental.phase9b_ext.trace.traced": 1
+   },
+   "calls": 389,
+   "functions": 50,
+   "required": {
+    "deployspecter._phase9b_ext_v1.seed_feasibility.check_seed": 1,
+    "deployspecter._phase9b_ext_v1.seed_feasibility.read_context": 1,
+    "deployspecter._phase9b_ext_v1.state_constructor.assign_rows": 1,
+    "deployspecter._phase9b_ext_v1.state_constructor.construct_state": 1,
+    "deployspecter.experimental.phase9b_ext.loader.same_v1": 54
+   }
+  },
+  "triggers": {
+   "controlled": {},
+   "notifications": [],
+   "refused": []
+  },
+  "write": {
+   "added": {
+    "chancy_jobs": [
+     "{\"attempts\": 0, \"claim_id\": null, \"completed_at\": null, \"created_at\": \"2026-01-01T00:00:00+00:00\", \"errors\": [], \"func\": \"deployspecter.experimental.thirdparty.chancy_adapter.ds_job\", \"id\": \"3193246d-6996-5af7-badf-732b28a2ea96\", \"kwargs\": {\"n\": 0}, \"limits\": [], \"max_attempts\": 1, \"meta\": {}, \"priority\": 0, \"queue\": \"ds_q\", \"scheduled_at\": \"2026-01-01T00:00:00+00:00\", \"started_at\": null, \"state\": \"pending\", \"taken_by\": null, \"unique_key\": null}"
+    ]
+   },
+   "baseline_rows": {
+    "chancy_jobs": 0,
+    "chancy_leader": 0,
+    "chancy_queue_rate_limits": 0,
+    "chancy_queues": 1,
+    "chancy_schema_version": 1,
+    "chancy_workers": 0
+   },
+   "fingerprint_at_write": "5de2c297170a8328c41cd04ebb2f43e3360aa1c5e80792cd27ea4af6659d2905",
+   "tables_locked": [
+    "chancy_jobs",
+    "chancy_leader",
+    "chancy_queue_rate_limits",
+    "chancy_queues",
+    "chancy_schema_version",
+    "chancy_workers"
+   ]
+  }
+ },
+ "constructor": "phase9b_ext ds-p9x/1",
+ "corroboration": {
+  "matched": 47,
+  "ok": true,
+  "params_compared": 40,
+  "params_mismatched": 0,
+  "params_unchecked": 0,
+  "problems": [],
+  "sessions": {
+   "645": "worker"
+  }
+ },
+ "detail": null,
+ "final_jobs": [
+  {
+   "attempts": 1,
+   "completed": true,
+   "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+   "has_claim_id": true,
+   "id": "3193246d-6996-5af7-badf-732b28a2ea96",
+   "kwargs": "{\"n\": 0}",
+   "queue": "ds_q",
+   "state": "succeeded"
+  }
+ ],
+ "final_rows": [
+  {
+   "attempts": 1,
+   "claim_id": "5a84f64b-a33c-423a-982f-61f734a64ec0",
+   "completed_at": "2026-11-06T13:43:34.174957+00:00",
+   "created_at": "2026-01-01T00:00:00+00:00",
+   "errors": [],
+   "func": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+   "id": "3193246d-6996-5af7-badf-732b28a2ea96",
+   "kwargs": {
+    "n": 0
+   },
+   "limits": [],
+   "max_attempts": 1,
+   "meta": {},
+   "priority": 0,
+   "queue": "ds_q",
+   "scheduled_at": "2026-01-01T00:00:00+00:00",
+   "started_at": "2026-11-06T13:43:34.173986+00:00",
+   "state": "succeeded",
+   "taken_by": "27a4aa90-193b-4a33-8458-fa16335e3538",
+   "unique_key": null
+  }
+ ],
+ "handled": [
+  0
+ ],
+ "oracle_violations": [],
+ "preconditions": [],
+ "setup_sound": true,
+ "stage": null,
+ "status": "ran",
+ "verified_digest": "375a8ae58ee2ac69031a2ee85120505640832f0e356f6f32ef0706c8fe00edf6",
+ "worker_sound": true,
+ "workload": {
+  "jobs": [
+   {
+    "handler": "deployspecter.experimental.thirdparty.chancy_adapter.ds_job",
+    "kwargs": {
+     "n": 0
+    },
+    "priority": 0,
+    "queue": "ds_q",
+    "state": "pending"
+   }
+  ],
+  "registry": "chancy-0.26.0/registry-v1"
+ }
+}
