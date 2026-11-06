@@ -158,10 +158,10 @@ Proposed ruling (register `DECISIONS_003_v3.md` L37; binding text: candidate L21
 
 - **Decider (register):** owner + the named author and reviewer
 - **project owner:** `approval/OWNER_APPROVAL.md` decision line L18, ticked nothing; signature row L41: unsigned
-- **oracle author (independent):** `approval/ORACLE_REVIEWER_ACCEPTANCE.md` decision line L12, ticked nothing; signature row L19: unsigned
-- **oracle reviewer (independent):** `approval/ORACLE_REVIEWER_ACCEPTANCE.md` decision line L12, ticked nothing; signature row L19: unsigned
+- **oracle author (independent):** `approval/ORACLE_REVIEWER_ACCEPTANCE.md` decision line L12, ticked nothing; signature row L22: unsigned
+- **oracle reviewer (independent):** `approval/ORACLE_REVIEWER_ACCEPTANCE.md` decision line L12, ticked nothing; signature row L23: unsigned
 - **Required evidence:** each required role's signed form line ticked 'approve' against candidate sha256 `ad5ea33111ac…`; accepted, implemented and verified evidence as listed in `DECISIONS_003_v2.md` L78–L84
-- **Blocking:** a named, independent oracle author (independent); a named, independent oracle reviewer (independent); ORACLE_REVIEWER_ACCEPTANCE.md has one unlabeled signature row standing for both the oracle author and the oracle reviewer; ruling #7 needs two people (rows 'Oracle author' and 'Oracle reviewer'); oracle specs encoded, reviewed and hashed into the freeze (checklist step 8)
+- **Blocking:** a named, independent oracle author (independent); a named, independent oracle reviewer (independent); oracle specs encoded, reviewed and hashed into the freeze (checklist step 8)
 
 ### #8 (Independence (needs named people; see `DECISIONS_003_v2.md` for roles and evidence)): **PROPOSED**
 
@@ -229,9 +229,9 @@ Proposed ruling (register `DECISIONS_003_v3.md` L48; binding text: candidate L22
 
 - **Decider (register):** owner + oracle reviewer
 - **project owner:** `approval/OWNER_APPROVAL.md` decision line L22, ticked nothing; signature row L41: unsigned
-- **oracle reviewer (independent):** `approval/ORACLE_REVIEWER_ACCEPTANCE.md` decision line L13, ticked nothing; signature row L19: unsigned
+- **oracle reviewer (independent):** `approval/ORACLE_REVIEWER_ACCEPTANCE.md` decision line L13, ticked nothing; signature row L23: unsigned
 - **Required evidence:** each required role's signed form line ticked 'approve' against candidate sha256 `ad5ea33111ac…`; each case's notification-path judgment; excluded cases listed
-- **Blocking:** a named, independent oracle reviewer (independent); ORACLE_REVIEWER_ACCEPTANCE.md has one unlabeled signature row standing for both the oracle author and the oracle reviewer; ruling #7 needs two people (rows 'Oracle author' and 'Oracle reviewer'); oracle specs encoded, reviewed and hashed into the freeze (checklist step 8)
+- **Blocking:** a named, independent oracle reviewer (independent); oracle specs encoded, reviewed and hashed into the freeze (checklist step 8)
 
 ### #12 (Instrumentation and analysis): **PROPOSED**
 

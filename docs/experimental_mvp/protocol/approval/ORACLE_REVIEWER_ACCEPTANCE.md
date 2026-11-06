@@ -14,8 +14,12 @@ I accept the oracle author and reviewer role in ruling #7, and the polling-mode 
 
 An "amend" or "reject" on any line means a new candidate, with a new sha256, and every form is signed again.
 
+Ruling #7 needs **two different independent people**: one oracle author and one oracle reviewer. Each signs only
+their own row, and each signature confirms the verdicts above. Ruling #11 is the oracle reviewer's judgment.
+
 | Role | Name | Signature | Date |
 |---|---|---|---|
-| | | | |
+| Oracle author | | | |
+| Oracle reviewer | | | |
 
-*Status: unsigned. No person has been named or contacted for this role.*
+*Status: unsigned. No person has been named or contacted for either role. Template revised on 2026-11-06, with the owner's authorization, to separate the author and reviewer rows; no decision changed.*
