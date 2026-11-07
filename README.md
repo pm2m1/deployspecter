@@ -165,7 +165,107 @@ This makes no model requests. It verifies the package's file hashes, replays the
 
 After that experiment, a deterministic state constructor was developed on a separate branch. It searches orders of a proposal's own seed rows, without changing their values or the test's operations. Applied offline to the saved responses, it made the three defect-aimed proposals executable, and all three then reproduced the original serial defect.
 
-This was post-hoc development on a known fixture, using a tool built after those failures were seen. It is not an independent or blind evaluation. It does not change the recorded 0 of 3, and it doesn't show that any Muse Spark prompt or configuration detects defects better. The constructor is not part of this release. [The details are in the evidence package](results/external_public/gitlab_authorization_sync/20261102T130607Z-public-evidence-gitlab-ai-2aef4b9c09c435b7/derived/retrospective_state_construction.json).
+This was post-hoc development on a known fixture, using a tool built after those failures were seen. It is not an independent or blind evaluation. It does not change the recorded 0 of 3, and it doesn't show that any Muse Spark prompt or configuration detects defects better. The constructor is not part of the hackathon release. The `research/real-application-mvp` branch includes it as experimental code (see [Research: real applications](#research-real-applications)). [The details are in the evidence package](results/external_public/gitlab_authorization_sync/20261102T130607Z-public-evidence-gitlab-ai-2aef4b9c09c435b7/derived/retrospective_state_construction.json).
+
+## Research: real applications
+
+The `research/real-application-mvp` branch extends DeploySpecter from modelled code to **unmodified application code** running on real PostgreSQL. All of it is EXPERIMENTAL research code under `src/deployspecter/experimental/`, `src/deployspecter/live/`, `src/deployspecter/research/` and `research_tools/`. Every result below is NONBLIND or exploratory, on development cases chosen by the developers. None of it is an independent or confirmatory evaluation. The detailed index is [`docs/experimental_mvp/README.md`](docs/experimental_mvp/README.md), and every tested status is in [`CAPABILITY_MATRIX.md`](docs/experimental_mvp/CAPABILITY_MATRIX.md).
+
+### Demonstrated capabilities
+
+- **Real application stepping:** application handlers, ORM sessions and job-queue workers run with every database statement passing through a deterministic scheduler, sync or async, on psycopg 3.
+- **PostgreSQL interleaving control:** a coordinator (`ds-coord/1`) grants each statement across processes and containers. That lets two released versions of one application run at the same time against one database.
+- **State construction:** initial states are built by a deterministic constructor (Phase 9B, extended as `ds-p9x/1.1` with jsonb and trigger awareness). Each state is checked inside the write transaction and read back independently.
+- **Server-log corroboration:** every run's driver trace is reconciled with PostgreSQL's own csvlog, statement by statement, with typed parameters compared exactly. That covers dates and times, intervals, UUIDs, json and jsonb (including the server's jsonb normalization), record arrays and float8. Statements the gate didn't see are refuted from the log.
+- **Historical-defect reproduction:** Chancy's fix commit `2895c4a` and its parent are built from hash-pinned trees, and each is run on its own fresh schema.
+
+### Architecture
+
+| Component | Role | Location |
+|---|---|---|
+| Stepping engines | Gate every statement of a sync or async psycopg connection. Task identity follows a contextvar | `experimental/stepping.py`, `stepping_async.py` |
+| ORM integration | SQLAlchemy 2.x (sync and asyncio) through the stepping engines, and a trusted Django 5.2 backend, one connection per actor | `experimental/stepping.py`, `experimental/django_backend/` |
+| Third-party adapters | Stepped pools and driver ports for Chancy, PGQueuer and procrastinate | `experimental/thirdparty/` |
+| Isolated runner | Restricted runc containers on an internal network; a coordinator container grants statements | `research_tools/isolated/` |
+| Corroborator | Reconciles traces with the csvlog, with typed parameters | `experimental/corroborate.py`, `jsonb_text.py` |
+| State construction | Phase 9B constructor (copied byte-identical) plus `ds-p9x/1.1` extensions, registries, physical plans and readback | `experimental/state_construction/`, `experimental/phase9b_ext/` |
+| Muse proposals | Workloads, states and candidate invariants, admitted only through deterministic validators | `experimental/muse*.py`, `experimental/muse_contrib/`, `research_tools/muse_contrib/` |
+| Evaluation tooling | Sealed corpus intake, paired detection analysis, the gated confirmatory runner and the onboarding study package | `research_tools/corpus_intake.py`, `paired_eval.py`, `confirmatory/`, `onboarding/`; `experimental/onboarding_pilot/` |
+
+### Supported integrations
+
+Tested here means live-tested, with the server log explaining every statement. Each row's boundary is in the capability matrix.
+
+| Status | Integrations |
+|---|---|
+| Tested | psycopg 3 (sync and async), on PostgreSQL 16 |
+| Tested | SQLAlchemy 2.x, sync and asyncio, with `use_native_hstore=False` |
+| Tested (trusted fixture) | Django 5.2, server-side and client-side binding |
+| Tested (pinned versions) | Chancy 0.25.1 and 0.26.0 (one-connection stepped pool, `notifications=False`) |
+| Tested (pinned versions) | PGQueuer 1.6.0 (Driver-port adapter) |
+| Tested (pinned versions) | procrastinate 3.3.0 and 3.4.0 (`listen_notify=False`) |
+| Experimental (onboarding pilot) | saq 0.26.5 and taskiq-postgresql 0.4.0 |
+| Refused, with a test that shows the refusal | PGQueuer's `from_psycopg_connection` and Chancy's LISTEN listener (both bypass the gate); Django server-side cursors and `CONN_MAX_AGE=0` reconnects; procrastinate state construction (triggers write `nextval` and `now()` defaults) |
+| Not supported | asyncpg, psycopg2, other drivers and languages; Chancy sync APIs and process executor |
+
+### Real-world experiments
+
+- **Chancy `2895c4a` (historical defect, NONBLIND):** the parent `80f570f` and release 0.25.1 let a late completion overwrite a cancellation. That happened in 3 of 3 forced runs, plus 9 of 10 explored schedules on the parent. The fix commit and 0.26.0 hold (0 of 13). All 34 runs are sound and corroborated.
+  - **Ablations:** each part of the fix's claim fence is necessary, and the schema change alone is not sufficient.
+  - **The oracle:** maintainer-sourced (their regression test) but developer-encoded.
+- **Chancy 0.25.1 and 0.26.0 simultaneously:** workers of both versions ran at the same time in two containers, with every statement granted by the coordinator.
+  - **Released code:** never ran a job twice in 10 seeded schedules. A declared claim-lock mutant did, in 2 of 10.
+  - **Cancels across versions:** across the four combinations of canceller version and worker version, a cancel was lost in every one except a 0.26.0 canceller with a 0.26.0 worker. Chancy's upgrade notes say to stop workers, so this is a hazard of running versions together outside that documented procedure, not a Chancy defect.
+- **procrastinate 3.3.0 → 3.4.0 blue-green upgrade:** the documented pre/post-migration procedure ran with old and new workers together during the overlap. There was **no application violation** in 5 sound runs, and the seven-phase deployment twin showed 0 genuine violations in 4 runs. Two harness oracle errors are recorded as errata.
+
+### Muse evaluation
+
+Muse Spark proposed workloads, initial states and candidate invariants. The same validators and engine ran them as ran the deterministic sources. The main experiment ran arms B1–B5 on three development cases, NONBLIND, for about $0.27 estimated:
+- **Workloads:** they matched or underperformed the deterministic drivers, and never improved on them.
+- **Initial states:** with workload and constructor held constant, Muse states reached first detection sooner in 3 of 6 cells and matched in 3. All of that is on one synthetic fixture.
+- **Invariants:** no Muse candidate caught a mutant that no deterministic candidate caught. 2 of its 8 Chancy candidates were invalid.
+
+Earlier pilots on Chancy and procrastinate found no defect that the deterministic sources missed. The sample supports no inferential claim. **A reliable advantage over strong deterministic baselines has not been demonstrated.** See [`muse_contrib/RESULTS.md`](docs/experimental_mvp/muse_contrib/RESULTS.md) and [`paired_eval/RESULTS.md`](docs/experimental_mvp/paired_eval/RESULTS.md).
+
+### Reproduction
+
+You need Python 3.12, [uv](https://docs.astral.sh/uv/) and Docker, and PostgreSQL 16 via Docker. The test suites never need a model key. For the third-party suites, set `DS_THIRDPARTY_SDIST_DIR` to a directory with the pinned sdists; `research_tools/isolated/fetch_pinned.sh` fetches and verifies them.
+
+```sh
+uv sync --extra experimental
+research_tools/mvp_pg.sh start        # disposable PostgreSQL 16 on 127.0.0.1:55441, random password outside the repo
+.venv/bin/python research_tools/pg_lock.py -- .venv/bin/python -m pytest tests/experimental -q   # core experimental suite
+.venv/bin/python research_tools/pg_lock.py -- .venv/bin/python -m pytest tests/thirdparty_isolated -v  # isolated suite
+research_tools/mvp_pg.sh stop
+research_tools/acceptance_run.sh SDIST_DIR OUT_DIR   # Ruff, core, isolated and root suites, with exit codes recorded
+research_tools/mvp_demo.sh OUT full                  # end-to-end demonstration, always torn down
+```
+
+Every database tool checks that it's talking to the disposable cluster (`cluster_name = ds_mvp_disposable`) and refuses anything else. Don't point these tools at a database you care about.
+
+The root suite needs `DATABASE_URL` set to a disposable `*_test` database. Without it, its database tests error with `DATABASE_URL is not set`. 163 of its tests also need a separate live-stepping logging cluster that isn't set up here, so they skip.
+
+### Research status
+
+- **Independent blind benchmark: not done.** The protocol amendment that would govern it (Amendment 003) is a draft. Every decision in it is PROPOSED, nothing is signed, adopted or registered, and no independent curator, oracle author or reviewer has been engaged.
+- **Confirmatory runner:** wired, and it refuses to run in this repository (exit 3) until real approvals, registration and sealed cases exist. It has been exercised only in clearly labelled SIMULATION.
+- **Paired time-to-detection evaluation:** the predeclared analysis is implemented, and on existing development data it reports INSUFFICIENT SAMPLE.
+- **Onboarding study with independent participants: not run.** The package, recruitment notice and participation guide exist, but no one has been recruited. The NONBLIND pilot (n = 1 per condition) is not evidence of a time saving.
+
+### Research limitations
+
+- **Restricted isolation only:** runc containers, not hostile-grade isolation (no gVisor or microVM). Run only trusted or pinned, reviewed code.
+- **Phase 9B coverage is narrow:**
+  - one third-party application (Chancy), under a developer-authored registry;
+  - jsonb/1 has no non-integer numbers;
+  - catalog/1.1 lacks views, partitions, inheritance, domains, generated columns, rules and policies;
+  - triggers with non-deterministic effects are refused;
+  - at most 10 seed rows.
+- **Limited scheduling control:** gates order statements, not in-process task timing or PostgreSQL internals. Verified on PostgreSQL 16 only.
+- **An unresolved reliability issue:** an intermittent core-suite failure observed earlier has not recurred (0 of 58 invocations) and is still **UNRESOLVED** ([`reliability/RESULTS.md`](docs/experimental_mvp/reliability/RESULTS.md)).
+- **Small, developer-selected evidence:** every application result is NONBLIND, on a handful of development cases.
+
+Third-party material redistributed as evidence is listed in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 ## Limitations
 
@@ -175,5 +275,5 @@ This was post-hoc development on a known fixture, using a tool built after those
 - **Requirements are written by hand per scenario.** A new codebase needs its own.
 - **Scheduling stops at statement boundaries.** PostgreSQL internals aren't controlled, and the benchmark uses `READ COMMITTED`.
 - **Python logic between statements is modelled, not run.** Flow the extractor can't see is counted as unverified.
-- **Extraction is limited.** It handles constant SQL through `execute` and `with conn.transaction()`. ORMs and other languages are unsupported.
+- **Extraction is limited.** It handles constant SQL through `execute` and `with conn.transaction()`. ORMs and other languages are unsupported by the static extractor. The experimental run-time stepping in [Research: real applications](#research-real-applications) runs SQLAlchemy and Django code instead of extracting it.
 - **Submitted code must be trusted.** Migrations run with admin rights on the test database. Model output is restricted, but this isn't a sandbox for hostile code.
