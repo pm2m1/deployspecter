@@ -1,0 +1,157 @@
+{
+ "scan": "ds-nbc/1",
+ "application": "chancy",
+ "label": "NONBLIND development",
+ "rule": "docs/experimental_mvp/nonblind_corpus/SELECTION_RULE.md \u00a74",
+ "rule_sha256": "0b567517b3842da2d1266a01aec07285a9cc905bd7d466e9d1a40019a2e82d8b",
+ "candidates_file": "docs/experimental_mvp/nonblind_corpus/CANDIDATES.json",
+ "candidates": 5,
+ "screened": 5,
+ "capacity": 12,
+ "not_screened_capacity": [],
+ "screened_by": "Track A agent (ds-nbc/1 chancy), 2026-11-08",
+ "order": "most recent first",
+ "existing_case": {
+  "case_id": "chancy-2895c4a",
+  "note": "prior exposure; registered from the historical case, not a scan candidate (its subject matches no fix expression)"
+ },
+ "results": [
+  {
+   "rank": 1,
+   "commit": "b8a77df3a514ce19ebcaf31453cff8da8af9f212",
+   "parent": "6716e0db1924d3393e51cd18076415e340b7c508",
+   "subject": "Acquire job row locks in a consistent order to prevent deadlocks (#89)",
+   "read": [
+    "commit message",
+    "full diff (chancy/app.py, chancy/utils.py, chancy/worker.py, tests/regressions/test_89.py)",
+    "0.26.0 CHANGELOG entry (commit 4fe6633)",
+    "parent code path: push_many, push_many_ex, _push_job_sql, Worker._maintain_updates, fetch query, AsyncExecutor, chancy_uuid"
+   ],
+   "E": {
+    "E1": {
+     "verdict": "PASS",
+     "why": "git archive trees pinned and normalized (PINS.json); both build in the isolated runner (bring-up)"
+    },
+    "E2": {
+     "verdict": "PASS",
+     "why": "a PostgreSQL deadlock between a push_many transaction (INSERT ... ON CONFLICT (unique_key) DO UPDATE row locks) and the worker's batched job-update transaction; public push_many and Worker"
+    },
+    "E3": {
+     "verdict": "PASS",
+     "why": "chancy_adapter's one-connection stepped-pool seam, under a pinned, declared variant (chancy_adapter_nbc: two trees' pins, push_many and worker phase functions); AsyncExecutor, notifications off; blocked statements are part of the coordinated engine"
+    },
+    "E4": {
+     "verdict": "PASS",
+     "why": "0.26.0 CHANGELOG entry and the maintainers' tests tests/regressions/test_89.py"
+    },
+    "E5": {
+     "verdict": "PASS",
+     "why": "D1 from the actors' own statement outcomes (SQLSTATE 40P01, corroborated against the server log) and push_many's result; D2 from the final rows"
+    },
+    "E6": {
+     "verdict": "PASS",
+     "why": "pinned public trees, fix diff and exercised path reviewed, restricted container, no network"
+    }
+   },
+   "first_failing": null,
+   "outcome": "ELIGIBLE: case chancy-b8a77df"
+  },
+  {
+   "rank": 2,
+   "commit": "ea44e76a26da0c66ef3e5f369a68bd35a5027857",
+   "parent": "c19f568f4073ff2703b41d4f39ace6b9987278de",
+   "subject": "Fix a race where the cancellation for a task can arrive in between the executor picking up the job and registering its PID.",
+   "read": [
+    "commit message",
+    "full diff (chancy/executors/process.py)"
+   ],
+   "E": {
+    "E1": {
+     "verdict": "PASS",
+     "why": "pinnable: package trees 27e2e36c (parent), 995452c4 (fix); no image built (a later criterion fails)"
+    },
+    "E2": {
+     "verdict": "FAIL",
+     "why": "the race is between ProcessExecutor dispatching a job to a child process and the child registering its PID for SIGUSR1: in-process/multiprocess signalling, not database-mediated"
+    },
+    "E3": {
+     "verdict": "not evaluated",
+     "why": "also outside the seam: the process executor runs jobs in child processes (CAPABILITY_MATRIX: NOT SUPPORTED)"
+    }
+   },
+   "first_failing": "E2",
+   "outcome": "NOT ELIGIBLE"
+  },
+  {
+   "rank": 3,
+   "commit": "eba1eb0918d52507d15e9c2b63debc82df882b94",
+   "parent": "6fad6fc04e7a4058fc221b6c59f38bafc10a553f",
+   "subject": "Don't duplicate logging handlers if setup_default_logger is somehow called twice or if the user has already setup their own handlers.",
+   "read": [
+    "commit message",
+    "full diff (chancy/app.py setup_default_logger)"
+   ],
+   "E": {
+    "E1": {
+     "verdict": "PASS",
+     "why": "pinnable: package trees 6c7dc436 (parent), 8080f217 (fix); no image built"
+    },
+    "E2": {
+     "verdict": "FAIL",
+     "why": "logging-handler configuration: pure in-process logging"
+    }
+   },
+   "first_failing": "E2",
+   "outcome": "NOT ELIGIBLE"
+  },
+  {
+   "rank": 4,
+   "commit": "c71a26624f5ef9918ebd6aee5f5e6fdbcfeae5c4",
+   "parent": "271c17bd5b97cb6ad2658a8738c8ea71fd279ff6",
+   "subject": "Simplify plugins, timeout for shutdown, fix occasional duplicated logging, add AsyncExecutor.",
+   "read": [
+    "commit message",
+    "diff stat",
+    "the diff's logging-related hunks"
+   ],
+   "E": {
+    "E1": {
+     "verdict": "PASS",
+     "why": "pinnable: package trees c5cd7963 (parent), 9f09e91d (fix); no image built"
+    },
+    "E2": {
+     "verdict": "FAIL",
+     "why": "the one defect the commit names is duplicated logging (in-process); the rest are a refactor and features (shutdown timeout, AsyncExecutor), not defects"
+    }
+   },
+   "first_failing": "E2",
+   "outcome": "NOT ELIGIBLE"
+  },
+  {
+   "rank": 5,
+   "commit": "8b8cbb4eeda65f7835a8a036c3d9a8d9c6737aa0",
+   "parent": "55c5a5cc09cf1e2640d31e9ce2fa4d331f8dfbff",
+   "subject": "v1 migration down() fix, improved atomic transactions, many, many documentation changes.",
+   "read": [
+    "commit message",
+    "diff of chancy/ (migrate.py, migrations/v1.py, plugin.py, cron, queues)",
+    "diff of docs/ (grep for atomic/transaction/migrate)",
+    "tests/test_queues.py (added)",
+    "parent app.py (pool, migrate) and pyproject (0.4.1)"
+   ],
+   "E": {
+    "E1": {
+     "verdict": "PASS",
+     "why": "pinnable: package trees 1a0e1227 (parent), 539b1d54 (fix); no image built"
+    },
+    "E2": {
+     "verdict": "FAIL",
+     "why": "the named defect, v1 down(), is a str.format keyword mismatch (leaders= for {leader}): a Python KeyError before any SQL. The second change, wrapping each migrate() in one transaction, is described as an improvement; for it E2 would pass, and E4 fails: no docs, changelog, docstring or maintainers' test states that migrations are atomic (the added test, test_queues.py, is about multiple queues)"
+    }
+   },
+   "first_failing": "E2",
+   "first_failing_note": "E2 for the named defect; E4 for the transactional change",
+   "outcome": "NOT ELIGIBLE"
+  }
+ ]
+}

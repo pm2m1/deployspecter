@@ -1,0 +1,60 @@
+{
+ "case_id": "chancy-b8a77df",
+ "application": "chancy",
+ "label": "NONBLIND development",
+ "integration": "research_tools/nbc/integrations/chancy_pushmany.py",
+ "R1": {
+  "archive": "/private/tmp/claude-501/-Users-kiyo-Desktop-deployspecter/b1c95b43-b64d-4432-a288-8cf30f7b145b/scratchpad/nbc_archives/chancy/chancy-b8a77df/R1.tar",
+  "sha256": "560e17b12963ac79837a84e7e7607c515ff0c84218cf2a733ae450129691aea3",
+  "commit": "6716e0db1924d3393e51cd18076415e340b7c508",
+  "package_tree": "2e8c904d0d4e41cf4eff67f1e7ca5f681cbd44ad",
+  "root_tree": "74128ffe0e4026d48fbcb8d5a467de997b68186d"
+ },
+ "R2": {
+  "archive": "/private/tmp/claude-501/-Users-kiyo-Desktop-deployspecter/b1c95b43-b64d-4432-a288-8cf30f7b145b/scratchpad/nbc_archives/chancy/chancy-b8a77df/R2.tar",
+  "sha256": "203199dfe9f096b4f1e2022c5f4eab03c16f920c7ef6da9b6c478ade808fd85d",
+  "commit": "b8a77df3a514ce19ebcaf31453cff8da8af9f212",
+  "package_tree": "306b899bf8009f29b22ff727e496112573e5b00e",
+  "root_tree": "e70e4d053116e441d44e7c0f84b6837bb615b07c"
+ },
+ "buggy": "R1",
+ "oracle": {
+  "path": "docs/experimental_mvp/nonblind_corpus/chancy/cases/chancy-b8a77df/oracle.py",
+  "sha256": "4922a28d8c4fdca61e1bff8fd52eca7ba958e09659a7c4597a06d3dbdea2d92b"
+ },
+ "upstream": {
+  "repository": "https://github.com/tktech/chancy",
+  "fix_commit": "b8a77df3a514ce19ebcaf31453cff8da8af9f212",
+  "parent": "6716e0db1924d3393e51cd18076415e340b7c508",
+  "issue_or_pr": "#89",
+  "title": "Acquire job row locks in a consistent order to prevent deadlocks (#89)",
+  "changelog": "0.26.0 (4fe6633): Pushing jobs with unique keys and the worker's batched job updates now lock rows in the same order, fixing a deadlock between overlapping pushes and updates that could fail either side (@AudeCstg, #89).",
+  "maintainers_test": "tests/regressions/test_89.py::test_regression_89, ::test_regression_89_sync_push_preserves_order"
+ },
+ "contract": {
+  "kind": "single-version",
+  "citation": "no mixed-version operation is documented for this fix; each revision migrates its own fresh schema (version 7)"
+ },
+ "exposure": [
+  {
+   "who": "Track A agent (ds-nbc/1 chancy)",
+   "when": "2026-11-08, screening",
+   "read": [
+    "fix commit message",
+    "full fix diff including tests/regressions/test_89.py",
+    "0.26.0 CHANGELOG entry and commit 4fe6633",
+    "parent code path: push_many, push_many_ex, _push_job_sql, Worker._maintain_updates, fetch query, AsyncExecutor, chancy_uuid"
+   ],
+   "before_step": "integration, workloads, oracle, case spec"
+  },
+  {
+   "who": "harness developer",
+   "when": "earlier increments",
+   "read": [
+    "chancy 0.25.1/0.26.0 sources and the 0.26.0 CHANGELOG"
+   ],
+   "before_step": "this case"
+  }
+ ],
+ "prior_exposure": false
+}
