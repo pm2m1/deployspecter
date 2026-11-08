@@ -1,0 +1,65 @@
+{
+ "case_id": "chancy-2895c4a",
+ "application": "chancy",
+ "label": "NONBLIND development",
+ "integration": "research_tools/nbc/integrations/chancy_sv1.py",
+ "R1": {
+  "archive": "/private/tmp/claude-501/-Users-kiyo-Desktop-deployspecter/b1c95b43-b64d-4432-a288-8cf30f7b145b/scratchpad/nbc_archives/chancy/chancy-2895c4a/R1.tar",
+  "sha256": "b31ce4b50d65d964a428600dcc8695c54996a887456f52aa828ec648f123ef5a",
+  "commit": "80f570f0b8332212e46c3c27af5940946f6486a9",
+  "package_tree": "76c7912522674ed078cec0ed10cabf91979a9503",
+  "root_tree": "a5a389c45c8db1f53275a6c121bb3bf520796adb"
+ },
+ "R2": {
+  "archive": "/private/tmp/claude-501/-Users-kiyo-Desktop-deployspecter/b1c95b43-b64d-4432-a288-8cf30f7b145b/scratchpad/nbc_archives/chancy/chancy-2895c4a/R2.tar",
+  "sha256": "f486e36e4d13f72bf26f832d28dd021074d5739e0b89d7862687ecc587904e25",
+  "commit": "2895c4a7fc173cec3d645221f63c4e51e2cf7e84",
+  "package_tree": "b2600abaeafd1c9ccaff68ad60d6b3ab11c4e3b1",
+  "root_tree": "bdf46b6b445bdc8519a3c96133a411610fc4a57a"
+ },
+ "buggy": "R1",
+ "oracle": {
+  "path": "docs/experimental_mvp/nonblind_corpus/chancy/cases/chancy-2895c4a/oracle.py",
+  "sha256": "ec4c85914f257b9a6061b24921fc3ee981059c5d29fdbd3d8780bc19be838cf5"
+ },
+ "upstream": {
+  "repository": "https://github.com/tktech/chancy",
+  "fix_commit": "2895c4a7fc173cec3d645221f63c4e51e2cf7e84",
+  "parent": "80f570f0b8332212e46c3c27af5940946f6486a9",
+  "issue_or_pr": null,
+  "changelog": "0.26.0: Fixed cancellation races that could overwrite cancelled results",
+  "title": "Jobs now have individual execution claims for safe fencing and cancellation. Job recovery now sends out cancellation requests for any jobs it recovers.",
+  "maintainers_test": "tests/plugins/test_recovery.py::test_cancellation_fences_execution_completion"
+ },
+ "contract": {
+  "kind": "single-version",
+  "citation": "fix commit CHANGELOG: 'Stop old workers, run migrations, then start updated workers'; 0.26.0 CHANGELOG: 'Stop your workers'"
+ },
+ "exposure": [
+  {
+   "who": "harness developer",
+   "when": "2026-11-05, before the historical case's first run",
+   "read": [
+    "fix commit stat and CHANGELOG hunk",
+    "git log -S of the three changed strings",
+    "the regression test lines 128-170",
+    "parent cancel_job_ex and the completion WHERE clause"
+   ],
+   "before_step": "historical case oracle (prior exposure)"
+  },
+  {
+   "who": "Track A agent (ds-nbc/1 chancy)",
+   "when": "2026-11-08, before this case's first ds-nbc/1 run",
+   "read": [
+    "historical CASE.md and RESULTS.md",
+    "historical_oracles.py",
+    "chancy_sv.py",
+    "run_historical.py",
+    "R1 docstrings of push and cancel_job, Job fields, migrations v1-v7"
+   ],
+   "before_step": "integration wrapper, oracle, case spec"
+  }
+ ],
+ "prior_exposure": true,
+ "historical_case": "docs/experimental_mvp/historical/chancy_2895c4a/"
+}
