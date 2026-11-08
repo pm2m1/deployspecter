@@ -1,0 +1,2154 @@
+{
+ "actors": {
+  "install": {
+   "handler": "onb-pilot.install",
+   "args": {},
+   "state": "finished",
+   "result": {
+    "installed": true
+   },
+   "exception": null,
+   "exception_class": null,
+   "backend_pid": 9048,
+   "transactions": 1
+  },
+  "enqueue": {
+   "handler": "onb-pilot.enqueue",
+   "args": {
+    "jobs": [
+     {
+      "key": {
+       "str": 2,
+       "sha256": "08243666f926"
+      },
+      "task": {
+       "str": 7,
+       "sha256": "98fa6c50b6f0"
+      },
+      "args": {
+       "n": 3
+      }
+     },
+     {
+      "key": {
+       "str": 2,
+       "sha256": "a499068b8f45"
+      },
+      "task": {
+       "str": 7,
+       "sha256": "98fa6c50b6f0"
+      },
+      "args": {
+       "n": 7
+      }
+     },
+     {
+      "key": {
+       "str": 2,
+       "sha256": "e73d2c69dab6"
+      },
+      "task": {
+       "str": 7,
+       "sha256": "98fa6c50b6f0"
+      },
+      "args": {
+       "n": 11
+      }
+     }
+    ]
+   },
+   "state": "finished",
+   "result": {
+    "enqueued": [
+     {
+      "str": 36,
+      "sha256": "0d4547fe1f08"
+     },
+     {
+      "str": 36,
+      "sha256": "6981ab5e1593"
+     },
+     {
+      "str": 36,
+      "sha256": "5729da765e35"
+     }
+    ]
+   },
+   "exception": null,
+   "exception_class": null,
+   "backend_pid": 9050,
+   "transactions": 3
+  },
+  "work": {
+   "handler": "onb-pilot.work",
+   "args": {
+    "expect": 3,
+    "timeout_s": 60.0
+   },
+   "state": "finished",
+   "result": {
+    "processed": 3,
+    "expect": 3,
+    "handled": [
+     {
+      "str": 2,
+      "sha256": "08243666f926"
+     },
+     {
+      "str": 2,
+      "sha256": "a499068b8f45"
+     },
+     {
+      "str": 2,
+      "sha256": "e73d2c69dab6"
+     }
+    ]
+   },
+   "exception": null,
+   "exception_class": null,
+   "backend_pid": 9052,
+   "transactions": 12
+  }
+ },
+ "records": [
+  {
+   "seq": 0,
+   "actor": "install",
+   "kind": "execute",
+   "sql": "CREATE TABLE IF NOT EXISTS \"task_queue\" ( id UUID PRIMARY KEY, queue_name TEXT NOT NULL, task JSONB NOT NULL, ttl SMALLINT NOT NULL, can_start_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, lease_timeout FLOAT, started_at TIMESTAMPTZ, completed_at TIMESTAMPTZ )",
+   "statement_id": "abdf0c7de182",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "install",
+    "handler": "install",
+    "invocation_id": "onb_pilot_install:install",
+    "migration_phase": "",
+    "logical_op": 0,
+    "session": {
+     "backend_pid": 9048
+    },
+    "task": "Task-4",
+    "on_behalf_of": "install",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "install:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 0,
+   "decision": 0,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": true,
+   "blocked_by": [],
+   "requested_ms": 9.86,
+   "completed_ms": 11.46
+  },
+  {
+   "seq": 1,
+   "actor": "install",
+   "kind": "execute",
+   "sql": "CREATE INDEX IF NOT EXISTS task_queue_queue_name_can_start_at_idx ON \"task_queue\" (queue_name, can_start_at)",
+   "statement_id": "1764e1728082",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "install",
+    "handler": "install",
+    "invocation_id": "onb_pilot_install:install",
+    "migration_phase": "",
+    "logical_op": 1,
+    "session": {
+     "backend_pid": 9048
+    },
+    "task": "Task-6",
+    "on_behalf_of": "install",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "install:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 1,
+   "decision": 1,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "INTRANS",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 11.62,
+   "completed_ms": 12.05
+  },
+  {
+   "seq": 2,
+   "actor": "install",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "install",
+    "handler": "install",
+    "invocation_id": "onb_pilot_install:install",
+    "migration_phase": "",
+    "logical_op": 2,
+    "session": {
+     "backend_pid": 9048
+    },
+    "task": "Task-9",
+    "on_behalf_of": "install",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "install:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 2,
+   "decision": 2,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 12.26,
+   "completed_ms": 12.43
+  },
+  {
+   "seq": 3,
+   "actor": "install",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "install",
+    "handler": "install",
+    "invocation_id": "onb_pilot_install:install",
+    "migration_phase": "",
+    "logical_op": 3,
+    "session": {
+     "backend_pid": 9048
+    },
+    "task": "Task-11",
+    "on_behalf_of": "install",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 3,
+   "decision": 3,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 12.61,
+   "completed_ms": 12.65
+  },
+  {
+   "seq": 0,
+   "actor": "enqueue",
+   "kind": "execute",
+   "sql": "INSERT INTO \"task_queue\" ( id, queue_name, task, ttl, lease_timeout, can_start_at ) VALUES (%s, %s, %s, %s, %s, COALESCE(%s, current_timestamp))",
+   "statement_id": "121e00fd7992",
+   "params": [
+    {
+     "str": 36,
+     "sha256": "0d4547fe1f08"
+    },
+    {
+     "str": 4,
+     "sha256": "b40779fda6ff"
+    },
+    {
+     "str": 50,
+     "sha256": "a1fb8214abbb",
+     "jsonb_sha256": "91695002f03c"
+    },
+    3,
+    30.0,
+    null
+   ],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "enqueue",
+    "handler": "enqueue",
+    "invocation_id": "onb_pilot_enqueue:enqueue",
+    "migration_phase": "",
+    "logical_op": 0,
+    "session": {
+     "backend_pid": 9050
+    },
+    "task": "Task-15",
+    "on_behalf_of": "enqueue",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "enqueue:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000000,
+   "decision": 0,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": true,
+   "blocked_by": [],
+   "requested_ms": 8.07,
+   "completed_ms": 8.88
+  },
+  {
+   "seq": 1,
+   "actor": "enqueue",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "enqueue",
+    "handler": "enqueue",
+    "invocation_id": "onb_pilot_enqueue:enqueue",
+    "migration_phase": "",
+    "logical_op": 1,
+    "session": {
+     "backend_pid": 9050
+    },
+    "task": "Task-17",
+    "on_behalf_of": "enqueue",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "enqueue:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000001,
+   "decision": 1,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 9.0,
+   "completed_ms": 9.18
+  },
+  {
+   "seq": 2,
+   "actor": "enqueue",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "enqueue",
+    "handler": "enqueue",
+    "invocation_id": "onb_pilot_enqueue:enqueue",
+    "migration_phase": "",
+    "logical_op": 2,
+    "session": {
+     "backend_pid": 9050
+    },
+    "task": "Task-20",
+    "on_behalf_of": "enqueue",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 1000002,
+   "decision": 2,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 9.43,
+   "completed_ms": 9.48
+  },
+  {
+   "seq": 3,
+   "actor": "enqueue",
+   "kind": "execute",
+   "sql": "INSERT INTO \"task_queue\" ( id, queue_name, task, ttl, lease_timeout, can_start_at ) VALUES (%s, %s, %s, %s, %s, COALESCE(%s, current_timestamp))",
+   "statement_id": "121e00fd7992",
+   "params": [
+    {
+     "str": 36,
+     "sha256": "6981ab5e1593"
+    },
+    {
+     "str": 4,
+     "sha256": "b40779fda6ff"
+    },
+    {
+     "str": 50,
+     "sha256": "a369aeff15e6",
+     "jsonb_sha256": "86f270d56098"
+    },
+    3,
+    30.0,
+    null
+   ],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "enqueue",
+    "handler": "enqueue",
+    "invocation_id": "onb_pilot_enqueue:enqueue",
+    "migration_phase": "",
+    "logical_op": 3,
+    "session": {
+     "backend_pid": 9050
+    },
+    "task": "Task-23",
+    "on_behalf_of": "enqueue",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "enqueue:2",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000003,
+   "decision": 3,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": true,
+   "blocked_by": [],
+   "requested_ms": 9.85,
+   "completed_ms": 10.38
+  },
+  {
+   "seq": 4,
+   "actor": "enqueue",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "enqueue",
+    "handler": "enqueue",
+    "invocation_id": "onb_pilot_enqueue:enqueue",
+    "migration_phase": "",
+    "logical_op": 4,
+    "session": {
+     "backend_pid": 9050
+    },
+    "task": "Task-25",
+    "on_behalf_of": "enqueue",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "enqueue:2",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000004,
+   "decision": 4,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 10.56,
+   "completed_ms": 10.75
+  },
+  {
+   "seq": 5,
+   "actor": "enqueue",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "enqueue",
+    "handler": "enqueue",
+    "invocation_id": "onb_pilot_enqueue:enqueue",
+    "migration_phase": "",
+    "logical_op": 5,
+    "session": {
+     "backend_pid": 9050
+    },
+    "task": "Task-28",
+    "on_behalf_of": "enqueue",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 1000005,
+   "decision": 5,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 11.04,
+   "completed_ms": 11.09
+  },
+  {
+   "seq": 6,
+   "actor": "enqueue",
+   "kind": "execute",
+   "sql": "INSERT INTO \"task_queue\" ( id, queue_name, task, ttl, lease_timeout, can_start_at ) VALUES (%s, %s, %s, %s, %s, COALESCE(%s, current_timestamp))",
+   "statement_id": "121e00fd7992",
+   "params": [
+    {
+     "str": 36,
+     "sha256": "5729da765e35"
+    },
+    {
+     "str": 4,
+     "sha256": "b40779fda6ff"
+    },
+    {
+     "str": 51,
+     "sha256": "2e593a5673ca",
+     "jsonb_sha256": "81f22d4261ad"
+    },
+    3,
+    30.0,
+    null
+   ],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "enqueue",
+    "handler": "enqueue",
+    "invocation_id": "onb_pilot_enqueue:enqueue",
+    "migration_phase": "",
+    "logical_op": 6,
+    "session": {
+     "backend_pid": 9050
+    },
+    "task": "Task-31",
+    "on_behalf_of": "enqueue",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "enqueue:3",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000006,
+   "decision": 6,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": true,
+   "blocked_by": [],
+   "requested_ms": 11.36,
+   "completed_ms": 11.73
+  },
+  {
+   "seq": 7,
+   "actor": "enqueue",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "enqueue",
+    "handler": "enqueue",
+    "invocation_id": "onb_pilot_enqueue:enqueue",
+    "migration_phase": "",
+    "logical_op": 7,
+    "session": {
+     "backend_pid": 9050
+    },
+    "task": "Task-33",
+    "on_behalf_of": "enqueue",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "enqueue:3",
+    "placeholders": "psycopg"
+   },
+   "grant": 1000007,
+   "decision": 7,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 11.81,
+   "completed_ms": 12.02
+  },
+  {
+   "seq": 8,
+   "actor": "enqueue",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "enqueue",
+    "handler": "enqueue",
+    "invocation_id": "onb_pilot_enqueue:enqueue",
+    "migration_phase": "",
+    "logical_op": 8,
+    "session": {
+     "backend_pid": 9050
+    },
+    "task": "Task-36",
+    "on_behalf_of": "enqueue",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 1000008,
+   "decision": 8,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 12.32,
+   "completed_ms": 12.4
+  },
+  {
+   "seq": 0,
+   "actor": "work",
+   "kind": "execute",
+   "sql": "UPDATE \"task_queue\" SET started_at = current_timestamp WHERE id = ( SELECT id FROM \"task_queue\" WHERE completed_at IS NULL AND started_at IS NULL AND queue_name = %s AND ttl > 0 AND can_start_at <= current_timestamp ORDER BY can_start_at FOR UPDATE SKIP LOCKED LIMIT 1 ) RETURNING id, task;",
+   "statement_id": "d85ea9e5b0ab",
+   "params": [
+    {
+     "str": 4,
+     "sha256": "b40779fda6ff"
+    }
+   ],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 0,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-40",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "work:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 2000000,
+   "decision": 0,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    [
+     {
+      "uuid_sha256": "0d4547fe1f08"
+     },
+     {
+      "key": {
+       "str": 2,
+       "sha256": "08243666f926"
+      },
+      "args": {
+       "n": 3
+      },
+      "task": {
+       "str": 7,
+       "sha256": "98fa6c50b6f0"
+      }
+     }
+    ]
+   ],
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": true,
+   "blocked_by": [],
+   "requested_ms": 7.7,
+   "completed_ms": 8.88
+  },
+  {
+   "seq": 1,
+   "actor": "work",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 1,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-43",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "work:1",
+    "placeholders": "psycopg"
+   },
+   "grant": 2000001,
+   "decision": 1,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 9.21,
+   "completed_ms": 9.36
+  },
+  {
+   "seq": 2,
+   "actor": "work",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 2,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-46",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 2000002,
+   "decision": 2,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 9.66,
+   "completed_ms": 9.7
+  },
+  {
+   "seq": 3,
+   "actor": "work",
+   "kind": "execute",
+   "sql": "UPDATE \"task_queue\" SET completed_at = current_timestamp WHERE id = %s AND completed_at is NULL",
+   "statement_id": "aeec1adcf703",
+   "params": [
+    {
+     "uuid_sha256": "0d4547fe1f08"
+    }
+   ],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 3,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-49",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "work:2",
+    "placeholders": "psycopg"
+   },
+   "grant": 2000003,
+   "decision": 3,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": true,
+   "blocked_by": [],
+   "requested_ms": 9.92,
+   "completed_ms": 10.29
+  },
+  {
+   "seq": 4,
+   "actor": "work",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 4,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-52",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "work:2",
+    "placeholders": "psycopg"
+   },
+   "grant": 2000004,
+   "decision": 4,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 10.64,
+   "completed_ms": 10.77
+  },
+  {
+   "seq": 5,
+   "actor": "work",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 5,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-54",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 2000005,
+   "decision": 5,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 10.88,
+   "completed_ms": 10.92
+  },
+  {
+   "seq": 6,
+   "actor": "work",
+   "kind": "execute",
+   "sql": "SELECT id FROM \"task_queue\" WHERE completed_at IS NULL AND started_at IS NOT NULL AND queue_name = %s AND ( started_at + (lease_timeout || ' seconds')::INTERVAL ) < current_timestamp ORDER BY can_start_at;",
+   "statement_id": "d85ad0a63f91",
+   "params": [
+    {
+     "str": 4,
+     "sha256": "b40779fda6ff"
+    }
+   ],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 6,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-57",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "work:3",
+    "placeholders": "psycopg"
+   },
+   "grant": 2000006,
+   "decision": 6,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 0,
+   "rows": [],
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": true,
+   "blocked_by": [],
+   "requested_ms": 11.27,
+   "completed_ms": 11.81
+  },
+  {
+   "seq": 7,
+   "actor": "work",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 7,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-60",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "work:3",
+    "placeholders": "psycopg"
+   },
+   "grant": 2000007,
+   "decision": 7,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 12.04,
+   "completed_ms": 12.2
+  },
+  {
+   "seq": 8,
+   "actor": "work",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 8,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-63",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 2000008,
+   "decision": 8,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 12.49,
+   "completed_ms": 12.52
+  },
+  {
+   "seq": 9,
+   "actor": "work",
+   "kind": "execute",
+   "sql": "SELECT count(*) as count FROM \"task_queue\" WHERE queue_name = %s AND completed_at IS NULL",
+   "statement_id": "c599b1051b02",
+   "params": [
+    {
+     "str": 4,
+     "sha256": "b40779fda6ff"
+    }
+   ],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 9,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-66",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "work:4",
+    "placeholders": "psycopg"
+   },
+   "grant": 2000009,
+   "decision": 9,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    [
+     2
+    ]
+   ],
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": true,
+   "blocked_by": [],
+   "requested_ms": 12.87,
+   "completed_ms": 13.31
+  },
+  {
+   "seq": 10,
+   "actor": "work",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 10,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-69",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "work:4",
+    "placeholders": "psycopg"
+   },
+   "grant": 2000010,
+   "decision": 10,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 13.55,
+   "completed_ms": 13.74
+  },
+  {
+   "seq": 11,
+   "actor": "work",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 11,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-72",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 2000011,
+   "decision": 11,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 13.89,
+   "completed_ms": 13.92
+  },
+  {
+   "seq": 12,
+   "actor": "work",
+   "kind": "execute",
+   "sql": "UPDATE \"task_queue\" SET started_at = current_timestamp WHERE id = ( SELECT id FROM \"task_queue\" WHERE completed_at IS NULL AND started_at IS NULL AND queue_name = %s AND ttl > 0 AND can_start_at <= current_timestamp ORDER BY can_start_at FOR UPDATE SKIP LOCKED LIMIT 1 ) RETURNING id, task;",
+   "statement_id": "d85ea9e5b0ab",
+   "params": [
+    {
+     "str": 4,
+     "sha256": "b40779fda6ff"
+    }
+   ],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 12,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-75",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "work:5",
+    "placeholders": "psycopg"
+   },
+   "grant": 2000012,
+   "decision": 12,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    [
+     {
+      "uuid_sha256": "6981ab5e1593"
+     },
+     {
+      "key": {
+       "str": 2,
+       "sha256": "a499068b8f45"
+      },
+      "args": {
+       "n": 7
+      },
+      "task": {
+       "str": 7,
+       "sha256": "98fa6c50b6f0"
+      }
+     }
+    ]
+   ],
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": true,
+   "blocked_by": [],
+   "requested_ms": 14.24,
+   "completed_ms": 14.76
+  },
+  {
+   "seq": 13,
+   "actor": "work",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 13,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-78",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "work:5",
+    "placeholders": "psycopg"
+   },
+   "grant": 2000013,
+   "decision": 13,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 15.03,
+   "completed_ms": 15.24
+  },
+  {
+   "seq": 14,
+   "actor": "work",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 14,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-81",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 2000014,
+   "decision": 14,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 15.47,
+   "completed_ms": 15.5
+  },
+  {
+   "seq": 15,
+   "actor": "work",
+   "kind": "execute",
+   "sql": "UPDATE \"task_queue\" SET completed_at = current_timestamp WHERE id = %s AND completed_at is NULL",
+   "statement_id": "aeec1adcf703",
+   "params": [
+    {
+     "uuid_sha256": "6981ab5e1593"
+    }
+   ],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 15,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-84",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "work:6",
+    "placeholders": "psycopg"
+   },
+   "grant": 2000015,
+   "decision": 15,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": true,
+   "blocked_by": [],
+   "requested_ms": 15.78,
+   "completed_ms": 16.12
+  },
+  {
+   "seq": 16,
+   "actor": "work",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 16,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-87",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "work:6",
+    "placeholders": "psycopg"
+   },
+   "grant": 2000016,
+   "decision": 16,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 16.34,
+   "completed_ms": 16.55
+  },
+  {
+   "seq": 17,
+   "actor": "work",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 17,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-89",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 2000017,
+   "decision": 17,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 16.63,
+   "completed_ms": 16.66
+  },
+  {
+   "seq": 18,
+   "actor": "work",
+   "kind": "execute",
+   "sql": "SELECT id FROM \"task_queue\" WHERE completed_at IS NULL AND started_at IS NOT NULL AND queue_name = %s AND ( started_at + (lease_timeout || ' seconds')::INTERVAL ) < current_timestamp ORDER BY can_start_at;",
+   "statement_id": "d85ad0a63f91",
+   "params": [
+    {
+     "str": 4,
+     "sha256": "b40779fda6ff"
+    }
+   ],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 18,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-92",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "work:7",
+    "placeholders": "psycopg"
+   },
+   "grant": 2000018,
+   "decision": 18,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 0,
+   "rows": [],
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": true,
+   "blocked_by": [],
+   "requested_ms": 16.97,
+   "completed_ms": 17.36
+  },
+  {
+   "seq": 19,
+   "actor": "work",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 19,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-95",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "work:7",
+    "placeholders": "psycopg"
+   },
+   "grant": 2000019,
+   "decision": 19,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 17.7,
+   "completed_ms": 17.82
+  },
+  {
+   "seq": 20,
+   "actor": "work",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 20,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-98",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 2000020,
+   "decision": 20,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 18.07,
+   "completed_ms": 18.11
+  },
+  {
+   "seq": 21,
+   "actor": "work",
+   "kind": "execute",
+   "sql": "SELECT count(*) as count FROM \"task_queue\" WHERE queue_name = %s AND completed_at IS NULL",
+   "statement_id": "c599b1051b02",
+   "params": [
+    {
+     "str": 4,
+     "sha256": "b40779fda6ff"
+    }
+   ],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 21,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-101",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "work:8",
+    "placeholders": "psycopg"
+   },
+   "grant": 2000021,
+   "decision": 21,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    [
+     1
+    ]
+   ],
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": true,
+   "blocked_by": [],
+   "requested_ms": 18.33,
+   "completed_ms": 18.67
+  },
+  {
+   "seq": 22,
+   "actor": "work",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 22,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-104",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "work:8",
+    "placeholders": "psycopg"
+   },
+   "grant": 2000022,
+   "decision": 22,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 18.88,
+   "completed_ms": 19.03
+  },
+  {
+   "seq": 23,
+   "actor": "work",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 23,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-107",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 2000023,
+   "decision": 23,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 19.32,
+   "completed_ms": 19.35
+  },
+  {
+   "seq": 24,
+   "actor": "work",
+   "kind": "execute",
+   "sql": "UPDATE \"task_queue\" SET started_at = current_timestamp WHERE id = ( SELECT id FROM \"task_queue\" WHERE completed_at IS NULL AND started_at IS NULL AND queue_name = %s AND ttl > 0 AND can_start_at <= current_timestamp ORDER BY can_start_at FOR UPDATE SKIP LOCKED LIMIT 1 ) RETURNING id, task;",
+   "statement_id": "d85ea9e5b0ab",
+   "params": [
+    {
+     "str": 4,
+     "sha256": "b40779fda6ff"
+    }
+   ],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 24,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-110",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "work:9",
+    "placeholders": "psycopg"
+   },
+   "grant": 2000024,
+   "decision": 24,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    [
+     {
+      "uuid_sha256": "5729da765e35"
+     },
+     {
+      "key": {
+       "str": 2,
+       "sha256": "e73d2c69dab6"
+      },
+      "args": {
+       "n": 11
+      },
+      "task": {
+       "str": 7,
+       "sha256": "98fa6c50b6f0"
+      }
+     }
+    ]
+   ],
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": true,
+   "blocked_by": [],
+   "requested_ms": 19.54,
+   "completed_ms": 20.22
+  },
+  {
+   "seq": 25,
+   "actor": "work",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 25,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-113",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "work:9",
+    "placeholders": "psycopg"
+   },
+   "grant": 2000025,
+   "decision": 25,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 20.55,
+   "completed_ms": 20.88
+  },
+  {
+   "seq": 26,
+   "actor": "work",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 26,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-116",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 2000026,
+   "decision": 26,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 21.14,
+   "completed_ms": 21.19
+  },
+  {
+   "seq": 27,
+   "actor": "work",
+   "kind": "execute",
+   "sql": "UPDATE \"task_queue\" SET completed_at = current_timestamp WHERE id = %s AND completed_at is NULL",
+   "statement_id": "aeec1adcf703",
+   "params": [
+    {
+     "uuid_sha256": "5729da765e35"
+    }
+   ],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 27,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-119",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "work:10",
+    "placeholders": "psycopg"
+   },
+   "grant": 2000027,
+   "decision": 27,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": true,
+   "blocked_by": [],
+   "requested_ms": 21.67,
+   "completed_ms": 22.27
+  },
+  {
+   "seq": 28,
+   "actor": "work",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 28,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-122",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "work:10",
+    "placeholders": "psycopg"
+   },
+   "grant": 2000028,
+   "decision": 28,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 22.47,
+   "completed_ms": 22.67
+  },
+  {
+   "seq": 29,
+   "actor": "work",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 29,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-124",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 2000029,
+   "decision": 29,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 22.91,
+   "completed_ms": 22.97
+  },
+  {
+   "seq": 30,
+   "actor": "work",
+   "kind": "execute",
+   "sql": "SELECT id FROM \"task_queue\" WHERE completed_at IS NULL AND started_at IS NOT NULL AND queue_name = %s AND ( started_at + (lease_timeout || ' seconds')::INTERVAL ) < current_timestamp ORDER BY can_start_at;",
+   "statement_id": "d85ad0a63f91",
+   "params": [
+    {
+     "str": 4,
+     "sha256": "b40779fda6ff"
+    }
+   ],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 30,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-127",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "work:11",
+    "placeholders": "psycopg"
+   },
+   "grant": 2000030,
+   "decision": 30,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 0,
+   "rows": [],
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": true,
+   "blocked_by": [],
+   "requested_ms": 23.27,
+   "completed_ms": 23.54
+  },
+  {
+   "seq": 31,
+   "actor": "work",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 31,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-130",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "work:11",
+    "placeholders": "psycopg"
+   },
+   "grant": 2000031,
+   "decision": 31,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 23.76,
+   "completed_ms": 23.9
+  },
+  {
+   "seq": 32,
+   "actor": "work",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 32,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-133",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 2000032,
+   "decision": 32,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 24.22,
+   "completed_ms": 24.3
+  },
+  {
+   "seq": 33,
+   "actor": "work",
+   "kind": "execute",
+   "sql": "SELECT count(*) as count FROM \"task_queue\" WHERE queue_name = %s AND completed_at IS NULL",
+   "statement_id": "c599b1051b02",
+   "params": [
+    {
+     "str": 4,
+     "sha256": "b40779fda6ff"
+    }
+   ],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 33,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-136",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "work:12",
+    "placeholders": "psycopg"
+   },
+   "grant": 2000033,
+   "decision": 33,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    [
+     0
+    ]
+   ],
+   "txn_before": "IDLE",
+   "txn_after": "INTRANS",
+   "implicit_begin": true,
+   "blocked_by": [],
+   "requested_ms": 24.68,
+   "completed_ms": 25.22
+  },
+  {
+   "seq": 34,
+   "actor": "work",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 34,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-139",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": "work:12",
+    "placeholders": "psycopg"
+   },
+   "grant": 2000034,
+   "decision": 34,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "INTRANS",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 25.39,
+   "completed_ms": 25.65
+  },
+  {
+   "seq": 35,
+   "actor": "work",
+   "kind": "commit",
+   "sql": "COMMIT",
+   "statement_id": "79663c1d3b43",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 35,
+    "session": {
+     "backend_pid": 9052
+    },
+    "task": "Task-142",
+    "on_behalf_of": "work",
+    "call_site": "../usr/local/lib/python3.12/asyncio/events.py:88:_run",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 2000035,
+   "decision": 35,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": null,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 25.9,
+   "completed_ms": 25.98
+  }
+ ]
+}
