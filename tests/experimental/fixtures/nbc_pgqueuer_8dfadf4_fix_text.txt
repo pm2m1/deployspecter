@@ -1,0 +1,219 @@
+fix(queries): keep a picked row when a job is cancelled (#1032)
+-| `canceled` | Job was canceled via `mark_job_as_cancelled()` |
++| `canceled` | Queued job removed by `mark_job_as_cancelled()`, or a picked job stopped by its worker after a cancel request |
+-at a time across all workers.
++at a time across all workers. Cancelling the running job does not free the slot
++until the worker logs the outcome.
+-`mark_job_as_cancelled` accepts a list of job IDs. Jobs that have already completed are
+-unaffected.
++`mark_job_as_cancelled` accepts a list of job IDs. A job that is still `queued` is
++removed at once and logged as `canceled`. A job that is already `picked` stays in the
++queue until its worker logs the outcome, so it keeps its `concurrency_limit` slot and
++its `dedupe_key` while the handler runs. The NOTIFY still asks the handler to stop.
++Jobs that have already completed are unaffected.
+-Cancelled jobs transition to the `canceled` status and are logged in the statistics table.
+-See [Architecture](../reference/architecture.md) for the full status lifecycle.
++A queued job is logged `canceled` immediately. A picked job is logged `canceled` when
++its worker sees the request and the handler returns; until that log, the row stays
++`picked`. See [Architecture](../reference/architecture.md) for the full status lifecycle.
+-- **`canceled`**: Jobs canceled before completion receive this status and are logged.
++- **`canceled`**: A queued job canceled with `mark_job_as_cancelled` is logged at once.
++  A picked job stays `picked` until its worker logs `canceled`.
+-        # A job cancelled while it ran already has its terminal log row.
++        # Gone (cleared) or owned by a newer picker: leave the existing log alone.
+-            row = self.rows.pop(int(raw_id), None)
+-            if row is None:
++            row = self.rows.get(int(raw_id))
++            # A picked row keeps its slot and dedupe key until the worker logs.
++            if row is None or row.status == "picked":
++            self.rows.pop(row.id)
+-        # The owner check sits on the target row so a concurrent re-pick is re-checked
+-        # under READ COMMITTED; a NULL owner (admin cancellation) is unfenced.
++        # Owner check is re-read under READ COMMITTED. A NULL owner (admin cancel)
++        # removes queued and failed rows only; a picked row stays for its worker.
+-                AND (js.queue_manager_id IS NULL OR q.queue_manager_id = js.queue_manager_id)
++                AND (
++                    q.queue_manager_id = js.queue_manager_id
++                    OR (js.queue_manager_id IS NULL AND q.status <> 'picked')
++                )
+-        """Log *ids* as 'canceled' and emit a cancellation NOTIFY."""
++        """Cancel *ids* and emit a cancellation NOTIFY.
++
++        A ``queued`` or ``failed`` row is logged ``canceled`` and removed. A
++        ``picked`` row stays until its worker logs the outcome, so the job keeps
++        its concurrency slot and dedupe key while the handler runs.
++        """
++from pgqueuer.domain.errors import DuplicateJobError
+-async def test_mark_job_cancellation(
+-    apgdriver: AsyncpgDriver,
+-) -> None:
+-    """mark_job_as_cancelled: job marked canceled, log entry created."""
++async def test_cancel_keeps_picked_row_until_worker_logs(apgdriver: AsyncpgDriver) -> None:
++    """Cancel of a running job keeps its slot and dedupe key until the worker logs (#1031)."""
+-
+-    jids = await q.enqueue(["ep"], [None], [0])
+-    qm_id = QueueManagerId(uuid.uuid4())
+-
+-    jobs = await q.dequeue(
+-        batch_size=1,
+-        entrypoints={QueueEntrypoint("ep"): EntrypointExecutionParameter(concurrency_limit=1)},
+-        queue_manager_id=qm_id,
+-        global_concurrency_limit=None,
+-        heartbeat_timeout=timedelta(seconds=30),
++    params = {QueueEntrypoint("serial"): EntrypointExecutionParameter(concurrency_limit=1)}
++    owner = QueueManagerId(uuid.uuid4())
++    timeout = timedelta(seconds=30)
++    (running_id,) = await q.enqueue("serial", None, dedupe_key="a")
++    (waiting_id,) = await q.enqueue("serial", None, dedupe_key="b")
++    (queued_id,) = await q.enqueue("serial", None, dedupe_key="c")
++
++    (running,) = await q.dequeue(1, params, owner, None, timeout)
++    assert running.id == running_id
++
++    await q.mark_job_as_cancelled([running_id, queued_id])
++
++    assert await q.queue_job_by_id(queued_id) is None
++    assert [entry.status for entry in await q.job_log_history(queued_id)] == ["queued", "canceled"]
++    held = await q.queue_job_by_id(running_id)
++    assert held is not None and held.status == "picked"
++    assert [entry.status for entry in await q.job_log_history(running_id)] == ["queued", "picked"]
++    assert await q.dequeue(1, params, owner, None, timeout) == []
++    with pytest.raises(DuplicateJobError):
++        await q.enqueue("serial", None, dedupe_key="a")
++
++    await q.log_jobs([(running, "canceled", None)])
++
++    assert await q.queue_job_by_id(running_id) is None
++    assert [entry.status for entry in await q.job_log_history(running_id)] == [
++        "queued",
++        "picked",
++        "canceled",
++    ]
++    (next_job,) = await q.dequeue(1, params, owner, None, timeout)
++    assert next_job.id == waiting_id
++    (replacement,) = await q.enqueue("serial", None, dedupe_key="a")
++    assert replacement is not None
++
++
++async def test_cancel_removes_failed_job(apgdriver: AsyncpgDriver) -> None:
++    """A held failed job is still removed and logged canceled."""
++    q = Queries(apgdriver)
++    (jid,) = await q.enqueue("ep", None)
++    (job,) = await q.dequeue(
++        1,
++        {QueueEntrypoint("ep"): EntrypointExecutionParameter(0)},
++        QueueManagerId(uuid.uuid4()),
++        None,
++        timedelta(seconds=30),
+-    assert len(jobs) == 1
++    await q.log_jobs([(job, "failed", None)])
+-    await q.mark_job_as_cancelled(jids)
++    await q.mark_job_as_cancelled([jid])
+-    logs = await q.queue_log()
+-    cancel_logs = [log for log in logs if log.job_id == int(jids[0]) and log.status == "canceled"]
+-    assert len(cancel_logs) == 1
++    assert await q.queue_job_by_id(jid) is None
++    assert [entry.status for entry in await q.job_log_history(jid)] == [
++        "queued",
++        "picked",
++        "failed",
++        "canceled",
++    ]
+-@pytest.mark.parametrize(("remove", "terminal"), [("cancel", "canceled"), ("clear", "deleted")])
+-async def test_log_jobs_skips_job_no_longer_in_queue(
++async def test_log_jobs_skips_job_cleared_while_it_ran(
+-    remove: str,
+-    terminal: str,
+-    """log_jobs writes nothing for a job cancelled or cleared while it ran."""
++    """log_jobs writes nothing for a job cleared while it ran."""
+-    if remove == "cancel":
+-        await q.mark_job_as_cancelled([jid])
+-    else:
+-        await q.clear_queue("ep")
++    await q.clear_queue("ep")
+-    assert [e.status for e in history] == ["queued", "picked", terminal]
+-    assert await q.job_status([jid]) == [(jid, terminal)]
++    assert [e.status for e in history] == ["queued", "picked", "deleted"]
++    assert await q.job_status([jid]) == [(jid, "deleted")]
+-@pytest.mark.parametrize(("remove", "terminal"), [("cancel", "canceled"), ("clear", "deleted")])
+-async def test_log_jobs_skips_job_no_longer_in_queue(
++async def test_log_jobs_skips_job_cleared_while_it_ran(
+-    remove: str,
+-    terminal: str,
+-    """A job cancelled or cleared while it ran keeps its terminal status, as in PostgreSQL."""
++    """A job cleared while it ran keeps status deleted, as in PostgreSQL."""
+-    if remove == "cancel":
+-        await queries.mark_job_as_cancelled([jid])
+-    else:
+-        await queries.clear_queue("ep")
++    await queries.clear_queue("ep")
+-    assert [e.status for e in history] == ["queued", "picked", terminal]
+-    assert await queries.job_status([jid]) == [(jid, terminal)]
++    assert [e.status for e in history] == ["queued", "picked", "deleted"]
++    assert await queries.job_status([jid]) == [(jid, "deleted")]
++async def test_cancel_keeps_picked_row_until_worker_logs(queries: InMemoryQueries) -> None:
++    """Cancel of a running job keeps its slot and dedupe key until the worker logs (#1031)."""
++    params = {QueueEntrypoint("serial"): EntrypointExecutionParameter(concurrency_limit=1)}
++    owner = QueueManagerId(uuid.uuid4())
++    timeout = timedelta(seconds=30)
++    (running_id,) = await queries.enqueue("serial", None, dedupe_key="a")
++    (waiting_id,) = await queries.enqueue("serial", None, dedupe_key="b")
++    (queued_id,) = await queries.enqueue("serial", None, dedupe_key="c")
++
++    (running,) = await queries.dequeue(1, params, owner, None, timeout)
++    assert running.id == running_id
++
++    await queries.mark_job_as_cancelled([running_id, queued_id])
++
++    assert await queries.queue_job_by_id(queued_id) is None
++    assert [entry.status for entry in await queries.job_log_history(queued_id)] == [
++        "queued",
++        "canceled",
++    ]
++    held = await queries.queue_job_by_id(running_id)
++    assert held is not None and held.status == "picked"
++    assert [entry.status for entry in await queries.job_log_history(running_id)] == [
++        "queued",
++        "picked",
++    ]
++    assert await queries.dequeue(1, params, owner, None, timeout) == []
++    with pytest.raises(DuplicateJobError):
++        await queries.enqueue("serial", None, dedupe_key="a")
++
++    await queries.log_jobs([(running, "canceled", None)])
++
++    assert await queries.queue_job_by_id(running_id) is None
++    assert [entry.status for entry in await queries.job_log_history(running_id)] == [
++        "queued",
++        "picked",
++        "canceled",
++    ]
++    (next_job,) = await queries.dequeue(1, params, owner, None, timeout)
++    assert next_job.id == waiting_id
++    (replacement,) = await queries.enqueue("serial", None, dedupe_key="a")
++    assert replacement is not None
++
++
++async def test_cancel_removes_failed_job(queries: InMemoryQueries) -> None:
++    """A held failed job is still removed and logged canceled."""
++    (jid,) = await queries.enqueue("ep", None)
++    (job,) = await queries.dequeue(
++        1,
++        {QueueEntrypoint("ep"): EntrypointExecutionParameter(0)},
++        QueueManagerId(uuid.uuid4()),
++        None,
++        timedelta(seconds=30),
++    )
++    await queries.log_jobs([(job, "failed", None)])
++
++    await queries.mark_job_as_cancelled([jid])
++
++    assert await queries.queue_job_by_id(jid) is None
++    assert [entry.status for entry in await queries.job_log_history(jid)] == [
++        "queued",
++        "picked",
++        "failed",
++        "canceled",
++    ]
++
++

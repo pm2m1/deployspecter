@@ -1,0 +1,70 @@
+{
+ "case_id": "pgqueuer-8dfadf4",
+ "application": "pgqueuer",
+ "label": "NONBLIND development",
+ "integration": "research_tools/nbc/integrations/pgqueuer_cancel.py",
+ "R1": {
+  "archive": "/private/tmp/claude-501/-Users-kiyo-Desktop-deployspecter/b1c95b43-b64d-4432-a288-8cf30f7b145b/scratchpad/nbc_archives/pgqueuer/pgqueuer-8dfadf4/R1.tar",
+  "sha256": "378ee7593ca1396be0a0d0323562f0c0cd98b1e76e2db75849f8eac2eb6310e2",
+  "commit": "f258cbcafab840612b8c42b1db60ab553b67c093",
+  "tree": "f9fbfbac88c491e0a918b5be3227c07ecb9d7614",
+  "package_tree": "3c6247642ceb3ceea639cf60d78ce121b5d1b6e6"
+ },
+ "R2": {
+  "archive": "/private/tmp/claude-501/-Users-kiyo-Desktop-deployspecter/b1c95b43-b64d-4432-a288-8cf30f7b145b/scratchpad/nbc_archives/pgqueuer/pgqueuer-8dfadf4/R2.tar",
+  "sha256": "d985c4686106f040a7ed274613bf16a7d1379e3631c4059fc58cb45706fe260b",
+  "commit": "8dfadf4ea3a6fb6d60ac970d799faf8338f9d03f",
+  "tree": "d9d7b31b593ec9d55e2e2d05afe8451e61d0808b",
+  "package_tree": "9b7989b302a3e481f8ec0978c470347e6e9a004c"
+ },
+ "buggy": "R1",
+ "oracle": {
+  "path": "docs/experimental_mvp/nonblind_corpus/pgqueuer/cases/pgqueuer-8dfadf4/oracle.py",
+  "sha256": "cb59b5732e459addd6220ddd414bbf12daa9912f69a61d7b8fc092bfcd9a80a6"
+ },
+ "pin": "research_tools/nbc/integrations/pgqueuer_pin.py --repo <public mirror of github.com/janbjorge/pgqueuer> --out <dir> --case pgqueuer-8dfadf4",
+ "upstream": {
+  "repository": "https://github.com/janbjorge/pgqueuer",
+  "fix_commit": "8dfadf4ea3a6fb6d60ac970d799faf8338f9d03f",
+  "parent": "f258cbcafab840612b8c42b1db60ab553b67c093",
+  "pr": 1032,
+  "issue": 1031,
+  "issue_source": "the maintainers' test docstring (#1031); the issue itself wasn't read",
+  "title": "fix(queries): keep a picked row when a job is cancelled (#1032)",
+  "date": "2026-10-24T11:06:01+02:00",
+  "first_release_with_fix": "none yet (after v1.6.0)"
+ },
+ "contract": {
+  "kind": "single-version",
+  "why": "no mixed-version deployment contract is documented for this pair; each run uses one revision on a fresh schema",
+  "property": "H1: concurrency_limit is a global cap on running jobs of an entrypoint",
+  "citation": [
+   "f258cbc docs/guides/concurrency-control.md: 'Setting concurrency_limit=1 guarantees that only one job of this entrypoint runs at a time across all workers.'",
+   "f258cbc pgqueuer/core/qm.py QueueManager.entrypoint docstring: 'Limits are enforced at the database level across all workers.'",
+   "f258cbc docs/guides/job-cancellation.md: 'Cancellations are best-effort and may not halt a job already underway.'",
+   "8dfadf4 test/integration/test_persistence_queries_sql.py::test_cancel_keeps_picked_row_until_worker_logs (maintainers' test)"
+  ]
+ },
+ "exposure": [
+  {
+   "who": "Track A agent (pgqueuer)",
+   "when": "2026-11-08, screening, before CASE.md",
+   "read": "commit message, git show --stat, the full pgqueuer/ diff, RELEASE.md and docs hunks of 8dfadf4; the maintainers' SQL test hunk"
+  },
+  {
+   "who": "Track A agent (pgqueuer)",
+   "when": "2026-11-08, integration design, before CASE.md and before any live run",
+   "read": "the parent's qm.py, qb.py (dequeue and log_job), queries.py, buffers.py, heartbeat.py, composer.py, schema_ddl.py, adapters/drivers/psycopg.py; docs/guides/concurrency-control.md and job-cancellation.md at the parent"
+  },
+  {
+   "who": "Track A agent (pgqueuer)",
+   "when": "2026-11-08, screening of the other 11 candidates",
+   "read": "their messages and diffs (SCREENING.json); 64b71e9's test file; the parent of bcf8f61's sm.py"
+  },
+  {
+   "who": "everyone",
+   "when": "always",
+   "read": "training-data exposure of the public repository can't be excluded"
+  }
+ ]
+}
