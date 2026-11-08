@@ -1,0 +1,202 @@
+{
+ "label": "saq-two-queues-addee31/1",
+ "policy": {
+  "kind": "seeded",
+  "seed": 1253216147
+ },
+ "network": "ds-mvp-coord-961575c8",
+ "containers": {
+  "coordinator": "ds-mvp-coord-c-961575c8",
+  "A": "ds-mvp-coord-a-961575c8"
+ },
+ "frozen_sha256": {
+  "properties": "d701a2f4c5150c8874cfe1ca514fab1f88ba0af15e266a6d5c67d1398222d4cd",
+  "checker": "72320a82f9d9c3e0175e19221f3b5f3ec4368803a1e5060cdd70b8deb9d975e9"
+ },
+ "code_revision": {
+  "head": "f1cf4b86e090f207e2e960f8f470e77adab2bba3",
+  "dirty": false
+ },
+ "runtime_flags": [
+  "--read-only",
+  "--tmpfs",
+  "/tmp:rw,noexec,nosuid,nodev,size=64m",
+  "--cap-drop",
+  "ALL",
+  "--security-opt",
+  "no-new-privileges",
+  "--pids-limit",
+  "64",
+  "--memory",
+  "512m",
+  "--memory-swap",
+  "512m",
+  "--cpus",
+  "1",
+  "--ulimit",
+  "nofile=256:256",
+  "--user",
+  "65534:65534"
+ ],
+ "network_internal": "true",
+ "precondition": {
+  "tables_before": 0
+ },
+ "initial_state_digest": "338f2c8b01f157656826fc24269bc533b49300b1b78d6ad943d7a0b8ebc4124d",
+ "refusals": [
+  "A printed no result (exit 1)"
+ ],
+ "container_seconds": 90.56,
+ "sessions_left_after_run": [],
+ "refusal_reasons": [
+  "coordinator_completed",
+  "corroborated",
+  "every_container_reported",
+  "every_run_completed",
+  "isolation"
+ ],
+ "coordinator": {
+  "protocol": "ds-coord/1",
+  "outcome": "refused",
+  "reason": "no hello from ['A']",
+  "policy": {
+   "kind": "seeded",
+   "seed": 1253216147
+  },
+  "gates": [
+   {
+    "actor": "second",
+    "match": null,
+    "until": [
+     {
+      "actor": "first",
+      "marker": "fetch",
+      "count": 1
+     }
+    ]
+   }
+  ],
+  "stop": {
+   "key": "succeeded",
+   "covers": [
+    "second"
+   ],
+   "after_s": 45
+  },
+  "processes": {},
+  "decisions": [],
+  "statements": {},
+  "events": [
+   {
+    "event": "abort",
+    "outcome": "refused",
+    "reason": "no hello from ['A']",
+    "t_ms": 90099.51
+   }
+  ],
+  "grants": 0,
+  "elapsed_ms": 90099.55
+ },
+ "corroboration": {
+  "ok": false,
+  "problems": [
+   "no process trace"
+  ]
+ },
+ "isolation_checks": {
+  "A": {
+   "uid": false,
+   "root_writable": false,
+   "app_writable": false,
+   "tmp_writable": false,
+   "ssh_dir_present": false,
+   "secret_like_env": false,
+   "host_55432_unreachable": false,
+   "internet_tcp_unreachable": false,
+   "internet_dns_unresolved": false,
+   "pids_limited": false,
+   "memory_limited": false
+  },
+  "coordinator": {
+   "uid": true,
+   "root_writable": true,
+   "app_writable": true,
+   "tmp_writable": true,
+   "ssh_dir_present": true,
+   "secret_like_env": true,
+   "host_55432_unreachable": true,
+   "internet_tcp_unreachable": true,
+   "internet_dns_unresolved": true,
+   "pids_limited": true,
+   "memory_limited": true
+  }
+ },
+ "probes": {
+  "A": {},
+  "coordinator": {
+   "uid": 65534,
+   "gid": 65534,
+   "root_writable": false,
+   "app_writable": false,
+   "tmp_writable": true,
+   "ssh_dir_present": false,
+   "env_keys": [
+    "DS_CO_NONCE",
+    "DS_CO_SPEC",
+    "DS_MODE",
+    "GPG_KEY",
+    "HOME",
+    "HOSTNAME",
+    "LANG",
+    "PATH",
+    "PIP_DISABLE_PIP_VERSION_CHECK",
+    "PIP_NO_CACHE_DIR",
+    "PYTHONDONTWRITEBYTECODE",
+    "PYTHON_SHA256",
+    "PYTHON_VERSION"
+   ],
+   "secret_like_env": [],
+   "host_55432": "refused:gaierror",
+   "host_gateway_55441": "refused:gaierror",
+   "internet_tcp": "refused:OSError",
+   "internet_dns": "unresolved:gaierror",
+   "nproc_limit": "64",
+   "memory_limit": "536870912"
+  }
+ },
+ "isolation_ok": false,
+ "versions": {
+  "A": null
+ },
+ "pinned_sources": {
+  "A": null
+ },
+ "outcomes": {},
+ "exceptions": {},
+ "raw_results": {},
+ "final_state": {
+  "tables": [],
+  "jobs": {}
+ },
+ "final_state_digest": "338f2c8b01f157656826fc24269bc533b49300b1b78d6ad943d7a0b8ebc4124d",
+ "trace_sha256": {},
+ "outputs": {
+  "coordinator": {
+   "exit": 0,
+   "stderr_tail": ""
+  },
+  "A": {
+   "exit": 1,
+   "stderr_tail": " 429, in main\n    out.update(asyncio.run(saq_coordinated()))\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.12/asyncio/runners.py\", line 195, in run\n    return runner.run(main)\n           ^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.12/asyncio/runners.py\", line 118, in run\n    return self._loop.run_until_complete(task)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.12/asyncio/base_events.py\", line 691, in run_until_complete\n    return future.result()\n           ^^^^^^^^^^^^^^^\n  File \"/app/smoke_inside.py\", line 400, in saq_coordinated\n    return await sa.coordinated_process()\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/app/src/deployspecter/experimental/thirdparty/saq_coord_adapter.py\", line 237, in coordinated_process\n    pinned = verify_pinned()\n             ^^^^^^^^^^^^^^^\n  File \"/app/src/deployspecter/experimental/thirdparty/saq_coord_adapter.py\", line 65, in verify_pinned\n    raise Refused(f\"saq's sources aren't the host-declared pinned tree: {short}\")\ndeployspecter.experimental.stepping.Refused: saq's sources aren't the host-declared pinned tree: [('saq/__init__.py', '67e07915d384'), ('saq/job.py', '7c65cc7af1af'), ('saq/multiplexer.py', '4bf9a3a3b90e'), ('saq/queue/__init__.py', 'e4b8011c6ca5'), ('saq/queue/base.py', 'a20676d5b6df'), ('saq/queue/postgres.py', '4b1150edf268'), ('saq/queue/postgres_migrations.py', '808ea3fb44f3'), ('saq/utils.py', 'f52276b46741'), ('saq/worker.py', 'f1a3e454f311')]\n"
+  }
+ },
+ "sound": false,
+ "complete": false,
+ "verdict": "REFUSED",
+ "teardown": {
+  "containers_removed": true,
+  "network_removed": true,
+  "workdir_removed": true,
+  "protected_unchanged": true
+ }
+}

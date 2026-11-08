@@ -1,0 +1,75 @@
+{
+ "case_id": "saq-c570ba4",
+ "application": "saq",
+ "integration": "research_tools/nbc/integrations/saq_burst_c570ba4.py",
+ "R1": {
+  "archive": "/private/tmp/claude-501/-Users-kiyo-Desktop-deployspecter/b1c95b43-b64d-4432-a288-8cf30f7b145b/scratchpad/nbc_archives/saq/saq-c570ba4/R1.tar",
+  "sha256": "5adf904ddbb9360865e59bf8d2adc06fedd50eb7c438447fdb2622927203dd65",
+  "commit": "59f32fce50428e5fb0073204f31cbe7ffc84c293",
+  "tree": "c7e084c9e3530c7adaab09e0809fb3a902bdc876"
+ },
+ "R2": {
+  "archive": "/private/tmp/claude-501/-Users-kiyo-Desktop-deployspecter/b1c95b43-b64d-4432-a288-8cf30f7b145b/scratchpad/nbc_archives/saq/saq-c570ba4/R2.tar",
+  "sha256": "d5de08ee0daa62500ded34fdf8224d853774c30b4bedc3ce65e71b7e8d850a42",
+  "commit": "c570ba4ee8366404db97e21074390361328f0d8b",
+  "tree": "2816d46a401cc85dd30d04c8ec8912353b7f14c1"
+ },
+ "buggy": "R1",
+ "oracle": {
+  "path": "docs/experimental_mvp/nonblind_corpus/saq/cases/saq-c570ba4/oracle.py",
+  "sha256": "7a88fd213a2a70d5d2e985122538cd9ee15efe0d6f6156f145950e0b802c1619"
+ },
+ "upstream": {
+  "repository": "https://github.com/tobymao/saq",
+  "fix_commit": "c570ba4ee8366404db97e21074390361328f0d8b",
+  "parent": "59f32fce50428e5fb0073204f31cbe7ffc84c293",
+  "issue_or_pr": null,
+  "title": "fix(queue): a timed-out postgres dequeue must take its buffered job",
+  "released_in": "v0.26.5",
+  "defect": "a dequeue that times out while a claim made on its behalf is landing reports an empty queue; a burst worker stops with the job stranded active"
+ },
+ "contract": {
+  "kind": "single-version",
+  "citation": "each revision migrates its own fresh schema; no mixed-version deployment is documented or exercised",
+  "property_sources": [
+   "saq/worker.py Worker docstring",
+   "tests/test_queue.py::test_dequeue_takes_job_buffered_while_waiting (added by the fix)",
+   "tests/test_worker.py::test_burst, test_max_burst_jobs",
+   "saq/job.py Status"
+  ]
+ },
+ "exposure": [
+  {
+   "who": "Track A agent (the developer encoding the case, NONBLIND)",
+   "what": "commit messages and --stat of the 12 most recent saq candidates",
+   "when": "2026-11-08T04:49Z",
+   "before": "screening; before any integration, workload, oracle or live run"
+  },
+  {
+   "who": "Track A agent (the developer encoding the case, NONBLIND)",
+   "what": "diffs of c570ba4, ad8d1c8 (saq/, tests/), addee31 (saq/), 45c80ef; e6bb151, bf73616, cc15cba (saq/)",
+   "when": "2026-11-08T04:51Z-04:54Z",
+   "before": "screening"
+  },
+  {
+   "who": "Track A agent (the developer encoding the case, NONBLIND)",
+   "what": "saq docs/ and README grep; Worker docstring; tests/test_worker.py test_burst, test_burst_poll_interval, test_max_burst_jobs (at 525acc9 and ad8d1c8); saq/job.py Status",
+   "when": "2026-11-08T04:54Z",
+   "before": "screening"
+  },
+  {
+   "who": "Track A agent (the developer encoding the case, NONBLIND)",
+   "what": "full saq/queue/postgres.py at 45c80ef^, 525acc9, 59f32fc, f827b52 (525acc9 contains addee31's fixed init_db and its comment); saq/worker.py at 6c48fa9 and 525acc9; saq/utils.py wait_for and cancel_tasks; postgres_migrations.py; git diff f827b52..525acc9 of postgres.py, worker.py, job.py, base.py",
+   "when": "2026-11-08T05:00Z-09:40Z",
+   "before": "writing the integrations, workloads and oracles; before any live run"
+  },
+  {
+   "who": "Track A agent (the developer encoding the case, NONBLIND)",
+   "what": "bring-up runs of the integrations on the v0.26.5 tree (not a case tree), neutral workloads",
+   "when": "2026-11-08 (see bringup/)",
+   "before": "freezing CASE.md; before the case's first live run"
+  }
+ ],
+ "pins": "research_tools/nbc/pin_saq.py --repo <mirror of tobymao/saq> --out <archives>/saq",
+ "label": "NONBLIND development"
+}

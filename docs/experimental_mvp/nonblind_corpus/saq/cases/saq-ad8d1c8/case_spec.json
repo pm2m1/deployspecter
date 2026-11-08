@@ -1,0 +1,74 @@
+{
+ "case_id": "saq-ad8d1c8",
+ "application": "saq",
+ "integration": "research_tools/nbc/integrations/saq_burst_ad8d1c8.py",
+ "R1": {
+  "archive": "/private/tmp/claude-501/-Users-kiyo-Desktop-deployspecter/b1c95b43-b64d-4432-a288-8cf30f7b145b/scratchpad/nbc_archives/saq/saq-ad8d1c8/R1.tar",
+  "sha256": "a1c757de7ccfe744ebc1dfb770936893179d5dfa63f0ff7092e4ed28855c93d9",
+  "commit": "525acc9251c95395b14090ebe481dac6a79062a5",
+  "tree": "c7ecb1cc79b9cbcd2e8e6bcf1c2d48a153e1fdd6"
+ },
+ "R2": {
+  "archive": "/private/tmp/claude-501/-Users-kiyo-Desktop-deployspecter/b1c95b43-b64d-4432-a288-8cf30f7b145b/scratchpad/nbc_archives/saq/saq-ad8d1c8/R2.tar",
+  "sha256": "047b052dc11eff0946bf8b1463cded16b3f5fc149f4ea0436f2201f833e39acb",
+  "commit": "ad8d1c8d3cfdf57d6800098ff1680862a964f9fc",
+  "tree": "1b9c5f3daa0646966cf86724fb3145efb708795a"
+ },
+ "buggy": "R1",
+ "oracle": {
+  "path": "docs/experimental_mvp/nonblind_corpus/saq/cases/saq-ad8d1c8/oracle.py",
+  "sha256": "36fef84d8c9bba9c0300f2642cfd20808fefb5679e92057cfae80a8524943319"
+ },
+ "upstream": {
+  "repository": "https://github.com/tobymao/saq",
+  "fix_commit": "ad8d1c8d3cfdf57d6800098ff1680862a964f9fc",
+  "parent": "525acc9251c95395b14090ebe481dac6a79062a5",
+  "issue_or_pr": "#311",
+  "title": "chore: support python 3.11-3.15, pin ruff, fix flaky queue tests (#311)",
+  "released_in": "v0.26.5",
+  "defect": "the postgres dequeue over-claims: jobs flipped 'active' that no consumer takes (a burst worker with max_burst_jobs leaves them stranded active)"
+ },
+ "contract": {
+  "kind": "single-version",
+  "citation": "each revision migrates its own fresh schema (PostgresQueue.connect/init_db); no mixed-version deployment is documented or exercised",
+  "property_sources": [
+   "saq/worker.py Worker docstring (burst, max_burst_jobs, dequeue_timeout)",
+   "tests/test_worker.py::test_max_burst_jobs, test_burst, test_burst_poll_interval (maintainers)",
+   "saq/job.py Status"
+  ]
+ },
+ "exposure": [
+  {
+   "who": "Track A agent (the developer encoding the case, NONBLIND)",
+   "what": "commit messages and --stat of the 12 most recent saq candidates",
+   "when": "2026-11-08T04:49Z",
+   "before": "screening; before any integration, workload, oracle or live run"
+  },
+  {
+   "who": "Track A agent (the developer encoding the case, NONBLIND)",
+   "what": "diffs of c570ba4, ad8d1c8 (saq/, tests/), addee31 (saq/), 45c80ef; e6bb151, bf73616, cc15cba (saq/)",
+   "when": "2026-11-08T04:51Z-04:54Z",
+   "before": "screening"
+  },
+  {
+   "who": "Track A agent (the developer encoding the case, NONBLIND)",
+   "what": "saq docs/ and README grep; Worker docstring; tests/test_worker.py test_burst, test_burst_poll_interval, test_max_burst_jobs (at 525acc9 and ad8d1c8); saq/job.py Status",
+   "when": "2026-11-08T04:54Z",
+   "before": "screening"
+  },
+  {
+   "who": "Track A agent (the developer encoding the case, NONBLIND)",
+   "what": "full saq/queue/postgres.py at 45c80ef^, 525acc9, 59f32fc, f827b52 (525acc9 contains addee31's fixed init_db and its comment); saq/worker.py at 6c48fa9 and 525acc9; saq/utils.py wait_for and cancel_tasks; postgres_migrations.py; git diff f827b52..525acc9 of postgres.py, worker.py, job.py, base.py",
+   "when": "2026-11-08T05:00Z-09:40Z",
+   "before": "writing the integrations, workloads and oracles; before any live run"
+  },
+  {
+   "who": "Track A agent (the developer encoding the case, NONBLIND)",
+   "what": "bring-up runs of the integrations on the v0.26.5 tree (not a case tree), neutral workloads",
+   "when": "2026-11-08 (see bringup/)",
+   "before": "freezing CASE.md; before the case's first live run"
+  }
+ ],
+ "pins": "research_tools/nbc/pin_saq.py --repo <mirror of tobymao/saq> --out <archives>/saq",
+ "label": "NONBLIND development"
+}

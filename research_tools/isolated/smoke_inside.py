@@ -407,6 +407,14 @@ async def procr_coordinated() -> dict:
             "raw_results": trace.raw_results, "received": r.received}
 
 
+async def saq_coordinated() -> dict:
+    """One process of a coordinated saq run (ds-nbc/1, NONBLIND): the declared variant adapter
+    (``thirdparty/saq_coord_adapter.py``, copied into the image only by its integration) builds the actors, their
+    connections and monitor; every grant from the coordinator."""
+    from deployspecter.experimental.thirdparty import saq_coord_adapter as sa
+    return await sa.coordinated_process()
+
+
 async def coordinator() -> dict:
     """The coordinator container: no database credentials, no application code; it only decides grants."""
     from deployspecter.experimental.coordinated import Coordinator
@@ -432,6 +440,8 @@ def main() -> int:
         out.update(asyncio.run(chancy_coordinated()))
     elif os.environ.get("DS_MODE") == "procr_coordinated":
         out.update(asyncio.run(procr_coordinated()))
+    elif os.environ.get("DS_MODE") == "saq_coordinated":
+        out.update(asyncio.run(saq_coordinated()))
     elif os.environ.get("DS_MODE") == "coordinator":
         out.update(asyncio.run(coordinator()))
     else:

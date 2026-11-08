@@ -1,0 +1,74 @@
+{
+ "case_id": "saq-addee31",
+ "application": "saq",
+ "integration": "research_tools/nbc/integrations/saq_two_queues_addee31.py",
+ "R1": {
+  "archive": "/private/tmp/claude-501/-Users-kiyo-Desktop-deployspecter/b1c95b43-b64d-4432-a288-8cf30f7b145b/scratchpad/nbc_archives/saq/saq-addee31/R1.tar",
+  "sha256": "32212a41573c1521610f1efa0d5de89ff275a2811053bd4a190384d1821e06e8",
+  "commit": "f827b529d48557e1a156f0207121aaf638a1035d",
+  "tree": "3c5a2543e935089ca8e301283a262142f6b30ef8"
+ },
+ "R2": {
+  "archive": "/private/tmp/claude-501/-Users-kiyo-Desktop-deployspecter/b1c95b43-b64d-4432-a288-8cf30f7b145b/scratchpad/nbc_archives/saq/saq-addee31/R2.tar",
+  "sha256": "d6ac6adacf68999abe26b32fe00f82e2e25b0114fca8a8f29563c9c943c08c41",
+  "commit": "addee31a697c42d292c5fd05aa107c157b0ee8e0",
+  "tree": "a3716f1d42d1716ab09a3ccb802a4fc14a4fb029"
+ },
+ "buggy": "R1",
+ "oracle": {
+  "path": "docs/experimental_mvp/nonblind_corpus/saq/cases/saq-addee31/oracle.py",
+  "sha256": "f683b6a14b4cfc028dc73e47bf2bef18f4e764a5d2a2048650d9820622cbabf3"
+ },
+ "upstream": {
+  "repository": "https://github.com/tobymao/saq",
+  "fix_commit": "addee31a697c42d292c5fd05aa107c157b0ee8e0",
+  "parent": "f827b529d48557e1a156f0207121aaf638a1035d",
+  "issue_or_pr": null,
+  "title": "fix: make init_db advisory lock transaction-scoped",
+  "released_in": "v0.26.5",
+  "defect": "init_db's session-level advisory lock outlives init_db on the pooled connection; another queue's init_db meanwhile skips its migrations and then fails with UndefinedTable"
+ },
+ "contract": {
+  "kind": "single-version",
+  "citation": "one revision at a time on a fresh schema; two queues of the same revision (two table sets) in one schema",
+  "property_sources": [
+   "saq/queue/postgres.py PostgresQueue docstring (versions_table, jobs_table, stats_table)",
+   "saq/queue/base.py Queue.enqueue docstring",
+   "the fix's commit message (the maintainers' statement of the defect; no regression test)"
+  ]
+ },
+ "exposure": [
+  {
+   "who": "Track A agent (the developer encoding the case, NONBLIND)",
+   "what": "commit messages and --stat of the 12 most recent saq candidates",
+   "when": "2026-11-08T04:49Z",
+   "before": "screening; before any integration, workload, oracle or live run"
+  },
+  {
+   "who": "Track A agent (the developer encoding the case, NONBLIND)",
+   "what": "diffs of c570ba4, ad8d1c8 (saq/, tests/), addee31 (saq/), 45c80ef; e6bb151, bf73616, cc15cba (saq/)",
+   "when": "2026-11-08T04:51Z-04:54Z",
+   "before": "screening"
+  },
+  {
+   "who": "Track A agent (the developer encoding the case, NONBLIND)",
+   "what": "saq docs/ and README grep; Worker docstring; tests/test_worker.py test_burst, test_burst_poll_interval, test_max_burst_jobs (at 525acc9 and ad8d1c8); saq/job.py Status",
+   "when": "2026-11-08T04:54Z",
+   "before": "screening"
+  },
+  {
+   "who": "Track A agent (the developer encoding the case, NONBLIND)",
+   "what": "full saq/queue/postgres.py at 45c80ef^, 525acc9, 59f32fc, f827b52 (525acc9 contains addee31's fixed init_db and its comment); saq/worker.py at 6c48fa9 and 525acc9; saq/utils.py wait_for and cancel_tasks; postgres_migrations.py; git diff f827b52..525acc9 of postgres.py, worker.py, job.py, base.py",
+   "when": "2026-11-08T05:00Z-09:40Z",
+   "before": "writing the integrations, workloads and oracles; before any live run"
+  },
+  {
+   "who": "Track A agent (the developer encoding the case, NONBLIND)",
+   "what": "bring-up runs of the integrations on the v0.26.5 tree (not a case tree), neutral workloads",
+   "when": "2026-11-08 (see bringup/)",
+   "before": "freezing CASE.md; before the case's first live run"
+  }
+ ],
+ "pins": "research_tools/nbc/pin_saq.py --repo <mirror of tobymao/saq> --out <archives>/saq",
+ "label": "NONBLIND development"
+}
