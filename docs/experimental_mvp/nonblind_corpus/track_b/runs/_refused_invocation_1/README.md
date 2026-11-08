@@ -1,0 +1,1 @@
+Refused at executor preflight ("unknown arm RA-DET RA-MD"): the coordinator shell (zsh) passed the arm list as one argument. No run, no Muse request. Re-invoked under bash with the same arms and order.
