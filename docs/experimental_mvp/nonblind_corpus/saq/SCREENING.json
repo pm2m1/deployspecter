@@ -1,0 +1,322 @@
+{
+ "label": "NONBLIND development",
+ "corpus": "ds-nbc/1",
+ "application": "saq",
+ "rule": "docs/experimental_mvp/nonblind_corpus/SELECTION_RULE.md \u00a74",
+ "order": "most recent first; at most 12 screened",
+ "screened_at": "2026-11-08",
+ "screener": "Track A agent (developer)",
+ "criteria_note": "E2 is judged by the defect's mechanism: it passes when the racing window contains the application's database statements and the wrong outcome is database state reachable through the public API; it fails when the race is between in-process coroutines with no statement in the window.",
+ "screened": [
+  {
+   "commit": "acafd5f1f1f2b175abf88a06f084d4f38aebd8bb",
+   "subject": "fix(redis): finish aborting a scheduled job (#312)",
+   "verdicts": {
+    "E1": "PASS",
+    "E2": "FAIL",
+    "E3": "-",
+    "E4": "-",
+    "E5": "-",
+    "E6": "-"
+   },
+   "first_failing": "E2",
+   "outcome": "REFUSED (screen)",
+   "read": [
+    "commit message",
+    "--stat"
+   ],
+   "note": "Redis queue only (saq/queue/redis.py). The Postgres queue is the only backend under the seam; a Redis defect isn't Postgres-mediated."
+  },
+  {
+   "commit": "c570ba4ee8366404db97e21074390361328f0d8b",
+   "subject": "fix(queue): a timed-out postgres dequeue must take its buffered job",
+   "verdicts": {
+    "E1": "PASS",
+    "E2": "PASS",
+    "E3": "PASS",
+    "E4": "PASS",
+    "E5": "PASS",
+    "E6": "PASS"
+   },
+   "first_failing": null,
+   "outcome": "ELIGIBLE: case saq-c570ba4",
+   "read": [
+    "commit message",
+    "diff (saq/queue/postgres.py, tests/test_queue.py)",
+    "parent's PostgresQueue.dequeue/_dequeue/schedule/sweep",
+    "parent's Worker (start, upkeep, process, _process, _check_burst) and docstring",
+    "tests/test_worker.py test_burst, test_burst_poll_interval, test_max_burst_jobs"
+   ],
+   "note": "E2: the racing window is a claim transaction (UPDATE ... SET status='active') committed on behalf of a waiter whose dequeue_timeout expired; the wrong outcome is a job left 'active' in the database. E3: Postgres queue, poll mode, one-connection pool (0.26.x needs only one connection per queue). E4: Worker docstring (burst, dequeue_timeout), maintainers' test added by the fix (test_dequeue_takes_job_buffered_while_waiting) and existing burst tests. E5: job statuses in the final state plus the worker's handled list. E6: pinned public tree; fix diff and the dequeue/worker path reviewed."
+  },
+  {
+   "commit": "ad8d1c8d3cfdf57d6800098ff1680862a964f9fc",
+   "subject": "chore: support python 3.11-3.15, pin ruff, fix flaky queue tests (#311)",
+   "verdicts": {
+    "E1": "PASS",
+    "E2": "PASS",
+    "E3": "PASS",
+    "E4": "PASS",
+    "E5": "PASS",
+    "E6": "PASS"
+   },
+   "first_failing": null,
+   "outcome": "ELIGIBLE: case saq-ad8d1c8",
+   "read": [
+    "commit message",
+    "diff (saq/queue/postgres.py, saq/worker.py, tests/test_worker.py, tests/helpers.py)",
+    "parent's postgres.py and worker.py (as for c570ba4)",
+    "tests/test_worker.py test_max_burst_jobs at parent and fix"
+   ],
+   "note": "A mixed commit (Python 3.11 floor, ruff pin, test deflaking) carrying one queue defect: the postgres dequeue over-claims ('_poll refetched without checking its own buffer, and a schedule() tick double-served an in-flight dequeue'). E1: the fix tree needs Python >= 3.11 (datetime.UTC); the runner image is CPython 3.12.16. E2: the racing window is two claim queries (the schedule tick's and the poll loop's refetch); the outcome is jobs left 'active'. E4: Worker docstring and the maintainers' test_max_burst_jobs (unchanged by the fix). The extra changes confound attribution, recorded in CASE.md."
+  },
+  {
+   "commit": "f89465f2103a132a743d2aec21bf33e9cb69fe82",
+   "subject": "fix: deadlock in Queue.listen from asyncio.wait_for swallowed cancellation",
+   "verdicts": {
+    "E1": "PASS",
+    "E2": "FAIL",
+    "E3": "-",
+    "E4": "-",
+    "E5": "-",
+    "E6": "-"
+   },
+   "first_failing": "E2",
+   "outcome": "REFUSED (screen)",
+   "read": [
+    "commit message",
+    "--stat"
+   ],
+   "note": "A CPython asyncio defect (bpo-42130, before 3.12): wait_for loses a cancellation. Pure in-process logic. (E3 would also fail: the runner is CPython 3.12.)"
+  },
+  {
+   "commit": "addee31a697c42d292c5fd05aa107c157b0ee8e0",
+   "subject": "fix: make init_db advisory lock transaction-scoped",
+   "verdicts": {
+    "E1": "PASS",
+    "E2": "PASS",
+    "E3": "PASS",
+    "E4": "PASS",
+    "E5": "PASS",
+    "E6": "PASS"
+   },
+   "first_failing": null,
+   "outcome": "ELIGIBLE: case saq-addee31",
+   "read": [
+    "commit message",
+    "diff (saq/queue/postgres.py)",
+    "parent's init_db, connect, postgres_migrations.py",
+    "PostgresQueue docstring",
+    "docs/ and README grep (no init_db or migration text)"
+   ],
+   "note": "E2: init_db's session-level pg_try_advisory_lock outlives init_db on the pooled connection, so another queue's init_db skips its migrations; database-mediated, through connect(). E4 is the weakest of the saq cases: no regression test in the fix; the contract is the PostgresQueue docstring (versions_table 'SAQ will use to maintain migrations', jobs_table, stats_table as constructor arguments) plus the maintainers' own statement of the defect in the commit message. Judged PASS on the docstring; recorded as weak. E5: the second queue's enqueue results and the final tables."
+  },
+  {
+   "commit": "de0cdd4dd56845996a0ac4d23412ca89bb6d8a15",
+   "subject": "fix: KeyError on concurrent same-key job attempts in job_task_contexts",
+   "verdicts": {
+    "E1": "PASS",
+    "E2": "FAIL",
+    "E3": "-",
+    "E4": "-",
+    "E5": "-",
+    "E6": "-"
+   },
+   "first_failing": "E2",
+   "outcome": "REFUSED (screen)",
+   "read": [
+    "commit message",
+    "--stat"
+   ],
+   "note": "The race is between two coroutines' finally blocks over the Worker's in-memory job_task_contexts dict (keyed by Job.key); no database statement is in the racing window. Pure in-process logic."
+  },
+  {
+   "commit": "e6bb151222c3ee6a2ca0d35b5bf4f646ea18017e",
+   "subject": "fix: Do wait to cancel task in case of timeout",
+   "verdicts": {
+    "E1": "PASS",
+    "E2": "FAIL",
+    "E3": "-",
+    "E4": "-",
+    "E5": "-",
+    "E6": "-"
+   },
+   "first_failing": "E2",
+   "outcome": "REFUSED (screen)",
+   "read": [
+    "diff (saq/worker.py)"
+   ],
+   "note": "On a job timeout the worker didn't await the task's cancellation: asyncio task lifecycle, in-process."
+  },
+  {
+   "commit": "bf7361609ce80371c4f96264d69877bc8f95b1c1",
+   "subject": "fix: Avoid race in setting task status b/w process and abort",
+   "verdicts": {
+    "E1": "PASS",
+    "E2": "PASS",
+    "E3": "PASS",
+    "E4": "FAIL",
+    "E5": "-",
+    "E6": "-"
+   },
+   "first_failing": "E4",
+   "outcome": "REFUSED (screen)",
+   "read": [
+    "diff (saq/worker.py)",
+    "parent's Worker.abort/process",
+    "Job.abort and Queue.finish_abort docstrings",
+    "utils.cancel_tasks"
+   ],
+   "note": "Database-mediated (Queue.abort writes 'aborting'; the worker's abort poller reads it; both paths write the final status) and under the seam. But no documented contract decides it: Job.abort is documented as 'Tries to abort the job.', the fix has no test, and the overwrite needs a handler that returns normally after cancellation, which no doc addresses."
+  },
+  {
+   "commit": "cc15cba428669d3da4b4f8a5585fb1ed8efdf3f9",
+   "subject": "fix: Avoid race in stop()",
+   "verdicts": {
+    "E1": "PASS",
+    "E2": "FAIL",
+    "E3": "-",
+    "E4": "-",
+    "E5": "-",
+    "E6": "-"
+   },
+   "first_failing": "E2",
+   "outcome": "REFUSED (screen)",
+   "read": [
+    "diff (saq/worker.py, first 120 lines)"
+   ],
+   "note": "Re-entrant Worker.stop() (signal handler and finally) cancelling tasks and running shutdown hooks twice: in-process."
+  },
+  {
+   "commit": "45c80ef56b6fefec84bc2046caead0aaeea6cd6d",
+   "subject": "fix: ensure there's no race condition in between dequeue and processing for sweeper",
+   "verdicts": {
+    "E1": "PASS",
+    "E2": "PASS",
+    "E3": "FAIL",
+    "E4": "-",
+    "E5": "-",
+    "E6": "-"
+   },
+   "first_failing": "E3",
+   "outcome": "REFUSED (screen)",
+   "read": [
+    "diff (saq/queue/postgres.py, tests/test_queue.py)",
+    "parent's postgres.py (dequeue, sweep, _get_dequeue_conn)"
+   ],
+   "note": "saq before v0.25.0 (93775ff 'refactor!: remove pg locks for stability', first in v0.25.0) holds a dedicated dequeue connection (PostgresQueue._get_dequeue_conn: pool.getconn() kept for the queue's life, carrying the job advisory locks) while every other call uses pool.connection(): one queue needs two concurrent connections. The seam gives each actor exactly one stepped connection and refuses a second; two connections per actor would be an engine extension. Unsupported: E3 fails."
+  },
+  {
+   "commit": "2fc793bd4bbee33cc552f7ab64d970ffdad76198",
+   "subject": "Fix: Acquiring an advisory lock for a job as part of a predicate",
+   "verdicts": {
+    "E1": "PASS",
+    "E2": "PASS",
+    "E3": "FAIL",
+    "E4": "-",
+    "E5": "-",
+    "E6": "-"
+   },
+   "first_failing": "E3",
+   "outcome": "REFUSED (screen)",
+   "read": [
+    "--stat",
+    "release (v0.24.9) and the pre-0.25 connection model above"
+   ],
+   "note": "saq before v0.25.0 (93775ff 'refactor!: remove pg locks for stability', first in v0.25.0) holds a dedicated dequeue connection (PostgresQueue._get_dequeue_conn: pool.getconn() kept for the queue's life, carrying the job advisory locks) while every other call uses pool.connection(): one queue needs two concurrent connections. The seam gives each actor exactly one stepped connection and refuses a second; two connections per actor would be an engine extension. Unsupported: E3 fails."
+  },
+  {
+   "commit": "3b562a1b54447d484a6859ba7e6b064e64a2bd6e",
+   "subject": "fix: ensure retried jobs are unlocked",
+   "verdicts": {
+    "E1": "PASS",
+    "E2": "PASS",
+    "E3": "FAIL",
+    "E4": "-",
+    "E5": "-",
+    "E6": "-"
+   },
+   "first_failing": "E3",
+   "outcome": "REFUSED (screen)",
+   "read": [
+    "--stat",
+    "release (v0.24.8) and the pre-0.25 connection model above"
+   ],
+   "note": "saq before v0.25.0 (93775ff 'refactor!: remove pg locks for stability', first in v0.25.0) holds a dedicated dequeue connection (PostgresQueue._get_dequeue_conn: pool.getconn() kept for the queue's life, carrying the job advisory locks) while every other call uses pool.connection(): one queue needs two concurrent connections. The seam gives each actor exactly one stepped connection and refuses a second; two connections per actor would be an engine extension. Unsupported: E3 fails."
+  }
+ ],
+ "not_screened": [
+  {
+   "commit": "3f86db9fe729b1f985e5829f049c70499cb49af3",
+   "subject": "fix: ensure that we filter locked objects before limits so that we actually return jobs",
+   "outcome": "NOT SCREENED (capacity)"
+  },
+  {
+   "commit": "e7ac42fdf98ca8cde967a810babc40b35b46fb4a",
+   "subject": "fix: race condition when refreshing and updating simultaneously, the update will be overriden mid task causing unexpected behavior",
+   "outcome": "NOT SCREENED (capacity)"
+  },
+  {
+   "commit": "1f61ae545736b6fe07e1e9578672e2e6b410dcde",
+   "subject": "fix: prevent zombie web worker",
+   "outcome": "NOT SCREENED (capacity)"
+  },
+  {
+   "commit": "2c53a01e0afc2cf1375629db6f64de6178a38156",
+   "subject": "fix: ensure abort is blocking",
+   "outcome": "NOT SCREENED (capacity)"
+  },
+  {
+   "commit": "97e518b4aa334a0aa1f6f8894c037a99bc895941",
+   "subject": "fix!: force autocommit",
+   "outcome": "NOT SCREENED (capacity)"
+  },
+  {
+   "commit": "d5916102efa43e234c4ee0bce9df978168e59528",
+   "subject": "fix: check if daemon task is still alive while waiting, otherwise we could be waiting forever",
+   "outcome": "NOT SCREENED (capacity)"
+  },
+  {
+   "commit": "5bb0b57f2e614474a667160fa19b7daedb190f26",
+   "subject": "fix!: update defaults to not touching status",
+   "outcome": "NOT SCREENED (capacity)"
+  },
+  {
+   "commit": "3ba9bb82721adf9a5bdd3259c3bbcae45db19d3d",
+   "subject": "fix: allow aborting jobs to be swept",
+   "outcome": "NOT SCREENED (capacity)"
+  },
+  {
+   "commit": "2ca5a5bb115b767adc44a5974c01756c71b413ae",
+   "subject": "fix!: wrap non-async calls and enforce that canceling them is a blocking operation",
+   "outcome": "NOT SCREENED (capacity)"
+  },
+  {
+   "commit": "99d23c5ac22161e3f96bc1c14676e49669d6de13",
+   "subject": "fix: concurrency 1 needs to queue cron jobs",
+   "outcome": "NOT SCREENED (capacity)"
+  },
+  {
+   "commit": "607678dda19ab3926064cdb34130d99d347a35d8",
+   "subject": "fix: postgres sweeping doesn't need to update job state",
+   "outcome": "NOT SCREENED (capacity)"
+  },
+  {
+   "commit": "d540acfa905a00f5ec24ad78dc9159fbb6bee62a",
+   "subject": "Fix: A queue's sweeper should only sweep jobs that belong to it (#157)",
+   "outcome": "NOT SCREENED (capacity)"
+  },
+  {
+   "commit": "a94c6d53c76f2e1caa5e3a098c29f55fdf5370fb",
+   "subject": "Handle aborting a job before it has started processing in Postgres",
+   "outcome": "NOT SCREENED (capacity)"
+  }
+ ],
+ "counts": {
+  "candidates": 25,
+  "screened": 12,
+  "eligible": 3,
+  "refused": 9,
+  "not_screened": 13
+ }
+}
