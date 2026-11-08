@@ -1,0 +1,102 @@
+{
+ "allowed_resources": {
+  "M_only": [
+   "Muse via pilot.py muse (JSON proposals; never executed)"
+  ],
+  "both": [
+   "the pinned sdist (source and PKG-INFO), read as data",
+   "PyPI JSON metadata (wheel resolution)",
+   "this repository's harness, code and docs, including existing adapters",
+   "the operator's general knowledge"
+  ]
+ },
+ "analysis": {
+  "claim_rule": "PROSPECTIVE_MUSE_PLAN.md \u00a77: a claim needs a >= 30% median reduction in both minutes and lines across >= 3 applications with no lost detection. Only 2 applications are eligible, so NO claim is possible by this rule; the result is descriptive",
+  "code": "research_tools/onboarding/pilot2_analyze.py",
+  "no_inference": true,
+  "primary": "per app and replicate, the paired difference M - D in lock-adjusted seconds to S3 (censored at 5400) and in final adapter lines; reported per app, with the median over replicates"
+ },
+ "apps": [
+  {
+   "app": "pgtq",
+   "condition": "D",
+   "declared_paths": [
+    "src/deployspecter/experimental/onboarding_pilot/adapters/pgtq.py"
+   ],
+   "sdist": "pgtq-0.5.0.tar.gz",
+   "sdist_sha256": "cbcdd66fb9aa0ed3c68784dd40bf429aa3e96f281b25974b45687df44fbea14d",
+   "version": "0.5.0",
+   "why_eligible": "MIT; psycopg[binary]>=3.0.0 only; pure-Python wheel; not previously integrated or exposed"
+  },
+  {
+   "app": "postgres_tq",
+   "condition": "D",
+   "declared_paths": [
+    "src/deployspecter/experimental/onboarding_pilot/adapters/postgres_tq.py"
+   ],
+   "sdist": "postgres_tq-1.2.1.tar.gz",
+   "sdist_sha256": "25b0f61c9f9621d02950218c4a352e12762ef280be7cb09678c5ddda8fed9039",
+   "version": "1.2.1",
+   "why_eligible": "MIT; psycopg[binary]>=3.1.12 and psycopg-pool>=3.1.12; pure-Python wheel; not previously integrated or exposed"
+  }
+ ],
+ "budgets": {
+  "max_attempts": 10,
+  "muse": {
+   "condition": "M only",
+   "max_calls": 3,
+   "max_estimated_usd": 0.3
+  },
+  "wall_clock_seconds": 5400,
+  "work_timeout_s": 60
+ },
+ "code_sha256": {
+  "docs/experimental_mvp/onboarding/pilot_2/OPERATOR_INSTRUCTIONS.md": "3b5e31c4df81400732d091c04edda131c4c190feccd1dc54c2d0653706d78c01",
+  "research_tools/onboarding/pilot.py": "b298be198add463af8bd1a7b4f3efd512f089a1c20381c164971a1ca377c1291",
+  "research_tools/onboarding/pilot2_analyze.py": "e835682d84ee8b49c4ba4fc8f6e06ed65f952d35898732c28df5d634354622da",
+  "research_tools/onboarding/pilot_inside.py": "57210fa8c0ad89c3f8054a50c4e69c5e495e4f6c286fc0dc66083186ad8beacc",
+  "research_tools/onboarding/pilot_runner.py": "08f54cb1e84849f7e6a7012141e805ce89186a18417be57f10b660e287fbc95f",
+  "research_tools/pg_lock.py": "de9b9372c95fc68ef33577c44519ef16ff76b1f97f659a364fe665a74e073857",
+  "src/deployspecter/experimental/onboarding_pilot/__init__.py": "b1d7f6d0f1727f8e841939ff55804ece478ed1192327a1cde263c2ca44a29ad5",
+  "src/deployspecter/experimental/onboarding_pilot/analysis.py": "e201abfad604fe8d9a78e4d0354ba97173d1a94afe3d825a248fb94b732cf9a6",
+  "src/deployspecter/experimental/onboarding_pilot/correctness.py": "c449810f1221fe831da7f480f4fb02abd86daee3b3a484e052910ff8406791e4",
+  "src/deployspecter/experimental/onboarding_pilot/muse_assist.py": "55fb6046e6ea60e08aefce5e50c994614e4f65c3f4ec99ff0113267c43bd331f",
+  "src/deployspecter/experimental/onboarding_pilot/recorder.py": "0b5f908e875e216b07dc74e2036e0a4b24d74c736879051d5a853c8417df337a",
+  "src/deployspecter/experimental/onboarding_pilot/session.py": "faf5c4610cd3ecc93cd16de8788f0adca4d61040b475bb073472742f48da179d",
+  "src/deployspecter/experimental/onboarding_pilot/spec.py": "05d26391dcf831b53a0b5d05b7cd9ac16b391b3e9fdb7b575a3ee14740a617d1"
+ },
+ "condition_of_this_manifest": "D",
+ "design": {
+  "contamination_controls": "separate worktrees, no shared task memory, an instruction not to read other sessions or worktrees, identical frozen instructions",
+  "contamination_limits": "all operators are instances of one model family; they may share general knowledge of these libraries; filesystem isolation is by instruction only",
+  "pairing": "each app is onboarded under BOTH D and M, by separate fresh agent contexts, in separate worktrees made from the same commit",
+  "replicates": "2 per (app, condition): replicate 1 then replicate 2; each replicate starts its four sessions at the same time, so neither condition runs first and image caches are cold or warm for both alike"
+ },
+ "frozen_at": "2026-11-08T04:50:07Z",
+ "label": "AI-OPERATOR, NONBLIND EXPLORATORY: each session is a fresh AI agent context with no task-specific memory; not an independent human participant",
+ "measures": {
+  "censoring": "an unmet milestone is censored at the budget, never imputed",
+  "per_session": "session.measure (unchanged), plus: database-lock waiting time from the session's pg_lock.log, subtracted from every elapsed time it falls inside (pilot2_analyze.py); interventions; failed attempts; adapter lines final and revised; code revisions (snapshots with a changed adapter); rejected proposals; S2/S3 verification outcomes; Muse calls, tokens, est. USD"
+ },
+ "question": "On the same application, under identical pins, success criteria, resources and budgets, does Muse assistance (M) reduce the automated work to reach S3 compared with D (no Muse)?",
+ "selection": {
+  "examined": {
+   "absurd-sdk 0.5.1": "the sdist ships no SQL schema; the library needs Absurd's schema from outside the pinned sdist",
+   "pgtq 0.5.0": "eligible",
+   "postgres-tq 1.2.1": "eligible",
+   "queueio 0.8.0": "requires Python >= 3.15 (the runner is CPython 3.12)",
+   "the onb-pilot/1 exclusions": "unchanged (see PILOT_MANIFEST_v1.json)"
+  },
+  "read_before_freeze": "PyPI JSON metadata and the sdist file listings only; no source, docs or repository of either app",
+  "rule": "PostgreSQL job-queue libraries found on PyPI on 2026-11-08 that declare psycopg 3, carry an OSI licence, ship a pure-Python wheel and a self-contained sdist, run on CPython 3.12, and were never integrated or exposed in this project; ALL eligible ones are used"
+ },
+ "sprint_cost": "each M session's maximum ($0.30) is reserved in the sprint ledger (research_tools/nbc/budget.py, $5 cap) before the session starts",
+ "status": "FROZEN before any onboarding work on either app",
+ "success": {
+  "S1": "the first spec and workload both accepted by spec.validate (against these pins)",
+  "S2": "the first run whose server-log corroboration is ok with 0 parameters mismatched, isolation ok, teardown complete",
+  "S3": "the first S2 run where the harness recorder saw every enqueued key handled exactly once and every step finished without an exception",
+  "workload": "at least 2 jobs of one declared task with an int argument"
+ },
+ "version": "onb-pilot-manifest/2"
+}
