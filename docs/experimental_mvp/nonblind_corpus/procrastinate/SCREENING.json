@@ -1,0 +1,306 @@
+{
+ "label": "NONBLIND development",
+ "scan": "ds-nbc/1",
+ "application": "procrastinate",
+ "repository": "https://github.com/procrastinate-org/procrastinate",
+ "mirror_head": "bedbe0e917c4a88214346f771fc7b1a98d944ecf",
+ "rule_sha256": "0b567517b3842da2d1266a01aec07285a9cc905bd7d466e9d1a40019a2e82d8b",
+ "candidates_json_sha256": "0b0261504a96fdf77cf07dc5299fd8d9a9bd43a16e099e193ff7f137d7c70376",
+ "screened_at": "2026-11-08",
+ "screened_by": "Track A agent (procrastinate), NONBLIND",
+ "order": "most recent first (rule \u00a74)",
+ "cap": 12,
+ "candidates_total": 5,
+ "screened": 5,
+ "not_screened_capacity": [],
+ "eligible": [],
+ "pin_command": "research_tools/nbc/pin_procrastinate.py pin --mirror <procrastinate.git> --out-root <scratchpad>/nbc_archives/procrastinate <fix commits> (writes the archives); research_tools/nbc/pin_procrastinate.py verify --mirror <procrastinate.git> --screening docs/experimental_mvp/nonblind_corpus/procrastinate/SCREENING.json",
+ "prior_exposure": "8fa4ab5 ('Close race condition in procrastinate_fetch_job', 2020-06-15; read in earlier work, the race is inside one plpgsql call) is not a ds-nbc/1 candidate: it is outside the window (rule \u00a72), dated before psycopg 3 existed.",
+ "candidates": [
+  {
+   "rank": 1,
+   "commit": "08260803aec6daaf6a721f499ebf7226005f4dec",
+   "date": "2026-06-12T22:33:12Z",
+   "subject": "Fix worker stop request lost during startup and de-flake shutdown tests",
+   "first_release": "3.9.0",
+   "criteria": {
+    "E1": {
+     "verdict": "PASS",
+     "reason": "PASS (tree level). Both commits are in the public mirror and reachable from the default branch head bedbe0e; `git archive` of procrastinate/ for each, normalized by sealed_evaluation.normalize_archive, is deterministic (rebuilt twice, same sha256), pinned below by git tree hash and archive sha256. The declared runtime dependencies are all available as hash-pinned entries in requirements.procrastinate.txt or uv.lock. No image was built: the tree has no PKG-INFO and procrastinate reads its distribution metadata at import, so a build would need a declared METADATA file; not attempted because E2 fails on its own."
+    },
+    "E2": {
+     "verdict": "FAIL",
+     "reason": "Pure in-process asyncio scheduling. Worker.run() creates the run-loop task and awaits asyncio.shield(loop_task); a cancellation landing before that task's first step calls stop(), and the task's first statement (_stop_event.clear() at the top of _run_loop) erases it. Read in the parent (896abfd worker.py run/_run_loop): no database statement lies between create_task and the loop task's first step (prune_stalled_workers and register_worker complete before it; a cancellation during them raises at that await and is not lost). The database does not mediate the defect; the maintainers' regression test (tests/unit/test_worker.py::test_stop_requested_before_run_loop_starts_is_not_lost) replaces Worker._run_loop and runs on the in-memory test app."
+    },
+    "E3": {
+     "verdict": "FAIL (secondary)",
+     "reason": "The window is an event-loop slot, not a statement boundary; the stepping seam orders statements only (in-process task timing is not controlled: CAPABILITY_MATRIX). not decided: the screen stops at the first failing criterion (secondary note only)"
+    },
+    "E4": {
+     "verdict": "PASS (secondary)",
+     "reason": "maintainers' unit test in the fix; docs/howto/advanced/shutdown.md (cancelling the run_worker_async task stops the worker). not decided: the screen stops at the first failing criterion (secondary note only)"
+    },
+    "E5": {
+     "verdict": "FAIL (secondary)",
+     "reason": "the symptom is a worker that never returns, not a database state. not decided: the screen stops at the first failing criterion (secondary note only)"
+    },
+    "E6": {
+     "verdict": "not assessed",
+     "reason": "not decided: the screen stops at the first failing criterion (secondary note only)"
+    }
+   },
+   "first_failing": "E2",
+   "read": [
+    "commit message (full body)",
+    "git show --stat",
+    "diff of procrastinate/worker.py",
+    "diff of tests/unit/test_worker.py (the new regression test)",
+    "parent 896abfd procrastinate/worker.py: Worker.run and Worker._run_loop (lines ~410-700)",
+    "pyproject.toml dependency list of fix and parent"
+   ],
+   "parent": "896abfdb3085997fcf42ca868ff1c517291c29fb",
+   "pins": {
+    "R1": {
+     "commit": "896abfdb3085997fcf42ca868ff1c517291c29fb",
+     "tree": "8cd1c08d25b4020f8faec9303b27e21fdb3d2d8e",
+     "sha256": "db4c8d928e3f9bdcdc78b48e09627f298913ee2675c7d3ac88ccb1e190cd2e68",
+     "archive": "/private/tmp/claude-501/-Users-kiyo-Desktop-deployspecter/b1c95b43-b64d-4432-a288-8cf30f7b145b/scratchpad/nbc_archives/procrastinate/procrastinate-0826080/R1.tar"
+    },
+    "R2": {
+     "commit": "08260803aec6daaf6a721f499ebf7226005f4dec",
+     "tree": "f5d4556e563a16baf4f242b27f3593f341025d5f",
+     "sha256": "1d90b4db871fcce185419d2de24012fea371247392d81ed2b45c95d55b709e42",
+     "archive": "/private/tmp/claude-501/-Users-kiyo-Desktop-deployspecter/b1c95b43-b64d-4432-a288-8cf30f7b145b/scratchpad/nbc_archives/procrastinate/procrastinate-0826080/R2.tar"
+    }
+   },
+   "outcome": "INELIGIBLE (E2)"
+  },
+  {
+   "rank": 2,
+   "commit": "a7bea33381c0f6590708cef0b3ec5247481335c3",
+   "date": "2025-05-08T10:22:21Z",
+   "subject": "Refactor queuing lock handling of InMemoryConnector",
+   "first_release": "3.2.0",
+   "criteria": {
+    "E1": {
+     "verdict": "PASS",
+     "reason": "PASS (tree level). Both commits are in the public mirror and reachable from the default branch head bedbe0e; `git archive` of procrastinate/ for each, normalized by sealed_evaluation.normalize_archive, is deterministic (rebuilt twice, same sha256), pinned below by git tree hash and archive sha256. The declared runtime dependencies are all available as hash-pinned entries in requirements.procrastinate.txt or uv.lock. No image was built: the tree has no PKG-INFO and procrastinate reads its distribution metadata at import, so a build would need a declared METADATA file; not attempted because E2 fails on its own."
+    },
+    "E2": {
+     "verdict": "FAIL",
+     "reason": "The only changed file is procrastinate/testing.py: InMemoryConnector, procrastinate's in-process test double, which simulates the queueing-lock unique index in Python. No PostgreSQL code path changes; the commit is a refactor of the in-memory duplicate check (no message body, no test)."
+    },
+    "E3": {
+     "verdict": "not assessed",
+     "reason": "not decided: the screen stops at the first failing criterion (secondary note only)"
+    },
+    "E4": {
+     "verdict": "not assessed",
+     "reason": "not decided: the screen stops at the first failing criterion (secondary note only)"
+    },
+    "E5": {
+     "verdict": "not assessed",
+     "reason": "not decided: the screen stops at the first failing criterion (secondary note only)"
+    },
+    "E6": {
+     "verdict": "not assessed",
+     "reason": "not decided: the screen stops at the first failing criterion (secondary note only)"
+    }
+   },
+   "first_failing": "E2",
+   "read": [
+    "commit subject (no body)",
+    "git show --stat",
+    "full diff of procrastinate/testing.py",
+    "pyproject.toml dependency list of fix and parent"
+   ],
+   "parent": "036fab8f4a8c9e578da3864bbe4ff43a089a34c8",
+   "pins": {
+    "R1": {
+     "commit": "036fab8f4a8c9e578da3864bbe4ff43a089a34c8",
+     "tree": "5c3b04f3c420cee6734ff48ab5169f642c3ec41f",
+     "sha256": "718c2fdeea962e67e982758913b159ce4659a199f7d44e7a598ee73f2053686f",
+     "archive": "/private/tmp/claude-501/-Users-kiyo-Desktop-deployspecter/b1c95b43-b64d-4432-a288-8cf30f7b145b/scratchpad/nbc_archives/procrastinate/procrastinate-a7bea33/R1.tar"
+    },
+    "R2": {
+     "commit": "a7bea33381c0f6590708cef0b3ec5247481335c3",
+     "tree": "508142b9a170ce747507a32a59411a65d9eb687c",
+     "sha256": "84d1ccebec3c7d14e55dba9f6153ca78fe58fff30e9d018c08d5fd07071cdf44",
+     "archive": "/private/tmp/claude-501/-Users-kiyo-Desktop-deployspecter/b1c95b43-b64d-4432-a288-8cf30f7b145b/scratchpad/nbc_archives/procrastinate/procrastinate-a7bea33/R2.tar"
+    }
+   },
+   "outcome": "INELIGIBLE (E2)"
+  },
+  {
+   "rank": 3,
+   "commit": "7864e21f9d7464f786e61c7e47f3aa05021b2200",
+   "date": "2024-12-17T23:41:01Z",
+   "subject": "Constraint to prevent jobs in todo state with abort_requested",
+   "first_release": "3.0.0",
+   "criteria": {
+    "E1": {
+     "verdict": "PASS",
+     "reason": "PASS (tree level). Both commits are in the public mirror and reachable from the default branch head bedbe0e; `git archive` of procrastinate/ for each, normalized by sealed_evaluation.normalize_archive, is deterministic (rebuilt twice, same sha256), pinned below by git tree hash and archive sha256. The declared runtime dependencies are all available as hash-pinned entries in requirements.procrastinate.txt or uv.lock. No image was built: the tree has no PKG-INFO and procrastinate reads its distribution metadata at import, so a build would need a declared METADATA file; not attempted because E2 fails on its own. The parent (6df6867, 3.0.0 development line) was never released."
+    },
+    "E2": {
+     "verdict": "FAIL",
+     "reason": "No defect reachable through the public API. The fix only adds CHECK (NOT (status = 'todo' AND abort_requested = true)) to schema.sql and the 03.00.00_50 post migration: a defensive invariant. Read in the parent's schema.sql and queries.sql: the only statement that sets status 'todo' on an existing job is procrastinate_retry_job_v1's else-branch, taken only when abort_requested is false, read under SELECT ... FOR UPDATE in the same plpgsql call; procrastinate_cancel_job_v1 with abort moves a 'todo' job to 'cancelled'; procrastinate_finish_job_v1 resets abort_requested; inserts default it to false. No public API path in the parent produces the forbidden state."
+    },
+    "E3": {
+     "verdict": "FAIL (secondary)",
+     "reason": "any interleaving inside procrastinate_retry_job_v1 is inside one stored-procedure call, which statement-boundary stepping cannot split (the same reason as prior-exposure 8fa4ab5). not decided: the screen stops at the first failing criterion (secondary note only)"
+    },
+    "E4": {
+     "verdict": "not assessed",
+     "reason": "not decided: the screen stops at the first failing criterion (secondary note only)"
+    },
+    "E5": {
+     "verdict": "not assessed",
+     "reason": "not decided: the screen stops at the first failing criterion (secondary note only)"
+    },
+    "E6": {
+     "verdict": "not assessed",
+     "reason": "not decided: the screen stops at the first failing criterion (secondary note only)"
+    }
+   },
+   "first_failing": "E2",
+   "read": [
+    "commit subject (no body)",
+    "git show --stat",
+    "full diff (schema.sql, 03.00.00_50 migration)",
+    "parent 6df6867 schema.sql lines 140-300 (fetch, finish, cancel, retry functions) and a grep of schema.sql/queries.sql for 'todo' and abort_requested",
+    "subject of merge commit 9cc20e2 (PR #1256, 'constraint-not-todo-abort-requested'); the PR page itself was not read",
+    "git log --oneline around the commit",
+    "pyproject.toml dependency list"
+   ],
+   "parent": "6df6867306b1ceab9d6d6b083f9b45161ac5be70",
+   "pins": {
+    "R1": {
+     "commit": "6df6867306b1ceab9d6d6b083f9b45161ac5be70",
+     "tree": "8f40b40a46985ab2aca9ae4a5a7d337edc53c2c6",
+     "sha256": "4532d2f393204c9d577e8477fb0fc3cb3e7dc9c16936ca9212ab1ce6b7a04cba",
+     "archive": "/private/tmp/claude-501/-Users-kiyo-Desktop-deployspecter/b1c95b43-b64d-4432-a288-8cf30f7b145b/scratchpad/nbc_archives/procrastinate/procrastinate-7864e21/R1.tar"
+    },
+    "R2": {
+     "commit": "7864e21f9d7464f786e61c7e47f3aa05021b2200",
+     "tree": "66919c792c223b653285527a74880454df522e2e",
+     "sha256": "24ec29fa63a202bf28ef55d45a9627538b346dcb55ec6aba11a9568d73d4d158",
+     "archive": "/private/tmp/claude-501/-Users-kiyo-Desktop-deployspecter/b1c95b43-b64d-4432-a288-8cf30f7b145b/scratchpad/nbc_archives/procrastinate/procrastinate-7864e21/R2.tar"
+    }
+   },
+   "outcome": "INELIGIBLE (E2)"
+  },
+  {
+   "rank": 4,
+   "commit": "e94a5a2361ba6f4269abd3c7dbe81a89396c7414",
+   "date": "2024-10-14T20:57:35+10:00",
+   "subject": "handle aborting sync jobs on shutdown",
+   "first_release": "3.0.0",
+   "criteria": {
+    "E1": {
+     "verdict": "PASS",
+     "reason": "PASS (tree level). Both commits are in the public mirror and reachable from the default branch head bedbe0e; `git archive` of procrastinate/ for each, normalized by sealed_evaluation.normalize_archive, is deterministic (rebuilt twice, same sha256), pinned below by git tree hash and archive sha256. The declared runtime dependencies are all available as hash-pinned entries in requirements.procrastinate.txt or uv.lock. No image was built: the tree has no PKG-INFO and procrastinate reads its distribution metadata at import, so a build would need a declared METADATA file; not attempted because E2 fails on its own. The parent (a8c7fc3, 3.0.0 development line) was never released."
+    },
+    "E2": {
+     "verdict": "FAIL",
+     "reason": "In-process worker shutdown logic. The change renames shutdown_timeout to shutdown_graceful_timeout, replaces asyncio.wait_for on the loop task with asyncio.wait on the running job tasks, adds AbortReason (USER_REQUEST/SHUTDOWN) to JobContext so a sync job (run in a thread) can see a shutdown abort through should_abort(), and lets a shutdown-aborted job be retried. The behaviour is decided by Python timers, thread-run sync jobs and the worker's in-memory abort map; the database only records the resulting status. The maintainers' acceptance tests drive it with wall-clock sleeps (0.05 s) and a 0.3 s graceful timeout."
+    },
+    "E3": {
+     "verdict": "FAIL (secondary)",
+     "reason": "wall-clock shutdown timeouts and sync jobs in threads are not under the stepping seam, which grants statements only. not decided: the screen stops at the first failing criterion (secondary note only)"
+    },
+    "E4": {
+     "verdict": "PASS (secondary)",
+     "reason": "docs/howto/advanced/shutdown.md (changed in the fix) and acceptance tests. not decided: the screen stops at the first failing criterion (secondary note only)"
+    },
+    "E5": {
+     "verdict": "not assessed",
+     "reason": "not decided: the screen stops at the first failing criterion (secondary note only)"
+    },
+    "E6": {
+     "verdict": "not assessed",
+     "reason": "not decided: the screen stops at the first failing criterion (secondary note only)"
+    }
+   },
+   "first_failing": "E2",
+   "read": [
+    "commit subject (no body)",
+    "git show --stat",
+    "diff of docs/howto/advanced/shutdown.md and of every changed file under procrastinate/ (app.py, cli.py, job_context.py, manager.py, worker.py; worker.py partly: the first ~250 lines of the diff)",
+    "diff of tests/acceptance/test_async.py (first ~140 lines)",
+    "pyproject.toml dependency list"
+   ],
+   "parent": "a8c7fc334d64e041a8f491847f2638b18a892c8a",
+   "pins": {
+    "R1": {
+     "commit": "a8c7fc334d64e041a8f491847f2638b18a892c8a",
+     "tree": "13989039ae2bd2d1c1821a3bddae4529c9296fd6",
+     "sha256": "1c38b4735b7ceebe6fb489cd9adb65a6889d54a88bd83ac11be07f7800e895b8",
+     "archive": "/private/tmp/claude-501/-Users-kiyo-Desktop-deployspecter/b1c95b43-b64d-4432-a288-8cf30f7b145b/scratchpad/nbc_archives/procrastinate/procrastinate-e94a5a2/R1.tar"
+    },
+    "R2": {
+     "commit": "e94a5a2361ba6f4269abd3c7dbe81a89396c7414",
+     "tree": "29888b084bd16a27f993562884506b4d9bff0892",
+     "sha256": "27e6221aca39cc372a601f37f48b9e79775c055c9f1a190d7581f264a376fb23",
+     "archive": "/private/tmp/claude-501/-Users-kiyo-Desktop-deployspecter/b1c95b43-b64d-4432-a288-8cf30f7b145b/scratchpad/nbc_archives/procrastinate/procrastinate-e94a5a2/R2.tar"
+    }
+   },
+   "outcome": "INELIGIBLE (E2)"
+  },
+  {
+   "rank": 5,
+   "commit": "b49a755c72894fd09816424d1ff7825e9618b09f",
+   "date": "2024-07-17T17:11:57+10:00",
+   "subject": "handle reraising cancellation on error",
+   "first_release": "3.0.0",
+   "criteria": {
+    "E1": {
+     "verdict": "PASS",
+     "reason": "PASS (tree level). Both commits are in the public mirror and reachable from the default branch head bedbe0e; `git archive` of procrastinate/ for each, normalized by sealed_evaluation.normalize_archive, is deterministic (rebuilt twice, same sha256), pinned below by git tree hash and archive sha256. The declared runtime dependencies are all available as hash-pinned entries in requirements.procrastinate.txt or uv.lock. No image was built: the tree has no PKG-INFO and procrastinate reads its distribution metadata at import, so a build would need a declared METADATA file; not attempted because E2 fails on its own. The parent (badc87d, 3.0.0 development line) was never released."
+    },
+    "E2": {
+     "verdict": "FAIL",
+     "reason": "Pure in-process asyncio cancellation handling in procrastinate/job_processor.py: when the shielded job task raises after the processor was cancelled, the pending CancelledError is now re-raised instead of swallowed by `except Exception: pass`. No database statement is involved in the defect; the test change is to a unit-test fixture."
+    },
+    "E3": {
+     "verdict": "not assessed",
+     "reason": "not decided: the screen stops at the first failing criterion (secondary note only)"
+    },
+    "E4": {
+     "verdict": "not assessed",
+     "reason": "not decided: the screen stops at the first failing criterion (secondary note only)"
+    },
+    "E5": {
+     "verdict": "not assessed",
+     "reason": "not decided: the screen stops at the first failing criterion (secondary note only)"
+    },
+    "E6": {
+     "verdict": "not assessed",
+     "reason": "not decided: the screen stops at the first failing criterion (secondary note only)"
+    }
+   },
+   "first_failing": "E2",
+   "read": [
+    "commit subject (no body)",
+    "full diff (procrastinate/job_processor.py, tests/unit/test_job_processor.py)",
+    "pyproject.toml dependency list"
+   ],
+   "parent": "badc87d53afc167e8650c12f2ab0a0e30943c42e",
+   "pins": {
+    "R1": {
+     "commit": "badc87d53afc167e8650c12f2ab0a0e30943c42e",
+     "tree": "4713be5321ed3e21d54320c42e46251762366c83",
+     "sha256": "a0c73db1041f98a9ee65a8976aeec083e17a79ba234fb3b707845ae18d7d755a",
+     "archive": "/private/tmp/claude-501/-Users-kiyo-Desktop-deployspecter/b1c95b43-b64d-4432-a288-8cf30f7b145b/scratchpad/nbc_archives/procrastinate/procrastinate-b49a755/R1.tar"
+    },
+    "R2": {
+     "commit": "b49a755c72894fd09816424d1ff7825e9618b09f",
+     "tree": "a9c90ae95009501bd24db0b0a2fd044bdc686f42",
+     "sha256": "de83c47d4cc6279a229e851fb44938225ab50e05a62b438a1537e9b94088286e",
+     "archive": "/private/tmp/claude-501/-Users-kiyo-Desktop-deployspecter/b1c95b43-b64d-4432-a288-8cf30f7b145b/scratchpad/nbc_archives/procrastinate/procrastinate-b49a755/R2.tar"
+    }
+   },
+   "outcome": "INELIGIBLE (E2)"
+  }
+ ]
+}
