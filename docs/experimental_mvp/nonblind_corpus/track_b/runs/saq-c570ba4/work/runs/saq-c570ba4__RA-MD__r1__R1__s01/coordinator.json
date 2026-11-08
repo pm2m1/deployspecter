@@ -1,0 +1,2202 @@
+{
+ "protocol": "ds-coord/1",
+ "outcome": "completed",
+ "reason": null,
+ "policy": {
+  "kind": "seeded",
+  "seed": 2227733124
+ },
+ "gates": [
+  {
+   "actor": "worker",
+   "match": null,
+   "until": [
+    {
+     "actor": "producer",
+     "marker": "insert",
+     "count": 4
+    }
+   ]
+  }
+ ],
+ "stop": {
+  "key": "succeeded",
+  "covers": [
+   "producer",
+   "worker"
+  ],
+  "after_s": 45
+ },
+ "processes": {
+  "A": {
+   "version": "git-59f32fc",
+   "run_id": "saq_A",
+   "monitor_pid": 23712,
+   "actors": {
+    "producer": {
+     "backend_pid": 23713,
+     "handler": "saq-git-59f32fc.enqueue"
+    },
+    "worker": {
+     "backend_pid": 23714,
+     "handler": "saq-git-59f32fc.burst_work"
+    }
+   },
+   "bye": "completed"
+  }
+ },
+ "decisions": [
+  {
+   "decision": 0,
+   "grant": 0,
+   "epoch": 1,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "producer",
+   "source": "seeded",
+   "enabled": [
+    "producer"
+   ],
+   "gated": [
+    "worker"
+   ],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "a8402858d4f1",
+   "sql": "BEGIN",
+   "t_ms": 20.96
+  },
+  {
+   "decision": 1,
+   "grant": 1,
+   "epoch": 2,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "producer",
+   "source": "seeded",
+   "enabled": [
+    "producer"
+   ],
+   "gated": [
+    "worker"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "f09045c78c4e",
+   "sql": "SELECT pg_try_advisory_xact_lock(%(key1)s, 0)",
+   "t_ms": 76.52
+  },
+  {
+   "decision": 2,
+   "grant": 2,
+   "epoch": 3,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "producer",
+   "source": "seeded",
+   "enabled": [
+    "producer"
+   ],
+   "gated": [
+    "worker"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "83a5d766ca02",
+   "sql": "CREATE TABLE IF NOT EXISTS \"saq_versions\" ( version INT );",
+   "t_ms": 131.94
+  },
+  {
+   "decision": 3,
+   "grant": 3,
+   "epoch": 4,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "producer",
+   "source": "seeded",
+   "enabled": [
+    "producer"
+   ],
+   "gated": [
+    "worker"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "c0e7190896be",
+   "sql": "SELECT version FROM \"saq_versions\"",
+   "t_ms": 187.7
+  },
+  {
+   "decision": 4,
+   "grant": 4,
+   "epoch": 5,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "producer",
+   "source": "seeded",
+   "enabled": [
+    "producer"
+   ],
+   "gated": [
+    "worker"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "d05be8ef18c0",
+   "sql": "CREATE TABLE IF NOT EXISTS \"saq_jobs\" ( key TEXT PRIMARY KEY, lock_key SERIAL NOT NULL, job BYTEA NOT NULL, queue TEXT NOT NULL, status TEXT NOT NULL, priority SMALLINT NOT NULL DEFAULT 0, group_key TEXT, scheduled BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW()), expire_at BIGINT );",
+   "t_ms": 241.48
+  },
+  {
+   "decision": 5,
+   "grant": 5,
+   "epoch": 6,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "producer",
+   "source": "seeded",
+   "enabled": [
+    "producer"
+   ],
+   "gated": [
+    "worker"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "f236e088b753",
+   "sql": "CREATE INDEX IF NOT EXISTS saq_jobs_dequeue_idx ON \"saq_jobs\" (status, queue, scheduled);",
+   "t_ms": 298.47
+  },
+  {
+   "decision": 6,
+   "grant": 6,
+   "epoch": 7,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "producer",
+   "source": "seeded",
+   "enabled": [
+    "producer"
+   ],
+   "gated": [
+    "worker"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "df291b23d82f",
+   "sql": "CREATE TABLE IF NOT EXISTS \"saq_stats\" ( worker_id TEXT PRIMARY KEY, stats JSONB, expire_at BIGINT );",
+   "t_ms": 355.04
+  },
+  {
+   "decision": 7,
+   "grant": 7,
+   "epoch": 8,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "producer",
+   "source": "seeded",
+   "enabled": [
+    "producer"
+   ],
+   "gated": [
+    "worker"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "5d8b5a1f8d58",
+   "sql": "ALTER TABLE \"saq_stats\" ADD COLUMN IF NOT EXISTS metadata JSONB; ALTER TABLE \"saq_stats\" ADD COLUMN IF NOT EXISTS queue_key TEXT; CREATE INDEX IF NOT EXISTS saq_stats_expire_at_idx ON \"saq_stats\" (expire_at); CREATE INDEX IF NOT EXISTS saq_stats_queue_key_idx ON \"saq_stats\" (queue_key);",
+   "t_ms": 412.14
+  },
+  {
+   "decision": 8,
+   "grant": 8,
+   "epoch": 9,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "producer",
+   "source": "seeded",
+   "enabled": [
+    "producer"
+   ],
+   "gated": [
+    "worker"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "29c4136b8abf",
+   "sql": "CREATE INDEX IF NOT EXISTS saq_jobs_status_queue_group_key_idx ON \"saq_jobs\" (status, queue, group_key); CREATE INDEX IF NOT EXISTS saq_jobs_status_queue_priority_scheduled_idx ON \"saq_jobs\" (status, queue, priority, scheduled); DROP INDEX saq_jobs_dequeue_idx;",
+   "t_ms": 469.27
+  },
+  {
+   "decision": 9,
+   "grant": 9,
+   "epoch": 10,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "producer",
+   "source": "seeded",
+   "enabled": [
+    "producer"
+   ],
+   "gated": [
+    "worker"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "9dc6038d4a93",
+   "sql": "DELETE FROM \"saq_versions\"; INSERT INTO \"saq_versions\" (version) VALUES (3);",
+   "t_ms": 521.15
+  },
+  {
+   "decision": 10,
+   "grant": 10,
+   "epoch": 11,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "producer",
+   "source": "seeded",
+   "enabled": [
+    "producer"
+   ],
+   "gated": [
+    "worker"
+   ],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 573.46
+  },
+  {
+   "decision": 11,
+   "grant": 11,
+   "epoch": 12,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "producer",
+   "source": "seeded",
+   "enabled": [
+    "producer"
+   ],
+   "gated": [
+    "worker"
+   ],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 625.19
+  },
+  {
+   "decision": 12,
+   "grant": 12,
+   "epoch": 13,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "producer",
+   "source": "seeded",
+   "enabled": [
+    "producer"
+   ],
+   "gated": [
+    "worker"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "50bd24be97e2",
+   "sql": "INSERT INTO \"saq_jobs\" ( key, job, queue, status, priority, group_key, scheduled ) VALUES ( %(key)s, %(job)s, %(queue)s, %(status)s, %(priority)s, %(group_key)s, %(scheduled)s ) ON CONFLICT (key) DO UPDATE SET job = %(job)s, queue = %(queue)s, status = %(status)s, priority = %(priority)s, group_key ",
+   "t_ms": 677.72
+  },
+  {
+   "decision": 13,
+   "grant": 13,
+   "epoch": 14,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "producer",
+   "source": "seeded",
+   "enabled": [
+    "producer"
+   ],
+   "gated": [
+    "worker"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "7fd57c4b1222",
+   "sql": "NOTIFY \"saq:ds_q\", 'saq:enqueue'",
+   "t_ms": 730.96
+  },
+  {
+   "decision": 14,
+   "grant": 14,
+   "epoch": 15,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "producer",
+   "source": "seeded",
+   "enabled": [
+    "producer"
+   ],
+   "gated": [
+    "worker"
+   ],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 782.91
+  },
+  {
+   "decision": 15,
+   "grant": 15,
+   "epoch": 16,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "producer",
+   "source": "seeded",
+   "enabled": [
+    "producer"
+   ],
+   "gated": [
+    "worker"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "50bd24be97e2",
+   "sql": "INSERT INTO \"saq_jobs\" ( key, job, queue, status, priority, group_key, scheduled ) VALUES ( %(key)s, %(job)s, %(queue)s, %(status)s, %(priority)s, %(group_key)s, %(scheduled)s ) ON CONFLICT (key) DO UPDATE SET job = %(job)s, queue = %(queue)s, status = %(status)s, priority = %(priority)s, group_key ",
+   "t_ms": 835.0
+  },
+  {
+   "decision": 16,
+   "grant": 16,
+   "epoch": 17,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "producer",
+   "source": "seeded",
+   "enabled": [
+    "producer"
+   ],
+   "gated": [
+    "worker"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "7fd57c4b1222",
+   "sql": "NOTIFY \"saq:ds_q\", 'saq:enqueue'",
+   "t_ms": 887.49
+  },
+  {
+   "decision": 17,
+   "grant": 17,
+   "epoch": 18,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "producer",
+   "source": "seeded",
+   "enabled": [
+    "producer"
+   ],
+   "gated": [
+    "worker"
+   ],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 940.04
+  },
+  {
+   "decision": 18,
+   "grant": 18,
+   "epoch": 19,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "producer",
+   "source": "seeded",
+   "enabled": [
+    "producer"
+   ],
+   "gated": [
+    "worker"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "50bd24be97e2",
+   "sql": "INSERT INTO \"saq_jobs\" ( key, job, queue, status, priority, group_key, scheduled ) VALUES ( %(key)s, %(job)s, %(queue)s, %(status)s, %(priority)s, %(group_key)s, %(scheduled)s ) ON CONFLICT (key) DO UPDATE SET job = %(job)s, queue = %(queue)s, status = %(status)s, priority = %(priority)s, group_key ",
+   "t_ms": 993.69
+  },
+  {
+   "decision": 19,
+   "grant": 19,
+   "epoch": 20,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "producer",
+   "source": "seeded",
+   "enabled": [
+    "producer"
+   ],
+   "gated": [
+    "worker"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "7fd57c4b1222",
+   "sql": "NOTIFY \"saq:ds_q\", 'saq:enqueue'",
+   "t_ms": 1046.7
+  },
+  {
+   "decision": 20,
+   "grant": 20,
+   "epoch": 21,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "producer",
+   "source": "seeded",
+   "enabled": [
+    "producer"
+   ],
+   "gated": [
+    "worker"
+   ],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 1099.41
+  },
+  {
+   "decision": 21,
+   "grant": 21,
+   "epoch": 22,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "producer",
+   "source": "seeded",
+   "enabled": [
+    "producer"
+   ],
+   "gated": [
+    "worker"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "50bd24be97e2",
+   "sql": "INSERT INTO \"saq_jobs\" ( key, job, queue, status, priority, group_key, scheduled ) VALUES ( %(key)s, %(job)s, %(queue)s, %(status)s, %(priority)s, %(group_key)s, %(scheduled)s ) ON CONFLICT (key) DO UPDATE SET job = %(job)s, queue = %(queue)s, status = %(status)s, priority = %(priority)s, group_key ",
+   "t_ms": 1151.95
+  },
+  {
+   "decision": 22,
+   "grant": 22,
+   "epoch": 23,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "producer",
+   "source": "seeded",
+   "enabled": [
+    "producer",
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "7fd57c4b1222",
+   "sql": "NOTIFY \"saq:ds_q\", 'saq:enqueue'",
+   "t_ms": 1207.66
+  },
+  {
+   "decision": 23,
+   "grant": 23,
+   "epoch": 24,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "producer",
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "a8402858d4f1",
+   "sql": "BEGIN",
+   "t_ms": 1260.48
+  },
+  {
+   "decision": 24,
+   "grant": 24,
+   "epoch": 25,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "producer",
+   "source": "seeded",
+   "enabled": [
+    "producer",
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 1317.17
+  },
+  {
+   "decision": 25,
+   "grant": 25,
+   "epoch": 26,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "f09045c78c4e",
+   "sql": "SELECT pg_try_advisory_xact_lock(%(key1)s, 0)",
+   "t_ms": 1373.91
+  },
+  {
+   "decision": 26,
+   "grant": 26,
+   "epoch": 27,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "83a5d766ca02",
+   "sql": "CREATE TABLE IF NOT EXISTS \"saq_versions\" ( version INT );",
+   "t_ms": 1430.86
+  },
+  {
+   "decision": 27,
+   "grant": 27,
+   "epoch": 28,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "c0e7190896be",
+   "sql": "SELECT version FROM \"saq_versions\"",
+   "t_ms": 1486.52
+  },
+  {
+   "decision": 28,
+   "grant": 28,
+   "epoch": 29,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 1539.77
+  },
+  {
+   "decision": 29,
+   "grant": 29,
+   "epoch": 30,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 1591.68
+  },
+  {
+   "decision": 30,
+   "grant": 30,
+   "epoch": 31,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "a8402858d4f1",
+   "sql": "BEGIN",
+   "t_ms": 1643.82
+  },
+  {
+   "decision": 31,
+   "grant": 31,
+   "epoch": 32,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "458a15678a63",
+   "sql": "WITH locked_job AS ( SELECT key FROM \"saq_jobs\" WHERE status = 'queued' AND queue = %(queue)s AND %(now)s >= scheduled AND priority BETWEEN %(plow)s AND %(phigh)s AND group_key NOT IN ( SELECT DISTINCT group_key FROM \"saq_jobs\" WHERE status = 'active' AND queue = %(queue)s AND group_key IS NOT NULL ",
+   "t_ms": 1696.17
+  },
+  {
+   "decision": 32,
+   "grant": 32,
+   "epoch": 33,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "19bfe31bf081",
+   "sql": "SAVEPOINT <auto>",
+   "t_ms": 1748.43
+  },
+  {
+   "decision": 33,
+   "grant": 33,
+   "epoch": 34,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "488f622e790b",
+   "sql": "UPDATE \"saq_jobs\" SET job = %(job)s ,status = %(status)s ,scheduled = %(scheduled)s WHERE key = %(key)s",
+   "t_ms": 1799.47
+  },
+  {
+   "decision": 34,
+   "grant": 34,
+   "epoch": 35,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "ad0e5ae50049",
+   "sql": "RELEASE SAVEPOINT",
+   "t_ms": 1853.62
+  },
+  {
+   "decision": 35,
+   "grant": 35,
+   "epoch": 36,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 1910.14
+  },
+  {
+   "decision": 36,
+   "grant": 36,
+   "epoch": 37,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 1963.85
+  },
+  {
+   "decision": 37,
+   "grant": 37,
+   "epoch": 38,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "205f0947afed",
+   "sql": "SELECT pg_try_advisory_lock(%(key1)s, hashtext(%(queue)s))",
+   "t_ms": 2020.64
+  },
+  {
+   "decision": 38,
+   "grant": 38,
+   "epoch": 39,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 2076.32
+  },
+  {
+   "decision": 39,
+   "grant": 39,
+   "epoch": 40,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "381b16718331",
+   "sql": "INSERT INTO \"saq_stats\" (worker_id, stats, queue_key, metadata, expire_at) VALUES (%(worker_id)s, %(stats)s, %(queue_key)s, %(metadata)s, EXTRACT(EPOCH FROM NOW()) + %(ttl)s) ON CONFLICT (worker_id) DO UPDATE SET stats = %(stats)s, queue_key = %(queue_key)s, metadata = %(metadata)s, expire_at = EXTR",
+   "t_ms": 2130.56
+  },
+  {
+   "decision": 40,
+   "grant": 40,
+   "epoch": 41,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 2187.16
+  },
+  {
+   "decision": 41,
+   "grant": 41,
+   "epoch": 42,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "a8402858d4f1",
+   "sql": "BEGIN",
+   "t_ms": 2240.03
+  },
+  {
+   "decision": 42,
+   "grant": 42,
+   "epoch": 43,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "488f622e790b",
+   "sql": "UPDATE \"saq_jobs\" SET job = %(job)s ,status = %(status)s ,scheduled = %(scheduled)s WHERE key = %(key)s",
+   "t_ms": 2297.37
+  },
+  {
+   "decision": 43,
+   "grant": 43,
+   "epoch": 44,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 2351.75
+  },
+  {
+   "decision": 44,
+   "grant": 44,
+   "epoch": 45,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 2408.9
+  },
+  {
+   "decision": 45,
+   "grant": 45,
+   "epoch": 46,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "9c297357bc70",
+   "sql": "NOTIFY \"saq:ds_q\", 'saq:dequeue'",
+   "t_ms": 2462.34
+  },
+  {
+   "decision": 46,
+   "grant": 46,
+   "epoch": 47,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 2515.25
+  },
+  {
+   "decision": 47,
+   "grant": 47,
+   "epoch": 48,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "ea06640319fb",
+   "sql": "-- Delete expired jobs DELETE FROM \"saq_jobs\" WHERE queue = %(queue)s AND status IN ('aborted', 'complete', 'failed') AND %(now)s >= expire_at;",
+   "t_ms": 2567.12
+  },
+  {
+   "decision": 48,
+   "grant": 48,
+   "epoch": 49,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "4901104b8c5b",
+   "sql": "-- Delete expired stats DELETE FROM \"saq_stats\" WHERE %(now)s >= expire_at;",
+   "t_ms": 2623.93
+  },
+  {
+   "decision": 49,
+   "grant": 49,
+   "epoch": 50,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "385474b76a8c",
+   "sql": "SELECT key, job, status FROM \"saq_jobs\" WHERE queue = %(queue)s AND status IN ('active', 'aborting');",
+   "t_ms": 2678.02
+  },
+  {
+   "decision": 50,
+   "grant": 50,
+   "epoch": 51,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 2730.69
+  },
+  {
+   "decision": 51,
+   "grant": 51,
+   "epoch": 52,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "a8402858d4f1",
+   "sql": "BEGIN",
+   "t_ms": 2783.64
+  },
+  {
+   "decision": 52,
+   "grant": 52,
+   "epoch": 53,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "e36c944300fe",
+   "sql": "UPDATE \"saq_jobs\" SET job = %(job)s ,status = %(status)s ,scheduled = %(scheduled)s ,expire_at = %(expire_at)s WHERE key = %(key)s",
+   "t_ms": 2835.81
+  },
+  {
+   "decision": 53,
+   "grant": 53,
+   "epoch": 54,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 2889.79
+  },
+  {
+   "decision": 54,
+   "grant": 54,
+   "epoch": 55,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 2944.04
+  },
+  {
+   "decision": 55,
+   "grant": 55,
+   "epoch": 56,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "a8402858d4f1",
+   "sql": "BEGIN",
+   "t_ms": 2998.51
+  },
+  {
+   "decision": 56,
+   "grant": 56,
+   "epoch": 57,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "458a15678a63",
+   "sql": "WITH locked_job AS ( SELECT key FROM \"saq_jobs\" WHERE status = 'queued' AND queue = %(queue)s AND %(now)s >= scheduled AND priority BETWEEN %(plow)s AND %(phigh)s AND group_key NOT IN ( SELECT DISTINCT group_key FROM \"saq_jobs\" WHERE status = 'active' AND queue = %(queue)s AND group_key IS NOT NULL ",
+   "t_ms": 3053.09
+  },
+  {
+   "decision": 57,
+   "grant": 57,
+   "epoch": 58,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "19bfe31bf081",
+   "sql": "SAVEPOINT <auto>",
+   "t_ms": 3107.59
+  },
+  {
+   "decision": 58,
+   "grant": 58,
+   "epoch": 59,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "488f622e790b",
+   "sql": "UPDATE \"saq_jobs\" SET job = %(job)s ,status = %(status)s ,scheduled = %(scheduled)s WHERE key = %(key)s",
+   "t_ms": 3160.76
+  },
+  {
+   "decision": 59,
+   "grant": 59,
+   "epoch": 60,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "ad0e5ae50049",
+   "sql": "RELEASE SAVEPOINT",
+   "t_ms": 3217.95
+  },
+  {
+   "decision": 60,
+   "grant": 60,
+   "epoch": 61,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 3273.65
+  },
+  {
+   "decision": 61,
+   "grant": 61,
+   "epoch": 62,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 3331.04
+  },
+  {
+   "decision": 62,
+   "grant": 62,
+   "epoch": 63,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "9c297357bc70",
+   "sql": "NOTIFY \"saq:ds_q\", 'saq:dequeue'",
+   "t_ms": 3383.06
+  },
+  {
+   "decision": 63,
+   "grant": 63,
+   "epoch": 64,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 3435.64
+  },
+  {
+   "decision": 64,
+   "grant": 64,
+   "epoch": 65,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "a8402858d4f1",
+   "sql": "BEGIN",
+   "t_ms": 3488.91
+  },
+  {
+   "decision": 65,
+   "grant": 65,
+   "epoch": 66,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "488f622e790b",
+   "sql": "UPDATE \"saq_jobs\" SET job = %(job)s ,status = %(status)s ,scheduled = %(scheduled)s WHERE key = %(key)s",
+   "t_ms": 3543.75
+  },
+  {
+   "decision": 66,
+   "grant": 66,
+   "epoch": 67,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 3600.3
+  },
+  {
+   "decision": 67,
+   "grant": 67,
+   "epoch": 68,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 3655.28
+  },
+  {
+   "decision": 68,
+   "grant": 68,
+   "epoch": 69,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "a8402858d4f1",
+   "sql": "BEGIN",
+   "t_ms": 3712.33
+  },
+  {
+   "decision": 69,
+   "grant": 69,
+   "epoch": 70,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "e36c944300fe",
+   "sql": "UPDATE \"saq_jobs\" SET job = %(job)s ,status = %(status)s ,scheduled = %(scheduled)s ,expire_at = %(expire_at)s WHERE key = %(key)s",
+   "t_ms": 3769.06
+  },
+  {
+   "decision": 70,
+   "grant": 70,
+   "epoch": 71,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 3825.98
+  },
+  {
+   "decision": 71,
+   "grant": 71,
+   "epoch": 72,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 3883.11
+  },
+  {
+   "decision": 72,
+   "grant": 72,
+   "epoch": 73,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "a8402858d4f1",
+   "sql": "BEGIN",
+   "t_ms": 3940.15
+  },
+  {
+   "decision": 73,
+   "grant": 73,
+   "epoch": 74,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "458a15678a63",
+   "sql": "WITH locked_job AS ( SELECT key FROM \"saq_jobs\" WHERE status = 'queued' AND queue = %(queue)s AND %(now)s >= scheduled AND priority BETWEEN %(plow)s AND %(phigh)s AND group_key NOT IN ( SELECT DISTINCT group_key FROM \"saq_jobs\" WHERE status = 'active' AND queue = %(queue)s AND group_key IS NOT NULL ",
+   "t_ms": 3993.06
+  },
+  {
+   "decision": 74,
+   "grant": 74,
+   "epoch": 75,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "19bfe31bf081",
+   "sql": "SAVEPOINT <auto>",
+   "t_ms": 4050.22
+  },
+  {
+   "decision": 75,
+   "grant": 75,
+   "epoch": 76,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "488f622e790b",
+   "sql": "UPDATE \"saq_jobs\" SET job = %(job)s ,status = %(status)s ,scheduled = %(scheduled)s WHERE key = %(key)s",
+   "t_ms": 4102.02
+  },
+  {
+   "decision": 76,
+   "grant": 76,
+   "epoch": 77,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "ad0e5ae50049",
+   "sql": "RELEASE SAVEPOINT",
+   "t_ms": 4157.93
+  },
+  {
+   "decision": 77,
+   "grant": 77,
+   "epoch": 78,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 4210.11
+  },
+  {
+   "decision": 78,
+   "grant": 78,
+   "epoch": 79,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 4264.79
+  },
+  {
+   "decision": 79,
+   "grant": 79,
+   "epoch": 80,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "9c297357bc70",
+   "sql": "NOTIFY \"saq:ds_q\", 'saq:dequeue'",
+   "t_ms": 4321.26
+  },
+  {
+   "decision": 80,
+   "grant": 80,
+   "epoch": 81,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 4375.33
+  },
+  {
+   "decision": 81,
+   "grant": 81,
+   "epoch": 82,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "a8402858d4f1",
+   "sql": "BEGIN",
+   "t_ms": 4432.29
+  },
+  {
+   "decision": 82,
+   "grant": 82,
+   "epoch": 83,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "488f622e790b",
+   "sql": "UPDATE \"saq_jobs\" SET job = %(job)s ,status = %(status)s ,scheduled = %(scheduled)s WHERE key = %(key)s",
+   "t_ms": 4486.18
+  },
+  {
+   "decision": 83,
+   "grant": 83,
+   "epoch": 84,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 4540.01
+  },
+  {
+   "decision": 84,
+   "grant": 84,
+   "epoch": 85,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 4597.08
+  },
+  {
+   "decision": 85,
+   "grant": 85,
+   "epoch": 86,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "a8402858d4f1",
+   "sql": "BEGIN",
+   "t_ms": 4650.48
+  },
+  {
+   "decision": 86,
+   "grant": 86,
+   "epoch": 87,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "e36c944300fe",
+   "sql": "UPDATE \"saq_jobs\" SET job = %(job)s ,status = %(status)s ,scheduled = %(scheduled)s ,expire_at = %(expire_at)s WHERE key = %(key)s",
+   "t_ms": 4706.47
+  },
+  {
+   "decision": 87,
+   "grant": 87,
+   "epoch": 88,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 4762.85
+  },
+  {
+   "decision": 88,
+   "grant": 88,
+   "epoch": 89,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 4818.84
+  },
+  {
+   "decision": 89,
+   "grant": 89,
+   "epoch": 90,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "a8402858d4f1",
+   "sql": "BEGIN",
+   "t_ms": 4870.66
+  },
+  {
+   "decision": 90,
+   "grant": 90,
+   "epoch": 91,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "458a15678a63",
+   "sql": "WITH locked_job AS ( SELECT key FROM \"saq_jobs\" WHERE status = 'queued' AND queue = %(queue)s AND %(now)s >= scheduled AND priority BETWEEN %(plow)s AND %(phigh)s AND group_key NOT IN ( SELECT DISTINCT group_key FROM \"saq_jobs\" WHERE status = 'active' AND queue = %(queue)s AND group_key IS NOT NULL ",
+   "t_ms": 4927.03
+  },
+  {
+   "decision": 91,
+   "grant": 91,
+   "epoch": 92,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "19bfe31bf081",
+   "sql": "SAVEPOINT <auto>",
+   "t_ms": 4982.37
+  },
+  {
+   "decision": 92,
+   "grant": 92,
+   "epoch": 93,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "488f622e790b",
+   "sql": "UPDATE \"saq_jobs\" SET job = %(job)s ,status = %(status)s ,scheduled = %(scheduled)s WHERE key = %(key)s",
+   "t_ms": 5039.74
+  },
+  {
+   "decision": 93,
+   "grant": 93,
+   "epoch": 94,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "ad0e5ae50049",
+   "sql": "RELEASE SAVEPOINT",
+   "t_ms": 5093.64
+  },
+  {
+   "decision": 94,
+   "grant": 94,
+   "epoch": 95,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 5145.88
+  },
+  {
+   "decision": 95,
+   "grant": 95,
+   "epoch": 96,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 5198.73
+  },
+  {
+   "decision": 96,
+   "grant": 96,
+   "epoch": 97,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "9c297357bc70",
+   "sql": "NOTIFY \"saq:ds_q\", 'saq:dequeue'",
+   "t_ms": 5252.75
+  },
+  {
+   "decision": 97,
+   "grant": 97,
+   "epoch": 98,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 5308.92
+  },
+  {
+   "decision": 98,
+   "grant": 98,
+   "epoch": 99,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "a8402858d4f1",
+   "sql": "BEGIN",
+   "t_ms": 5362.05
+  },
+  {
+   "decision": 99,
+   "grant": 99,
+   "epoch": 100,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "488f622e790b",
+   "sql": "UPDATE \"saq_jobs\" SET job = %(job)s ,status = %(status)s ,scheduled = %(scheduled)s WHERE key = %(key)s",
+   "t_ms": 5415.94
+  },
+  {
+   "decision": 100,
+   "grant": 100,
+   "epoch": 101,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 5468.89
+  },
+  {
+   "decision": 101,
+   "grant": 101,
+   "epoch": 102,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 5525.86
+  },
+  {
+   "decision": 102,
+   "grant": 102,
+   "epoch": 103,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "a8402858d4f1",
+   "sql": "BEGIN",
+   "t_ms": 5579.73
+  },
+  {
+   "decision": 103,
+   "grant": 103,
+   "epoch": 104,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "e36c944300fe",
+   "sql": "UPDATE \"saq_jobs\" SET job = %(job)s ,status = %(status)s ,scheduled = %(scheduled)s ,expire_at = %(expire_at)s WHERE key = %(key)s",
+   "t_ms": 5633.44
+  },
+  {
+   "decision": 104,
+   "grant": 104,
+   "epoch": 105,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 5686.54
+  },
+  {
+   "decision": 105,
+   "grant": 105,
+   "epoch": 106,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 5741.05
+  },
+  {
+   "decision": 106,
+   "grant": 106,
+   "epoch": 107,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "a8402858d4f1",
+   "sql": "BEGIN",
+   "t_ms": 5794.19
+  },
+  {
+   "decision": 107,
+   "grant": 107,
+   "epoch": 108,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "458a15678a63",
+   "sql": "WITH locked_job AS ( SELECT key FROM \"saq_jobs\" WHERE status = 'queued' AND queue = %(queue)s AND %(now)s >= scheduled AND priority BETWEEN %(plow)s AND %(phigh)s AND group_key NOT IN ( SELECT DISTINCT group_key FROM \"saq_jobs\" WHERE status = 'active' AND queue = %(queue)s AND group_key IS NOT NULL ",
+   "t_ms": 5849.52
+  },
+  {
+   "decision": 108,
+   "grant": 108,
+   "epoch": 109,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 5902.26
+  },
+  {
+   "decision": 109,
+   "grant": 109,
+   "epoch": 110,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 5959.37
+  },
+  {
+   "decision": 110,
+   "grant": 110,
+   "epoch": 111,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_enter",
+   "statement_id": "a8402858d4f1",
+   "sql": "BEGIN",
+   "t_ms": 6015.53
+  },
+  {
+   "decision": 111,
+   "grant": 111,
+   "epoch": 112,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "458a15678a63",
+   "sql": "WITH locked_job AS ( SELECT key FROM \"saq_jobs\" WHERE status = 'queued' AND queue = %(queue)s AND %(now)s >= scheduled AND priority BETWEEN %(plow)s AND %(phigh)s AND group_key NOT IN ( SELECT DISTINCT group_key FROM \"saq_jobs\" WHERE status = 'active' AND queue = %(queue)s AND group_key IS NOT NULL ",
+   "t_ms": 6068.04
+  },
+  {
+   "decision": 112,
+   "grant": 112,
+   "epoch": 113,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "transaction_exit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 6121.11
+  },
+  {
+   "decision": 113,
+   "grant": 113,
+   "epoch": 114,
+   "process": "A",
+   "version": "git-59f32fc",
+   "actor": "worker",
+   "source": "seeded",
+   "enabled": [
+    "worker"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "commit",
+   "statement_id": "79663c1d3b43",
+   "sql": "COMMIT",
+   "t_ms": 6172.86
+  }
+ ],
+ "statements": {
+  "a8402858d4f1": "BEGIN",
+  "f09045c78c4e": "SELECT pg_try_advisory_xact_lock(%(key1)s, 0)",
+  "83a5d766ca02": "CREATE TABLE IF NOT EXISTS \"saq_versions\" ( version INT );",
+  "c0e7190896be": "SELECT version FROM \"saq_versions\"",
+  "d05be8ef18c0": "CREATE TABLE IF NOT EXISTS \"saq_jobs\" ( key TEXT PRIMARY KEY, lock_key SERIAL NOT NULL, job BYTEA NOT NULL, queue TEXT NOT NULL, status TEXT NOT NULL, priority SMALLINT NOT NULL DEFAULT 0, group_key TEXT, scheduled BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW()), expire_at BIGINT );",
+  "f236e088b753": "CREATE INDEX IF NOT EXISTS saq_jobs_dequeue_idx ON \"saq_jobs\" (status, queue, scheduled);",
+  "df291b23d82f": "CREATE TABLE IF NOT EXISTS \"saq_stats\" ( worker_id TEXT PRIMARY KEY, stats JSONB, expire_at BIGINT );",
+  "5d8b5a1f8d58": "ALTER TABLE \"saq_stats\" ADD COLUMN IF NOT EXISTS metadata JSONB; ALTER TABLE \"saq_stats\" ADD COLUMN IF NOT EXISTS queue_key TEXT; CREATE INDEX IF NOT EXISTS saq_stats_expire_at_idx ON \"saq_stats\" (expire_at); CREATE INDEX IF NOT EXISTS saq_stats_queue_key_idx ON \"saq_stats\" (queue_key);",
+  "29c4136b8abf": "CREATE INDEX IF NOT EXISTS saq_jobs_status_queue_group_key_idx ON \"saq_jobs\" (status, queue, group_key); CREATE INDEX IF NOT EXISTS saq_jobs_status_queue_priority_scheduled_idx ON \"saq_jobs\" (status, queue, priority, scheduled); DROP INDEX saq_jobs_dequeue_idx;",
+  "9dc6038d4a93": "DELETE FROM \"saq_versions\"; INSERT INTO \"saq_versions\" (version) VALUES (3);",
+  "79663c1d3b43": "COMMIT",
+  "50bd24be97e2": "INSERT INTO \"saq_jobs\" ( key, job, queue, status, priority, group_key, scheduled ) VALUES ( %(key)s, %(job)s, %(queue)s, %(status)s, %(priority)s, %(group_key)s, %(scheduled)s ) ON CONFLICT (key) DO UPDATE SET job = %(job)s, queue = %(queue)s, status = %(status)s, priority = %(priority)s, group_key = %(group_key)s, scheduled = %(scheduled)s, expire_at = null WHERE \"saq_jobs\".status IN ('aborted', 'complete', 'failed') AND %(scheduled)s > \"saq_jobs\".scheduled RETURNING 1",
+  "7fd57c4b1222": "NOTIFY \"saq:ds_q\", 'saq:enqueue'",
+  "458a15678a63": "WITH locked_job AS ( SELECT key FROM \"saq_jobs\" WHERE status = 'queued' AND queue = %(queue)s AND %(now)s >= scheduled AND priority BETWEEN %(plow)s AND %(phigh)s AND group_key NOT IN ( SELECT DISTINCT group_key FROM \"saq_jobs\" WHERE status = 'active' AND queue = %(queue)s AND group_key IS NOT NULL ) ORDER BY priority, scheduled LIMIT %(limit)s FOR UPDATE SKIP LOCKED ) UPDATE \"saq_jobs\" SET status = 'active' FROM locked_job WHERE \"saq_jobs\".key = locked_job.key RETURNING job",
+  "19bfe31bf081": "SAVEPOINT <auto>",
+  "488f622e790b": "UPDATE \"saq_jobs\" SET job = %(job)s ,status = %(status)s ,scheduled = %(scheduled)s WHERE key = %(key)s",
+  "ad0e5ae50049": "RELEASE SAVEPOINT",
+  "205f0947afed": "SELECT pg_try_advisory_lock(%(key1)s, hashtext(%(queue)s))",
+  "381b16718331": "INSERT INTO \"saq_stats\" (worker_id, stats, queue_key, metadata, expire_at) VALUES (%(worker_id)s, %(stats)s, %(queue_key)s, %(metadata)s, EXTRACT(EPOCH FROM NOW()) + %(ttl)s) ON CONFLICT (worker_id) DO UPDATE SET stats = %(stats)s, queue_key = %(queue_key)s, metadata = %(metadata)s, expire_at = EXTRACT(EPOCH FROM NOW()) + %(ttl)s",
+  "9c297357bc70": "NOTIFY \"saq:ds_q\", 'saq:dequeue'",
+  "ea06640319fb": "-- Delete expired jobs DELETE FROM \"saq_jobs\" WHERE queue = %(queue)s AND status IN ('aborted', 'complete', 'failed') AND %(now)s >= expire_at;",
+  "4901104b8c5b": "-- Delete expired stats DELETE FROM \"saq_stats\" WHERE %(now)s >= expire_at;",
+  "385474b76a8c": "SELECT key, job, status FROM \"saq_jobs\" WHERE queue = %(queue)s AND status IN ('active', 'aborting');",
+  "e36c944300fe": "UPDATE \"saq_jobs\" SET job = %(job)s ,status = %(status)s ,scheduled = %(scheduled)s ,expire_at = %(expire_at)s WHERE key = %(key)s"
+ },
+ "events": [
+  {
+   "event": "start",
+   "t_ms": 20.82,
+   "pids": {
+    "23713": "producer",
+    "23714": "worker"
+   }
+  },
+  {
+   "event": "stop",
+   "why": "covered",
+   "at_grant": 114,
+   "t_ms": 6226.72
+  },
+  {
+   "event": "bye",
+   "process": "A",
+   "t_ms": 6237.92
+  },
+  {
+   "event": "end",
+   "t_ms": 6237.93
+  }
+ ],
+ "grants": 114,
+ "elapsed_ms": 6237.93
+}

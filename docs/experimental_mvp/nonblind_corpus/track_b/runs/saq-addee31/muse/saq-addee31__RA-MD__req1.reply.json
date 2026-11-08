@@ -1,0 +1,6 @@
+{"rationale": "Cover shared vs isolated Postgres table_sets, empty/single/multi job queues, and fast/slow polling. Same-table pairs stress concurrent connect/migration on one versions_table plus worker dequeue status new->queued->active->complete and stats writes vs connect/disconnect. Cross-table pairs test leakage between saq_jobs/saq_alt_jobs and saq_versions/saq_alt_versions sharing one schema. 0 jobs tests polling empty queue while peer connects; 1 job tests single claim-to-complete; 2 jobs tests ordering/duplicate-key enqueue returns None and double-claim. 0.25 polls densely to maximize interleavings, 1.0 sparsely for completion overwritten or lost update windows.", "workloads": [{"first": {"jobs": 0, "tables": "default"}, "poll_interval_s": 0.25, "second": {"tables": "default"}}, {"first": {"jobs": 2, "tables": "default"}, "poll_interval_s": 0.25, "second": {"tables": "default"}}, {"first": {"jobs": 1, "tables": "default"}, "poll_interval_s": 0.5, "second": {"tables": "alt"}}, {"first": {"jobs": 1, "tables": "alt"}, "poll_interval_s": 0.5, "second": {"tables": "default"}}, {"first": {"jobs": 2, "tables": "alt"}, "poll_interval_s": 1
+
+
+
+
+, "second": {"tables": "alt"}}, {"first": {"jobs": 0, "tables": "alt"}, "poll_interval_s": 1, "second": {"tables": "default"}}]}
