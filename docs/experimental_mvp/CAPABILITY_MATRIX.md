@@ -66,3 +66,14 @@ These are tested statuses, not claims of general support. Every row marked SUPPO
 | Restricted container: runc, internal network, uid 65534, read-only root, all capabilities dropped, PID and memory limits | SUPPORTED for trusted code and pinned, reviewed third-party code |
 | Hostile-grade isolation (gVisor, microVM) | BLOCKED: only runc is available (`isolation_runtime_scan_2`). No unreviewed application code is run |
 | Isolated-runner teardown under SIGINT/SIGTERM (2026-11-06) | FIXED: signals are deferred during teardown and re-delivered (`signal_safe.py`); the regression fails on the unfixed runner. A separate finding; it does not explain the original intermittent failure (`reliability/RESULTS.md`) |
+
+## ds-nbc/1 historical cases and RA-NONBLIND paired runs (2026-11-08/09, NONBLIND)
+
+| Path | Status | Evidence | Boundary |
+|---|---|---|---|
+| Historical fix pairs from pinned public trees, NONBLIND (chancy-2895c4a, pgqueuer-8dfadf4, saq-c570ba4, saq-addee31) | REPRODUCED, LIVE-TESTED; fixed controls hold | `nonblind_corpus/CORPUS_RESULTS.md` | Developer-selected and developer-encoded; saq-addee31 re-encoded post hoc |
+| pgqueuer commit trees (`pgqueuer-cancel-sv/1`, `pgqueuer_hist_adapter`) and saq commit trees (`saq_coord_adapter`) | SUPPORTED for the pinned trees | `nonblind_corpus/{pgqueuer,saq}/` | One declared watcher-poll deviation (pgqueuer); one connection per actor (saq ≥ 0.25) |
+| A fixed control whose fix replaces a deadlock with a lock wait (chancy-b8a77df) | REFUSED by the corroborator (lock wait reorders completion against the grant order) | `nonblind_corpus/chancy/cases/chancy-b8a77df/` | Recorded; the corroborator is not weakened |
+| Parse-time server errors (an ERROR row with no statement row) | REFUSED by the corroborator | `saq-addee31/reproduction_2` | Recorded |
+| RA-NONBLIND paired arms RA-DET / RA-MD under the plan's budgets and the same seeds | LIVE-TESTED on 4 cases | `nonblind_corpus/track_b/RESULTS.md` | INSUFFICIENT SAMPLE; RA-MS, RA-MDS and RA-DET-C not applicable |
+| Same-app D vs M onboarding with fresh AI-operator contexts | LIVE-TESTED, 2 apps × 2 replicates | `onboarding/pilot_2/RESULTS.md` | AI operators, not humans; no claim possible |

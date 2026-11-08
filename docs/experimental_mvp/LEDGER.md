@@ -319,3 +319,48 @@ Account balance was not checked through the API. The Responses API returns per-r
       failed attempts.
 
 **Meta usage in this increment:** none.
+
+## Increment 16 (2026-11-08/09): ds-nbc/1 NONBLIND corpus, RA-NONBLIND paired detection, same-app onboarding
+
+94. **NONBLIND development corpus `ds-nbc/1`** (`nonblind_corpus/`).
+    - **Selection:** the rule and scanner were frozen before the scan. The first scan's `--first-parent` defect was
+      preserved and corrected before any screening.
+    - **Candidates:** 68 (chancy 5, pgqueuer 33, procrastinate 5, saq 25); taskiq-postgresql excluded (no declared
+      repository). 34 screened.
+    - **Cases with a holding control: 4,** each reproducing a documented upstream defect:
+      - chancy-2895c4a (prior exposure);
+      - pgqueuer-8dfadf4;
+      - saq-c570ba4;
+      - saq-addee31 (v2, a disclosed post-hoc re-encoding).
+    - **Not counted:** chancy-b8a77df (REFUSED by the instrument: lock waits reorder statement completion) and
+      saq-ad8d1c8 (CONTROL FAILED).
+    - **Image audit:** every case image matches exactly one tree, file by file.
+95. **Track B RA-NONBLIND paired time-to-detection** (`nonblind_corpus/track_b/`).
+    - **Frozen beforehand:** the manifest, before any RA-MD request; each case's admission, before its first RA-MD
+      request.
+    - **Arms:** RA-MS, RA-MDS and RA-DET-C NOT APPLICABLE (no state stage).
+    - **Result:** RA-DET 4/4 verified detections vs RA-MD 1/4; 0 false positives; exact McNemar p = 0.25;
+      **INSUFFICIENT SAMPLE.**
+    - **Muse:** $0.114168 (8 requests, 48/48 proposals valid).
+96. **onb-pilot/2: same-app D vs M** (AI-OPERATOR, NONBLIND EXPLORATORY).
+    - **Design:** pgtq 0.5.0 and postgres-tq 1.2.1, 2 replicates of both conditions; every session reached S3.
+    - **Disruptions:** replicate 2 was voided by a service usage-limit interruption and replaced by 2b; incident 1
+      (an unlocked suite run) cost one D session two attempts.
+    - **Muse use:** called once in 4 M sessions ($0.016494).
+    - **Result:** no claim is possible (only 2 apps).
+97. **Track D:** Q1–Q4 answered in `nonblind_corpus/MUSE_VALUE.md`: no Muse benefit survived the equal-budget
+    comparisons.
+98. **Track E:** `handoff/REMAINING_HUMAN_ACTIONS.md`, with the verified state. Nothing signed, adopted or
+    registered; real mode refuses.
+99. **Shared code:** `research_tools/isolated/smoke_inside.py` gained two opt-in modes (chancy variant adapter,
+    saq coordinated). Existing behaviour is unchanged, and the isolated suite still passes 14/14.
+100. **Acceptance** (`reliability/acceptance_nbc_1`, at `66c8ba1`):
+     - core 934 passed;
+     - isolated 14 passed;
+     - root without `DATABASE_URL`: 1746 passed, with 322 failing only because it is unset;
+     - Ruff on the source trees clean.
+101. **Environment:** the owner moved the project folders into `~/Desktop/deploy spector/`. Worktrees were repaired
+     with `git worktree repair`, the virtual environments re-synced, and the Meta ledger addressed through
+     `DS_NBC_META_LEDGER`. A stray ledger the move caused was merged into the real one and removed.
+
+**Meta usage in this increment:** $0.130662 estimated (14 settled reservations, 0 refusals), under a $5 cap.
