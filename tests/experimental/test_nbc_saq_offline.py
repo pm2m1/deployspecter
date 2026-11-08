@@ -217,3 +217,17 @@ def test_adapter_refuses_without_declared_pins(monkeypatch):
         sa.installed_version()
     assert set(sa.FUNCTIONS) == {"enqueue", "burst_work", "run_worker"}
     assert sa.EXERCISED == sc.EXERCISED
+
+
+def test_tar_files_names_and_hashes_regular_files_only():
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w") as tf:
+        for name, data in (("saq/a.py", b"x"), ("saq/q/__pycache__/a.pyc", b"y"), ("saq/q/b.py", b"z")):
+            info = tarfile.TarInfo(name)
+            info.size = len(data)
+            tf.addfile(info, io.BytesIO(data))
+        d = tarfile.TarInfo("saq/q")
+        d.type = tarfile.DIRTYPE
+        tf.addfile(d)
+    got = sc.tar_files(buf.getvalue(), "saq")
+    assert got == {"a.py": hashlib.sha256(b"x").hexdigest(), "q/b.py": hashlib.sha256(b"z").hexdigest()}

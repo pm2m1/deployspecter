@@ -29,10 +29,12 @@ import hashlib
 import importlib.util
 import io
 import json
+import os
 import shutil
 import sys
 import tarfile
 import tempfile
+import time
 from pathlib import Path
 from typing import Any
 
@@ -102,10 +104,49 @@ def build_image(archive: Path, sha256: str, work: Path) -> tuple[str, str]:
     for f in sorted(p for p in ctx.rglob("*") if p.is_file()):
         digest.update(str(f.relative_to(ctx)).encode() + b"\0" + f.read_bytes())
     tag = f"ds-mvp-iso:saq-{digest.hexdigest()[:16]}"
+    # Erratum E1 (see the cases' ERRATA.md): a normalized archive gives every file mtime 0, and Docker's build-context
+    # sync reused a stale same-size file from an earlier build. Every context file gets this build's own mtime, and
+    # the built image's saq/ tree is verified file by file against the archive before it is used.
+    stamp = time.time_ns()
+    for f in ctx.rglob("*"):
+        os.utime(f, ns=(stamp, stamp))
     proc = ri.docker("build", "-q", "-t", tag, str(ctx), timeout=900, check=False)
     if proc.returncode != 0:
         raise RuntimeError(f"image build failed: {proc.stderr[-1500:]}")
-    return tag, ri.docker("image", "inspect", "-f", "{{.Id}}", tag).stdout.strip()
+    image_id = ri.docker("image", "inspect", "-f", "{{.Id}}", tag).stdout.strip()
+    if problems := verify_image_tree(image_id, archive, work / "verify"):
+        raise RuntimeError(f"the built image's saq/ isn't the archive's: {problems[:5]}")
+    return tag, image_id
+
+
+def tar_files(data: bytes, strip: str) -> dict[str, str]:
+    """sha256 of every regular file in a tar (read as data), named relative to its ``strip`` directory."""
+    out = {}
+    with tarfile.open(fileobj=io.BytesIO(data)) as tf:
+        for m in tf.getmembers():
+            name = m.name.removeprefix("./")
+            if m.isfile() and "__pycache__" not in name.split("/"):
+                f = tf.extractfile(m)
+                assert f is not None
+                out[name.removeprefix(strip + "/")] = hashlib.sha256(f.read()).hexdigest()
+    return out
+
+
+def verify_image_tree(image_id: str, archive: Path, work: Path) -> list[str]:
+    """Streams /app/src/saq out of a created (never started) container as a tar and compares every file with the
+    archive's."""
+    import subprocess
+
+    import run_isolated as ri
+    cid = ri.docker("create", image_id).stdout.strip()
+    try:
+        proc = subprocess.run(["docker", "cp", f"{cid}:/app/src/saq", "-"], capture_output=True, timeout=120,
+                              check=True)
+    finally:
+        ri.docker("rm", cid, check=False)
+    got, want = tar_files(proc.stdout, "saq"), tar_files(archive.read_bytes(), "saq")
+    return sorted(f"{k}: image {got.get(k, 'missing')[:12]}, archive {want.get(k, 'missing')[:12]}"
+                  for k in set(want) | set(got) if want.get(k) != got.get(k))
 
 
 def prepare(archive: Path, sha256: str, workdir: Path, *, integration: str, rev: str) -> dict[str, Any]:
