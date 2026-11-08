@@ -55,7 +55,8 @@ def declares_psycopg3(repo: Path, commit: str) -> bool:
 
 
 def scan(repo: Path, prefixes: tuple[str, ...]) -> dict:
-    log = git(repo, "log", "--first-parent", "--no-merges", f"--before={END}", "--format=%x1e%H%x1f%cI%x1f%s%x1f%b",
+    # every non-merge commit reachable from HEAD (rule §2)
+    log = git(repo, "log", "--no-merges", f"--before={END}", "--format=%x1e%H%x1f%cI%x1f%s%x1f%b",
               "HEAD")
     commits = [c for c in log.split("\x1e") if c.strip()]
     cands, scanned, in_window = [], 0, 0
