@@ -1,0 +1,101 @@
+{"rationale": "Cover cancellation vs completion races and DB-level concurrency-limit enforcement. 1: cancel while handler in-progress (2 steps) tests best-effort vs overwrite. 2: zero-step handler likely completes before post-claim cancel tests completed-unaffected. 3: inverted enqueue/priority under limit=1 tests priority-first dispatch. 4: 2 workers limit=1 with long handlers tests serialisation/slot uniqueness. 5: 3 jobs 2 workers limit=2 tests max-2 parallelism. 6: cancel of still-queued second job while first runs under limit=1 tests queued-cancel prevents start despite handler ignoring scope.",
+ "workloads": [
+  {
+   "concurrency_limit": 0,
+   "handler_steps": 2,
+   "jobs": [
+    {
+     "cancel": true,
+     "n": 1,
+     "priority": 5
+    }
+   ],
+   "workers": 1
+  },
+  {
+   "concurrency_limit": 0,
+   "handler_steps": 0,
+   "jobs": [
+    {
+     "cancel": true,
+     "n": 2,
+     "priority": 5
+    }
+   ],
+   "workers": 1
+  },
+  {
+   "concurrency_limit": 1,
+   "handler_steps": 1,
+   "jobs": [
+    {
+     "cancel": false,
+     "n": 3,
+     "priority": 0
+    },
+    {
+     "cancel": false,
+     "n": 4,
+     "priority": 9
+    }
+   ],
+   "workers": 1
+  },
+  {
+   "concurrency_limit": 1,
+   "handler_steps": 2,
+   "jobs": [
+    {
+     "cancel": false,
+     "n": 5,
+     "priority": 5
+    },
+    {
+     "cancel": false,
+     "n": 6,
+     "priority": 5
+    }
+   ],
+   "workers": 2
+  },
+  {
+   "concurrency_limit": 2,
+   "handler_steps": 2,
+   "jobs": [
+    {
+     "cancel": false,
+     "n": 0,
+     "priority": 4
+    },
+    {
+     "cancel": false,
+     "n": 1,
+     "priority": 4
+    },
+    {
+     "cancel": false,
+     "n": 2,
+     "priority": 4
+    }
+   ],
+   "workers": 2
+  },
+  {
+   "concurrency_limit": 1,
+   "handler_steps": 1,
+   "jobs": [
+    {
+     "cancel": false,
+     "n": 7,
+     "priority": 9
+    },
+    {
+     "cancel": true,
+     "n": 8,
+     "priority": 1
+    }
+   ],
+   "workers": 2
+  }
+ ]
+}

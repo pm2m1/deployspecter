@@ -1,0 +1,865 @@
+{
+ "protocol": "ds-coord/1",
+ "outcome": "completed",
+ "reason": null,
+ "policy": {
+  "kind": "seeded",
+  "seed": 1441995128
+ },
+ "gates": [
+  {
+   "actor": "w1",
+   "match": null,
+   "until": [
+    {
+     "actor": "setup",
+     "marker": "installed",
+     "count": 1
+    }
+   ]
+  },
+  {
+   "actor": "prod",
+   "match": null,
+   "until": [
+    {
+     "actor": "setup",
+     "marker": "installed",
+     "count": 1
+    }
+   ]
+  },
+  {
+   "actor": "prod",
+   "match": null,
+   "until": [
+    {
+     "actor": "w1",
+     "marker": "fetch",
+     "count": 1
+    }
+   ]
+  },
+  {
+   "actor": "prod",
+   "match": "WITH job_status AS",
+   "until": [
+    {
+     "actor": "w1",
+     "marker": "claim",
+     "count": 1
+    }
+   ]
+  }
+ ],
+ "stop": {
+  "key": "succeeded",
+  "covers": [
+   1
+  ],
+  "after_s": 45
+ },
+ "processes": {
+  "A": {
+   "version": "tree-de03f708aaf1",
+   "run_id": "pgq_hist_A",
+   "monitor_pid": 18715,
+   "actors": {
+    "prod": {
+     "backend_pid": 18718,
+     "handler": "pgqueuer-tree-de03f708aaf1.produce"
+    },
+    "setup": {
+     "backend_pid": 18716,
+     "handler": "pgqueuer-tree-de03f708aaf1.install"
+    },
+    "w1": {
+     "backend_pid": 18717,
+     "handler": "pgqueuer-tree-de03f708aaf1.work"
+    }
+   },
+   "bye": "completed"
+  }
+ },
+ "decisions": [
+  {
+   "decision": 0,
+   "grant": 0,
+   "epoch": 1,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "setup",
+   "source": "seeded",
+   "enabled": [
+    "setup"
+   ],
+   "gated": [
+    "prod",
+    "w1"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "a9e83f206cc9",
+   "sql": "-- pgqueuer 0.0.0 -- prefix='' schema=None durability=durable CREATE TYPE pgqueuer_status AS ENUM ('queued', 'picked', 'successful', 'exception', 'canceled', 'deleted', 'failed'); CREATE TABLE pgqueuer ( id bigserial NOT NULL PRIMARY KEY, priority integer NOT NULL, queue_manager_id uuid, created tim",
+   "t_ms": 110.63
+  },
+  {
+   "decision": 1,
+   "grant": 1,
+   "epoch": 2,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "setup",
+   "source": "seeded",
+   "enabled": [
+    "setup"
+   ],
+   "gated": [
+    "prod",
+    "w1"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "3e16a42b54b1",
+   "sql": "CREATE TABLE IF NOT EXISTS ds_pgq_runs (seq bigserial PRIMARY KEY, job_id bigint NOT NULL, n integer NOT NULL, worker text NOT NULL, exec text NOT NULL, phase text NOT NULL)",
+   "t_ms": 162.36
+  },
+  {
+   "decision": 2,
+   "grant": 2,
+   "epoch": 3,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [
+    "prod"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "77c036eb7e38",
+   "sql": "SELECT EXISTS ( SELECT FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = $1 );",
+   "t_ms": 224.16
+  },
+  {
+   "decision": 3,
+   "grant": 3,
+   "epoch": 4,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [
+    "prod"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "77c036eb7e38",
+   "sql": "SELECT EXISTS ( SELECT FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = $1 );",
+   "t_ms": 277.01
+  },
+  {
+   "decision": 4,
+   "grant": 4,
+   "epoch": 5,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [
+    "prod"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "77c036eb7e38",
+   "sql": "SELECT EXISTS ( SELECT FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = $1 );",
+   "t_ms": 334.72
+  },
+  {
+   "decision": 5,
+   "grant": 5,
+   "epoch": 6,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [
+    "prod"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "cfa1b6723a3e",
+   "sql": "SELECT EXISTS ( SELECT FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = $1 AND column_name = $2 );",
+   "t_ms": 386.71
+  },
+  {
+   "decision": 6,
+   "grant": 6,
+   "epoch": 7,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [
+    "prod"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "cfa1b6723a3e",
+   "sql": "SELECT EXISTS ( SELECT FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = $1 AND column_name = $2 );",
+   "t_ms": 440.32
+  },
+  {
+   "decision": 7,
+   "grant": 7,
+   "epoch": 8,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [
+    "prod"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "cfa1b6723a3e",
+   "sql": "SELECT EXISTS ( SELECT FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = $1 AND column_name = $2 );",
+   "t_ms": 498.3
+  },
+  {
+   "decision": 8,
+   "grant": 8,
+   "epoch": 9,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [
+    "prod"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "cfa1b6723a3e",
+   "sql": "SELECT EXISTS ( SELECT FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = $1 AND column_name = $2 );",
+   "t_ms": 556.87
+  },
+  {
+   "decision": 9,
+   "grant": 9,
+   "epoch": 10,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [
+    "prod"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "cfa1b6723a3e",
+   "sql": "SELECT EXISTS ( SELECT FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = $1 AND column_name = $2 );",
+   "t_ms": 615.35
+  },
+  {
+   "decision": 10,
+   "grant": 10,
+   "epoch": 11,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [
+    "prod"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "cfa1b6723a3e",
+   "sql": "SELECT EXISTS ( SELECT FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = $1 AND column_name = $2 );",
+   "t_ms": 668.87
+  },
+  {
+   "decision": 11,
+   "grant": 11,
+   "epoch": 12,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [
+    "prod"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "cfa1b6723a3e",
+   "sql": "SELECT EXISTS ( SELECT FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = $1 AND column_name = $2 );",
+   "t_ms": 720.72
+  },
+  {
+   "decision": 12,
+   "grant": 12,
+   "epoch": 13,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [
+    "prod"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "cfa1b6723a3e",
+   "sql": "SELECT EXISTS ( SELECT FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = $1 AND column_name = $2 );",
+   "t_ms": 783.15
+  },
+  {
+   "decision": 13,
+   "grant": 13,
+   "epoch": 14,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [
+    "prod"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "56884c9dd2eb",
+   "sql": "SELECT enumlabel, typname FROM pg_enum JOIN pg_type ON pg_enum.enumtypid = pg_type.oid",
+   "t_ms": 835.89
+  },
+  {
+   "decision": 14,
+   "grant": 14,
+   "epoch": 15,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [
+    "prod"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "56884c9dd2eb",
+   "sql": "SELECT enumlabel, typname FROM pg_enum JOIN pg_type ON pg_enum.enumtypid = pg_type.oid",
+   "t_ms": 888.23
+  },
+  {
+   "decision": 15,
+   "grant": 15,
+   "epoch": 16,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [
+    "prod"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "1834bf18678c",
+   "sql": "SELECT EXISTS ( SELECT 1 FROM pg_indexes WHERE tablename = $1 AND indexname = $2 AND schemaname = current_schema() );",
+   "t_ms": 940.51
+  },
+  {
+   "decision": 16,
+   "grant": 16,
+   "epoch": 17,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [
+    "prod"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "1834bf18678c",
+   "sql": "SELECT EXISTS ( SELECT 1 FROM pg_indexes WHERE tablename = $1 AND indexname = $2 AND schemaname = current_schema() );",
+   "t_ms": 995.9
+  },
+  {
+   "decision": 17,
+   "grant": 17,
+   "epoch": 18,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [
+    "prod"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "bc4cfffa3206",
+   "sql": "LISTEN \"ch_pgqueuer\"",
+   "t_ms": 1056.62
+  },
+  {
+   "decision": 18,
+   "grant": 18,
+   "epoch": 19,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [
+    "prod"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "f7599bbef8c3",
+   "sql": "SELECT pg_notify($1, $2)",
+   "t_ms": 1108.97
+  },
+  {
+   "decision": 19,
+   "grant": 19,
+   "epoch": 20,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [
+    "prod"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "816ec3dd12d7",
+   "sql": "WITH -- No entrypoint carries a concurrency limit; all are available. available AS ( SELECT UNNEST($2::text[]) AS entrypoint ), -- New queued jobs; LATERAL hits the (entrypoint, priority, id) index. next_queued AS ( SELECT job.id, job.priority FROM available CROSS JOIN LATERAL ( SELECT candidate.id,",
+   "t_ms": 1162.61
+  },
+  {
+   "decision": 20,
+   "grant": 20,
+   "epoch": 21,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "prod",
+   "source": "seeded",
+   "enabled": [
+    "prod",
+    "w1"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "8f78678778e8",
+   "sql": "WITH input AS MATERIALIZED ( -- MATERIALIZED: nextval is volatile and `input` is referenced twice, -- so pin single evaluation -- each input row gets exactly one id. -- The scalar sub-select resolves the sequence name once (InitPlan) -- rather than a catalog lookup per row. -- Skipped ON CONFLICT ro",
+   "t_ms": 1222.02
+  },
+  {
+   "decision": 21,
+   "grant": 21,
+   "epoch": 22,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [
+    "prod"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "64056a6a247c",
+   "sql": "SELECT COUNT(*) AS queued_work FROM ( SELECT 1 FROM pgqueuer WHERE entrypoint = ANY($1) AND status = 'queued' AND execute_after <= NOW() LIMIT 1 ) sub",
+   "t_ms": 1276.75
+  },
+  {
+   "decision": 22,
+   "grant": 22,
+   "epoch": 23,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [
+    "prod"
+   ],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "816ec3dd12d7",
+   "sql": "WITH -- No entrypoint carries a concurrency limit; all are available. available AS ( SELECT UNNEST($2::text[]) AS entrypoint ), -- New queued jobs; LATERAL hits the (entrypoint, priority, id) index. next_queued AS ( SELECT job.id, job.priority FROM available CROSS JOIN LATERAL ( SELECT candidate.id,",
+   "t_ms": 1329.0
+  },
+  {
+   "decision": 23,
+   "grant": 23,
+   "epoch": 24,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "prod",
+    "w1"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "816ec3dd12d7",
+   "sql": "WITH -- No entrypoint carries a concurrency limit; all are available. available AS ( SELECT UNNEST($2::text[]) AS entrypoint ), -- New queued jobs; LATERAL hits the (entrypoint, priority, id) index. next_queued AS ( SELECT job.id, job.priority FROM available CROSS JOIN LATERAL ( SELECT candidate.id,",
+   "t_ms": 1398.45
+  },
+  {
+   "decision": 24,
+   "grant": 24,
+   "epoch": 25,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "prod",
+   "source": "seeded",
+   "enabled": [
+    "prod",
+    "w1"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "830b0c548883",
+   "sql": "WITH job_status AS ( SELECT UNNEST($1::bigint[]) AS id, UNNEST($2::pgqueuer_status[]) AS status, UNNEST($3::JSONB[]) AS traceback, UNNEST($4::uuid[]) AS queue_manager_id ), deleted AS ( DELETE FROM pgqueuer q USING job_status js WHERE q.id = js.id AND js.status != 'failed' AND ( q.queue_manager_id =",
+   "t_ms": 1449.98
+  },
+  {
+   "decision": 25,
+   "grant": 25,
+   "epoch": 26,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "prod",
+   "source": "seeded",
+   "enabled": [
+    "prod",
+    "w1"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "f7599bbef8c3",
+   "sql": "SELECT pg_notify($1, $2)",
+   "t_ms": 1505.98
+  },
+  {
+   "decision": 26,
+   "grant": 26,
+   "epoch": 27,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "ed24247c3b49",
+   "sql": "INSERT INTO ds_pgq_runs (job_id, n, worker, exec, phase) VALUES ($1, $2, $3, $4, $5)",
+   "t_ms": 1558.7
+  },
+  {
+   "decision": 27,
+   "grant": 27,
+   "epoch": 28,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "64056a6a247c",
+   "sql": "SELECT COUNT(*) AS queued_work FROM ( SELECT 1 FROM pgqueuer WHERE entrypoint = ANY($1) AND status = 'queued' AND execute_after <= NOW() LIMIT 1 ) sub",
+   "t_ms": 1615.94
+  },
+  {
+   "decision": 28,
+   "grant": 28,
+   "epoch": 29,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "ed24247c3b49",
+   "sql": "INSERT INTO ds_pgq_runs (job_id, n, worker, exec, phase) VALUES ($1, $2, $3, $4, $5)",
+   "t_ms": 1675.35
+  },
+  {
+   "decision": 29,
+   "grant": 29,
+   "epoch": 30,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "39b679bc7562",
+   "sql": "SELECT execute_after - NOW() AS eta FROM pgqueuer WHERE status = 'queued' AND execute_after > NOW() AND entrypoint = ANY($1) ORDER BY execute_after LIMIT 1",
+   "t_ms": 1731.04
+  },
+  {
+   "decision": 30,
+   "grant": 30,
+   "epoch": 31,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "ed24247c3b49",
+   "sql": "INSERT INTO ds_pgq_runs (job_id, n, worker, exec, phase) VALUES ($1, $2, $3, $4, $5)",
+   "t_ms": 1783.19
+  },
+  {
+   "decision": 31,
+   "grant": 31,
+   "epoch": 32,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "5b842964f63e",
+   "sql": "SELECT COUNT(*) AS queued_work FROM ( SELECT 1 FROM pgqueuer WHERE entrypoint = ANY($1) AND status = 'queued' LIMIT 1 ) sub",
+   "t_ms": 1836.8
+  },
+  {
+   "decision": 32,
+   "grant": 32,
+   "epoch": 33,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "ed24247c3b49",
+   "sql": "INSERT INTO ds_pgq_runs (job_id, n, worker, exec, phase) VALUES ($1, $2, $3, $4, $5)",
+   "t_ms": 1897.65
+  },
+  {
+   "decision": 33,
+   "grant": 33,
+   "epoch": 34,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "816ec3dd12d7",
+   "sql": "WITH -- No entrypoint carries a concurrency limit; all are available. available AS ( SELECT UNNEST($2::text[]) AS entrypoint ), -- New queued jobs; LATERAL hits the (entrypoint, priority, id) index. next_queued AS ( SELECT job.id, job.priority FROM available CROSS JOIN LATERAL ( SELECT candidate.id,",
+   "t_ms": 1953.65
+  },
+  {
+   "decision": 34,
+   "grant": 34,
+   "epoch": 35,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "830b0c548883",
+   "sql": "WITH job_status AS ( SELECT UNNEST($1::bigint[]) AS id, UNNEST($2::pgqueuer_status[]) AS status, UNNEST($3::JSONB[]) AS traceback, UNNEST($4::uuid[]) AS queue_manager_id ), deleted AS ( DELETE FROM pgqueuer q USING job_status js WHERE q.id = js.id AND js.status != 'failed' AND ( q.queue_manager_id =",
+   "t_ms": 2007.25
+  },
+  {
+   "decision": 35,
+   "grant": 35,
+   "epoch": 36,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "64056a6a247c",
+   "sql": "SELECT COUNT(*) AS queued_work FROM ( SELECT 1 FROM pgqueuer WHERE entrypoint = ANY($1) AND status = 'queued' AND execute_after <= NOW() LIMIT 1 ) sub",
+   "t_ms": 2064.24
+  },
+  {
+   "decision": 36,
+   "grant": 36,
+   "epoch": 37,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "39b679bc7562",
+   "sql": "SELECT execute_after - NOW() AS eta FROM pgqueuer WHERE status = 'queued' AND execute_after > NOW() AND entrypoint = ANY($1) ORDER BY execute_after LIMIT 1",
+   "t_ms": 2123.14
+  },
+  {
+   "decision": 37,
+   "grant": 37,
+   "epoch": 38,
+   "process": "A",
+   "version": "tree-de03f708aaf1",
+   "actor": "w1",
+   "source": "seeded",
+   "enabled": [
+    "w1"
+   ],
+   "gated": [],
+   "blocked": {},
+   "kind": "execute",
+   "statement_id": "5b842964f63e",
+   "sql": "SELECT COUNT(*) AS queued_work FROM ( SELECT 1 FROM pgqueuer WHERE entrypoint = ANY($1) AND status = 'queued' LIMIT 1 ) sub",
+   "t_ms": 2175.0
+  }
+ ],
+ "statements": {
+  "a9e83f206cc9": "-- pgqueuer 0.0.0 -- prefix='' schema=None durability=durable CREATE TYPE pgqueuer_status AS ENUM ('queued', 'picked', 'successful', 'exception', 'canceled', 'deleted', 'failed'); CREATE TABLE pgqueuer ( id bigserial NOT NULL PRIMARY KEY, priority integer NOT NULL, queue_manager_id uuid, created timestamp with time zone NOT NULL DEFAULT now(), updated timestamp with time zone NOT NULL DEFAULT now(), heartbeat timestamp with time zone NOT NULL DEFAULT now(), execute_after timestamp with time zone NOT NULL DEFAULT now(), status pgqueuer_status NOT NULL, entrypoint text NOT NULL, dedupe_key text, payload bytea, headers jsonb, attempts integer NOT NULL DEFAULT 0, slot bigint ); CREATE TABLE pgqueuer_log ( id bigint GENERATED BY DEFAULT AS IDENTITY NOT NULL PRIMARY KEY, created timestamp with time zone NOT NULL DEFAULT now(), job_id bigint NOT NULL, status pgqueuer_status NOT NULL, priority integer NOT NULL, entrypoint text NOT NULL, traceback jsonb, aggregated boolean DEFAULT false ); CREATE TABLE pgqueuer_schedules ( id bigserial NOT NULL PRIMARY KEY, expression text NOT NULL, entrypoint text NOT NULL, heartbeat timestamp with time zone NOT NULL DEFAULT now(), created timestamp with time zone NOT NULL DEFAULT now(), updated timestamp with time zone NOT NULL DEFAULT now(), next_run timestamp with time zone NOT NULL DEFAULT now(), last_run timestamp with time zone, status pgqueuer_status DEFAULT 'queued'::pgqueuer_status, UNIQUE (expression, entrypoint) ); CREATE TABLE pgqueuer_statistics ( id bigserial NOT NULL PRIMARY KEY, created timestamp with time zone NOT NULL DEFAULT date_trunc('sec'::text, now()), count bigint NOT NULL, priority integer NOT NULL, status pgqueuer_status NOT NULL, entrypoint text NOT NULL ); CREATE INDEX pgqueuer_ep_ea_idx ON pgqueuer USING btree (entrypoint, execute_after) WHERE (status = 'queued'::pgqueuer_status); CREATE INDEX pgqueuer_ep_prio_id_idx ON pgqueuer USING btree (entrypoint, priority DESC, id) WHERE (status = 'queued'::pgqueuer_statu",
+  "3e16a42b54b1": "CREATE TABLE IF NOT EXISTS ds_pgq_runs (seq bigserial PRIMARY KEY, job_id bigint NOT NULL, n integer NOT NULL, worker text NOT NULL, exec text NOT NULL, phase text NOT NULL)",
+  "77c036eb7e38": "SELECT EXISTS ( SELECT FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = $1 );",
+  "cfa1b6723a3e": "SELECT EXISTS ( SELECT FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = $1 AND column_name = $2 );",
+  "56884c9dd2eb": "SELECT enumlabel, typname FROM pg_enum JOIN pg_type ON pg_enum.enumtypid = pg_type.oid",
+  "1834bf18678c": "SELECT EXISTS ( SELECT 1 FROM pg_indexes WHERE tablename = $1 AND indexname = $2 AND schemaname = current_schema() );",
+  "bc4cfffa3206": "LISTEN \"ch_pgqueuer\"",
+  "f7599bbef8c3": "SELECT pg_notify($1, $2)",
+  "816ec3dd12d7": "WITH -- No entrypoint carries a concurrency limit; all are available. available AS ( SELECT UNNEST($2::text[]) AS entrypoint ), -- New queued jobs; LATERAL hits the (entrypoint, priority, id) index. next_queued AS ( SELECT job.id, job.priority FROM available CROSS JOIN LATERAL ( SELECT candidate.id, candidate.priority FROM pgqueuer candidate WHERE candidate.entrypoint = available.entrypoint AND candidate.status = 'queued' AND candidate.execute_after < NOW() ORDER BY candidate.priority DESC, candidate.id ASC LIMIT $1 FOR UPDATE SKIP LOCKED ) job ORDER BY job.priority DESC, job.id ASC LIMIT $1 ), -- Stale picked jobs whose heartbeat timed out. next_stale AS ( SELECT stale.id, stale.priority FROM pgqueuer stale WHERE stale.status = 'picked' AND stale.entrypoint = ANY($2) AND stale.heartbeat < NOW() - $4::interval AND stale.execute_after < NOW() ORDER BY stale.priority DESC, stale.id ASC FOR UPDATE SKIP LOCKED LIMIT $1 ), -- Merge both sets into one priority order so stale competes with fresh. eligible AS ( SELECT id FROM ( SELECT id, priority FROM next_queued UNION ALL SELECT id, priority FROM next_stale ) combined ORDER BY priority DESC, id ASC LIMIT $1 ), -- Claim every eligible job in one atomic UPDATE. claimed AS ( UPDATE pgqueuer SET status = 'picked', updated = NOW(), heartbeat = NOW(), queue_manager_id = $3 WHERE id IN (SELECT id FROM eligible) RETURNING * ), -- Record the pick in the log table. log_pick AS ( INSERT INTO pgqueuer_log (job_id, status, entrypoint, priority) SELECT id, status, entrypoint, priority FROM claimed ) SELECT * FROM claimed ORDER BY priority DESC, id ASC;",
+  "8f78678778e8": "WITH input AS MATERIALIZED ( -- MATERIALIZED: nextval is volatile and `input` is referenced twice, -- so pin single evaluation -- each input row gets exactly one id. -- The scalar sub-select resolves the sequence name once (InitPlan) -- rather than a catalog lookup per row. -- Skipped ON CONFLICT rows leave harmless id gaps; a pre-count CTE -- could avoid them but isn't worth the extra pass. SELECT nextval( (SELECT pg_get_serial_sequence('pgqueuer', 'id')) ) AS id, priority, entrypoint, payload, execute_after, dedupe_key, headers, ord FROM UNNEST( $1::int[], $2::text[], $3::bytea[], $4::interval[], $5::text[], $6::jsonb[] ) WITH ORDINALITY AS t(priority, entrypoint, payload, execute_after, dedupe_key, headers, ord) ), inserted AS ( INSERT INTO pgqueuer AS job (id, priority, entrypoint, payload, execute_after, dedupe_key, headers, status) SELECT id, priority, entrypoint, payload, execute_after + NOW(), dedupe_key, headers, 'queued' FROM input RETURNING id, entrypoint, priority, dedupe_key ), logged AS ( INSERT INTO pgqueuer_log (job_id, status, entrypoint, priority) SELECT id, 'queued', entrypoint, priority FROM inserted -- A job whose priority was updated was queued before; log new jobs only. WHERE id IN (SELECT id FROM input) ) -- Join maps each surviving id back to its input ordinal. Rows skipped by -- ON CONFLICT are absent from `inserted`, so their positions never appear. SELECT i.ord AS ord, ins.id AS id FROM inserted ins JOIN input i ON i.id = ins.id ORDER BY i.ord",
+  "64056a6a247c": "SELECT COUNT(*) AS queued_work FROM ( SELECT 1 FROM pgqueuer WHERE entrypoint = ANY($1) AND status = 'queued' AND execute_after <= NOW() LIMIT 1 ) sub",
+  "830b0c548883": "WITH job_status AS ( SELECT UNNEST($1::bigint[]) AS id, UNNEST($2::pgqueuer_status[]) AS status, UNNEST($3::JSONB[]) AS traceback, UNNEST($4::uuid[]) AS queue_manager_id ), deleted AS ( DELETE FROM pgqueuer q USING job_status js WHERE q.id = js.id AND js.status != 'failed' AND ( q.queue_manager_id = js.queue_manager_id OR (js.queue_manager_id IS NULL AND q.status <> 'picked') ) RETURNING q.id, q.entrypoint, q.priority ), held AS ( UPDATE pgqueuer q SET status = 'failed', updated = NOW(), queue_manager_id = NULL FROM job_status js WHERE q.id = js.id AND js.status = 'failed' AND (js.queue_manager_id IS NULL OR q.queue_manager_id = js.queue_manager_id) RETURNING q.id, q.entrypoint, q.priority ), all_resolved AS ( SELECT id, entrypoint, priority FROM deleted UNION ALL SELECT id, entrypoint, priority FROM held ), merged AS ( SELECT job_status.id AS id, job_status.status AS status, job_status.traceback AS traceback, all_resolved.entrypoint AS entrypoint, all_resolved.priority AS priority FROM job_status INNER JOIN all_resolved ON all_resolved.id = job_status.id ) INSERT INTO pgqueuer_log ( job_id, status, entrypoint, priority, traceback ) SELECT id, status, entrypoint, priority, traceback FROM merged",
+  "ed24247c3b49": "INSERT INTO ds_pgq_runs (job_id, n, worker, exec, phase) VALUES ($1, $2, $3, $4, $5)",
+  "39b679bc7562": "SELECT execute_after - NOW() AS eta FROM pgqueuer WHERE status = 'queued' AND execute_after > NOW() AND entrypoint = ANY($1) ORDER BY execute_after LIMIT 1",
+  "5b842964f63e": "SELECT COUNT(*) AS queued_work FROM ( SELECT 1 FROM pgqueuer WHERE entrypoint = ANY($1) AND status = 'queued' LIMIT 1 ) sub"
+ },
+ "events": [
+  {
+   "event": "start",
+   "t_ms": 110.47,
+   "pids": {
+    "18718": "prod",
+    "18716": "setup",
+    "18717": "w1"
+   }
+  },
+  {
+   "event": "stop",
+   "why": "covered",
+   "at_grant": 33,
+   "t_ms": 1953.52
+  },
+  {
+   "event": "bye",
+   "process": "A",
+   "t_ms": 2358.0
+  },
+  {
+   "event": "end",
+   "t_ms": 2358.01
+  }
+ ],
+ "grants": 38,
+ "elapsed_ms": 2358.01
+}
