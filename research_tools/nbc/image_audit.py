@@ -29,14 +29,19 @@ def image_files(image, pkg):
                 out[m.name] = hashlib.sha256(t.extractfile(m).read()).hexdigest()
     return out
 
-pkg, image, *archives = sys.argv[1:]
-img = image_files(image, pkg)
-res = {"image": image, "files_in_image": len(img), "vs": {}}
-for a in archives:
-    arc = archive_files(a, pkg)
-    common = set(arc) & set(img)
-    diff = sorted(f for f in common if arc[f] != img[f])
-    res["vs"][a.rsplit("/", 2)[-2] + "/" + a.rsplit("/", 1)[-1]] = {
-        "archive_files": len(arc), "missing_in_image": len(set(arc) - set(img)),
-        "extra_in_image": len(set(img) - set(arc)), "differing": len(diff), "differing_files": diff[:6]}
-print(json.dumps(res))
+def main() -> None:
+    pkg, image, *archives = sys.argv[1:]
+    img = image_files(image, pkg)
+    res = {"image": image, "files_in_image": len(img), "vs": {}}
+    for a in archives:
+        arc = archive_files(a, pkg)
+        common = set(arc) & set(img)
+        diff = sorted(f for f in common if arc[f] != img[f])
+        res["vs"][a.rsplit("/", 2)[-2] + "/" + a.rsplit("/", 1)[-1]] = {
+            "archive_files": len(arc), "missing_in_image": len(set(arc) - set(img)),
+            "extra_in_image": len(set(img) - set(arc)), "differing": len(diff), "differing_files": diff[:6]}
+    print(json.dumps(res))
+
+
+if __name__ == "__main__":
+    main()
