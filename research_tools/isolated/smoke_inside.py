@@ -6,7 +6,7 @@
    Reset, initial-state verification, the oracle and the server-log corroboration happen on the host.
 
 Reads only DS_PG_HOST, DS_PG_PORT, DS_PG_USER, DS_PG_PASSWORD, DS_PG_DB, DS_SCHEDULE, DS_VARIANT,
-DS_MODE and DS_SCHEMA.
+DS_MODE and DS_SCHEMA (and, for the Chancy modes, the optional DS_CHANCY_ADAPTER: see ``_variant_functions``).
 """
 
 from __future__ import annotations
@@ -242,6 +242,21 @@ async def chancy_runtime() -> dict:
     return {"monitor_pid": r.monitor_pid, "trace": trace.to_dict(), "raw_results": trace.raw_results}
 
 
+# Declared variant adapters (ds-nbc/1). Importing one registers its pinned trees with ``chancy_adapter``; its phase
+# functions join the whitelist. With DS_CHANCY_ADAPTER unset, nothing is imported and nothing changes.
+VARIANT_ADAPTERS = ("chancy_adapter_nbc",)
+
+
+def _variant_functions(kind: str) -> dict:
+    name = os.environ.get("DS_CHANCY_ADAPTER")
+    if not name:
+        return {}
+    if name not in VARIANT_ADAPTERS:
+        raise SystemExit(f"unknown chancy adapter variant {name!r}")
+    import importlib
+    return dict(getattr(importlib.import_module(f"deployspecter.experimental.thirdparty.{name}"), kind))
+
+
 async def chancy_plan() -> dict:
     """The mixed-version pilot: a plan (DS_CHANCY_PLAN, JSON) of stepped runs, each a list of actors that call one of
     the adapter's whitelisted phase functions with JSON arguments. Whichever pinned chancy release this image holds
@@ -253,7 +268,7 @@ async def chancy_plan() -> dict:
     from deployspecter.experimental.thirdparty import chancy_adapter as ca
 
     functions = {"setup": ca.phase_setup, "migrate": ca.phase_migrate, "push": ca.phase_push, "work": ca.phase_work,
-                 "co_setup": ca.co_setup}
+                 "co_setup": ca.co_setup, **_variant_functions("PLAN_FUNCTIONS")}
 
     class CaptureHandler(Handler):
         def allows(self, text: str) -> bool:
@@ -307,7 +322,7 @@ async def chancy_coordinated() -> dict:
     from deployspecter.experimental.stepping_async import async_actor_connection_factory
     from deployspecter.experimental.thirdparty import chancy_adapter as ca
 
-    functions = {"work": ca.co_work, "push": ca.co_push}
+    functions = {"work": ca.co_work, "push": ca.co_push, **_variant_functions("COORDINATED_FUNCTIONS")}
 
     class CaptureHandler(Handler):
         def allows(self, text: str) -> bool:
