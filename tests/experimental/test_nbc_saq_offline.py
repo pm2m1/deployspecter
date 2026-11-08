@@ -231,3 +231,44 @@ def test_tar_files_names_and_hashes_regular_files_only():
         tf.addfile(d)
     got = sc.tar_files(buf.getvalue(), "saq")
     assert got == {"a.py": hashlib.sha256(b"x").hexdigest(), "q/b.py": hashlib.sha256(b"z").hexdigest()}
+
+
+# ------------------------------------------------------------------- saq-addee31 v2 (attempt 3 onward, ERRATA E2)
+import saq_two_queues_addee31_v2 as twoq2  # noqa: E402
+
+
+def test_v2_interface_schema_and_leaks():
+    ws = twoq2.workloads("RA-DET")
+    assert len(ws) == 3 and all(twoq2.validate(w) == [] for w in ws)
+    with pytest.raises(ValueError):
+        twoq2.workloads("RA-MD")
+    assert sc.strict(twoq2.WORKLOAD_JSON_SCHEMA) == []
+    assert twoq2.validate({**ws[0], "second": {"tables": "alt", "jobs": 1}})
+    text = json.dumps(twoq2.MUSE_CONTEXT)
+    assert all(h not in text and h[:7] not in text for h in ALL_FIX_HASHES)
+    assert not (words(twoq2.MUSE_CONTEXT) & set(FIX_WORDS["saq-addee31"]["words"])) - ALLOWED_OVERLAP["saq-addee31"]
+    s = sh.two_queues_v2_spec(ws[0])
+    assert s["processes"]["A"][1]["args"] == {"tables": "alt", "ns": []}
+    assert s["gates"] == sh.two_queues_spec({**ws[0], "second": {"tables": "alt", "jobs": 1}})["gates"]
+    assert twoq2.REVS == twoq.REVS
+
+
+def test_v2_spec_and_oracle():
+    spec = json.loads((CASES / "saq-addee31" / "case_spec_v2.json").read_text())
+    assert spec["integration"] == "research_tools/nbc/integrations/saq_two_queues_addee31_v2.py"
+    assert spec["label"] == "NONBLIND development"
+    v1 = json.loads((CASES / "saq-addee31" / "case_spec.json").read_text())
+    assert {k: spec[k] for k in ("R1", "R2", "upstream", "case_id")} == {k: v1[k] for k in ("R1", "R2", "upstream",
+                                                                                           "case_id")}
+    p = ROOT / spec["oracle"]["path"]
+    o = sc.load_oracle(p, spec["oracle"]["sha256"])
+    first = {"tables": "default", "ns": [0], "connected": True, "enqueued": ["default-0"], "db_error": None}
+    second = {"tables": "alt", "ns": [], "connected": True, "enqueued": [], "db_error": None}
+    both = {"tables": ["saq_alt_jobs", "saq_alt_stats", "saq_alt_versions", "saq_jobs", "saq_stats", "saq_versions"],
+            "jobs": {"saq_jobs": [{"key": "default-0"}], "saq_alt_jobs": []}}
+    only = {"tables": ["saq_jobs", "saq_stats", "saq_versions"], "jobs": {"saq_jobs": [{"key": "default-0"}]}}
+    assert o.check(both, {"first": first, "second": second}) == "HOLDS"
+    assert o.check(only, {"first": first, "second": second}) == "VIOLATED"
+    assert o.check(only, {"first": first, "second": {**second, "tables": "default"}}) == "HOLDS"
+    assert o.check(both, {"first": first, "second": {**second, "db_error": "X: y"}}) == "VIOLATED"
+    assert o.check(both, {"first": {**first, "db_error": "X: y"}, "second": second}) == "NO_VERDICT"

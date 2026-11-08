@@ -210,3 +210,53 @@ TWO_QUEUES_REGISTRY = {
     "argument_ranges": {"first.tables": TABLE_SETS, "first.jobs": "0..2", "second.tables": TABLE_SETS,
                         "second.jobs": "1..3", "poll_interval_s": TWO_POLLS},
     "constants": "both queues share one schema; every other PostgresQueue argument is its default; poll_interval > 0."}
+
+# ------------------------------------------------------------------------- two queues, v2 (added after a live run)
+# The same deployment as ``two_queues``, but the second queue only starts (its ``connect``) and issues no statement of
+# its own afterwards, so the run can't depend on corroborating a statement the server rejects while parsing it. The
+# property is decided on the state its ``connect`` left. ``two_queues`` above is unchanged (earlier attempts use it).
+
+TWO_QUEUES_V2_SCHEMA: dict[str, Any] = {
+    "type": "object", "additionalProperties": False, "required": ["first", "second", "poll_interval_s"],
+    "properties": {
+        "first": {"type": "object", "additionalProperties": False, "required": ["tables", "jobs"],
+                  "properties": {"tables": {"type": "string", "enum": TABLE_SETS},
+                                 "jobs": {"type": "integer", "minimum": 0, "maximum": 2}}},
+        "second": {"type": "object", "additionalProperties": False, "required": ["tables"],
+                   "properties": {"tables": {"type": "string", "enum": TABLE_SETS}}},
+        "poll_interval_s": {"type": "number", "enum": TWO_POLLS}}}
+
+
+def two_queues_v2_validate(w: Any) -> list[str]:
+    if not isinstance(w, dict) or set(w) != {"first", "second", "poll_interval_s"}:
+        return ["exactly first, second and poll_interval_s"]
+    p = []
+    f, s = w["first"], w["second"]
+    if not isinstance(f, dict) or set(f) != {"tables", "jobs"}:
+        p.append("first: exactly tables and jobs")
+    else:
+        if f["tables"] not in TABLE_SETS:
+            p.append(f"first.tables: one of {TABLE_SETS}")
+        if not _int(f["jobs"], 0, 2):
+            p.append("first.jobs: an int in 0..2")
+    if not isinstance(s, dict) or set(s) != {"tables"}:
+        p.append("second: exactly tables")
+    elif s["tables"] not in TABLE_SETS:
+        p.append(f"second.tables: one of {TABLE_SETS}")
+    if not _num_in(w["poll_interval_s"], TWO_POLLS):
+        p.append(f"poll_interval_s: one of {TWO_POLLS}")
+    return p
+
+
+def two_queues_v2_spec(w: dict[str, Any]) -> dict[str, Any]:
+    s = two_queues_spec({**w, "second": {"tables": w["second"]["tables"], "jobs": 1}})
+    s["processes"]["A"][1]["args"]["ns"] = []  # the second queue only connects
+    return s
+
+
+TWO_QUEUES_V2_REGISTRY = {
+    **TWO_QUEUES_REGISTRY,
+    "operations": {**TWO_QUEUES_REGISTRY["operations"],
+                   "second.enqueue": "PostgresQueue(pool, **table_set) connect(), then disconnect(); nothing else."},
+    "argument_ranges": {"first.tables": TABLE_SETS, "first.jobs": "0..2", "second.tables": TABLE_SETS,
+                        "poll_interval_s": TWO_POLLS}}
