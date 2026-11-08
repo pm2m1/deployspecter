@@ -1,0 +1,62 @@
+{
+ "accounting": "every Muse proposal stays in the denominator (executor invalid_proposals); runs are never retried; REFUSED and INCOMPLETE are final; transport failures count against R",
+ "admission": "every Track A case classified REPRODUCED or NOT REPRODUCED, logged before its first RA-MD request; REFUSED and CONTROL FAILED cases are reported only",
+ "analysis": {
+  "post_hoc": "anything not listed here is labelled POST-HOC",
+  "primary": "case-level detection RA-MD vs RA-DET (exact McNemar), schedules to first verified detection (paired Gehan sign test, censored at B), via paired_eval.py",
+  "uncertainty": "exact Clopper-Pearson 95% intervals: per-arm detection rate; discordant split",
+  "unit": "the historical case; seeds and replicates are never cases",
+  "verdict_rule": "paired_eval: INSUFFICIENT SAMPLE below 10 paired defect cases; no claim of significance otherwise unless p < 0.05"
+ },
+ "arm_definitions": "AMENDMENT_003_DRAFT_v2.md \u00a72, unchanged: RA-DET = curated workloads and/or the systematic grid (exactly 3 per case, frozen per case before its first live run); RA-MD = validated Muse workload proposals",
+ "arm_order": "per case: sha256(case_id) first byte even -> RA-DET then RA-MD; odd -> RA-MD then RA-DET (image builds are outside the timed region in both orders)",
+ "arms_not_applicable": {
+  "RA-DET-C": "draft v2 \u00a72: RA-DET's goals with the constructor replaced by literal translation. There is no constructor in these integrations to replace, so the control has nothing to isolate.",
+  "RA-MDS": "draft v2 \u00a72: Muse proposals plus Muse state goals through the constructor. No state-goal stage (as RA-MS), so it would only relabel RA-MD.",
+  "RA-MS": "draft v2 \u00a72: RA-DET's drivers with Muse state goals through the deterministic constructor. These integrations have no state-goal stage: all initial state is created by the workload's own public API calls (push, enqueue, cancel) inside the run. A Muse-state arm would only relabel RA-DET."
+ },
+ "arms_run": [
+  "RA-DET",
+  "RA-MD"
+ ],
+ "budgets": {
+  "B": 12,
+  "C_usd_per_case_arm": 1.0,
+  "C_usd_per_evaluation": 10.0,
+  "P": 6,
+  "R": 2,
+  "T_seconds": 900,
+  "deterministic_model_budget": 0,
+  "max_grants": 1000,
+  "replicates": 3,
+  "source": "PROSPECTIVE_MUSE_PLAN.md \u00a75, unchanged"
+ },
+ "code_sha256": {
+  "docs/experimental_mvp/nonblind_corpus/SELECTION_RULE.md": "0b567517b3842da2d1266a01aec07285a9cc905bd7d466e9d1a40019a2e82d8b",
+  "docs/experimental_mvp/protocol/PROSPECTIVE_MUSE_PLAN.md": "a0b72c99d674040c2ce1e6cd789754eb7c3bc461d0304e45f5c3a25c8ca4920f",
+  "research_tools/confirmatory/real_executor.py": "013fae5176f6baee5bef9f612df6ef9fd4415f00f493fe8a5c640bb212dfc851",
+  "research_tools/nbc/budget.py": "1cd3fb2dad3fe069e02209de92f903b33211056a11840820c60ff3969212b932",
+  "research_tools/nbc/muse_workloads.py": "a16555b4b0a96f2160b5ce0fffa96f84eae1f5d50525398871ad8fe1ce115810",
+  "research_tools/nbc/run_nbc.py": "cd132ec71ec798484b936b22a1f8788929f5b7ac0787c7709e75fe54fe8dc573",
+  "research_tools/nbc/track_b.py": "18a667e4fbdda56f373d4e4558542ef3beaff28c064855afd7541fd9f74b3fd2",
+  "research_tools/paired_eval.py": "a6207b8e910057ac6d21935dac1969cc32d4bcf6cea4a04bcbc59efe1fd0f379"
+ },
+ "deviation_cost": "the plan's $10 per evaluation is replaced by the sprint's stricter $5 total Meta cap (research_tools/nbc/budget.py), shared with onb-pilot/2",
+ "experiment": "ds-nbc/1 Track B",
+ "frozen_at": "2026-11-08T04:52:51Z",
+ "frozen_before": "any RA-MD request on any case",
+ "label": "RA-NONBLIND EXPLORATORY: developer-selected development cases, developer-written oracles; never confirmatory, never pooled with confirmatory results",
+ "muse": {
+  "P_proposals": "plan P",
+  "R_requests": "plan R",
+  "context": "the integration's MUSE_CONTEXT (registry and R1 schema only) and its workload schema",
+  "instructions_sha256": "1824235a91b63c34feebf0da2c0e123273bb07aea05e613d6067d161f0895a42",
+  "max_output_tokens": 16000,
+  "model": "muse-spark-1.3 (DEFAULT_MODEL; MODEL_NAME as in .env, recorded per call)",
+  "proposer": "nbc-muse-workloads/1",
+  "reasoning_effort": "medium",
+  "store": false
+ },
+ "schedule_explorer": "coordinated.Policy 'seeded' via each integration's run(); unchanged for both arms",
+ "seeds": "real_executor.seed_for(case_id, replicate, i): identical for both arms"
+}
