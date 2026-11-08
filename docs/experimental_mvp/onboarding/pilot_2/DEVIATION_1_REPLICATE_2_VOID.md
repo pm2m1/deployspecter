@@ -27,3 +27,11 @@
 - the sprint ledger is addressed explicitly through `DS_NBC_META_LEDGER`.
 
 No evidence file was changed by the move.
+
+**Replicate 2b instructions.** Two changes from replicate 1's filled-in instructions, applied identically for D
+and M:
+- the new worktree paths;
+- one appended note: "the worktree path contains a space; quote every path; use `.venv/bin/python
+  research_tools/onboarding/pilot.py`".
+
+The task, budgets, resources and success criteria are unchanged.
