@@ -364,3 +364,43 @@ Account balance was not checked through the API. The Responses API returns per-r
      `DS_NBC_META_LEDGER`. A stray ledger the move caused was merged into the real one and removed.
 
 **Meta usage in this increment:** $0.130662 estimated (14 settled reservations, 0 refusals), under a $5 cap.
+
+## Increment 17 (2026-11-10): corrected Muse methodology (audit, ds-nbc/2, onb-pilot/3, ledger path)
+
+102. **Audit of ds-nbc/1 Track B** (`nonblind_corpus/track_b/AUDIT_1.md`; no evidence changed).
+     - **The 3-workload limit:** the frozen executor runs one workload per replicate, so only 3 per arm ran.
+     - **Unexecuted:** 36 of 48 valid Muse proposals; 17 of them match the defects' structure (POST-HOC).
+     - **Selection was outcome-independent.**
+     - **RA-DET was fix-informed.**
+     - **Only saq-addee31 was re-encoded after outcomes.**
+     - **Sensitivity without saq-addee31:** RA-DET 3/3 vs RA-MD 1/3, p = 0.5. The original result (4/4 vs 1/4) stays
+       primary.
+103. **ds-nbc/2** (`nonblind_corpus/nbc2/`), prospective, frozen before any request or run.
+     - **Arms:**
+       - D1: fix-informed workloads;
+       - D2: an outcome-blind schema generator;
+       - M: one Muse request, all valid proposals admitted.
+     - **Allocation:** 6 slots × 2 schedules per revision, the same seeds, no early stopping. 288 runs, 0 mismatched,
+       images audited.
+     - **Result:** detection 4/4 for every arm. M vs D2: McNemar p = 1.0, Gehan 2 vs 2, Kaplan–Meier medians 5 vs 9;
+       INSUFFICIENT SAMPLE.
+     - **saq-c570ba4:** D2 and M also violated the fixed version (clause B3, a burst overrun present at the fix).
+     - **POST-HOC discriminating detection:** D1 4/4, D2 3/4, M 4/4.
+     - **Muse cost:** $0.059209.
+104. **onb-pilot/3** (`onboarding/pilot_3/`, AI-OPERATOR NONBLIND).
+     - **Design:** the same two exposed apps, a clean base, and a mandatory Muse checkpoint in M (made in 4/4 M
+       sessions: pgtq modified ×2, postgres_tq rejected ×2).
+     - **Outcome:** all 8 sessions reached S3 on the first attempt. M was slower in every pair (median +54.8 s and
+       +87.8 s), mostly the checkpoint's own cost.
+     - **Claim:** none possible. Muse cost $0.056202.
+105. **Ledger path hazard removed** (`research_tools/nbc/budget.py`).
+     - **Resolution:** the location comes from an explicit absolute path or the module's verified git worktree root;
+       missing directories are refused, not created.
+     - **Tests:** 6 regression tests, including relocated worktrees.
+     - **Cap:** recorded per reservation. The old ledger is unchanged.
+106. **Environment:** part of `/private/tmp` (the old scratchpad's chancy and pgqueuer sdists and chancy git trees)
+     disappeared. They were re-fetched and hash-verified with `fetch_pinned.sh --with-git`. The case archives were
+     intact.
+
+**Meta usage in this increment:** $0.115411 estimated, under a $1 cap (`nbc2/META_LEDGER_nbc2.jsonl`: 8 settled
+reservations, 0 refusals).
