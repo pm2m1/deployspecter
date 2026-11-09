@@ -13,7 +13,7 @@ your role does not need them, and the curator's and integrator's work should not
 
 ## Curator (`approval_r1/CURATOR_ACCEPTANCE.md`: #1, #2, #6, #19, #26, #29)
 
-1. Declare conflicts of interest (`handoff/templates/`).
+1. Declare conflicts of interest with `handoff/templates/participation_declaration.md` (every role does this).
 2. Select candidate cases under the frozen rules, **excluding** every development-exposed application:
    - chancy, pgqueuer, procrastinate, saq, taskiq-postgresql, pgtq, postgres-tq;
    - InvenTree, paperless-ngx, langgraph-checkpoint-postgres;
