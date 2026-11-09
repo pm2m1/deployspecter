@@ -404,3 +404,24 @@ Account balance was not checked through the API. The Responses API returns per-r
 
 **Meta usage in this increment:** $0.115411 estimated, under a $1 cap (`nbc2/META_LEDGER_nbc2.jsonl`: 8 settled
 reservations, 0 refusals).
+
+## Increment 18 (2026-11-10): research readiness package
+
+107. **ds-nbc/2 audit** (`nonblind_corpus/nbc2/AUDIT_2.md`, `analysis_1/SENSITIVITY.json`).
+     - **Records:** all 288 verified (chains, keys, seeds, allocation, order, budgets).
+     - **INCOMPLETE runs:** 20, all chancy second-job-cancel workloads, an engine limit.
+     - **saq-c570ba4 violations:** B1 detections (D1, M) against B3 burst overruns that also occur at the fix (D2, M).
+       No instrument false positive was found.
+     - **Scoring:** S0 is primary (4/4/4); S1–S3 are secondary. No treatment separates M from D2.
+     - **D2:** schema-only at run time, but the schemas are fix-shaped.
+108. **Proposed revision r1 to Amendment 003** (`protocol/AMENDMENT_003_REVISION_PROPOSAL_r1.md`): coverage of eight
+     ruling areas, proposed #23–#30, impact analysis. PROPOSED only; the candidate is unchanged (`ad5ea331…`).
+109. **External handoff** (`handoff/EXTERNAL_HANDOFF.md`).
+110. **Third-party notices:** saq archives, pgtq and postgres-tq (MIT).
+111. **Verification:**
+     - `reliability/acceptance_final_3`: Ruff clean, core 946, isolated 14, root without a database 1746 (322 fail
+       only because `DATABASE_URL` is unset).
+     - `reliability/root_suite_db_3`: 1905 passed and 164 skipped on the identity-checked disposable cluster.
+     - Ledgers: 16 evidence ledgers intact; both Meta ledgers fully settled.
+
+**Meta usage in this increment:** none.
