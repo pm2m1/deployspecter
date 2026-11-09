@@ -1,0 +1,53 @@
+{
+  "rationale": "SAQ Postgres burst worker correctness hinges on concurrent dequeue (duplicate/active lost-update), burst-stop counting, poll vs dequeue_timeout wakeup, and schedule-timer visibility. Baselines plus extremes: 1-job control, 4-job concurrent dequeue race, partial max_burst_jobs with concurrency=2 for burst-counter race/early-exit, max_burst=1 with slow poll and schedule disabled for premature stop vs hang, max_burst>jobs with concurrency for off-by-one completion, and short dequeue_timeout with slow poll and schedule=3600 for missed-wakeup/lost-job on burst exit.",
+  "workloads": [
+    {
+      "concurrency": 1,
+      "dequeue_timeout_s": 0.25,
+      "jobs": 1,
+      "max_burst_jobs": 0,
+      "poll_interval_s": 0.1,
+      "schedule_s": 1
+    },
+    {
+      "concurrency": 2,
+      "dequeue_timeout_s": 2,
+      "jobs": 4,
+      "max_burst_jobs": 0,
+      "poll_interval_s": 0.1,
+      "schedule_s": 1
+    },
+    {
+      "concurrency": 2,
+      "dequeue_timeout_s": 1,
+      "jobs": 4,
+      "max_burst_jobs": 2,
+      "poll_interval_s": 0.25,
+      "schedule_s": 1
+    },
+    {
+      "concurrency": 1,
+      "dequeue_timeout_s": 3,
+      "jobs": 3,
+      "max_burst_jobs": 1,
+      "poll_interval_s": 1,
+      "schedule_s": 3600
+    },
+    {
+      "concurrency": 2,
+      "dequeue_timeout_s": 0.5,
+      "jobs": 2,
+      "max_burst_jobs": 4,
+      "poll_interval_s": 0.5,
+      "schedule_s": 5
+    },
+    {
+      "concurrency": 1,
+      "dequeue_timeout_s": 0.25,
+      "jobs": 4,
+      "max_burst_jobs": 0,
+      "poll_interval_s": 1,
+      "schedule_s": 3600
+    }
+  ]
+}

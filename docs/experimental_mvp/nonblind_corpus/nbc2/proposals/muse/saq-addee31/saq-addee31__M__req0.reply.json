@@ -1,0 +1,82 @@
+{
+  "rationale": "First actor pre-enqueues 0-2 ds_task jobs with keys '<tables>-<n>' then runs a concurrency=1 worker; second actor only connects then disconnects. Any interference must therefore come from shared-schema side effects: versions-table migrations, jobs/stats DDL, and polling vs connect/disconnect interleaving. Same-table pairs (default-default, alt-alt) test whether the second connect overwrites versions, stats, or disrupts dequeue/completion of 1 job or 2 jobs and empty polling. Cross-table pairs (default-alt, alt-default) test isolation: the worker must not see or mutate the other table set. Jobs 0 covers empty poll, 1 covers dedup/single execution, 2 covers lost/duplicate/ordering. Poll intervals 0.25/0.5/1.0 vary the polling window the explorer can interleave the second actor in.",
+  "workloads": [
+    {
+      "first": {
+        "jobs": 1,
+        "tables": "default"
+      },
+      "poll_interval_s": 0.25,
+      "second": {
+        "tables": "default"
+      }
+    },
+    {
+      "first": {
+        "jobs": 2,
+        "tables": "default"
+      },
+      "poll_interval_s": 0.5,
+      "second": {
+        "tables": "default"
+      }
+    },
+    {
+      "first": {
+        "jobs": 0,
+        "tables": "default"
+      },
+      "poll_interval_s": 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+,
+      "second": {
+        "tables": "default"
+      }
+    },
+    {
+      "first": {
+        "jobs": 2,
+        "tables": "default"
+      },
+      "poll_interval_s": 0.25,
+      "second": {
+        "tables": "alt"
+      }
+    },
+    {
+      "first": {
+        "jobs": 2,
+        "tables": "alt"
+      },
+      "poll_interval_s": 0.5,
+      "second": {
+        "tables": "default"
+      }
+    },
+    {
+      "first": {
+        "jobs": 1,
+        "tables": "alt"
+      },
+      "poll_interval_s": 1,
+      "second": {
+        "tables": "alt"
+      }
+    }
+  ]
+}
