@@ -214,9 +214,45 @@ def build_image(work: Path, *, chancy_sdist: Path | None = None, pgqueuer_sdist:
     for f in sorted(p for p in ctx.rglob("*") if p.is_file()):
         digest.update(str(f.relative_to(ctx)).encode() + b"\0" + f.read_bytes())
     tag = f"ds-mvp-iso:{digest.hexdigest()[:16]}"
+    stamp_fresh_mtimes(ctx)  # normalized archives carry mtime 0: never let the build context match a stale file
     docker("build", "-q", "-t", tag, str(ctx), timeout=900)
+    if problems := image_tree_problems(context_tree(ctx / "app"), image_tree(tag)):
+        docker("image", "rm", "-f", tag, check=False)
+        raise RuntimeError(f"the built image {tag} doesn't contain the staged files: {problems[:5]}")
     image_id = docker("image", "inspect", "-f", "{{.Id}}", tag).stdout.strip()
     return tag, image_id
+
+
+# The stale-build-context hazard (ds-nbc/1 IMAGE_AUDIT.md, saq erratum E1): normalized archives set every mtime to 0,
+# and Docker's context transfer can then reuse an earlier file of the same size. Every build stamps fresh mtimes on
+# the staged context and then verifies, file by file, that /app in the image is exactly what was staged.
+IMAGE_TREE_SCRIPT = ("import hashlib,json,os\nout={}\nfor d,_,fs in os.walk('/app'):\n for f in fs:\n"
+                     "  p=os.path.join(d,f)\n  out[os.path.relpath(p,'/app')]=hashlib.sha256(open(p,'rb').read())"
+                     ".hexdigest()\nprint(json.dumps(out))")
+
+
+def stamp_fresh_mtimes(ctx: Path) -> None:
+    now = time.time()
+    for f in ctx.rglob("*"):
+        os.utime(f, (now, now), follow_symlinks=False)
+
+
+def context_tree(root: Path) -> dict[str, str]:
+    return {str(f.relative_to(root)): hashlib.sha256(f.read_bytes()).hexdigest()
+            for f in root.rglob("*") if f.is_file() and "__pycache__" not in f.parts}
+
+
+def image_tree(tag: str) -> dict[str, str]:
+    r = docker("run", "--rm", "--network", "none", tag, "-c", IMAGE_TREE_SCRIPT, timeout=120)
+    return {k: v for k, v in json.loads(r.stdout).items() if "__pycache__" not in k}
+
+
+def image_tree_problems(staged: dict[str, str], in_image: dict[str, str]) -> list[str]:
+    """Every staged file must be in the image with the same sha256 (the image may add nothing under /app either)."""
+    p = [f"missing {k}" for k in sorted(set(staged) - set(in_image))]
+    p += [f"differs {k}" for k in sorted(k for k in set(staged) & set(in_image) if staged[k] != in_image[k])]
+    p += [f"extra {k}" for k in sorted(set(in_image) - set(staged))]
+    return p
 
 
 def protected_state() -> str:
