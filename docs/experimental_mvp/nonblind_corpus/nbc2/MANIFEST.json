@@ -1,0 +1,576 @@
+{
+ "accounting": "SOUND / REFUSED / INCOMPLETE / ERROR per run, hash-chained, never retried; wall seconds per run",
+ "admission": {
+  "D1": "all 3",
+  "D2": "all 6",
+  "M": "valid proposals in model order, all admitted (P=6, at most 6); invalid ones counted; no substitution or reordering after outcomes"
+ },
+ "allocation": {
+  "K_slots_per_arm": 6,
+  "S_schedules_per_slot_per_revision": 2,
+  "arm_order": "a permutation of (D1, D2, M) from sha256('ds-nbc/2|order|case')[0] % 6",
+  "early_stopping": "none: every slot and schedule runs on R1 and on R2",
+  "schedules_per_arm_per_revision": 12,
+  "seed": "int(sha256('ds-nbc/2|case|k|j')[:8], 16), identical across arms",
+  "slot_rule": "slot k runs list[k % len(list)]; an empty list makes every slot REFUSED"
+ },
+ "analysis": {
+  "post_hoc": "anything else is labelled POST-HOC",
+  "primary": "M vs D2 (paired_eval: exact McNemar, Gehan sign test; INSUFFICIENT SAMPLE below 10 cases)",
+  "secondary": [
+   "D1 vs D2",
+   "D1 vs M"
+  ],
+  "sensitivity": "excluding ['saq-addee31'] (post-hoc encoding in ds-nbc/1)",
+  "uncertainty": "exact Clopper-Pearson 95% intervals",
+  "unit": "the historical case"
+ },
+ "arms": {
+  "D1": "developer-written, fix-informed workloads (each integration's RA-DET list, 3 per case)",
+  "D2": "outcome-blind schema generator: WORKLOAD_JSON_SCHEMA only, seeded by case id, K distinct valid workloads, computed here at freeze time",
+  "M": "one Muse request (R=1) for P=6 proposals with the frozen nbc-muse-workloads/1 proposer (MUSE_CONTEXT plus schema); valid proposals admitted in model order"
+ },
+ "cases": {
+  "chancy-2895c4a": {
+   "D1": [
+    {
+     "jobs": [
+      {
+       "cancel": true,
+       "n": 0
+      }
+     ],
+     "max_attempts": 1
+    },
+    {
+     "jobs": [
+      {
+       "cancel": true,
+       "n": 0
+      }
+     ],
+     "max_attempts": 2
+    },
+    {
+     "jobs": [
+      {
+       "cancel": false,
+       "n": 0
+      },
+      {
+       "cancel": true,
+       "n": 1
+      }
+     ],
+     "max_attempts": 1
+    }
+   ],
+   "D2": {
+    "draws": 6,
+    "rejected_by_validate": 0,
+    "workloads": [
+     {
+      "jobs": [
+       {
+        "cancel": false,
+        "n": 42
+       },
+       {
+        "cancel": false,
+        "n": 0
+       }
+      ],
+      "max_attempts": 1
+     },
+     {
+      "jobs": [
+       {
+        "cancel": false,
+        "n": 51
+       },
+       {
+        "cancel": false,
+        "n": 0
+       }
+      ],
+      "max_attempts": 2
+     },
+     {
+      "jobs": [
+       {
+        "cancel": false,
+        "n": 0
+       }
+      ],
+      "max_attempts": 2
+     },
+     {
+      "jobs": [
+       {
+        "cancel": false,
+        "n": 47
+       }
+      ],
+      "max_attempts": 1
+     },
+     {
+      "jobs": [
+       {
+        "cancel": true,
+        "n": 41
+       }
+      ],
+      "max_attempts": 1
+     },
+     {
+      "jobs": [
+       {
+        "cancel": false,
+        "n": 96
+       },
+       {
+        "cancel": true,
+        "n": 99
+       }
+      ],
+      "max_attempts": 1
+     }
+    ]
+   },
+   "R1_sha256": "b31ce4b50d65d964a428600dcc8695c54996a887456f52aa828ec648f123ef5a",
+   "R2_sha256": "f486e36e4d13f72bf26f832d28dd021074d5739e0b89d7862687ecc587904e25",
+   "arm_order": [
+    "M",
+    "D1",
+    "D2"
+   ],
+   "buggy": "R1",
+   "integration": "research_tools/nbc/integrations/chancy_sv1.py",
+   "integration_sha256": "25c8ae50df8a27cd2d986d140f2b054699897381a6dd6849b63edd32827583de",
+   "muse_prompt_sha256": "5fb539a49ce270eddbc2d15aab8135d4a1f207895780e3c960d9ef3e6cfbf478",
+   "oracle_sha256": "ec4c85914f257b9a6061b24921fc3ee981059c5d29fdbd3d8780bc19be838cf5",
+   "spec": "docs/experimental_mvp/nonblind_corpus/chancy/cases/chancy-2895c4a/case_spec.json",
+   "spec_sha256": "ae62dad321d32f3947f8a135816b645355c953b4a93e899a5a91aa7c75affdde"
+  },
+  "pgqueuer-8dfadf4": {
+   "D1": [
+    {
+     "concurrency_limit": 1,
+     "handler_steps": 1,
+     "jobs": [
+      {
+       "cancel": true,
+       "n": 0,
+       "priority": 0
+      },
+      {
+       "cancel": false,
+       "n": 1,
+       "priority": 0
+      }
+     ],
+     "workers": 2
+    },
+    {
+     "concurrency_limit": 1,
+     "handler_steps": 2,
+     "jobs": [
+      {
+       "cancel": true,
+       "n": 0,
+       "priority": 0
+      },
+      {
+       "cancel": false,
+       "n": 1,
+       "priority": 0
+      }
+     ],
+     "workers": 2
+    },
+    {
+     "concurrency_limit": 1,
+     "handler_steps": 2,
+     "jobs": [
+      {
+       "cancel": true,
+       "n": 0,
+       "priority": 0
+      },
+      {
+       "cancel": false,
+       "n": 1,
+       "priority": 0
+      },
+      {
+       "cancel": false,
+       "n": 2,
+       "priority": 0
+      }
+     ],
+     "workers": 2
+    }
+   ],
+   "D2": {
+    "draws": 7,
+    "rejected_by_validate": 1,
+    "workloads": [
+     {
+      "concurrency_limit": 1,
+      "handler_steps": 2,
+      "jobs": [
+       {
+        "cancel": false,
+        "n": 8,
+        "priority": 7
+       },
+       {
+        "cancel": false,
+        "n": 3,
+        "priority": 1
+       }
+      ],
+      "workers": 2
+     },
+     {
+      "concurrency_limit": 2,
+      "handler_steps": 0,
+      "jobs": [
+       {
+        "cancel": false,
+        "n": 5,
+        "priority": 5
+       },
+       {
+        "cancel": false,
+        "n": 2,
+        "priority": 0
+       }
+      ],
+      "workers": 1
+     },
+     {
+      "concurrency_limit": 0,
+      "handler_steps": 1,
+      "jobs": [
+       {
+        "cancel": true,
+        "n": 8,
+        "priority": 9
+       },
+       {
+        "cancel": false,
+        "n": 0,
+        "priority": 4
+       }
+      ],
+      "workers": 2
+     },
+     {
+      "concurrency_limit": 2,
+      "handler_steps": 1,
+      "jobs": [
+       {
+        "cancel": false,
+        "n": 4,
+        "priority": 8
+       }
+      ],
+      "workers": 1
+     },
+     {
+      "concurrency_limit": 1,
+      "handler_steps": 2,
+      "jobs": [
+       {
+        "cancel": true,
+        "n": 5,
+        "priority": 7
+       },
+       {
+        "cancel": false,
+        "n": 4,
+        "priority": 5
+       }
+      ],
+      "workers": 1
+     },
+     {
+      "concurrency_limit": 2,
+      "handler_steps": 1,
+      "jobs": [
+       {
+        "cancel": false,
+        "n": 2,
+        "priority": 4
+       },
+       {
+        "cancel": false,
+        "n": 1,
+        "priority": 1
+       },
+       {
+        "cancel": false,
+        "n": 5,
+        "priority": 9
+       }
+      ],
+      "workers": 2
+     }
+    ]
+   },
+   "R1_sha256": "378ee7593ca1396be0a0d0323562f0c0cd98b1e76e2db75849f8eac2eb6310e2",
+   "R2_sha256": "d985c4686106f040a7ed274613bf16a7d1379e3631c4059fc58cb45706fe260b",
+   "arm_order": [
+    "M",
+    "D2",
+    "D1"
+   ],
+   "buggy": "R1",
+   "integration": "research_tools/nbc/integrations/pgqueuer_cancel.py",
+   "integration_sha256": "138dc2723c1a8e159761dc575eecec6f4fff6bd258b5a4038330ea0e6ee88cad",
+   "muse_prompt_sha256": "fa5f0cb094c4f68d03c805d9ec321dbc417a59edcab22ff885214f8edf04821e",
+   "oracle_sha256": "cb59b5732e459addd6220ddd414bbf12daa9912f69a61d7b8fc092bfcd9a80a6",
+   "spec": "docs/experimental_mvp/nonblind_corpus/pgqueuer/cases/pgqueuer-8dfadf4/case_spec.json",
+   "spec_sha256": "c57a2d0f0852b9ffea849f045f57042e949c57f64c3417fa98f8b6eea2c00e50"
+  },
+  "saq-addee31": {
+   "D1": [
+    {
+     "first": {
+      "jobs": 1,
+      "tables": "default"
+     },
+     "poll_interval_s": 0.5,
+     "second": {
+      "tables": "alt"
+     }
+    },
+    {
+     "first": {
+      "jobs": 0,
+      "tables": "alt"
+     },
+     "poll_interval_s": 0.5,
+     "second": {
+      "tables": "default"
+     }
+    },
+    {
+     "first": {
+      "jobs": 2,
+      "tables": "default"
+     },
+     "poll_interval_s": 1.0,
+     "second": {
+      "tables": "alt"
+     }
+    }
+   ],
+   "D2": {
+    "draws": 8,
+    "rejected_by_validate": 0,
+    "workloads": [
+     {
+      "first": {
+       "jobs": 2,
+       "tables": "alt"
+      },
+      "poll_interval_s": 0.5,
+      "second": {
+       "tables": "default"
+      }
+     },
+     {
+      "first": {
+       "jobs": 2,
+       "tables": "alt"
+      },
+      "poll_interval_s": 1.0,
+      "second": {
+       "tables": "default"
+      }
+     },
+     {
+      "first": {
+       "jobs": 2,
+       "tables": "alt"
+      },
+      "poll_interval_s": 0.25,
+      "second": {
+       "tables": "alt"
+      }
+     },
+     {
+      "first": {
+       "jobs": 0,
+       "tables": "default"
+      },
+      "poll_interval_s": 0.5,
+      "second": {
+       "tables": "default"
+      }
+     },
+     {
+      "first": {
+       "jobs": 2,
+       "tables": "alt"
+      },
+      "poll_interval_s": 1.0,
+      "second": {
+       "tables": "alt"
+      }
+     },
+     {
+      "first": {
+       "jobs": 1,
+       "tables": "default"
+      },
+      "poll_interval_s": 0.5,
+      "second": {
+       "tables": "alt"
+      }
+     }
+    ]
+   },
+   "R1_sha256": "32212a41573c1521610f1efa0d5de89ff275a2811053bd4a190384d1821e06e8",
+   "R2_sha256": "d6ac6adacf68999abe26b32fe00f82e2e25b0114fca8a8f29563c9c943c08c41",
+   "arm_order": [
+    "D1",
+    "M",
+    "D2"
+   ],
+   "buggy": "R1",
+   "integration": "research_tools/nbc/integrations/saq_two_queues_addee31_v2.py",
+   "integration_sha256": "0926d8c90c58fba99802cc11c5844f46a61c6bf883d1915a86693a9339fe8332",
+   "muse_prompt_sha256": "e74fa2f1aed0849606ac1c063aaab66147aef531e9dfe286d43ce3658d4afa2f",
+   "oracle_sha256": "1da3266eee34b4a2a71c8ce6baea81017e44752063f6df508abcdbef5fa310fc",
+   "spec": "docs/experimental_mvp/nonblind_corpus/saq/cases/saq-addee31/case_spec_v2.json",
+   "spec_sha256": "7d55198eb2e237c045db52e54c7baba3dc5a75a149d416912a1aebaee508fa7b"
+  },
+  "saq-c570ba4": {
+   "D1": [
+    {
+     "concurrency": 1,
+     "dequeue_timeout_s": 0.5,
+     "jobs": 1,
+     "max_burst_jobs": 0,
+     "poll_interval_s": 1.0,
+     "schedule_s": 1
+    },
+    {
+     "concurrency": 1,
+     "dequeue_timeout_s": 0.5,
+     "jobs": 2,
+     "max_burst_jobs": 0,
+     "poll_interval_s": 1.0,
+     "schedule_s": 1
+    },
+    {
+     "concurrency": 1,
+     "dequeue_timeout_s": 0.25,
+     "jobs": 1,
+     "max_burst_jobs": 0,
+     "poll_interval_s": 1.0,
+     "schedule_s": 1
+    }
+   ],
+   "D2": {
+    "draws": 6,
+    "rejected_by_validate": 0,
+    "workloads": [
+     {
+      "concurrency": 1,
+      "dequeue_timeout_s": 0.25,
+      "jobs": 1,
+      "max_burst_jobs": 0,
+      "poll_interval_s": 0.1,
+      "schedule_s": 5
+     },
+     {
+      "concurrency": 2,
+      "dequeue_timeout_s": 0.5,
+      "jobs": 1,
+      "max_burst_jobs": 0,
+      "poll_interval_s": 1.0,
+      "schedule_s": 3600
+     },
+     {
+      "concurrency": 2,
+      "dequeue_timeout_s": 3.0,
+      "jobs": 4,
+      "max_burst_jobs": 4,
+      "poll_interval_s": 0.5,
+      "schedule_s": 3600
+     },
+     {
+      "concurrency": 2,
+      "dequeue_timeout_s": 2.0,
+      "jobs": 1,
+      "max_burst_jobs": 0,
+      "poll_interval_s": 0.1,
+      "schedule_s": 1
+     },
+     {
+      "concurrency": 2,
+      "dequeue_timeout_s": 3.0,
+      "jobs": 2,
+      "max_burst_jobs": 2,
+      "poll_interval_s": 0.25,
+      "schedule_s": 5
+     },
+     {
+      "concurrency": 2,
+      "dequeue_timeout_s": 0.5,
+      "jobs": 4,
+      "max_burst_jobs": 3,
+      "poll_interval_s": 0.25,
+      "schedule_s": 3600
+     }
+    ]
+   },
+   "R1_sha256": "5adf904ddbb9360865e59bf8d2adc06fedd50eb7c438447fdb2622927203dd65",
+   "R2_sha256": "d5de08ee0daa62500ded34fdf8224d853774c30b4bedc3ce65e71b7e8d850a42",
+   "arm_order": [
+    "M",
+    "D1",
+    "D2"
+   ],
+   "buggy": "R1",
+   "integration": "research_tools/nbc/integrations/saq_burst_c570ba4.py",
+   "integration_sha256": "1cd0102e72acb5fbba76dc7fabd30d99b0a719ce8a0c10f75a7a4b3f91ad46b1",
+   "muse_prompt_sha256": "1adb73771b8fc0709613f7f3f2cbd3610646ccd19d72fc1a10114782028150df",
+   "oracle_sha256": "7a88fd213a2a70d5d2e985122538cd9ee15efe0d6f6156f145950e0b802c1619",
+   "spec": "docs/experimental_mvp/nonblind_corpus/saq/cases/saq-c570ba4/case_spec.json",
+   "spec_sha256": "cf2763eafe40bd254ec07f3e253adf29d64f73ced7627ef574931f7d99ff48df"
+  }
+ },
+ "code_sha256": {
+  "research_tools/nbc/budget.py": "090c1992026cfee0731f32aa15e7505e0041620d79ac0f158785ed3ef1fe5c0d",
+  "research_tools/nbc/muse_workloads.py": "a16555b4b0a96f2160b5ce0fffa96f84eae1f5d50525398871ad8fe1ce115810",
+  "research_tools/nbc/track_b.py": "18a667e4fbdda56f373d4e4558542ef3beaff28c064855afd7541fd9f74b3fd2",
+  "research_tools/nbc2/ds_nbc2.py": "b77bf0ba86a7e50cdb3cb2e6203503c0a0af5bedfd8617612240f39674d6b247",
+  "research_tools/paired_eval.py": "a6207b8e910057ac6d21935dac1969cc32d4bcf6cea4a04bcbc59efe1fd0f379"
+ },
+ "cost": {
+  "cap_usd": 1.0,
+  "ledger": "docs/experimental_mvp/nonblind_corpus/nbc2/META_LEDGER_nbc2.jsonl (shared with onb-pilot/3), DS_NBC_META_CAP_USD=1.00"
+ },
+ "d2_disclosure": "the generator was written before any of its output was seen; its output for the four cases was printed once during development before this freeze, and the generator, seeds and K were not changed afterwards",
+ "experiment": "ds-nbc2/1",
+ "frozen_at": "2026-11-09T19:19:07Z",
+ "information": "D2 and M see no fix details, oracle, triggering schedule or result; D2 sees less than M (the schema only); D1 was written with knowledge of each fix",
+ "label": "RA-NONBLIND-EXPLORATORY ds-nbc/2",
+ "model": {
+  "max_output_tokens": 16000,
+  "model": "MODEL_NAME from the .env file or DEFAULT_MODEL (muse-spark-1.3), recorded per call",
+  "proposals_per_request": 6,
+  "proposer": "nbc-muse-workloads/1",
+  "reasoning_effort": "medium",
+  "requests_per_case": 1,
+  "store": false
+ },
+ "outcomes": "detected, false positive, schedules to first detection (censored at 12), R1 seconds to detection, utilization (distinct workloads executed, workloads that violated)",
+ "relation_to_ds_nbc1": "a separate experiment; ds-nbc/1's result (RA-DET 4/4 vs RA-MD 1/4) stays its primary result and is not replaced; ds-nbc/1 Muse proposals are not reused",
+ "status": "FROZEN before any ds-nbc/2 Muse request or run"
+}
