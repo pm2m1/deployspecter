@@ -1,0 +1,98 @@
+{
+ "allowed_resources": {
+  "M_only": [
+   "Muse via pilot.py muse (JSON proposals; never executed)"
+  ],
+  "both": [
+   "the pinned sdist (source and PKG-INFO), read as data",
+   "PyPI JSON metadata (wheel resolution)",
+   "this repository's harness, code and docs, including existing adapters",
+   "the operator's general knowledge"
+  ]
+ },
+ "analysis": {
+  "claim_rule": "PROSPECTIVE_MUSE_PLAN.md \u00a77: a claim needs a >= 30% median reduction in both minutes and lines across >= 3 applications with no lost detection. Only 2 applications are eligible, so NO claim is possible by this rule; the result is descriptive",
+  "code": "research_tools/onboarding/pilot2_analyze.py (unchanged) plus pilot3_checkpoints.py (checkpoint decisions)",
+  "no_inference": true,
+  "primary": "per app and replicate, the paired difference M - D in lock-adjusted seconds to S3 (censored at 5400) and in final adapter lines; reported per app, with the median over replicates"
+ },
+ "applications": "pgtq 0.5.0 and postgres-tq 1.2.1, development applications exposed by onb-pilot/2 (not new)",
+ "apps": [
+  {
+   "app": "pgtq",
+   "condition": "D",
+   "declared_paths": [
+    "src/deployspecter/experimental/onboarding_pilot/adapters/pgtq.py"
+   ],
+   "sdist": "pgtq-0.5.0.tar.gz",
+   "sdist_sha256": "cbcdd66fb9aa0ed3c68784dd40bf429aa3e96f281b25974b45687df44fbea14d",
+   "version": "0.5.0",
+   "why_eligible": "MIT; psycopg[binary]>=3.0.0 only; pure-Python wheel; not previously integrated or exposed"
+  },
+  {
+   "app": "postgres_tq",
+   "condition": "D",
+   "declared_paths": [
+    "src/deployspecter/experimental/onboarding_pilot/adapters/postgres_tq.py"
+   ],
+   "sdist": "postgres_tq-1.2.1.tar.gz",
+   "sdist_sha256": "25b0f61c9f9621d02950218c4a352e12762ef280be7cb09678c5ddda8fed9039",
+   "version": "1.2.1",
+   "why_eligible": "MIT; psycopg[binary]>=3.1.12 and psycopg-pool>=3.1.12; pure-Python wheel; not previously integrated or exposed"
+  }
+ ],
+ "assistance_definition": "M: one mandatory `pilot.py muse` call at CHECKPOINT A (after pkginfo, before any source reading or code); the response is shown to the operator, who records accepted/modified/rejected; up to 2 further optional calls. D: the same checkpoint with a written plan and no model.",
+ "budgets": {
+  "max_attempts": 10,
+  "muse": {
+   "condition": "M only",
+   "max_calls": 3,
+   "max_estimated_usd": 0.12
+  },
+  "wall_clock_seconds": 5400,
+  "work_timeout_s": 60
+ },
+ "checkpoint_text": "   a. Write down your plan, based on the documentation you have read: `.venv/bin/python research_tools/onboarding/pilot.py note --session \"{SESSION}\" intervention --detail \"CHECKPOINT_A plan: <one-line plan>\"`. Condition D has no model assistance.",
+ "code_sha256": {
+  "docs/experimental_mvp/onboarding/pilot_2/OPERATOR_INSTRUCTIONS.md": "3b5e31c4df81400732d091c04edda131c4c190feccd1dc54c2d0653706d78c01",
+  "docs/experimental_mvp/onboarding/pilot_3/OPERATOR_INSTRUCTIONS.md": "3235f546cf089642495affc273ae27585704005571b77e749773668587c68c77",
+  "research_tools/onboarding/pilot.py": "b298be198add463af8bd1a7b4f3efd512f089a1c20381c164971a1ca377c1291",
+  "research_tools/onboarding/pilot2_analyze.py": "e835682d84ee8b49c4ba4fc8f6e06ed65f952d35898732c28df5d634354622da",
+  "research_tools/onboarding/pilot3_manifest.py": "33efa2cbaf8dc3f87777e1a9cc306d6f1a9a92265e51c05541a32c0358760ade",
+  "research_tools/onboarding/pilot_inside.py": "57210fa8c0ad89c3f8054a50c4e69c5e495e4f6c286fc0dc66083186ad8beacc",
+  "research_tools/onboarding/pilot_runner.py": "08f54cb1e84849f7e6a7012141e805ce89186a18417be57f10b660e287fbc95f",
+  "research_tools/pg_lock.py": "de9b9372c95fc68ef33577c44519ef16ff76b1f97f659a364fe665a74e073857",
+  "src/deployspecter/experimental/onboarding_pilot/__init__.py": "b1d7f6d0f1727f8e841939ff55804ece478ed1192327a1cde263c2ca44a29ad5",
+  "src/deployspecter/experimental/onboarding_pilot/analysis.py": "e201abfad604fe8d9a78e4d0354ba97173d1a94afe3d825a248fb94b732cf9a6",
+  "src/deployspecter/experimental/onboarding_pilot/correctness.py": "c449810f1221fe831da7f480f4fb02abd86daee3b3a484e052910ff8406791e4",
+  "src/deployspecter/experimental/onboarding_pilot/muse_assist.py": "55fb6046e6ea60e08aefce5e50c994614e4f65c3f4ec99ff0113267c43bd331f",
+  "src/deployspecter/experimental/onboarding_pilot/recorder.py": "0b5f908e875e216b07dc74e2036e0a4b24d74c736879051d5a853c8417df337a",
+  "src/deployspecter/experimental/onboarding_pilot/session.py": "faf5c4610cd3ecc93cd16de8788f0adca4d61040b475bb073472742f48da179d",
+  "src/deployspecter/experimental/onboarding_pilot/spec.py": "05d26391dcf831b53a0b5d05b7cd9ac16b391b3e9fdb7b575a3ee14740a617d1"
+ },
+ "condition_of_this_manifest": "D",
+ "design": {
+  "contamination_controls": "worktrees from the pre-onb-pilot/2 base f82e90d plus this manifest; an instruction not to read outside the worktree except the pinned sdists; identical frozen instructions apart from the checkpoint",
+  "contamination_limits": "the same model family as earlier operators; filesystem isolation by instruction only; the main repository (outside the worktree) holds onb-pilot/2's adapters for these apps",
+  "pairing": "each app under both D and M, separate fresh agent contexts, separate fresh worktrees from a base commit that holds no earlier adapter for these apps",
+  "replicates": "2 per (app, condition); each replicate's four sessions start together"
+ },
+ "frozen_at": "2026-11-09T19:23:37Z",
+ "label": "AI-OPERATOR, NONBLIND EXPLORATORY: fresh AI agent contexts with no task-specific memory; not independent human participants; the two applications were already exposed by onb-pilot/2",
+ "measures": {
+  "censoring": "an unmet milestone is censored at the budget, never imputed",
+  "checkpoint": "CHECKPOINT_A notes (decision and reason); Muse calls, tokens, USD; Muse-sourced proposals and their validation",
+  "per_session": "session.measure (unchanged), plus: database-lock waiting time from the session's pg_lock.log, subtracted from every elapsed time it falls inside (pilot2_analyze.py); interventions; failed attempts; adapter lines final and revised; code revisions (snapshots with a changed adapter); rejected proposals; S2/S3 verification outcomes; Muse calls, tokens, est. USD"
+ },
+ "muse_later_text": "Condition D: no Muse and no model assistance of any kind.",
+ "question": "On the same application, under identical pins, success criteria, resources and budgets, does a mandatory Muse consultation at a fixed workflow point (M) change the automated work to reach S3 compared with the same checkpoint without the model (D)?",
+ "sprint_cost": "each M session's maximum ($0.12) is reserved in the ds-nbc/2 ledger (cap $1) before it starts",
+ "status": "FROZEN before any onboarding work on either app",
+ "success": {
+  "S1": "the first spec and workload both accepted by spec.validate (against these pins)",
+  "S2": "the first run whose server-log corroboration is ok with 0 parameters mismatched, isolation ok, teardown complete",
+  "S3": "the first S2 run where the harness recorder saw every enqueued key handled exactly once and every step finished without an exception",
+  "workload": "at least 2 jobs of one declared task with an int argument"
+ },
+ "version": "onb-pilot-manifest/3"
+}
