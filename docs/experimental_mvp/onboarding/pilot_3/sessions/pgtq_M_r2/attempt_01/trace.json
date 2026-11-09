@@ -1,0 +1,930 @@
+{
+ "actors": {
+  "install": {
+   "handler": "onb-pilot.install",
+   "args": {},
+   "state": "finished",
+   "result": {
+    "installed": true
+   },
+   "exception": null,
+   "exception_class": null,
+   "backend_pid": 1971,
+   "transactions": 5
+  },
+  "enqueue": {
+   "handler": "onb-pilot.enqueue",
+   "args": {
+    "jobs": [
+     {
+      "key": {
+       "str": 2,
+       "sha256": "08243666f926"
+      },
+      "task": {
+       "str": 11,
+       "sha256": "d10356c179bf"
+      },
+      "args": {
+       "a": 1,
+       "b": 2
+      }
+     },
+     {
+      "key": {
+       "str": 2,
+       "sha256": "a499068b8f45"
+      },
+      "task": {
+       "str": 11,
+       "sha256": "d10356c179bf"
+      },
+      "args": {
+       "a": 3,
+       "b": 4
+      }
+     },
+     {
+      "key": {
+       "str": 2,
+       "sha256": "e73d2c69dab6"
+      },
+      "task": {
+       "str": 11,
+       "sha256": "d10356c179bf"
+      },
+      "args": {
+       "a": 5,
+       "b": 6
+      }
+     }
+    ]
+   },
+   "state": "finished",
+   "result": {
+    "enqueued": [
+     1,
+     2,
+     3
+    ]
+   },
+   "exception": null,
+   "exception_class": null,
+   "backend_pid": 1973,
+   "transactions": 6
+  },
+  "work": {
+   "handler": "onb-pilot.work",
+   "args": {
+    "expect": 3,
+    "timeout_s": 60.0
+   },
+   "state": "finished",
+   "result": {
+    "processed": 3,
+    "results": [
+     3,
+     7,
+     11
+    ],
+    "handled": [
+     {
+      "str": 2,
+      "sha256": "08243666f926"
+     },
+     {
+      "str": 2,
+      "sha256": "a499068b8f45"
+     },
+     {
+      "str": 2,
+      "sha256": "e73d2c69dab6"
+     }
+    ]
+   },
+   "exception": null,
+   "exception_class": null,
+   "backend_pid": 1975,
+   "transactions": 6
+  }
+ },
+ "records": [
+  {
+   "seq": 0,
+   "actor": "install",
+   "kind": "execute",
+   "sql": "CREATE TABLE IF NOT EXISTS pgtq_tasks ( id BIGSERIAL PRIMARY KEY, call TEXT NOT NULL, args JSONB NOT NULL DEFAULT '{}'::jsonb, status TEXT NOT NULL DEFAULT 'queued', priority INTEGER NOT NULL DEFAULT 0, inserted_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), started_at TIMESTAMP WITH TIME ZONE, last_heartbeat TIMESTAMP WITH TIME ZONE, expected_duration INTERVAL, batch_id UUID, retry_count INTEGER NOT NULL DEFAULT 0, last_error TEXT );",
+   "statement_id": "b080be88a556",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "install",
+    "handler": "install",
+    "invocation_id": "onb_pilot_install:install",
+    "migration_phase": "",
+    "logical_op": 0,
+    "session": {
+     "backend_pid": 1971
+    },
+    "task": "ds-actor-install",
+    "on_behalf_of": null,
+    "call_site": "../app/src/pgtq/async_core.py:128:install",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 0,
+   "decision": 0,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 10.66,
+   "completed_ms": 12.2
+  },
+  {
+   "seq": 1,
+   "actor": "install",
+   "kind": "execute",
+   "sql": "CREATE INDEX IF NOT EXISTS pgtq_tasks_status_priority_id_idx ON pgtq_tasks (status, priority, id);",
+   "statement_id": "bc942adf6c77",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "install",
+    "handler": "install",
+    "invocation_id": "onb_pilot_install:install",
+    "migration_phase": "",
+    "logical_op": 1,
+    "session": {
+     "backend_pid": 1971
+    },
+    "task": "ds-actor-install",
+    "on_behalf_of": null,
+    "call_site": "../app/src/pgtq/async_core.py:151:install",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 1,
+   "decision": 1,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 12.25,
+   "completed_ms": 12.8
+  },
+  {
+   "seq": 2,
+   "actor": "install",
+   "kind": "execute",
+   "sql": "CREATE INDEX IF NOT EXISTS pgtq_tasks_status_heartbeat_idx ON pgtq_tasks (status, last_heartbeat);",
+   "statement_id": "4c883c6b6ab8",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "install",
+    "handler": "install",
+    "invocation_id": "onb_pilot_install:install",
+    "migration_phase": "",
+    "logical_op": 2,
+    "session": {
+     "backend_pid": 1971
+    },
+    "task": "ds-actor-install",
+    "on_behalf_of": null,
+    "call_site": "../app/src/pgtq/async_core.py:161:install",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 2,
+   "decision": 2,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 12.83,
+   "completed_ms": 13.23
+  },
+  {
+   "seq": 3,
+   "actor": "install",
+   "kind": "execute",
+   "sql": "ALTER TABLE pgtq_tasks ADD COLUMN IF NOT EXISTS batch_id UUID;",
+   "statement_id": "99e77ad12055",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "install",
+    "handler": "install",
+    "invocation_id": "onb_pilot_install:install",
+    "migration_phase": "",
+    "logical_op": 3,
+    "session": {
+     "backend_pid": 1971
+    },
+    "task": "ds-actor-install",
+    "on_behalf_of": null,
+    "call_site": "../app/src/pgtq/async_core.py:171:install",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 3,
+   "decision": 3,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 13.29,
+   "completed_ms": 13.59
+  },
+  {
+   "seq": 4,
+   "actor": "install",
+   "kind": "execute",
+   "sql": "CREATE INDEX IF NOT EXISTS pgtq_tasks_batch_status_idx ON pgtq_tasks (batch_id, status);",
+   "statement_id": "97fc90c28733",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "install",
+    "handler": "install",
+    "invocation_id": "onb_pilot_install:install",
+    "migration_phase": "",
+    "logical_op": 4,
+    "session": {
+     "backend_pid": 1971
+    },
+    "task": "ds-actor-install",
+    "on_behalf_of": null,
+    "call_site": "../app/src/pgtq/async_core.py:179:install",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 4,
+   "decision": 4,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 13.64,
+   "completed_ms": 14.09
+  },
+  {
+   "seq": 0,
+   "actor": "enqueue",
+   "kind": "execute",
+   "sql": "INSERT INTO pgtq_tasks (call, args, priority, expected_duration, batch_id) VALUES (%s, %s, %s, %s, %s) RETURNING id;",
+   "statement_id": "56bfa908a8f3",
+   "params": [
+    {
+     "str": 11,
+     "sha256": "d10356c179bf"
+    },
+    {
+     "str": 30,
+     "sha256": "6bb8cd940f53"
+    },
+    0,
+    null,
+    null
+   ],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "enqueue",
+    "handler": "enqueue",
+    "invocation_id": "onb_pilot_enqueue:enqueue",
+    "migration_phase": "",
+    "logical_op": 0,
+    "session": {
+     "backend_pid": 1973
+    },
+    "task": "ds-actor-enqueue",
+    "on_behalf_of": null,
+    "call_site": "../app/src/pgtq/async_core.py:237:enqueue",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 1000000,
+   "decision": 0,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    [
+     1
+    ]
+   ],
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 8.57,
+   "completed_ms": 9.48
+  },
+  {
+   "seq": 1,
+   "actor": "enqueue",
+   "kind": "execute",
+   "sql": "NOTIFY pgtq_new_tasks;",
+   "statement_id": "b72f75782251",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "enqueue",
+    "handler": "enqueue",
+    "invocation_id": "onb_pilot_enqueue:enqueue",
+    "migration_phase": "",
+    "logical_op": 1,
+    "session": {
+     "backend_pid": 1973
+    },
+    "task": "ds-actor-enqueue",
+    "on_behalf_of": null,
+    "call_site": "../app/src/pgtq/async_core.py:262:_notify_new_tasks",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 1000001,
+   "decision": 1,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 9.56,
+   "completed_ms": 9.8
+  },
+  {
+   "seq": 2,
+   "actor": "enqueue",
+   "kind": "execute",
+   "sql": "INSERT INTO pgtq_tasks (call, args, priority, expected_duration, batch_id) VALUES (%s, %s, %s, %s, %s) RETURNING id;",
+   "statement_id": "56bfa908a8f3",
+   "params": [
+    {
+     "str": 11,
+     "sha256": "d10356c179bf"
+    },
+    {
+     "str": 30,
+     "sha256": "8fc50139a5c0"
+    },
+    0,
+    null,
+    null
+   ],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "enqueue",
+    "handler": "enqueue",
+    "invocation_id": "onb_pilot_enqueue:enqueue",
+    "migration_phase": "",
+    "logical_op": 2,
+    "session": {
+     "backend_pid": 1973
+    },
+    "task": "ds-actor-enqueue",
+    "on_behalf_of": null,
+    "call_site": "../app/src/pgtq/async_core.py:237:enqueue",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 1000002,
+   "decision": 2,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    [
+     2
+    ]
+   ],
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 9.89,
+   "completed_ms": 10.43
+  },
+  {
+   "seq": 3,
+   "actor": "enqueue",
+   "kind": "execute",
+   "sql": "NOTIFY pgtq_new_tasks;",
+   "statement_id": "b72f75782251",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "enqueue",
+    "handler": "enqueue",
+    "invocation_id": "onb_pilot_enqueue:enqueue",
+    "migration_phase": "",
+    "logical_op": 3,
+    "session": {
+     "backend_pid": 1973
+    },
+    "task": "ds-actor-enqueue",
+    "on_behalf_of": null,
+    "call_site": "../app/src/pgtq/async_core.py:262:_notify_new_tasks",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 1000003,
+   "decision": 3,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 10.5,
+   "completed_ms": 10.74
+  },
+  {
+   "seq": 4,
+   "actor": "enqueue",
+   "kind": "execute",
+   "sql": "INSERT INTO pgtq_tasks (call, args, priority, expected_duration, batch_id) VALUES (%s, %s, %s, %s, %s) RETURNING id;",
+   "statement_id": "56bfa908a8f3",
+   "params": [
+    {
+     "str": 11,
+     "sha256": "d10356c179bf"
+    },
+    {
+     "str": 30,
+     "sha256": "fbb775259201"
+    },
+    0,
+    null,
+    null
+   ],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "enqueue",
+    "handler": "enqueue",
+    "invocation_id": "onb_pilot_enqueue:enqueue",
+    "migration_phase": "",
+    "logical_op": 4,
+    "session": {
+     "backend_pid": 1973
+    },
+    "task": "ds-actor-enqueue",
+    "on_behalf_of": null,
+    "call_site": "../app/src/pgtq/async_core.py:237:enqueue",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 1000004,
+   "decision": 4,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    [
+     3
+    ]
+   ],
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 10.87,
+   "completed_ms": 11.22
+  },
+  {
+   "seq": 5,
+   "actor": "enqueue",
+   "kind": "execute",
+   "sql": "NOTIFY pgtq_new_tasks;",
+   "statement_id": "b72f75782251",
+   "params": null,
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "enqueue",
+    "handler": "enqueue",
+    "invocation_id": "onb_pilot_enqueue:enqueue",
+    "migration_phase": "",
+    "logical_op": 5,
+    "session": {
+     "backend_pid": 1973
+    },
+    "task": "ds-actor-enqueue",
+    "on_behalf_of": null,
+    "call_site": "../app/src/pgtq/async_core.py:262:_notify_new_tasks",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 1000005,
+   "decision": 5,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": -1,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 11.25,
+   "completed_ms": 11.44
+  },
+  {
+   "seq": 0,
+   "actor": "work",
+   "kind": "execute",
+   "sql": "WITH next AS ( SELECT id FROM pgtq_tasks WHERE status = 'queued' AND call = ANY(%s) ORDER BY priority DESC, id ASC FOR UPDATE SKIP LOCKED LIMIT 1 ) UPDATE pgtq_tasks t SET status = 'in_progress', started_at = COALESCE(started_at, now()), last_heartbeat = now() FROM next WHERE t.id = next.id RETURNING t.id, t.call, t.args, t.priority, t.status, t.inserted_at, t.started_at, t.last_heartbeat, t.expected_duration, t.batch_id;",
+   "statement_id": "ffdf2cd0d8e8",
+   "params": [
+    [
+     {
+      "str": 11,
+      "sha256": "d10356c179bf"
+     }
+    ]
+   ],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 0,
+    "session": {
+     "backend_pid": 1975
+    },
+    "task": "ds-actor-work",
+    "on_behalf_of": null,
+    "call_site": "../app/src/pgtq/async_core.py:398:dequeue_one",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 2000000,
+   "decision": 0,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    {
+     "id": 1,
+     "call": {
+      "str": 11,
+      "sha256": "d10356c179bf"
+     },
+     "args": {
+      "a": 1,
+      "b": 2,
+      "jkey": {
+       "str": 2,
+       "sha256": "08243666f926"
+      }
+     },
+     "priority": 0,
+     "status": {
+      "str": 11,
+      "sha256": "01734f4123dc"
+     },
+     "inserted_at": {
+      "timestamptz_us": 1794254804194407
+     },
+     "started_at": {
+      "timestamptz_us": 1794254804205264
+     },
+     "last_heartbeat": {
+      "timestamptz_us": 1794254804205264
+     },
+     "expected_duration": null,
+     "batch_id": null
+    }
+   ],
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 7.7,
+   "completed_ms": 9.28
+  },
+  {
+   "seq": 1,
+   "actor": "work",
+   "kind": "execute",
+   "sql": "DELETE FROM pgtq_tasks WHERE id = %s;",
+   "statement_id": "cc21fe584528",
+   "params": [
+    1
+   ],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 1,
+    "session": {
+     "backend_pid": 1975
+    },
+    "task": "ds-actor-work",
+    "on_behalf_of": null,
+    "call_site": "../app/src/pgtq/async_core.py:473:complete",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 2000001,
+   "decision": 1,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 9.36,
+   "completed_ms": 9.82
+  },
+  {
+   "seq": 2,
+   "actor": "work",
+   "kind": "execute",
+   "sql": "WITH next AS ( SELECT id FROM pgtq_tasks WHERE status = 'queued' AND call = ANY(%s) ORDER BY priority DESC, id ASC FOR UPDATE SKIP LOCKED LIMIT 1 ) UPDATE pgtq_tasks t SET status = 'in_progress', started_at = COALESCE(started_at, now()), last_heartbeat = now() FROM next WHERE t.id = next.id RETURNING t.id, t.call, t.args, t.priority, t.status, t.inserted_at, t.started_at, t.last_heartbeat, t.expected_duration, t.batch_id;",
+   "statement_id": "ffdf2cd0d8e8",
+   "params": [
+    [
+     {
+      "str": 11,
+      "sha256": "d10356c179bf"
+     }
+    ]
+   ],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 2,
+    "session": {
+     "backend_pid": 1975
+    },
+    "task": "ds-actor-work",
+    "on_behalf_of": null,
+    "call_site": "../app/src/pgtq/async_core.py:398:dequeue_one",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 2000002,
+   "decision": 2,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    {
+     "id": 2,
+     "call": {
+      "str": 11,
+      "sha256": "d10356c179bf"
+     },
+     "args": {
+      "a": 3,
+      "b": 4,
+      "jkey": {
+       "str": 2,
+       "sha256": "a499068b8f45"
+      }
+     },
+     "priority": 0,
+     "status": {
+      "str": 11,
+      "sha256": "01734f4123dc"
+     },
+     "inserted_at": {
+      "timestamptz_us": 1794254804195632
+     },
+     "started_at": {
+      "timestamptz_us": 1794254804207432
+     },
+     "last_heartbeat": {
+      "timestamptz_us": 1794254804207432
+     },
+     "expected_duration": null,
+     "batch_id": null
+    }
+   ],
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 9.9,
+   "completed_ms": 10.53
+  },
+  {
+   "seq": 3,
+   "actor": "work",
+   "kind": "execute",
+   "sql": "DELETE FROM pgtq_tasks WHERE id = %s;",
+   "statement_id": "cc21fe584528",
+   "params": [
+    2
+   ],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 3,
+    "session": {
+     "backend_pid": 1975
+    },
+    "task": "ds-actor-work",
+    "on_behalf_of": null,
+    "call_site": "../app/src/pgtq/async_core.py:473:complete",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 2000003,
+   "decision": 3,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 10.6,
+   "completed_ms": 10.91
+  },
+  {
+   "seq": 4,
+   "actor": "work",
+   "kind": "execute",
+   "sql": "WITH next AS ( SELECT id FROM pgtq_tasks WHERE status = 'queued' AND call = ANY(%s) ORDER BY priority DESC, id ASC FOR UPDATE SKIP LOCKED LIMIT 1 ) UPDATE pgtq_tasks t SET status = 'in_progress', started_at = COALESCE(started_at, now()), last_heartbeat = now() FROM next WHERE t.id = next.id RETURNING t.id, t.call, t.args, t.priority, t.status, t.inserted_at, t.started_at, t.last_heartbeat, t.expected_duration, t.batch_id;",
+   "statement_id": "ffdf2cd0d8e8",
+   "params": [
+    [
+     {
+      "str": 11,
+      "sha256": "d10356c179bf"
+     }
+    ]
+   ],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 4,
+    "session": {
+     "backend_pid": 1975
+    },
+    "task": "ds-actor-work",
+    "on_behalf_of": null,
+    "call_site": "../app/src/pgtq/async_core.py:398:dequeue_one",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 2000004,
+   "decision": 4,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": [
+    {
+     "id": 3,
+     "call": {
+      "str": 11,
+      "sha256": "d10356c179bf"
+     },
+     "args": {
+      "a": 5,
+      "b": 6,
+      "jkey": {
+       "str": 2,
+       "sha256": "e73d2c69dab6"
+      }
+     },
+     "priority": 0,
+     "status": {
+      "str": 11,
+      "sha256": "01734f4123dc"
+     },
+     "inserted_at": {
+      "timestamptz_us": 1794254804196642
+     },
+     "started_at": {
+      "timestamptz_us": 1794254804208581
+     },
+     "last_heartbeat": {
+      "timestamptz_us": 1794254804208581
+     },
+     "expected_duration": null,
+     "batch_id": null
+    }
+   ],
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 10.99,
+   "completed_ms": 11.87
+  },
+  {
+   "seq": 5,
+   "actor": "work",
+   "kind": "execute",
+   "sql": "DELETE FROM pgtq_tasks WHERE id = %s;",
+   "statement_id": "cc21fe584528",
+   "params": [
+    3
+   ],
+   "provenance": {
+    "app_version": "onb-pilot",
+    "actor": "work",
+    "handler": "work",
+    "invocation_id": "onb_pilot_work:work",
+    "migration_phase": "",
+    "logical_op": 5,
+    "session": {
+     "backend_pid": 1975
+    },
+    "task": "ds-actor-work",
+    "on_behalf_of": null,
+    "call_site": "../app/src/pgtq/async_core.py:473:complete",
+    "framework_entry": null,
+    "txn": null,
+    "placeholders": "psycopg"
+   },
+   "grant": 2000005,
+   "decision": 5,
+   "outcome": "ok",
+   "error_class": null,
+   "sqlstate": null,
+   "rowcount": 1,
+   "rows": null,
+   "txn_before": "IDLE",
+   "txn_after": "IDLE",
+   "implicit_begin": false,
+   "blocked_by": [],
+   "requested_ms": 11.93,
+   "completed_ms": 12.18
+  }
+ ]
+}
