@@ -125,3 +125,68 @@ SOFTWARE.
 
 Excerpts of taskiq-postgresql 0.4.0 appear in `docs/experimental_mvp/onboarding/pilot_1/`. Its sdist declares
 `License-Expression: MIT` and ships no licence file; see https://pypi.org/project/taskiq-postgresql/0.4.0/.
+
+## saq source archives (MIT)
+
+Normalized `saq/` package trees at commits `59f32fc`, `c570ba4`, `f827b52` and `addee31` are redistributed as
+evidence copies in a refused invocation:
+`docs/experimental_mvp/nonblind_corpus/track_b/runs/_refused_invocation_1/{saq-c570ba4,saq-addee31}/package/cases/*/R{1,2}.tar`.
+saq's licence is reproduced above.
+
+## pgtq (MIT)
+
+Excerpts of pgtq 0.5.0 (SQL statements, API names) appear in `docs/experimental_mvp/onboarding/pilot_2/` and
+`pilot_3/` session evidence.
+
+```
+# License
+
+Copyright (c) 2025 Kyle Ketchell
+
+Permission is hereby granted, free of charge,  to any person obtaining a copy of
+this software  and associated documentation files  (the “Software”),  to deal in
+the Software  without restriction,  including  without limitation  the rights to
+use,  copy,  modify,  merge, publish, distribute, sublicense, and/or sell copies
+of the Software,  and to permit persons to whom the Software  is furnished to do
+so, subject to the following conditions:
+
+The above copyright notice  and  this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE  SOFTWARE  IS  PROVIDED  “AS IS”, WITHOUT WARRANTY OF ANY KIND,  EXPRESS  OR
+IMPLIED,  INCLUDING  BUT  NOT  LIMITED  TO  THE  WARRANTIES  OF MERCHANTABILITY,
+FITNESS  FOR A  PARTICULAR PURPOSE  AND NONINFRINGEMENT.  IN NO EVENT  SHALL THE
+AUTHORS  OR  COPYRIGHT  HOLDERS  BE  LIABLE  FOR  ANY  CLAIM,  DAMAGES  OR OTHER
+LIABILITY,  WHETHER  IN  AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF  OR  IN CONNECTION WITH THE SOFTWARE  OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+## postgres-tq (MIT)
+
+Excerpts of postgres-tq 1.2.1 (SQL statements, API names) appear in `docs/experimental_mvp/onboarding/pilot_2/` and
+`pilot_3/` session evidence.
+
+```
+MIT License
+
+Copyright (c) 2023 FlixMobility Tech GmbH
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
