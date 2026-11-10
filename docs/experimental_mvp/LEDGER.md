@@ -451,3 +451,28 @@ reservations, 0 refusals).
      - Ledgers: 16 evidence ledgers intact; both Meta ledgers settled.
 
 **Meta usage in this increment:** none.
+
+## Increment 20 (2026-11-10): last self-executable r1 gaps
+
+118. **Recommended r1 decision set** (`protocol/r1/RECOMMENDED_DECISION_SET.md`).
+     - **Covers:** the owner's proposed directions for #23–#30 against r1's text and the existing decisions.
+     - **Needs an r2 text change:** six decisions (#24, #24a, #27, #28, #29, #30), plus #15's T. r2 hasn't been
+       generated.
+119. **#27 client-side verification** (`confirmatory_prep/verified_request.py`, 9 tests).
+     - **Before sending:** the frozen requested model and digests.
+     - **After the reply:** the provider-reported model.
+     - **On failure:** the worst-case charge stays counted.
+     - `MetaClient` is unchanged, and no Meta request was made.
+120. **K × S feasibility** (`protocol/r1/KS_FEASIBILITY.md`): executable (max 474.5 s per arm and case). T = 900 s can
+     truncate an all-INCOMPLETE arm (worst case 1,154 s), so T = 1,200 s or a non-truncating stop is the prospective
+     alternative.
+121. **Draft 3-application onboarding protocol** (`onboarding/participant_study/PROTOCOL_r1_3APP.md`): 6 sequences ×
+     3 = 18 minimum, 24 preferred; sign-test power documented; Muse call-duration logging still needed.
+122. **Verification:**
+     - `reliability/acceptance_final_5`: core 971, isolated 14, Ruff clean, root without a database 1746 (322 fail
+       only because `DATABASE_URL` is unset).
+     - `reliability/root_suite_db_5`: 1905 passed, 164 skipped.
+     - Hashes, forms, checksums and the real-mode refusal all verified.
+123. **Correction:** the previous report's "8 local commits" for `c251da0..90a9e89` was a miscount; the number is 7.
+
+**Meta usage in this increment:** none.
