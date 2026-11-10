@@ -161,3 +161,10 @@ def test_the_preparation_path_never_runs_a_real_or_non_development_evaluation():
         prep.PrepExecutor(k=K, s=S, integration=SimInteg(), oracle_targets={"T"}, real=True, simulation=True)
     with pytest.raises(SystemExit, match="development or SIMULATION"):
         prep.PrepExecutor(k=K, s=S, integration=SimInteg(), oracle_targets={"T"}, split="confirmatory")
+
+
+def test_the_time_cap_must_cover_the_worst_case_so_equal_budgets_hold():
+    # ds-nbc/2: every INCOMPLETE run stopped at about 48 s (the coordinator's fixed limit); SOUND runs took <= 10.1 s
+    assert prep.worst_case_seconds(6, 2, 48.1) == pytest.approx(1154.4)
+    assert prep.time_cap_problems(6, 2, 900, 48.1)          # T = 900 s can cut an all-INCOMPLETE arm short
+    assert prep.time_cap_problems(6, 2, 1200, 48.1) == []   # a prospective T derived from the instrument bound

@@ -229,3 +229,18 @@ class PrepExecutor:
                                    wall_seconds=round(time.monotonic() - t0, 4))
                     out.append(rec)
         return out
+
+
+# ------------------------------------------------------------------------------------------------ #24 feasibility
+
+def worst_case_seconds(k: int, s: int, max_run_seconds: float) -> float:
+    """An arm's worst-case execution time for one case: K × S schedules on each of the two revisions, every run
+    stopping at the coordinator's fixed limit (an INCOMPLETE run). Derived from the instrument, not from outcomes."""
+    return 2 * k * s * max_run_seconds
+
+
+def time_cap_problems(k: int, s: int, t_seconds: float, max_run_seconds: float) -> list[str]:
+    """A per-arm time cap T must never cut an arm's schedules short, or equal budgets (#24) would break."""
+    worst = worst_case_seconds(k, s, max_run_seconds)
+    return [] if worst <= t_seconds else [f"T = {t_seconds:g} s can censor an arm: worst case {worst:g} s "
+                                          f"({2 * k * s} runs at {max_run_seconds:g} s)"]
