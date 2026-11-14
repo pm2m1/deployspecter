@@ -9,7 +9,10 @@ runs a confirmatory evaluation, and ``research_tools/confirmatory/run.py``'s rea
 4. valid = the shared validator passes (schema, integration validator, frozen eligibility rules);
 5. valid workloads deduplicated by the sha256 of their canonical JSON, across requests;
 6. the first K distinct valid workloads admitted; later distinct valid ones are overflow, never executed;
-7. slot accounting: filled first time, by repetition (1 to K − 1 admitted) or unfilled (none admitted).
+7. slot accounting: filled first time, by repetition (1 to K − 1 admitted) or unfilled (none admitted), with a
+   per-slot plan naming the workload and, for a repetition, the slot it repeats;
+8. request accounting: planned (R), attempted (every index recorded), transmitted (sent to the provider: not
+   missing and not refused before sending) and failed, with each status counted.
 
 A reply record is ``{"index": i, "status": "ok" | <failure status>, "proposals": [...] | None}``. ``reply_record``
 builds one from ``prep_r2.r2_generate``'s output. Admission sees only the replies and the validator, never labels,
@@ -28,6 +31,7 @@ import prep_r2
 VERSION = "ds-confirm-prep-r3/1"
 K = prep_r2.K
 USABLE = "ok"
+NOT_SENT = {"missing", "refused_before_sending"}  # planned, but nothing was transmitted to the provider
 
 
 def reply_record(index: int, generated: dict[str, Any] | None, *, key: str = "workloads") -> dict[str, Any]:
@@ -106,11 +110,15 @@ def admit_replies(replies: list[dict[str, Any]], r: int, validate: Callable[[Any
     return {
         "version": VERSION, "admitted": admitted, "journal_sha256": prep.sha(admitted), "log": log,
         "requests": {"planned": r, "attempted": sum(1 for q in requests if q["status"] != "missing"),
+                     "transmitted": sum(1 for q in requests if q["status"] not in NOT_SENT),
                      "failed": sum(1 for q in requests if q["status"] != USABLE), "by_status": status_counts},
         "proposals": {**n, "invalid_by_reason": invalid_reasons,
                       "validity_rate": round(n["valid"] / n["generated"], 4) if n["generated"] else None},
         "slots": {"slots": k, "filled_first_time": a, "filled_by_repetition": (k - a) if 0 < a < k else 0,
                   "unfilled_refused": k if a == 0 else 0},
+        "slot_plan": [{"slot": i, "workload_sha256": prep.sha(admitted[i % a]) if a else None,
+                       "fill": "first" if i < a else "repetition" if a else "unfilled_refused",
+                       "repeats_slot": i % a if a and i >= a else None} for i in range(k)],
     }
 
 

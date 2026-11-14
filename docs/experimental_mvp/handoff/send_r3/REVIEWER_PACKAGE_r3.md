@@ -9,6 +9,8 @@
   forward at most one.
 - Changes: `protocol/DECISION_COMPARISON_r2.md` (r2 against r1) and `protocol/DECISION_COMPARISON_r3.md` (r3's only
   change: the proposal-admission rule, #24a). Time budget: `protocol/r2/TIME_BUDGET_r2.md`.
+- **Please confirm or decide:** the C1–C4 resolutions (`DECISION_COMPARISON_r3.md`) and the three admission items
+  in `protocol/r3/ADMISSION_REVIEW_r3.md` (unparseable replies, the canonical-JSON definition, missing requests).
 - r3 states a recommended study design as proposed text. It is not an approval by anyone. It is meant as the stable
   review candidate: please report any substantive problem rather than minor wording.
 

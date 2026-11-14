@@ -97,7 +97,8 @@ def test_cross_request_duplicates_point_to_the_first_occurrence():
 
 def test_missing_failed_and_provider_failure_requests():
     a = r3.admit_replies([ok(0, [w(1)])], R, validate)  # request 1 never recorded
-    assert a["requests"] == {"planned": 2, "attempted": 1, "failed": 1, "by_status": {"ok": 1, "missing": 1}}
+    assert a["requests"] == {"planned": 2, "attempted": 1, "transmitted": 1, "failed": 1,
+                             "by_status": {"ok": 1, "missing": 1}}
     mismatch = {"status": "provider_model_mismatch", "usable": False, "reply_text": json.dumps({"workloads": [w(5)]})}
     recs = [r3.reply_record(0, None), r3.reply_record(1, mismatch)]
     assert recs[0]["status"] == "refused_before_sending" and recs[1]["proposals"] == [w(5)]
@@ -166,3 +167,37 @@ def test_k_is_fixed_and_real_execution_stays_disabled():
         r3.admit_replies([], R, validate, k=4)
     with pytest.raises(SystemExit, match="real confirmatory execution is not enabled"):
         prep_r2.R2Executor(integration=Sim(), oracle_targets={"T"}, journal_sha={}, real=True, simulation=True)
+
+
+def test_planned_attempted_and_transmitted_requests_are_distinguished():
+    recs = [r3.reply_record(0, None), ok(1, [w(1)])]
+    a = r3.admit_replies(recs, R, validate)
+    assert a["requests"] == {"planned": 2, "attempted": 2, "transmitted": 1, "failed": 1,
+                             "by_status": {"refused_before_sending": 1, "ok": 1}}
+    b = r3.admit_replies([ok(0, [w(1)])], R, validate)  # index 1 never recorded
+    assert (b["requests"]["attempted"], b["requests"]["transmitted"], b["requests"]["failed"]) == (1, 1, 1)
+    mismatch = r3.reply_record(1, {"status": "provider_model_mismatch", "usable": False, "reply_text": "{}"})
+    c = r3.admit_replies([ok(0, []), mismatch], R, validate)
+    assert c["requests"]["transmitted"] == 2 and c["requests"]["failed"] == 1  # sent, but unusable
+
+
+def test_the_slot_plan_reports_every_repetition_and_diversity():
+    a = r3.admit_replies([ok(0, [w(1), w(2)]), ok(1, [w(1)])], R, validate)
+    plan = a["slot_plan"]
+    assert [s["fill"] for s in plan] == ["first", "first", "repetition", "repetition", "repetition", "repetition"]
+    assert [s["repeats_slot"] for s in plan] == [None, None, 0, 1, 0, 1]
+    assert [s["workload_sha256"] for s in plan] == [prep.sha(w(1)), prep.sha(w(2))] * 3
+    runs = run_admitted(a)
+    for s in plan:  # the executor ran exactly this plan
+        assert {r["workload_sha256"] for r in runs if r["k"] == s["slot"]} == {s["workload_sha256"]}
+    none = r3.admit_replies([ok(0, [{"bad": 1}])], R, validate)
+    assert {s["fill"] for s in none["slot_plan"]} == {"unfilled_refused"}
+
+
+def test_deduplication_uses_the_deterministic_canonical_json_after_full_validation():
+    assert prep.canonical({"b": [1, 2], "a": "x"}) == b'{"a":"x","b":[1,2]}'
+    rule = prep_r2.EligibilityRule("no-7", "reject n = 7 (prospective)", lambda p: p["jobs"][0]["n"] == 7)
+    v = prep_r2.UniformValidator(validate, [rule], prep_r2.freeze_eligibility([rule]))
+    a = r3.admit_replies([ok(0, [w(7), w(7), w(1)])], R, v)
+    p = a["proposals"]
+    assert (p["invalid"], p["valid"], p["duplicate"], p["admitted"]) == (2, 1, 0, 1)  # ineligible never deduplicated
