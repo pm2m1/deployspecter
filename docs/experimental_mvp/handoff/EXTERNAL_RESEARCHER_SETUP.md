@@ -24,13 +24,17 @@ git checkout research/real-application-mvp
 shasum -a 256 docs/experimental_mvp/protocol/AMENDMENT_003_ADOPTION_CANDIDATE.md     # ad5ea331… (original)
 shasum -a 256 docs/experimental_mvp/protocol/AMENDMENT_003_ADOPTION_CANDIDATE_r1.md  # 20403460… (revision r1)
 shasum -a 256 -c docs/experimental_mvp/handoff/send_r1/SHA256SUMS_r1
+shasum -a 256 docs/experimental_mvp/protocol/AMENDMENT_003_ADOPTION_CANDIDATE_r2.md  # 476d5c57… (revision r2)
+shasum -a 256 -c docs/experimental_mvp/handoff/send_r2/SHA256SUMS_r2
 ```
 The owner decides which candidate goes forward. Sign only the forms for that candidate: `approval/` for the
-original, `approval_r1/` for r1.
+original, `approval_r1/` for r1, `approval_r2/` for r2.
 
 ## 2. Read, in this order
-1. The chosen candidate. For r1, also read `protocol/DECISION_COMPARISON_r1.md`.
-2. `handoff/send_r1/REVIEWER_PACKAGE_r1.md`: your role's section.
+1. The chosen candidate. For r1, also read `protocol/DECISION_COMPARISON_r1.md`; for r2,
+   `protocol/DECISION_COMPARISON_r2.md` and `protocol/r2/TIME_BUDGET_r2.md`.
+2. `handoff/send_r1/REVIEWER_PACKAGE_r1.md` (r1) or `handoff/send_r2/REVIEWER_PACKAGE_r2.md` (r2): your role's
+   section.
 3. `handoff/templates/labels.json` (curator) and `handoff/templates/oracle_spec.md` (oracle author).
 
 ## 3. Excluded applications (never eligible)
@@ -66,7 +70,7 @@ Every database tool checks the cluster's identity and refuses anything else.
 5. **Leak-check every input you hand to the evaluator:**
    `python research_tools/seal_labels.py leak-check --reveal R --bundle DIR`.
 
-## 6. Integrator workflow (r1 #29; the curator may serve, with an attestation)
+## 6. Integrator workflow (r1 #29: the curator may serve, with an attestation; r2 #29: always a separate person)
 1. **Starting point:** the public API, the documentation and the **defective** revision's pinned tree only. Never
    the fix.
 2. **Per case, write:**
@@ -75,7 +79,8 @@ Every database tool checks the cluster's identity and refuses anything else.
    - the curated RA-DET workloads.
 3. **Leak-check them**, and record your reads in the exposure ledger.
 4. **Generator inputs:** `research_tools/confirmatory_prep/prep.py` `generate_det_g` (RA-DET-G) and `freeze_record`
-   (#27) show exactly what is derived from your schema and what is hashed.
+   (#27) show exactly what is derived from your schema and what is hashed. Under r2, `prep_r2.py` adds the request
+   plan (#24a), the uniform validator for eligibility rules (#28), exposure records (#29) and the time rule.
 
 ## 7. Oracle author and reviewer
 1. **Author:** write each oracle from documentation only, exposing `check_clauses(final_state, raw_results)`. List

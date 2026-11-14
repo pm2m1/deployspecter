@@ -118,6 +118,12 @@ The package is in `onboarding/participant_study/`, not run.
 
 ## 9. Dependency-ordered checklist to enable a real confirmatory evaluation
 
+> **Revision candidates (2026-11-15).** Besides the original (`ad5ea331…`), two PROPOSED revisions exist: r1
+> (`20403460…`, `protocol/DECISION_COMPARISON_r1.md`) and r2 (`476d5c57…`, `protocol/DECISION_COMPARISON_r2.md`,
+> reviewer package `handoff/send_r2/`). r2 fixes K = 6 and S = 2, replaces #15's 900 s cap with a non-truncating time
+> rule, requires a separate Integrator, and proposes the three-application study. None is adopted or signed. Under r2,
+> step 2 below also names the Integrator, and step 5's runner preparation is `research_tools/confirmatory_prep/`.
+
 1. **Rule on the proposed revision.** The owner rules on `protocol/AMENDMENT_003_REVISION_PROPOSAL_r1.md`. If any
    part is accepted, a new candidate is written with a new hash; otherwise the current one (`ad5ea331…`) stands.
 2. **Name the people.** Name and declare (COI) the curator, the oracle author and reviewer, the triage reviewers and
