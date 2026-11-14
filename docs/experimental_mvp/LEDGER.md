@@ -519,3 +519,31 @@ reservations, 0 refusals).
 129. **Publication:** `handoff/PUBLICATION_REPORT_r2.md`; audit clean. Not pushed.
 
 **Meta usage in this increment:** none.
+
+## Increment 22 (2026-11-15): proposal admission clarified; r3 review candidate
+
+130. **PROPOSED revision candidate r3** (`protocol/AMENDMENT_003_ADOPTION_CANDIDATE_r3.md`, sha256 `af9b2205…`).
+     - **What it is:** r2 with the proposal-admission rule (#24a) made explicit, by 5 asserted edits
+       (`protocol/r3/build_candidate_r3.py`, byte-identical rebuild). The original, r1 and r2 are unchanged.
+     - **The rule:** exactly R requests before any run; request-index then reply order; every generated proposal
+       in the validity denominator; canonical-JSON deduplication across requests; the first K = 6 distinct valid
+       workloads admitted; overflow and duplicates counted, never executed; separate counts reported.
+     - **Recorded as proposed text,** not as an owner approval. Unsigned forms in `approval_r3/` (checklist step
+       r3-h), `DECISION_COMPARISON_r3.md`, and the package `handoff/send_r3/` with `SHA256SUMS_r3` (17 files).
+131. **Contradictions resolved in the text, for reviewers to confirm** (`DECISION_COMPARISON_r3.md`):
+     - **C1:** "unfilled slots" against #24's cycling. r3 keeps cycling; a slot is unfilled only when nothing is
+       admitted.
+     - **C2:** proposals in a failed reply count as generated and as not valid.
+     - **C3:** a request refused before sending counts as one failed request.
+     - **C4:** deduplication applies to fully valid workloads (schema, validator and eligibility rules).
+132. **Development-only admission tooling** (`confirmatory_prep/prep_r3.py`; 12 offline tests). `prep.py`,
+     `prep_r2.py` and the real-mode gates are unchanged; `run.py real` still refuses (exit 3).
+133. **Verification** (`reliability/acceptance_r3_1` at `c220541`):
+     - Ruff clean.
+     - Core without a database: 810 passed, 195 skipped, every skip "the disposable MVP PostgreSQL isn't running".
+       Nothing those tests cover changed since `cfd5477`, where they passed.
+     - Integrity: the four candidate hashes, three byte-identical rebuilds, three blank form sets, five checksum
+       sets, `verify_amendment`, `dashboard --check`, the real-mode refusal; historical evidence unchanged; both
+       Meta ledgers settled and unchanged.
+
+**Meta usage in this increment:** none.
