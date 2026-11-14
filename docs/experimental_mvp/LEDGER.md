@@ -476,3 +476,46 @@ reservations, 0 refusals).
 123. **Correction:** the previous report's "8 local commits" for `c251da0..90a9e89` was a miscount; the number is 7.
 
 **Meta usage in this increment:** none.
+
+## Increment 21 (2026-11-15): Amendment 003 r2 and external evaluation readiness
+
+124. **PROPOSED revision candidate r2** (`protocol/AMENDMENT_003_ADOPTION_CANDIDATE_r2.md`, sha256 `476d5c57…`).
+     - **Built** from r1 by `protocol/r2/build_candidate_r2.py`: 16 asserted edits, refusing unless r1 and the original
+       match their hashes; `--check` rebuilds it byte-identically. The original and r1 are unchanged.
+     - **Content:** the recommended design written as proposed text, not as a recorded approval. #24 K = 6, S = 2;
+       #24a exactly R requests, no replacement, slot accounting; #27 an exact accepted provider string; #28
+       prospective, uniformly applied eligibility rules; #29 a separate Integrator; #30 option A.
+     - **Also:** unsigned `approval_r2/` forms (a separate-Integrator form, seven r2 checklist steps),
+       `DECISION_COMPARISON_r2.md`, and the reviewer package `handoff/send_r2/` with `SHA256SUMS_r2` (22 files).
+125. **Time budget** (`protocol/r2/TIME_BUDGET_r2.md`).
+     - **900 s** is unsafe: −275 s against the observed worst case.
+     - **1,200 s** was evaluated and **rejected as a cap**. The observed worst case is 24 × 48.1 s plus gaps =
+       1,175 s, a 25 s margin, and a single stalled run past the 45 s soft stop truncates an arm.
+     - **r2's rule:** an executor limit L = 300 s per run (a longer run is INCOMPLETE, for every arm alike); a
+       7,500 s per case and arm safety ceiling, above 24 × L + gaps = 7,223 s, whose breach excludes the case for
+       every arm. Nothing truncates an arm's schedules.
+     - **Correction:** increment 20 (#120) proposed 1,200 s as the alternative. That proposal is withdrawn.
+126. **Development-only r2 preparation path** (`confirmatory_prep/prep_r2.py`; `prep.py` unchanged; 14 tests):
+     the request plan, slot accounting, an admission journal, `R2Executor` with the time rule, one validator for
+     every arm's eligibility rules, and exposure and Integrator-separation checks. `verified_request.py` now accepts
+     a frozen exact provider string. `run.py real` still refuses (exit 3).
+127. **Three-application onboarding preparation** (onb-study/2, NOT RUN; onb-study/1 files unchanged; 8
+     synthetic-data tests): `participant_study_3app.py`, `research_tools/onboarding/pilot_v2.py` (Muse
+     call-duration logging), `study3.py`, `participant_study/PROTOCOL_r2_3APP.md` and `SAMPLE_SIZE_r2.md`. With 18
+     determined pairs, 80% power needs about 82% of participants favouring one condition; with 24, about 80%.
+     - **Found:** onb-study/1's manifest pins an older `research_tools/isolated/smoke_inside.py`. The file changed
+       additively on 2026-11-08 for ds-nbc/1, so the onb-study/2 manifest must pin the current one.
+128. **Verification:**
+     - `reliability/acceptance_final_6` (at `cfd5477`): Ruff clean; core **993 passed**; root without a database
+       1746 passed (all 322 failures and errors are "DATABASE_URL is not set"); isolated 13 passed and 1 skipped.
+       The skip was the procrastinate sdists missing from the re-fetched directory.
+     - `reliability/isolated_full_6`: with those sdists fetched and hash-verified, isolated **14 passed**.
+     - `reliability/root_suite_db_6`: **1905 passed, 164 skipped** (163 need the Gate 2B cluster).
+     - Hashes, forms, all four checksum sets, `verify_amendment`, `dashboard --check` and the real-mode refusal were
+       all verified. 16 evidence ledgers intact; both Meta ledgers settled. The protected container is unchanged.
+     - **Environment:** the `/private/tmp` cleanup had emptied the sdists, the git mirrors and the case archives.
+       They were restored from public sources and verified against committed pins (`fetch_pinned.sh`, `git clone
+       --mirror`, `pin_chancy.py --check`).
+129. **Publication:** `handoff/PUBLICATION_REPORT_r2.md`; audit clean. Not pushed.
+
+**Meta usage in this increment:** none.
