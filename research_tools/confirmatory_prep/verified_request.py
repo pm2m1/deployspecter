@@ -8,8 +8,9 @@ the unchanged ``MetaClient`` and fails closed.
 
 Any difference refuses the request, and nothing is sent.
 
-**After a request,** the provider-reported model (``response.model``) must equal the frozen model. The proxy captures
-it from the response object; ``MetaClient`` itself is not modified.
+**After a request,** the provider-reported model (``response.model``) must equal the frozen model, or, under r2's
+#27, the exact accepted string recorded at adoption (``frozen["accepted_provider_model"]``) when one is frozen. The
+proxy captures it from the response object; ``MetaClient`` itself is not modified.
 - **On a mismatch:** the reply is kept for the record but marked a **provider failure**. Its proposals are never
   used, and it counts against R with its cost.
 - **On a transport or provider error:** the worst-case cost that ``MetaClient`` charged before the call stays
@@ -50,7 +51,8 @@ def verified_generate(client: Any, frozen: dict[str, Any], *, proposer_source: b
     current = prep.freeze_record(proposer_source=proposer_source, instructions=instructions, context=context,
                                  schema=schema, model=client.model, reasoning_effort=client.reasoning_effort,
                                  store=client.store, max_output_tokens=max_output_tokens)
-    prep.verify_freeze(frozen, current)  # refuses before anything is sent
+    accepted = frozen.get("accepted_provider_model", frozen["model"])  # r2 #27: the exact string recorded at adoption
+    prep.verify_freeze({k: v for k, v in frozen.items() if k != "accepted_provider_model"}, current)  # before sending
     inner = client._client
     proxy = _ClientProxy(inner)
     client._client = proxy
@@ -66,6 +68,7 @@ def verified_generate(client: Any, frozen: dict[str, Any], *, proposer_source: b
     reported = getattr(proxy.responses.last, "model", None)
     out = {"status": "ok", "reply_text": reply.text, "est_usd": reply.approx_cost_usd,
            "provider_model": reported, "usable": True}
-    if reported != frozen["model"]:
+    out["accepted_provider_model"] = accepted
+    if reported != accepted:
         out.update(status="provider_model_mismatch", usable=False)  # kept for the record, never used
     return out
