@@ -123,6 +123,8 @@ The package is in `onboarding/participant_study/`, not run.
 > reviewer package `handoff/send_r2/`). r2 fixes K = 6 and S = 2, replaces #15's 900 s cap with a non-truncating time
 > rule, requires a separate Integrator, and proposes the three-application study. None is adopted or signed. Under r2,
 > step 2 below also names the Integrator, and step 5's runner preparation is `research_tools/confirmatory_prep/`.
+> **r3** (`af9b2205…`, `protocol/DECISION_COMPARISON_r3.md`, package `handoff/send_r3/`) is r2 with the
+> proposal-admission rule (#24a) made explicit. It is the proposed review candidate; it too is unsigned and not adopted.
 
 1. **Rule on the proposed revision.** The owner rules on `protocol/AMENDMENT_003_REVISION_PROPOSAL_r1.md`. If any
    part is accepted, a new candidate is written with a new hash; otherwise the current one (`ad5ea331…`) stands.

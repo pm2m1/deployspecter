@@ -26,14 +26,17 @@ shasum -a 256 docs/experimental_mvp/protocol/AMENDMENT_003_ADOPTION_CANDIDATE_r1
 shasum -a 256 -c docs/experimental_mvp/handoff/send_r1/SHA256SUMS_r1
 shasum -a 256 docs/experimental_mvp/protocol/AMENDMENT_003_ADOPTION_CANDIDATE_r2.md  # 476d5c57… (revision r2)
 shasum -a 256 -c docs/experimental_mvp/handoff/send_r2/SHA256SUMS_r2
+shasum -a 256 docs/experimental_mvp/protocol/AMENDMENT_003_ADOPTION_CANDIDATE_r3.md  # af9b2205… (r3, review candidate)
+shasum -a 256 -c docs/experimental_mvp/handoff/send_r3/SHA256SUMS_r3
 ```
 The owner decides which candidate goes forward. Sign only the forms for that candidate: `approval/` for the
-original, `approval_r1/` for r1, `approval_r2/` for r2.
+original, `approval_r1/` for r1, `approval_r2/` for r2, `approval_r3/` for r3. r3 is the review candidate.
 
 ## 2. Read, in this order
 1. The chosen candidate. For r1, also read `protocol/DECISION_COMPARISON_r1.md`; for r2,
    `protocol/DECISION_COMPARISON_r2.md` and `protocol/r2/TIME_BUDGET_r2.md`.
-2. `handoff/send_r1/REVIEWER_PACKAGE_r1.md` (r1) or `handoff/send_r2/REVIEWER_PACKAGE_r2.md` (r2): your role's
+2. `handoff/send_r1/REVIEWER_PACKAGE_r1.md` (r1), `handoff/send_r2/REVIEWER_PACKAGE_r2.md` (r2) or
+   `handoff/send_r3/REVIEWER_PACKAGE_r3.md` (r3; also read `protocol/DECISION_COMPARISON_r3.md`): your role's
    section.
 3. `handoff/templates/labels.json` (curator) and `handoff/templates/oracle_spec.md` (oracle author).
 
