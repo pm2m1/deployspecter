@@ -69,3 +69,8 @@ On 2026-11-15, `verify` reported 7,848 of 7,848 files matching and `ok: true`. W
 bundle, it reported `sha256 differs from SHA256SUMS` and `ok: false`. Per-file sha256 values can also be compared
 with the evidence's own committed manifests and ledgers (for example `MANIFEST.json`, `SHA256SUMS*` and
 `RESULTS_LEDGER.jsonl` files) after unpacking.
+
+## Release and DOI
+
+The bundles and `SHA256SUMS` are attached to the GitHub Release for `research-2026-11-15`. Steps to archive them on
+Zenodo for a DOI are in [`ZENODO.md`](ZENODO.md).
