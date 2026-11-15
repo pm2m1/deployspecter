@@ -28,7 +28,8 @@ sources of cases:
 One person runs the study. Independence that r3 requires is replaced by automation where possible, and the rest
 is declared. The protocol is Amendment 003, revision candidate r3 (sha256
 `af9b2205ab77c38cb5b7c803e85dbf7bb8bd283b68e15e26d6b177a9bb13fe1c`), adopted under the attached solo adoption record.
-`FREEZE.json` lists the sha256 of every frozen document and program, and of the two sealed seeds. Results will be
+`FREEZE.json` (sha256 `696a50d1d403a54870f5008573de9ace1eac5ef154fff101c08e6f14e86112fc`) lists the sha256 of every
+frozen document and program, and of the two sealed seeds. Results will be
 labelled "preregistered, automation-blinded, single-investigator. Not independent".
 
 ### Hypotheses
@@ -68,9 +69,13 @@ No. Declared instead (see the solo adoption record):
   and RA-DET-C only where the integration has a state stage.
 - **Budgets:** K = 6 slots × S = 2 schedules per revision per arm. Muse: R = 2 requests, P = 6 proposals,
   C = $1 per case per arm.
-- **Oracles:** historical cases use the maintainers' regression test from the fix commit, as a spec over the final
-  database state (`maintainer_oracle.py`); mutants use a differential against the unmutated build under the
-  identical schedule (`auto_oracles.py`).
+- **Oracles:** historical cases use the maintainers' regression test from the fix commit, transcribed as a spec
+  (format `ds-maintainer-spec/2`) over the final database state (`maintainer_oracle.py`). Every assertion of the
+  chosen test functions is accounted for. Each expressed assertion is flagged when it uses DeploySpecter code, and
+  checked against the spec's declared sources. The `mock`, `exception` and `in_memory_return_value` reasons are
+  verified mechanically, and the others are counted as investigator judgement. A case whose oracle rests only on
+  DeploySpecter code is refused (`oracle_depends_on_tool`). Mutants use a differential against the unmutated build
+  under the identical schedule (`auto_oracles.py`).
 
 ### Randomization
 
@@ -97,8 +102,9 @@ of the 4 cases, which were then detected with holding controls; the adapter refu
   matching the frozen topic and fix expressions, the driver rule (psycopg 3, or rule S4: a Django application on
   psycopg2 that runs unmodified with psycopg 3 under Django 4.2 or later, checked per application before any of its
   fixes is read), and a regression test changed by the fix.
-- **Oracles:** each admitted case's maintainer spec is committed and hashed before any arm runs. A case is refused
-  if no assertion is expressible over the final state. A case is excluded for every arm if its oracle fails on the
+- **Oracles:** each admitted case's maintainer spec and its coverage record are committed and hashed before any arm
+  runs. A case is refused if no assertion is expressible over the final state, if a checkable reason fails
+  verification, or if every expressed assertion uses DeploySpecter code. A case is excluded for every arm if its oracle fails on the
   corrected revision under the serial schedule.
 - **Runs:** restricted containers with pinned trees, a disposable PostgreSQL 16, and server-log corroboration that
   requires 0 mismatched parameters. Nothing is retried.
@@ -134,6 +140,9 @@ The workload source (arm).
 - Coverage (r3 §7).
 - Mutant verdicts (VIOLATED, EQUIVALENT-SUSPECT, UNREACHABLE; serial-killed separately).
 - Adapter refusals by reason, and integration time per application.
+- Per case, the coverage record: assertions total, expressed, expressed without DeploySpecter code, not expressible
+  by reason, mechanically verified, investigator judgement. Per detection, whether it rests only on DeploySpecter
+  code.
 
 ### Indices
 
@@ -147,6 +156,9 @@ The workload source (arm).
 
 `ANALYSIS_PLAN.md` and `ANALYSIS_PLAN_SOLO.md`:
 - exact two-sided McNemar, Muse arm vs RA-DET-G (primary) and vs RA-DET (secondary);
+- **preregistered sensitivity analysis:** the same comparisons on the strict subset (no expressed assertion uses
+  DeploySpecter code, and no not-expressible reason is investigator judgement). It is reported whatever its size,
+  and is descriptive only with fewer than 10 strict cases;
 - leave-one-application-out sensitivity;
 - Kaplan–Meier and the paired censored median difference for time to detection, with an exact Wilcoxon only if
   both arms detect at least 10 cases;

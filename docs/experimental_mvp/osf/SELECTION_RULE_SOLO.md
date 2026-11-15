@@ -22,16 +22,25 @@ the one in `FREEZE.json`.
    - `driver`: the parent declares neither psycopg 3, nor psycopg2 with Django 4.2 or later;
    - `s4_failed`: an S4 application whose S4 check failed;
    - `no_regression_test`: the fix adds or changes no `test_*` function that contains an assertion;
-   - `adapter_refused`: `maintainer_oracle.py` refused the case;
+   - `adapter_refused`: `maintainer_oracle.py` refused the case, with its reason. The reasons include
+     `oracle_depends_on_tool`: every expressed assertion uses DeploySpecter code;
    - `app_cap`: the application already has 3 admitted cases.
 4. **Stop** at 10 admitted cases from at least 5 applications, or after 100 screens. With fewer than 10, RA-Q3 is
    descriptive.
 5. **S4 checks come first.** The selection stops (exit 4) at the first S4 application without a recorded verdict.
    The investigator runs that application's S4 check (`SELECTION_RULE.md` S4, steps 1–6), records `pass` or `fail`
    in `S4.json`, and re-runs `select`. Because the order is fixed, earlier decisions don't change.
-6. **Adapter refusals.** For each admitted case, the investigator writes the maintainer spec and runs
-   `maintainer_oracle.py check-spec`. A refusal goes into `REFUSED.json`, and `select` is re-run; the next candidate
-   in the fixed order takes the place.
+6. **Adapter refusals.** For each admitted case, the investigator writes the maintainer spec (format
+   `ds-maintainer-spec/2`) and runs `maintainer_oracle.py check-spec`. A refusal goes into `REFUSED.json` as
+   `{"repo", "fix_commit", "reason"}`, and `select` is re-run; the next candidate in the fixed order takes the place.
+   `check-spec` refuses when:
+   - the spec leaves out or invents an assertion or a changed test function;
+   - an expressed assertion lacks `uses_deployspecter_code`, or claims `false` while reading DeploySpecter data;
+   - a `mock`, `exception` or `in_memory_return_value` reason fails mechanical verification;
+   - nothing is expressible;
+   - every expressed assertion uses DeploySpecter code (`oracle_depends_on_tool`).
+
+   The coverage record of every admitted or refused case is committed with its spec.
 
 ## What the investigator reads, and when
 

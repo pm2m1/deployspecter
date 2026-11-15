@@ -21,6 +21,39 @@ confirmatory, whatever the sample size.
   arm and the paired censored median difference. Leave-one-application-out sensitivity for every comparison.
 - With fewer than 10 eligible cases, RA-Q3 is descriptive.
 
+### Reported per case: assertion coverage
+
+Every admitted and every refused case gets its coverage record from `maintainer_oracle.py` (spec format
+`ds-maintainer-spec/2`):
+- the total number of assertions in the chosen regression test functions;
+- how many are expressed over the final state;
+- how many of those are expressed without DeploySpecter code: no handler table, model or helper output, only the
+  application's own tables read with plain SQL and the workload's record of its own operations;
+- not-expressible assertions by reason;
+- how many reasons were verified mechanically (`mock`, `exception`, `in_memory_return_value`);
+- how many rest on investigator judgement.
+
+For every detection, the report also states whether it rests on at least one assertion that uses no DeploySpecter
+code (`failed_without_deployspecter_code`), or only on assertions that do (`detected_only_through_deployspecter_code`).
+
+### Preregistered sensitivity analysis: the strict subset
+
+The **strict subset** is the cases where no expressed assertion uses DeploySpecter code, and no not-expressible
+reason is investigator judgement (`coverage.strict_subset`).
+- The primary comparison (McNemar, the Muse arm against RA-DET-G) and the secondary comparisons (against RA-DET,
+  with Holm correction; time to detection) are repeated on the strict subset.
+- They are reported whatever its size, with exact counts.
+- With fewer than 10 strict cases, the result is **descriptive only**, and the report says so in those words.
+- For reference, neither development case would qualify (`solo/DEV_CASE_CHECK.md`).
+
+### Rule: an oracle may not depend only on the tool
+
+A case whose expressed assertions **all** have `uses_deployspecter_code: true` is refused. It is logged as
+`adapter_refused` with reason `oracle_depends_on_tool`, and the next candidate takes its place
+(`SELECTION_RULE_SOLO.md`). `uses_deployspecter_code` is declared per assertion. `check-spec` refuses `false` when the
+predicate reads a final-state key the spec classifies as DeploySpecter's, or a `raw_results` path outside the
+workload's record.
+
 ## Mutants (a second source, reported separately and never pooled)
 
 - **Generation:** `research_tools/solo/mutants.py generate` per application, after its integration is frozen and

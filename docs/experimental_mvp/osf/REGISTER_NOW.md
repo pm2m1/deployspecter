@@ -10,6 +10,9 @@ After step 11, `FREEZE.json` and everything it hashes must never change.
    .venv/bin/python research_tools/solo/build_freeze.py --check     # must print "FREEZE.json matches a rebuild"
    shasum -a 256 docs/experimental_mvp/osf/FREEZE.json             # the value you paste in step 8
    ```
+   As committed on 2026-11-16 (spec format 2, coverage reporting, strict-subset sensitivity analysis), it must print
+   `696a50d1d403a54870f5008573de9ace1eac5ef154fff101c08e6f14e86112fc`. A different value means something hashed changed
+   after this file was written. Stop, and find out what before registering.
 2. Confirm the sealed seeds exist and match FREEZE.json, without printing them:
    ```sh
    python3 -c 'import json,hashlib,pathlib; s=json.loads((pathlib.Path.home()/".deployspecter-sealed/seeds.json").read_text()); f=json.load(open("docs/experimental_mvp/osf/FREEZE.json"))["sealed_seeds"]; print(all(hashlib.sha256(s[k].encode()).hexdigest()==f[k+"_sha256"] for k in ("selection_seed","mutant_seed")))'
