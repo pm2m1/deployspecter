@@ -91,11 +91,22 @@ uv run python research_tools/nbc/run_nbc.py summarize --out /tmp/nbc_saq
 research_tools/mvp_pg.sh stop
 ```
 
-Expected, per `CORPUS_RESULTS.md`: R1 violates on its first schedule, and the R2 control holds in 12 of 12. Because
-the scheduler is seeded, a re-run should give the same verdicts. Server-log corroboration should show 0 mismatched
-parameters. RA-DET makes no model requests, so no API key is needed.
+Expected, per `CORPUS_RESULTS.md`: R1 violates on its first schedule, and the R2 control holds in 12 of 12. The
+summary's row for RA-DET should show `"detected": true`, `"schedules_to_detection": 1`, `"false_positive": false`,
+`"fixed_schedules": 12`, `"runs": {"VIOLATED": 2, "HOLDS": 4}` and `"params_mismatched": 0`. Because the scheduler is
+seeded, a re-run gives the same verdicts. The statement and parameter counts can differ by a few, because saq polls
+the queue; the frozen run matched 715 statements, a re-run from a fresh clone 718. RA-DET makes no model requests,
+so no API key is needed.
 
-These steps are the ones used in ds-nbc/1, but they haven't been re-run end to end from a fresh clone. Two things
-are assumed:
-- the pinned Python runner image builds on your machine;
-- port 55441 is free.
+Notes for a first run:
+- The `run` step took 74 seconds here, including the image build. The runner builds its image from the pinned archive
+  on every run, and checks the image's `saq/` tree against the archive file by file.
+- An existing `--out` directory resumes after its committed runs, and does nothing once complete. Use a new `--out`
+  to run again.
+- `mvp_pg.sh start` refuses if port 55441 is in use or a container named `deployspecter-mvp-pg` exists. Its password
+  file is `~/.ds_mvp_pg_password`, deleted by `mvp_pg.sh stop`.
+- To clean up afterwards: `rm -rf /tmp/saq.git /tmp/archives /tmp/saq-c570ba4.json /tmp/nbc_saq`.
+
+These steps were re-run from a fresh clone of the tag on 2026-11-15 (macOS, Docker 29.7.2, uv 0.12.9), and gave the
+expected verdicts with 0 mismatched parameters. Docker already had the base image, so its first download wasn't
+tested.
