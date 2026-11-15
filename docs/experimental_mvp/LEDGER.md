@@ -547,3 +547,30 @@ reservations, 0 refusals).
        Meta ledgers settled and unchanged.
 
 **Meta usage in this increment:** none.
+
+## Increment 23 (2026-11-15): r3 admission review, full acceptance and recruitment handoff
+
+134. **r3 admission review** (`protocol/r3/ADMISSION_REVIEW_r3.md`; the candidate `af9b2205…` is unchanged; no r4).
+     - **C1–C4:** consistent with `prep_r3.py`.
+     - **Reporting added**, with no change to any admission decision: `requests.transmitted` (planned, attempted
+       and transmitted are now distinct) and a per-slot plan naming each repetition. 3 tests added.
+     - **Left for reviewers:** unparseable replies; the exact canonical-JSON definition (the implementation's, not
+       RFC 8785); and whether a missing request record is an infrastructure failure for the case.
+135. **Full acceptance at `32b335f`, with the disposable database:**
+     - `reliability/acceptance_final_7`: Ruff clean; core **1008 passed**, 0 skipped; isolated **14 passed**; root
+       without a database 1746 passed, with all 322 failures and errors "DATABASE_URL is not set".
+     - `reliability/root_suite_db_7`: **1905 passed, 164 skipped** (163 need the Gate 2B cluster; 1 collection skip).
+     - `acceptance_final_7/integrity.txt`: the four candidate hashes; three byte-identical rebuilds; three blank form
+       sets; five checksum sets; `verify_amendment`; `dashboard --check`; `run.py real` refusing (exit 3);
+       historical evidence unchanged; 16 evidence ledgers intact; both Meta ledgers settled and unchanged.
+     - `MANIFEST_final_7` differs only in the two intended files (`prep_r3.py` and its test). `MANIFEST_final_8`
+       supersedes it.
+136. **Recruitment handoff (nobody named or contacted):**
+     - `handoff/send_r3/INDEPENDENT_ROLES_CHECKLIST_r3.md`, for the seven roles;
+     - `handoff/templates/RECRUITMENT_TRACKER_TEMPLATE.md`, blank. Filled copies go outside the repository or in
+       the git-ignored `handoff/private/`;
+     - `onboarding/participant_study/PARTICIPANT_RECRUITMENT_CHECKLIST_r3.md`, for 24 participants and three
+       applications;
+     - `SHA256SUMS_r3` now covers 21 files.
+
+**Meta usage in this increment:** none.
