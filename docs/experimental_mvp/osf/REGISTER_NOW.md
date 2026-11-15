@@ -11,7 +11,7 @@ After step 11, `FREEZE.json` and everything it hashes must never change.
    shasum -a 256 docs/experimental_mvp/osf/FREEZE.json             # the value you paste in step 8
    ```
    As committed on 2026-11-16 (spec format 2, coverage reporting, strict-subset sensitivity analysis), it must print
-   `696a50d1d403a54870f5008573de9ace1eac5ef154fff101c08e6f14e86112fc`. A different value means something hashed changed
+   `0bf657c07caff0f20bda39ae20d52e2d8fba0a8889daaf2c13a1d9fd8771cc6a`. A different value means something hashed changed
    after this file was written. Stop, and find out what before registering.
 2. Confirm the sealed seeds exist and match FREEZE.json, without printing them:
    ```sh

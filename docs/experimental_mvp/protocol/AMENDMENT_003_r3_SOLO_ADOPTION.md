@@ -58,4 +58,8 @@ Authorization (verbatim):
 
 > I, Parth Mishra (sole owner, GitHub pm2m1), authorize this session to: back up unpushed work to a private repo, submit the GitLab report as a confidential issue, post the saq issue, merge PR #2, publish the draft release, record my owner decisions, and re-plan the benchmark for a single investigator. I have no collaborators, curator, oracle writer or faculty reader. Record this text verbatim in each record you write on my behalf.
 
+Amendment before registration, 2026-11-16: maintainer spec format 2 (the tool-code flag, mechanical verification of reasons, coverage records), the strict-subset sensitivity analysis and the `oracle_depends_on_tool` refusal were added and FREEZE.json was rebuilt, on the owner's written authorization (verbatim):
+
+> I, Parth Mishra (sole owner, GitHub pm2m1), authorize this session to: encrypt my confidential backup, remove the `backup` git remote and the local GitLab snapshot branch after the encrypted backup is verified, copy the encrypted backup to iCloud Drive, add assertion-coverage reporting and a sensitivity analysis to the solo benchmark before OSF registration and rebuild FREEZE.json, and submit the GitLab report as a confidential issue. Record this text verbatim in each record you write on my behalf.
+
 OSF registration DOI or URL: ______________________   Registered FREEZE.json sha256: ______________________

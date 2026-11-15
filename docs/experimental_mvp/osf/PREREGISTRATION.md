@@ -28,7 +28,7 @@ sources of cases:
 One person runs the study. Independence that r3 requires is replaced by automation where possible, and the rest
 is declared. The protocol is Amendment 003, revision candidate r3 (sha256
 `af9b2205ab77c38cb5b7c803e85dbf7bb8bd283b68e15e26d6b177a9bb13fe1c`), adopted under the attached solo adoption record.
-`FREEZE.json` (sha256 `696a50d1d403a54870f5008573de9ace1eac5ef154fff101c08e6f14e86112fc`) lists the sha256 of every
+`FREEZE.json` (sha256 `0bf657c07caff0f20bda39ae20d52e2d8fba0a8889daaf2c13a1d9fd8771cc6a`) lists the sha256 of every
 frozen document and program, and of the two sealed seeds. Results will be
 labelled "preregistered, automation-blinded, single-investigator. Not independent".
 
