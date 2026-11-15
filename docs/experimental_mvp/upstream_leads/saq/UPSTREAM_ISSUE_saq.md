@@ -1,6 +1,6 @@
 <!-- FINAL DRAFT for the owner to post. Not posted. The body below is identical to UPSTREAM_ISSUE_saq.body.md,
      which is what this command posts (run from this directory, by the owner only):
-     gh issue create --repo tobymao/saq --title "`max_burst_jobs` is exceeded when `concurrency > 1` (up to `max_burst_jobs + concurrency - 1` jobs run)" --body-file UPSTREAM_ISSUE_saq.body.md
+     gh issue create --repo tobymao/saq --title '`max_burst_jobs` is exceeded when `concurrency > 1` (up to `max_burst_jobs + concurrency - 1` jobs run)' --body-file UPSTREAM_ISSUE_saq.body.md
      Duplicate search, 2026-11-15 (gh search issues --include-prs, open and closed): "burst", "max_burst_jobs", "burst mode"
      matched #311, #253, #179 (PRs) and #98 (issue). None reports the total exceeding max_burst_jobs. -->
 
