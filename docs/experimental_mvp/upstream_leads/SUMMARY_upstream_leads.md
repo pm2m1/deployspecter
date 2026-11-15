@@ -7,6 +7,6 @@
 5. **Smallest failing workload:** 3 jobs, concurrency 2, cap 2, giving 3 jobs processed (80 grants). It doesn't depend on the schedule: 5 seeds per workload gave the same result.
 6. **Standalone reproduction** (saq public API plus docker-compose, no DeploySpecter): over the cap in 20 of 20 and 20 of 20 iterations, and 0 of 20 in both controls (`saq/standalone/`).
 7. **Oracle:** not narrowed. No oracle-error file was written, because the documentation doesn't permit the overrun. Earlier results are unchanged.
-8. **Draft issue:** `saq/UPSTREAM_ISSUE_saq.md`. It includes the line "this may be intended; if so, could the docstring say…".
+8. **Final draft issue** (owner posts): `saq/UPSTREAM_ISSUE_saq.md`, body in `saq/UPSTREAM_ISSUE_saq.body.md`. It cites the constructor clamp, gives the mechanism and an untested one-line suggestion, and says "this may be intended; if so, could the docstring say…". A search of saq issues and PRs found no duplicate (#311, #253, #179, #98 are related only).
 9. **Chancy:** the documented upgrade is "Stop your workers", then migrate, and the maintainer describes scaling to 0 (#38). Mixed 0.25/0.26 workers are neither documented as supported nor ruled out (`chancy/UPGRADE_GUIDANCE.md`).
 10. **Chancy draft question** (`chancy/DISCUSSION_DRAFT_chancy.md`): a cancel was lost in every cell except a 0.26.0 cancel with a 0.26.0 worker. It's labelled NONBLIND and outside the documented procedure, and suggests a docs note.

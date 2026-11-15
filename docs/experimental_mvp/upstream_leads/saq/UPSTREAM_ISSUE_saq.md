@@ -1,89 +1,155 @@
-<!-- DRAFT for the owner to review and post. Not posted. Paste from the title line down. -->
+<!-- FINAL DRAFT for the owner to post. Not posted. The body below is identical to UPSTREAM_ISSUE_saq.body.md,
+     which is what this command posts (run from this directory, by the owner only):
+     gh issue create --repo tobymao/saq --title "`max_burst_jobs` is exceeded when `concurrency > 1` (up to `max_burst_jobs + concurrency - 1` jobs run)" --body-file UPSTREAM_ISSUE_saq.body.md
+     Duplicate search, 2026-11-15 (gh search issues --include-prs, open and closed): "burst", "max_burst_jobs", "burst mode"
+     matched #311, #253, #179 (PRs) and #98 (issue). None reports the total exceeding max_burst_jobs. -->
 
-**Title:** `max_burst_jobs` is exceeded when `concurrency > 1` (burst worker processes up to `max_burst_jobs + concurrency - 1` jobs)
+**Title:** `max_burst_jobs` is exceeded when `concurrency > 1` (up to `max_burst_jobs + concurrency - 1` jobs run)
 
-A burst worker with `concurrency=2` and `max_burst_jobs=2` processes 3 jobs when 3 are queued. The `Worker`
-docstring describes `max_burst_jobs` as "the maximum number of jobs to process in burst mode", so I expected at
-most 2.
+A burst worker with `concurrency=2` and `max_burst_jobs=2` processes 3 jobs when 3 are queued. I expected at most 2.
 
-Verified on saq 0.26.5 (PyPI), Python 3.12.16, psycopg 3.3.9, PostgreSQL 16. Line links point at `4a9ecc2`
-(v0.26.5). The burst code is unchanged since #311.
+**Versions:** saq 0.26.5 (PyPI; `main` has no changes to the burst code since), Python 3.12.16, psycopg 3.3.9,
+PostgreSQL 16. Links point at `4a9ecc2` (v0.26.5).
 
-### Expected
+### Why I read it as a hard limit
 
-From the `Worker` docstring
-([worker.py#L73-L74](https://github.com/tobymao/saq/blob/4a9ecc242f04861552955a5a40f6232889f94354/saq/worker.py#L73-L74)):
+- The `Worker` docstring ([L73-L74](https://github.com/tobymao/saq/blob/4a9ecc242f04861552955a5a40f6232889f94354/saq/worker.py#L73-L74)): "max_burst_jobs: the maximum number of jobs to process in burst
+  mode".
+- The constructor clamps concurrency to it ([L152-L153](https://github.com/tobymao/saq/blob/4a9ecc242f04861552955a5a40f6232889f94354/saq/worker.py#L152-L153)):
+  ```python
+  if self.max_burst_jobs is not None:
+      self.concurrency = min(self.concurrency, self.max_burst_jobs)
+  ```
 
-> burst: whether to stop the worker once all jobs have been processed
-> max_burst_jobs: the maximum number of jobs to process in burst mode
+### Observed
 
-With `max_burst_jobs=2`, at most 2 jobs are processed and the rest stay `queued`. That is what `test_max_burst_jobs`
-asserts, with `max_burst_jobs=1`.
-
-### Actual
-
-| concurrency | max_burst_jobs | jobs queued | handler calls | runs over the cap |
+| concurrency | max_burst_jobs | jobs queued | handler calls | iterations over the cap |
 |---|---|---|---|---|
 | 2 | 2 | 3 | 3 | 20 of 20 |
 | 2 | 3 | 4 | 4 | 20 of 20 |
-| 1 | 2 | 3 | 2 | 0 of 20 |
-| 2 | 2 | 2 | 2 | 0 of 20 |
+| 1 | 2 | 3 | 2 | 0 of 20 (control) |
+| 2 | 2 | 2 | 2 | 0 of 20 (control) |
 
-Every extra job runs once and ends `complete`. None is duplicated or left `active`.
+Each extra job runs once and ends `complete`. None is duplicated or left `active`.
 
-### Why, as far as I can tell
+### Mechanism, as far as I can tell
 
-`_check_burst` counts a job only when its process task finishes
-([worker.py#L438-L466](https://github.com/tobymao/saq/blob/4a9ecc242f04861552955a5a40f6232889f94354/saq/worker.py#L438-L466)).
-With 2 slots, the first job to finish brings the count to 1 of 2, so `_process` starts a new task, which dequeues
-a third job. Meanwhile the second slot is still running and hasn't been counted. The constructor's
-`concurrency = min(concurrency, max_burst_jobs)` and the slot limit in `start()` cap jobs in flight ("burst mode
-caps in-flight dequeues at `max_burst_jobs`", #311), not the total. So up to `max_burst_jobs + concurrency - 1` jobs
-can run. With `concurrency=1`, the only case the test covers, the count is exact.
+`_check_burst` increments `burst_jobs_processed` only when a process task **completes**
+([L438-L466](https://github.com/tobymao/saq/blob/4a9ecc242f04861552955a5a40f6232889f94354/saq/worker.py#L438-L466)). When the first of 2 in-flight jobs finishes, the count is 1 of 2, so `_process`
+starts a new task, which dequeues a third job while the second is still running. When the second finishes, the cap
+is reached, but in-flight tasks aren't cancelled, so the third also runs. In general up to
+`max_burst_jobs + concurrency - 1` jobs run. The slot limit in `start()` ("burst mode caps in-flight dequeues at
+`max_burst_jobs`", #311) bounds jobs in flight, not the total. With `concurrency=1`, the case `test_max_burst_jobs`
+covers, the count is exact.
 
-### Minimal reproduction
+**Suggestion (untested):** count a job when it is dequeued, or stop dequeuing once completed + in-flight >=
+`max_burst_jobs`.
 
-`repro_max_burst.py` uses only saq's public API, and `docker-compose.yml` provides PostgreSQL 16 plus Python 3.12
-with `saq[postgres]==0.26.5`:
+### Reproduction
+
+Only saq's public API. Save both files in one directory, then:
 
 ```sh
-docker compose run --rm repro                                         # concurrency 2, max_burst_jobs 2, 3 jobs, 20 runs
-docker compose run --rm repro python /repro/repro_max_burst.py 20 1 2 3   # control, concurrency 1
+docker compose run --rm repro                                              # concurrency 2, max_burst_jobs 2, 3 jobs, 20 iterations
+docker compose run --rm repro python /repro/repro_max_burst.py 20 1 2 3    # control: concurrency 1
 docker compose down -v
 ```
 
+Output: `RESULT: more than max_burst_jobs=2 jobs processed in 20 of 20 iterations` (control: 0 of 20). The handler
+sleeps 0.1 s so that both slots are busy at once; I haven't measured how often very short jobs overrun.
+
+<details>
+<summary><code>repro_max_burst.py</code></summary>
+
 ```python
-worker = Worker(queue, functions=[work], concurrency=2, burst=True, max_burst_jobs=2, dequeue_timeout=1)
-await worker.start()   # with 3 jobs queued: `work` is called 3 times
+"""max_burst_jobs overrun: standalone reproduction with saq's public API only (no other tooling).
+
+A burst worker with concurrency=2 and max_burst_jobs=2 is given 3 queued jobs. Worker's docstring says
+"max_burst_jobs: the maximum number of jobs to process in burst mode", so at most 2 handler calls are expected.
+Each iteration uses its own queue name. Control: the same with concurrency=1.
+
+    python repro_max_burst.py [N] [concurrency] [max_burst_jobs] [jobs]
+"""
+import asyncio
+import os
+import sys
+import uuid
+
+from saq import Queue, Worker
+
+DSN = os.environ.get("SAQ_PG_URL", "postgresql://postgres:postgres@localhost:5432/postgres")
+calls: list[str] = []
+RUN = uuid.uuid4().hex[:8]  # unique queue names, so no earlier run's jobs are picked up
+
+
+async def work(ctx, n: int) -> int:
+    calls.append(ctx["job"].key)
+    await asyncio.sleep(0.1)  # long enough for both slots to be busy at once
+    return n * 2
+
+
+async def once(i: int, concurrency: int, cap: int, jobs: int) -> tuple[int, list[str]]:
+    calls.clear()
+    queue = Queue.from_url(DSN, name=f"burst-repro-{RUN}-{i}")
+    await queue.connect()
+    try:
+        enqueued = [await queue.enqueue("work", n=n) for n in range(jobs)]
+        worker = Worker(queue, functions=[work], concurrency=concurrency, burst=True,
+                        max_burst_jobs=cap, dequeue_timeout=1)
+        await asyncio.wait_for(worker.start(), timeout=30)
+        statuses = []
+        for job in enqueued:
+            await job.refresh()
+            statuses.append(str(job.status))
+        return len(calls), statuses
+    finally:
+        await queue.disconnect()
+
+
+async def main() -> None:
+    n, concurrency, cap, jobs = (int(a) for a in (sys.argv[1:] + ["20", "2", "2", "3"][len(sys.argv) - 1:]))
+    import saq
+    print(f"saq {saq.__version__}, concurrency={concurrency}, max_burst_jobs={cap}, jobs={jobs}, iterations={n}")
+    over = 0
+    for i in range(n):
+        handled, statuses = await once(i, concurrency, cap, jobs)
+        over += handled > cap
+        print(f"iteration {i}: handler called {handled} times ({len(set(calls))} distinct jobs); statuses {statuses}")
+    print(f"RESULT: more than max_burst_jobs={cap} jobs processed in {over} of {n} iterations")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
 ```
 
-Output: `RESULT: more than max_burst_jobs=2 jobs processed in 20 of 20 iterations`. The handler sleeps 0.1 s, so
-both slots are busy at once. With very short jobs the overrun may be less frequent. I haven't measured that.
+</details>
+
+<details>
+<summary><code>docker-compose.yml</code></summary>
+
+```yaml
+# Disposable: PostgreSQL 16 and a Python 3.12 container with saq 0.26.5 from PyPI. No host port is published.
+#   docker compose run --rm repro                      # 20 iterations, concurrency 2, max_burst_jobs 2, 3 jobs
+#   docker compose run --rm repro python /repro/repro_max_burst.py 20 1 2 3   # control: concurrency 1
+#   docker compose down -v
+services:
+  db:
+    image: postgres:16
+    environment: {POSTGRES_PASSWORD: postgres}
+    healthcheck: {test: ["CMD", "pg_isready", "-U", "postgres"], interval: 1s, retries: 30}
+  repro:
+    image: python:3.12-slim
+    depends_on: {db: {condition: service_healthy}}
+    environment: {SAQ_PG_URL: "postgresql://postgres:postgres@db:5432/postgres", PIP_DISABLE_PIP_VERSION_CHECK: "1"}
+    volumes: ["./repro_max_burst.py:/repro/repro_max_burst.py:ro"]
+    entrypoint: ["sh", "-c", "pip install -q 'saq[postgres]==0.26.5' 'psycopg[binary]' && exec \"$@\"", "--"]
+    command: ["python", "/repro/repro_max_burst.py", "20", "2", "2", "3"]
+```
+
+</details>
 
 ### This may be intended
 
-If `max_burst_jobs` is meant as a soft limit, or only as a cap on jobs in flight, could the docstring say so? For
-example: "stop taking new jobs once `max_burst_jobs` have finished; with `concurrency > 1` up to
-`concurrency - 1` further jobs already started may also complete". If a hard cap is intended, one option is to
-count a job when it is dequeued rather than when it finishes, which I haven't tested. [Owner: keep or delete] I'm happy to send a PR
-either way.
-
-<details>
-<summary>Appendix: the same overrun under a controlled schedule</summary>
-
-I first saw this in a research tool (DeploySpecter) that runs a library under a coordinator granting each database
-statement in a chosen order, and checks the trace against the PostgreSQL server log. On saq 0.26.5, with 3 jobs,
-concurrency 2 and `max_burst_jobs` 2, the worker's statements were:
-
-```
-grant  28  claim (dequeue)   WITH locked_job AS ( SELECT key FROM "saq_jobs" WHERE status = 'queued' ...   (2 jobs)
-grant  56  update+expire_at  UPDATE "saq_jobs" SET ... expire_at ...                                          (job 1 done)
-grant  60  update+expire_at  UPDATE "saq_jobs" SET ... expire_at ...                                          (job 2 done)
-grant  64  claim (dequeue)   WITH locked_job AS ( ... )                                                       (job 3)
-grant  77  update+expire_at  UPDATE "saq_jobs" SET ... expire_at ...                                          (job 3 done)
-```
-
-The result was the same under 5 different schedules per workload, and on the commits before and after `c570ba4`.
-These are research results from a non-blind development study. I'm not reporting anything beyond the issue above.
-
-</details>
+If `max_burst_jobs` is meant as a soft limit, could the docstring say so? For example: "max_burst_jobs: stop taking
+new jobs once this many have finished; with `concurrency > 1`, up to `concurrency - 1` jobs already started may also
+run."
