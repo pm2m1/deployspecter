@@ -1,0 +1,456 @@
+"""Epic SQL integration tests for persistence adapter (Queries).
+
+Tests real PostgreSQL behavior: concurrency, locking, LISTEN/NOTIFY,
+transactions, constraints. Complements unit tests (InMemoryQueries).
+
+Each test validates SQL-specific semantics that the in-memory fake cannot.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import uuid
+from datetime import UTC, timedelta
+from typing import Any
+
+import asyncpg
+import pytest
+
+from pgqueuer.adapters.persistence.queries import Queries
+from pgqueuer.db import AsyncpgDriver
+from pgqueuer.domain.errors import DuplicateJobError
+from pgqueuer.domain.models import CronExpressionEntrypoint, TracebackRecord
+from pgqueuer.domain.types import (
+    JOB_STATUS,
+    CronEntrypoint,
+    CronExpression,
+    JobId,
+    QueueEntrypoint,
+    QueueManagerId,
+)
+from pgqueuer.ports.repository import EntrypointExecutionParameter
+
+
+async def test_dequeue_locking_race_single_job_one_picker(
+    apgdriver: AsyncpgDriver,
+) -> None:
+    """SELECT FOR UPDATE SKIP LOCKED: only one worker picks same job."""
+    q = Queries(apgdriver)
+
+    await q.enqueue(["ep"], [None], [0])
+    qm1_id = QueueManagerId(uuid.uuid4())
+    qm2_id = QueueManagerId(uuid.uuid4())
+
+    async def dequeue_1() -> list[Any]:
+        return await q.dequeue(
+            batch_size=1,
+            entrypoints={QueueEntrypoint("ep"): EntrypointExecutionParameter(concurrency_limit=1)},
+            queue_manager_id=qm1_id,
+            global_concurrency_limit=None,
+            heartbeat_timeout=timedelta(seconds=30),
+        )
+
+    async def dequeue_2() -> list[Any]:
+        await asyncio.sleep(0.001)
+        return await q.dequeue(
+            batch_size=1,
+            entrypoints={QueueEntrypoint("ep"): EntrypointExecutionParameter(concurrency_limit=1)},
+            queue_manager_id=qm2_id,
+            global_concurrency_limit=None,
+            heartbeat_timeout=timedelta(seconds=30),
+        )
+
+    r1, r2 = await asyncio.gather(dequeue_1(), dequeue_2())
+    assert len(r1) + len(r2) == 1
+    if r1:
+        assert r1[0].queue_manager_id == qm1_id
+    else:
+        assert r2[0].queue_manager_id == qm2_id
+
+
+async def test_atomicity_dequeue_log_entry_created(
+    apgdriver: AsyncpgDriver,
+) -> None:
+    """Dequeue + log is atomic: picked job always has log entry."""
+    q = Queries(apgdriver)
+
+    jids = await q.enqueue(["ep"], [None], [0])
+    qm_id = QueueManagerId(uuid.uuid4())
+
+    jobs = await q.dequeue(
+        batch_size=1,
+        entrypoints={QueueEntrypoint("ep"): EntrypointExecutionParameter(concurrency_limit=1)},
+        queue_manager_id=qm_id,
+        global_concurrency_limit=None,
+        heartbeat_timeout=timedelta(seconds=30),
+    )
+
+    assert len(jobs) == 1
+    assert jobs[0].status == "picked"
+    assert jobs[0].queue_manager_id == qm_id
+
+    logs = await q.queue_log()
+    picked_logs = [log for log in logs if log.job_id == int(jids[0]) and log.status == "picked"]
+    assert len(picked_logs) == 1
+
+
+async def test_dedupe_constraint_partial_index(
+    apgdriver: AsyncpgDriver,
+) -> None:
+    """Partial unique index: allows duplicates in terminal states."""
+    q = Queries(apgdriver)
+
+    jids1 = await q.enqueue(["ep"], [None], [0], dedupe_key=["k"], on_conflict="raise")
+
+    with pytest.raises(Exception):
+        await q.enqueue(["ep"], [None], [0], dedupe_key=["k"], on_conflict="raise")
+
+    qm_id = QueueManagerId(uuid.uuid4())
+    jobs = await q.dequeue(
+        batch_size=1,
+        entrypoints={QueueEntrypoint("ep"): EntrypointExecutionParameter(concurrency_limit=1)},
+        queue_manager_id=qm_id,
+        global_concurrency_limit=None,
+        heartbeat_timeout=timedelta(seconds=30),
+    )
+    assert len(jobs) == 1
+
+    await q.log_jobs([(jobs[0], "successful", None)])
+
+    jids2 = await q.enqueue(["ep"], [None], [0], dedupe_key=["k"], on_conflict="raise")
+    assert len(jids2) == 1
+    assert jids2[0] != jids1[0]
+
+
+async def test_concurrent_enqueue_dedup_race(
+    apgdriver: AsyncpgDriver,
+) -> None:
+    """Concurrent enqueue same dedupe_key: one succeeds, one fails."""
+    q = Queries(apgdriver)
+
+    results: dict[int, list[Any] | Exception] = {}
+
+    async def enqueue_worker(worker_id: int) -> None:
+        try:
+            result = await q.enqueue(
+                ["ep"], [None], [0], dedupe_key=["shared_k"], on_conflict="raise"
+            )
+            results[worker_id] = result
+        except Exception as e:
+            results[worker_id] = e
+
+    await asyncio.gather(enqueue_worker(1), enqueue_worker(2))
+
+    successes = [r for r in results.values() if isinstance(r, list)]
+    failures = [r for r in results.values() if isinstance(r, Exception)]
+
+    assert len(successes) == 1
+    assert len(failures) == 1
+
+
+async def test_stale_job_recovery_heartbeat_timeout(
+    apgdriver: AsyncpgDriver,
+) -> None:
+    """Heartbeat timeout: stale job re-picked by different worker."""
+    q = Queries(apgdriver)
+
+    await q.enqueue(["ep"], [None], [0])
+
+    qm1_id = QueueManagerId(uuid.uuid4())
+    jobs = await q.dequeue(
+        batch_size=1,
+        entrypoints={QueueEntrypoint("ep"): EntrypointExecutionParameter(concurrency_limit=1)},
+        queue_manager_id=qm1_id,
+        global_concurrency_limit=None,
+        heartbeat_timeout=timedelta(seconds=1),
+    )
+    assert len(jobs) == 1
+    original_qm_id = jobs[0].queue_manager_id
+    assert original_qm_id == qm1_id
+
+    await asyncio.sleep(1.2)
+
+    qm2_id = QueueManagerId(uuid.uuid4())
+    jobs2 = await q.dequeue(
+        batch_size=1,
+        entrypoints={QueueEntrypoint("ep"): EntrypointExecutionParameter(concurrency_limit=1)},
+        queue_manager_id=qm2_id,
+        global_concurrency_limit=None,
+        heartbeat_timeout=timedelta(seconds=1),
+    )
+
+    assert len(jobs2) == 1
+    assert jobs2[0].queue_manager_id == qm2_id
+    assert jobs2[0].queue_manager_id != original_qm_id
+
+
+async def test_large_batch_atomicity_10k_jobs(
+    apgdriver: AsyncpgDriver,
+) -> None:
+    """Large batch 10k jobs: all inserted or error, never partial."""
+    q = Queries(apgdriver)
+
+    N = 10_000
+    eps = ["ep"] * N
+    payloads: list[None] = [None] * N
+    priorities = [0] * N
+    dedupe_keys: list[str] = [f"k_{i}" for i in range(N)]
+
+    jids = await q.enqueue(
+        eps,
+        payloads,
+        priorities,
+        dedupe_key=dedupe_keys,
+        on_conflict="raise",  # type: ignore[call-overload]
+    )
+
+    assert len(jids) == N
+    size = await q.queue_size()
+    total_count = sum(s.count for s in size if s.entrypoint == "ep")
+    assert total_count == N
+
+
+async def test_on_conflict_skip_shape_preservation(
+    apgdriver: AsyncpgDriver,
+) -> None:
+    """on_conflict=skip: returned array shape matches input, None at conflicts."""
+    q = Queries(apgdriver)
+
+    await q.enqueue(["ep"], [None], [0], dedupe_key=["b"], on_conflict="raise")
+
+    dedupe_keys: list[str] = ["a", "b", "c", "d", "e"]
+    jids = await q.enqueue(
+        ["ep"] * 5,
+        [None] * 5,
+        [0] * 5,
+        dedupe_key=dedupe_keys,
+        on_conflict="skip",  # type: ignore[call-overload]
+    )
+
+    assert len(jids) == 5
+    assert jids[0] is not None
+    assert jids[1] is None
+    assert jids[2] is not None
+    assert jids[3] is not None
+    assert jids[4] is not None
+
+
+async def test_cancel_keeps_picked_row_until_worker_logs(apgdriver: AsyncpgDriver) -> None:
+    """Cancel of a running job keeps its slot and dedupe key until the worker logs (#1031)."""
+    q = Queries(apgdriver)
+    params = {QueueEntrypoint("serial"): EntrypointExecutionParameter(concurrency_limit=1)}
+    owner = QueueManagerId(uuid.uuid4())
+    timeout = timedelta(seconds=30)
+    (running_id,) = await q.enqueue("serial", None, dedupe_key="a")
+    (waiting_id,) = await q.enqueue("serial", None, dedupe_key="b")
+    (queued_id,) = await q.enqueue("serial", None, dedupe_key="c")
+
+    (running,) = await q.dequeue(1, params, owner, None, timeout)
+    assert running.id == running_id
+
+    await q.mark_job_as_cancelled([running_id, queued_id])
+
+    assert await q.queue_job_by_id(queued_id) is None
+    assert [entry.status for entry in await q.job_log_history(queued_id)] == ["queued", "canceled"]
+    held = await q.queue_job_by_id(running_id)
+    assert held is not None and held.status == "picked"
+    assert [entry.status for entry in await q.job_log_history(running_id)] == ["queued", "picked"]
+    assert await q.dequeue(1, params, owner, None, timeout) == []
+    with pytest.raises(DuplicateJobError):
+        await q.enqueue("serial", None, dedupe_key="a")
+
+    await q.log_jobs([(running, "canceled", None)])
+
+    assert await q.queue_job_by_id(running_id) is None
+    assert [entry.status for entry in await q.job_log_history(running_id)] == [
+        "queued",
+        "picked",
+        "canceled",
+    ]
+    (next_job,) = await q.dequeue(1, params, owner, None, timeout)
+    assert next_job.id == waiting_id
+    (replacement,) = await q.enqueue("serial", None, dedupe_key="a")
+    assert replacement is not None
+
+
+async def test_cancel_removes_failed_job(apgdriver: AsyncpgDriver) -> None:
+    """A held failed job is still removed and logged canceled."""
+    q = Queries(apgdriver)
+    (jid,) = await q.enqueue("ep", None)
+    (job,) = await q.dequeue(
+        1,
+        {QueueEntrypoint("ep"): EntrypointExecutionParameter(0)},
+        QueueManagerId(uuid.uuid4()),
+        None,
+        timedelta(seconds=30),
+    )
+    await q.log_jobs([(job, "failed", None)])
+
+    await q.mark_job_as_cancelled([jid])
+
+    assert await q.queue_job_by_id(jid) is None
+    assert [entry.status for entry in await q.job_log_history(jid)] == [
+        "queued",
+        "picked",
+        "failed",
+        "canceled",
+    ]
+
+
+@pytest.mark.parametrize("outcome", ["successful", "canceled", "exception", "failed"])
+async def test_log_jobs_skips_job_cleared_while_it_ran(
+    apgdriver: AsyncpgDriver,
+    outcome: JOB_STATUS,
+) -> None:
+    """log_jobs writes nothing for a job cleared while it ran."""
+    q = Queries(apgdriver)
+    (jid,) = await q.enqueue("ep", None)
+    (job,) = await q.dequeue(
+        batch_size=1,
+        entrypoints={QueueEntrypoint("ep"): EntrypointExecutionParameter(concurrency_limit=1)},
+        queue_manager_id=QueueManagerId(uuid.uuid4()),
+        global_concurrency_limit=None,
+        heartbeat_timeout=timedelta(seconds=30),
+    )
+    await q.clear_queue("ep")
+
+    await q.log_jobs([(job, outcome, None)])
+
+    history = await q.job_log_history(jid)
+    assert [e.status for e in history] == ["queued", "picked", "deleted"]
+    assert await q.job_status([jid]) == [(jid, "deleted")]
+
+
+async def test_traceback_jsonb_roundtrip(
+    apgdriver: AsyncpgDriver,
+) -> None:
+    """Traceback JSONB round-trips correctly through log storage."""
+    from datetime import datetime
+
+    q = Queries(apgdriver)
+
+    jids = await q.enqueue(["ep"], [None], [0])
+    qm_id = QueueManagerId(uuid.uuid4())
+
+    jobs = await q.dequeue(
+        batch_size=1,
+        entrypoints={QueueEntrypoint("ep"): EntrypointExecutionParameter(concurrency_limit=1)},
+        queue_manager_id=qm_id,
+        global_concurrency_limit=None,
+        heartbeat_timeout=timedelta(seconds=30),
+    )
+    assert len(jobs) == 1
+    job = jobs[0]
+
+    tb_record = TracebackRecord(
+        job_id=JobId(int(jids[0])),
+        timestamp=datetime.now(UTC),
+        exception_type="ValueError",
+        exception_message="test error",
+        traceback="line 1\nline 2",
+        additional_context=None,
+    )
+    await q.log_jobs([(job, "exception", tb_record)])
+
+    logs = await q.queue_log()
+    exc_logs = [log for log in logs if log.job_id == int(jids[0]) and log.status == "exception"]
+    assert len(exc_logs) == 1
+    exc_log = exc_logs[0]
+    assert exc_log.traceback is not None
+
+
+async def test_schedule_fetch_skips_row_locked_by_another_picker(
+    apgdriver: AsyncpgDriver,
+    dsn: str,
+) -> None:
+    """A locked due schedule is not returned to another picker."""
+    key = CronExpressionEntrypoint(
+        CronEntrypoint("locked_schedule"),
+        CronExpression("* * * * *"),
+    )
+    await Queries(apgdriver).insert_schedule({key: timedelta(seconds=0)})
+
+    first_connection = await asyncpg.connect(dsn=dsn)
+    second_connection = await asyncpg.connect(dsn=dsn)
+    transaction = first_connection.transaction()
+    await transaction.start()
+    try:
+        first = await Queries.from_asyncpg_connection(first_connection).fetch_schedule(
+            {key: timedelta(minutes=1)}
+        )
+        second = await Queries.from_asyncpg_connection(second_connection).fetch_schedule(
+            {key: timedelta(minutes=1)}
+        )
+
+        assert len(first) == 1
+        assert second == []
+    finally:
+        await transaction.rollback()
+        await first_connection.close()
+        await second_connection.close()
+
+
+async def test_schedule_fetch_reclaims_stale_picked_schedule(
+    apgdriver: AsyncpgDriver,
+) -> None:
+    """A picked schedule with an expired heartbeat can be claimed again."""
+    queries = Queries(apgdriver)
+    key = CronExpressionEntrypoint(
+        CronEntrypoint("stale_schedule"),
+        CronExpression("* * * * *"),
+    )
+    await queries.insert_schedule({key: timedelta(seconds=0)})
+    first = await queries.fetch_schedule({key: timedelta(hours=1)})
+    assert len(first) == 1
+
+    await apgdriver.execute(
+        f"UPDATE {queries.qbs.qualified.schedules_table} "
+        "SET heartbeat = NOW() - interval '31 seconds' WHERE id = $1",
+        first[0].id,
+    )
+
+    reclaimed = await queries.fetch_schedule({key: timedelta(hours=1)})
+
+    assert len(reclaimed) == 1
+    assert reclaimed[0].id == first[0].id
+    assert reclaimed[0].heartbeat > first[0].heartbeat
+
+
+async def test_schedule_fetch_moves_next_run_on(
+    apgdriver: AsyncpgDriver,
+) -> None:
+    """A picked schedule's next run moves to now + delay, so it is not due again at once."""
+    queries = Queries(apgdriver)
+    key = CronExpressionEntrypoint(
+        CronEntrypoint("next_run_schedule"),
+        CronExpression("0 * * * *"),
+    )
+    await queries.insert_schedule({key: timedelta(seconds=0)})
+    (picked,) = await queries.fetch_schedule({key: timedelta(hours=1)})
+    await queries.set_schedule_queued({picked.id})
+
+    assert await queries.fetch_schedule({key: timedelta(hours=1)}) == []
+    (schedule,) = await queries.peek_schedule()
+    assert schedule.next_run == (picked.updated + timedelta(hours=1)).replace(microsecond=0)
+
+
+async def test_schedule_heartbeat_update_persists_timestamps(
+    apgdriver: AsyncpgDriver,
+) -> None:
+    """Schedule heartbeat updates persist heartbeat and updated timestamps."""
+    queries = Queries(apgdriver)
+    key = CronExpressionEntrypoint(
+        CronEntrypoint("heartbeat_schedule"),
+        CronExpression("* * * * *"),
+    )
+    await queries.insert_schedule({key: timedelta(hours=1)})
+    before = await queries.peek_schedule()
+    assert len(before) == 1
+
+    await asyncio.sleep(0.01)
+    await queries.update_schedule_heartbeat({before[0].id})
+    after = await queries.peek_schedule()
+
+    assert len(after) == 1
+    assert after[0].heartbeat > before[0].heartbeat
+    assert after[0].updated > before[0].updated

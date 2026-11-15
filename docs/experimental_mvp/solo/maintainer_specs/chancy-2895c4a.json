@@ -1,0 +1,208 @@
+{
+ "format": "ds-maintainer-spec/1",
+ "label": "NONBLIND development case: transcribed after the fix was read (ds-nbc/1)",
+ "transcribed": "2026-11-16",
+ "case_id": "chancy-2895c4a",
+ "upstream": {
+  "repository": "https://github.com/TkTech/chancy",
+  "fix_commit": "2895c4a7fc173cec3d645221f63c4e51e2cf7e84",
+  "test_path": "tests/plugins/test_recovery.py",
+  "test_blob": "9345a746cdc06f101f637f5b4dc4c201565e88f9",
+  "changed_test_functions": [
+   "test_cancellation_cancels_all_matching_executions",
+   "test_cancellation_fences_execution_completion",
+   "test_cancelled_execution_cannot_fail_its_replacement",
+   "test_claim_migration_preserves_existing_jobs",
+   "test_manual_retry_invalidates_completed_claim",
+   "test_mixed_batch_filters_stale_updates_and_preserves_hook_order",
+   "test_process_cancellation_signals_preserve_pool",
+   "test_process_recovery_cancellation_during_child_startup",
+   "test_recovery_cancels_only_the_old_execution",
+   "test_recovery_fences_late_updates_and_hooks",
+   "test_recovery_ignores_live_workers_and_locked_jobs",
+   "test_recovery_isolates_executor_errors",
+   "test_recovery_notification_commits_with_claim_invalidation"
+  ],
+  "test_functions": [
+   "test_cancellation_fences_execution_completion"
+  ],
+  "unused_test_functions": {
+   "test_cancellation_cancels_all_matching_executions": "scenario_not_exercised",
+   "test_cancelled_execution_cannot_fail_its_replacement": "scenario_not_exercised",
+   "test_claim_migration_preserves_existing_jobs": "scenario_not_exercised",
+   "test_manual_retry_invalidates_completed_claim": "scenario_not_exercised",
+   "test_mixed_batch_filters_stale_updates_and_preserves_hook_order": "scenario_not_exercised",
+   "test_process_cancellation_signals_preserve_pool": "scenario_not_exercised",
+   "test_process_recovery_cancellation_during_child_startup": "scenario_not_exercised",
+   "test_recovery_cancels_only_the_old_execution": "scenario_not_exercised",
+   "test_recovery_fences_late_updates_and_hooks": "scenario_not_exercised",
+   "test_recovery_ignores_live_workers_and_locked_jobs": "scenario_not_exercised",
+   "test_recovery_isolates_executor_errors": "scenario_not_exercised",
+   "test_recovery_notification_commits_with_claim_invalidation": "scenario_not_exercised"
+  }
+ },
+ "precondition": {
+  "exists": {
+   "rows": {
+    "path": "raw_results.push.cancelled"
+   },
+   "as": "c",
+   "where": {
+    "eq": [
+     {
+      "path": "c.rowcount"
+     },
+     {
+      "lit": 1
+     }
+    ]
+   }
+  }
+ },
+ "assertions": [
+  {
+   "line": 139,
+   "source": "assert old.claim_id is not None",
+   "kind": "not_expressible",
+   "reason": "schema_added_by_fix",
+   "note": "claim_id exists only in the fixed revision's schema"
+  },
+  {
+   "line": 146,
+   "source": "assert await chancy.cancel_job_ex(cursor, ref) == 1",
+   "kind": "not_expressible",
+   "reason": "in_memory_return_value",
+   "note": "cancel's return value; used as the precondition (rowcount 1)"
+  },
+  {
+   "line": 150,
+   "source": "assert expected.state == QueuedJob.State.FAILED",
+   "kind": "not_expressible",
+   "reason": "intermediate_state",
+   "note": "the state read right after the cancel; line 164 pins the final state to it"
+  },
+  {
+   "line": 164,
+   "source": "assert await chancy.get_job(ref) == expected",
+   "kind": "final_state",
+   "predicate": {
+    "forall": {
+     "rows": {
+      "path": "raw_results.push.cancelled"
+     },
+     "as": "c",
+     "where": {
+      "eq": [
+       {
+        "path": "c.rowcount"
+       },
+       {
+        "lit": 1
+       }
+      ]
+     },
+     "check": {
+      "exists": {
+       "rows": {
+        "path": "final_state.jobs_detail"
+       },
+       "as": "j",
+       "where": {
+        "eq": [
+         {
+          "path": "j.n"
+         },
+         {
+          "path": "c.n"
+         }
+        ]
+       },
+       "check": {
+        "eq": [
+         {
+          "path": "j.state"
+         },
+         {
+          "lit": "failed"
+         }
+        ]
+       }
+      }
+     }
+    }
+   },
+   "note": "get_job(ref) == expected after the late completion: the cancelled job's final state is still the cancelled one, state 'failed' (line 150)"
+  },
+  {
+   "line": 165,
+   "source": "assert expected.claim_id is None",
+   "kind": "not_expressible",
+   "reason": "schema_added_by_fix",
+   "note": "claim_id exists only in the fixed revision's schema"
+  },
+  {
+   "line": 166,
+   "source": "assert expected.completed_at is not None",
+   "kind": "final_state",
+   "predicate": {
+    "forall": {
+     "rows": {
+      "path": "raw_results.push.cancelled"
+     },
+     "as": "c",
+     "where": {
+      "eq": [
+       {
+        "path": "c.rowcount"
+       },
+       {
+        "lit": 1
+       }
+      ]
+     },
+     "check": {
+      "exists": {
+       "rows": {
+        "path": "final_state.jobs_detail"
+       },
+       "as": "j",
+       "where": {
+        "eq": [
+         {
+          "path": "j.n"
+         },
+         {
+          "path": "c.n"
+         }
+        ]
+       },
+       "check": {
+        "eq": [
+         {
+          "path": "j.completed"
+         },
+         {
+          "lit": true
+         }
+        ]
+       }
+      }
+     }
+    }
+   },
+   "note": "completed_at is set on the cancelled job (jobs_detail.completed)"
+  },
+  {
+   "line": 167,
+   "source": "transactional.assert_not_awaited()",
+   "kind": "not_expressible",
+   "reason": "mock"
+  },
+  {
+   "line": 168,
+   "source": "committed.assert_not_awaited()",
+   "kind": "not_expressible",
+   "reason": "mock"
+  }
+ ]
+}
