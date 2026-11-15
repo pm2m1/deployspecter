@@ -186,3 +186,9 @@ This was post-hoc development on a known fixture, using a tool built after those
 - **Python logic between statements is modelled, not run.** Flow the extractor can't see is counted as unverified.
 - **Extraction is limited.** It handles constant SQL through `execute` and `with conn.transaction()`. ORMs and other languages are unsupported.
 - **Submitted code must be trusted.** Migrations run with admin rights on the test database. Model output is restricted, but this isn't a sandbox for hostile code.
+
+## License
+
+DeploySpecter is licensed under the [Apache License 2.0](LICENSE); see also [`NOTICE`](NOTICE). Third-party material
+redistributed as fixtures or evidence keeps its own licence and is listed in
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
