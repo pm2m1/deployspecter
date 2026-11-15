@@ -1,7 +1,7 @@
 {
- "format": "ds-maintainer-spec/1",
+ "format": "ds-maintainer-spec/2",
  "label": "NONBLIND development case: transcribed after the fix was read (ds-nbc/1)",
- "transcribed": "2026-11-16",
+ "transcribed": "2026-11-16 (format 2: lines 253, 254, 264 and 265 now tell picked jobs from pgqueuer's own log instead of the handler table; line 258 still reads the handler table)",
  "case_id": "pgqueuer-8dfadf4",
  "upstream": {
   "repository": "https://github.com/janbjorge/pgqueuer",
@@ -42,7 +42,7 @@
     "ge": [
      {
       "len": {
-       "path": "final_state.runs"
+       "path": "final_state.log"
       }
      },
      {
@@ -73,7 +73,7 @@
       "not": {
        "exists": {
         "rows": {
-         "path": "final_state.runs"
+         "path": "final_state.log"
         },
         "as": "s",
         "where": {
@@ -81,20 +81,27 @@
           {
            "eq": [
             {
-             "path": "s.n"
+             "path": "s.job_id"
             },
             {
-             "path": "c"
+             "get": [
+              {
+               "path": "raw_results.prod.job_ids"
+              },
+              {
+               "path": "c"
+              }
+             ]
             }
            ]
           },
           {
            "eq": [
             {
-             "path": "s.phase"
+             "path": "s.status"
             },
             {
-             "lit": "start"
+             "lit": "picked"
             }
            ]
           }
@@ -132,7 +139,8 @@
      }
     }
    },
-   "note": "a job cancelled before it started has no queue row at the end"
+   "note": "a cancelled job that was never picked has no queue row at the end",
+   "uses_deployspecter_code": false
   },
   {
    "line": 254,
@@ -148,7 +156,7 @@
       "not": {
        "exists": {
         "rows": {
-         "path": "final_state.runs"
+         "path": "final_state.log"
         },
         "as": "s",
         "where": {
@@ -156,20 +164,27 @@
           {
            "eq": [
             {
-             "path": "s.n"
+             "path": "s.job_id"
             },
             {
-             "path": "c"
+             "get": [
+              {
+               "path": "raw_results.prod.job_ids"
+              },
+              {
+               "path": "c"
+              }
+             ]
             }
            ]
           },
           {
            "eq": [
             {
-             "path": "s.phase"
+             "path": "s.status"
             },
             {
-             "lit": "start"
+             "lit": "picked"
             }
            ]
           }
@@ -219,7 +234,8 @@
      }
     }
    },
-   "note": "its log history is queued, canceled"
+   "note": "its log history is queued, canceled",
+   "uses_deployspecter_code": false
   },
   {
    "line": 256,
@@ -397,7 +413,8 @@
      }
     }
    },
-   "note": "TRANSLATED through the handler table: while a cancelled job's handler runs (its start..end rows in the integration's ds_pgq_runs table, part of the final database state), no other job starts; that is, dequeue returns nothing under concurrency_limit 1"
+   "note": "TRANSLATED through the handler table: while a cancelled job's handler runs (its start..end rows in the integration's ds_pgq_runs table, part of the final database state), no other job starts; that is, dequeue returns nothing under concurrency_limit 1",
+   "uses_deployspecter_code": true
   },
   {
    "line": 259,
@@ -419,7 +436,7 @@
      "where": {
       "exists": {
        "rows": {
-        "path": "final_state.runs"
+        "path": "final_state.log"
        },
        "as": "s",
        "where": {
@@ -427,20 +444,27 @@
          {
           "eq": [
            {
-            "path": "s.n"
+            "path": "s.job_id"
            },
            {
-            "path": "c"
+            "get": [
+             {
+              "path": "raw_results.prod.job_ids"
+             },
+             {
+              "path": "c"
+             }
+            ]
            }
           ]
          },
          {
           "eq": [
            {
-            "path": "s.phase"
+            "path": "s.status"
            },
            {
-            "lit": "start"
+            "lit": "picked"
            }
           ]
          }
@@ -477,7 +501,8 @@
      }
     }
    },
-   "note": "after the worker logs, the cancelled job has no queue row"
+   "note": "after the worker logs, a cancelled job that was picked has no queue row",
+   "uses_deployspecter_code": false
   },
   {
    "line": 265,
@@ -492,7 +517,7 @@
      "where": {
       "exists": {
        "rows": {
-        "path": "final_state.runs"
+        "path": "final_state.log"
        },
        "as": "s",
        "where": {
@@ -500,20 +525,27 @@
          {
           "eq": [
            {
-            "path": "s.n"
+            "path": "s.job_id"
            },
            {
-            "path": "c"
+            "get": [
+             {
+              "path": "raw_results.prod.job_ids"
+             },
+             {
+              "path": "c"
+             }
+            ]
            }
           ]
          },
          {
           "eq": [
            {
-            "path": "s.phase"
+            "path": "s.status"
            },
            {
-            "lit": "start"
+            "lit": "picked"
            }
           ]
          }
@@ -563,7 +595,8 @@
      }
     }
    },
-   "note": "its log history is queued, picked, canceled"
+   "note": "its log history is queued, picked, canceled",
+   "uses_deployspecter_code": false
   },
   {
    "line": 271,
@@ -577,5 +610,18 @@
    "kind": "not_expressible",
    "reason": "in_memory_return_value"
   }
- ]
+ ],
+ "sources": {
+  "final_state": {
+   "log": "application",
+   "queue": "application",
+   "tables": "application",
+   "runs": "deployspecter"
+  },
+  "raw_results_workload_record": [
+   "prod.cancelled",
+   "prod.job_ids"
+  ],
+  "notes": "log and queue are plain SQL over pgqueuer_log and pgqueuer; runs is ds_pgq_runs, the handler table DeploySpecter's trusted handler writes. prod.cancelled and prod.job_ids are the producer's record of the jobs it enqueued and cancelled."
+ }
 }

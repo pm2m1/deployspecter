@@ -43,3 +43,44 @@ refused by design.** A blind run should expect refusals at a similar rate, and s
 
 RM3 found no site: these libraries have no batched backfill with a multi-conjunct `WHERE` in a migration file. No
 mutant was run.
+
+## Spec format 2: assertion coverage (2026-11-16, before registration)
+
+The two admitted specs were converted to `ds-maintainer-spec/2`. Each expressed assertion declares
+`uses_deployspecter_code`, which `check-spec` verifies against each spec's declared sources:
+- **chancy:** `jobs_detail` is plain SQL over `chancy_jobs`;
+- **pgqueuer:** `log` and `queue` are plain SQL over pgqueuer's tables, while `runs` is DeploySpecter's handler table
+  `ds_pgq_runs`.
+
+The mechanically checkable reasons are verified. Two transcription changes:
+- **chancy line 146** (`assert await chancy.cancel_job_ex(cursor, ref) == 1`) was `in_memory_return_value`, which
+  fails mechanical verification because the assertion is itself a call. It is now `not_in_final_state`, an
+  investigator judgement: the returned row count isn't stored in the database.
+- **pgqueuer lines 253, 254, 264 and 265** now tell picked jobs from pgqueuer's own log (a `picked` entry) instead of
+  the handler table. The precondition no longer reads the handler table either. Line 258 still reads it, and is
+  flagged `true`.
+
+| Coverage | chancy-2895c4a | pgqueuer-8dfadf4 |
+|---|---|---|
+| Assertions in the chosen test function | 8 | 11 |
+| Expressed over the final state | 2 (164, 166) | 5 (253, 254, 258, 264, 265) |
+| Expressed without DeploySpecter code | 2 | 4 |
+| Expressed with DeploySpecter code | 0 | 1 (258, the handler table) |
+| Not expressible, by reason | mock 2, schema_added_by_fix 2, intermediate_state 1, not_in_final_state 1 | in_memory_return_value 3, intermediate_state 2, exception 1 |
+| Reasons verified mechanically | 2 (both mocks) | 4 (3 return values, 1 `pytest.raises`) |
+| Reasons by investigator judgement | 4 | 2 |
+| In the strict subset | **no** (judgement) | **no** (judgement, and DeploySpecter code) |
+
+saq-c570ba4 is still refused, but its only reason (`in_memory_return_value`, line 583) is now verified
+mechanically. saq-addee31 is still refused: there is no regression test.
+
+**Live re-run with the format-2 oracles** (RA-DET, both cases, captured as before; same pinned archives):
+- **chancy-2895c4a:** detected on schedule 1; runs 2 VIOLATED, 2 HOLDS, 2 INCOMPLETE; 0 parameters mismatched. The
+  format-2 oracle agrees with the case oracle on 10 of 10 calls: R1 VIOLATED 2 of 2 through line 164 (no
+  DeploySpecter code), and R2 HOLDS 8 of 8.
+- **pgqueuer-8dfadf4:** detected on schedule 2; runs 3 VIOLATED, 3 HOLDS; 0 mismatched. It agrees on 16 of 16 calls:
+  R1 VIOLATED 3 of 4, R2 HOLDS 12 of 12.
+
+**Every pgqueuer detection rests only on line 258**, the assertion that reads DeploySpecter's handler table. The
+four assertions over pgqueuer's own tables hold on R1 as well. The verdicts are unchanged from the format-1 oracles,
+and the controls still hold.

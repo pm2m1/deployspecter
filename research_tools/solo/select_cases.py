@@ -18,7 +18,8 @@ Procedure (deterministic given the seed and the mirrors):
    * ``root_commit``; ``driver`` (the parent revision declares neither psycopg 3 nor, for rule S4, psycopg2 with
      Django 4.2 or later); ``s4_failed`` (the application failed its S4 check);
    * ``no_regression_test``: the fix adds or changes no test function (``test_*``) containing an assertion;
-   * ``adapter_refused``: listed in REFUSED.json (``maintainer_oracle.py`` refused the case);
+   * ``adapter_refused``: listed in REFUSED.json (``maintainer_oracle.py`` refused the case; the entry's
+     ``reason``, for example ``oracle_depends_on_tool``, is copied into the skip record);
    * ``app_cap``: the application already has ``per_app_admit_cap`` admitted cases.
    Otherwise the case is **admitted**, with its test file, blob id and changed test functions.
 4. Stop when at least ``target_cases`` are admitted from at least ``min_apps`` applications, or after
@@ -129,7 +130,8 @@ def changed_test_functions(mirror: Path, parent: str, commit: str) -> list[dict[
 
 
 def select(mirrors: Path, seed: str, rules: dict[str, Any], s4: dict[str, str],
-           refused: set[tuple[str, str]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
+           refused: set[tuple[str, str]] | dict[tuple[str, str], str]
+           ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
     apps = sorted(rules["applications"], key=lambda a: order_key(seed, "app", a["repo"]))
     admitted: list[dict[str, Any]] = []
     skips: list[dict[str, Any]] = []
@@ -173,7 +175,10 @@ def select(mirrors: Path, seed: str, rules: dict[str, Any], s4: dict[str, str],
             if not code and sum(1 for c in admitted if c["repo"] == repo) >= rules["per_app_admit_cap"]:
                 code = "app_cap"
             if code:
-                skips.append({"repo": repo, "commit": commit, "code": code})
+                skip = {"repo": repo, "commit": commit, "code": code}
+                if code == "adapter_refused" and isinstance(refused, dict) and refused[(repo, commit)]:
+                    skip["reason"] = refused[(repo, commit)]
+                skips.append(skip)
                 continue
             admitted.append({"repo": repo, "fix_commit": commit, "parent": parents[0], "driver": d,
                              "screen": screens, "tests": tests})
@@ -220,7 +225,8 @@ def main(argv: list[str] | None = None) -> int:
     expected = json.loads(a.freeze.read_text())["sealed_seeds"]["selection_seed_sha256"]
     seed = sealed.load_seed("selection_seed", expected, a.seeds)
     s4 = json.loads(a.s4_verdicts.read_text()) if a.s4_verdicts else {}
-    refused = {(r["repo"], r["fix_commit"]) for r in json.loads(a.refused.read_text())} if a.refused else set()
+    refused = ({(r["repo"], r["fix_commit"]): r.get("reason", "") for r in json.loads(a.refused.read_text())}
+               if a.refused else {})
     try:
         admitted, skips, counts = select(a.mirrors, seed, rules, s4, refused)
     except Stop as e:

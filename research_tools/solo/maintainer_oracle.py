@@ -3,14 +3,31 @@
     python research_tools/solo/maintainer_oracle.py check-spec --spec SPEC.json --test-file FILE
     python research_tools/solo/maintainer_oracle.py evaluate --spec SPEC.json --test-file FILE --report report.json
 
-A **spec** (``ds-maintainer-spec/1``) transcribes the regression test that a case's fix commit added or changed:
+A **spec** (``ds-maintainer-spec/2``; ``/1`` is still read) transcribes the regression test that a case's fix
+commit added or changed:
 
 * ``upstream``: repository, fix commit, the test file's path and **git blob id** at the fix commit, and the test
   functions that are the regression test;
 * ``assertions``: **every** assertion in those functions, by line, each either
   ``{"kind": "final_state", "predicate": ...}`` (expressed over the run's final database state), or
   ``{"kind": "not_expressible", "reason": ...}`` with one of ``REASONS``;
-* ``precondition`` (optional): a predicate that must hold for a verdict at all (otherwise ``NO_VERDICT``).
+* ``precondition`` (optional): a predicate that must hold for a verdict at all (otherwise ``NO_VERDICT``);
+* (``/2``) ``sources``: ``final_state`` maps each final-state key to ``"application"`` (the application's own tables,
+  read with plain SQL) or ``"deployspecter"`` (anything DeploySpecter writes or computes, such as a handler table);
+  ``raw_results_workload_record`` lists the ``raw_results`` paths that are the workload's record of the operations it
+  issued (the ids it pushed or cancelled and those calls' return values), the analogue of the test's own variables.
+  Any other ``raw_results`` path counts as DeploySpecter's;
+* (``/2``) every ``final_state`` assertion carries ``uses_deployspecter_code``. ``check_spec`` computes which sources
+  the predicate reads and refuses ``false`` when it reads DeploySpecter's (``true`` is always accepted).
+
+``/2`` also verifies the not-expressible reasons that can be checked mechanically: ``mock`` (the assertion is a mock
+call ``assert_*await*``/``assert_*call*``), ``exception`` (the line is ``pytest.raises`` or inside its ``with``) and
+``in_memory_return_value`` (the asserted expression makes no call, and every local name in it is bound once, from a
+call's return value). A checkable reason that fails is a refusal. Other reasons are reported as
+``investigator_judgement``. ``coverage`` gives the per-case record: total assertions, expressed, expressed without
+DeploySpecter code, not-expressible by reason, mechanically verified, investigator judgement, and whether the case
+is in the strict subset (no expressed assertion uses DeploySpecter code and no reason is investigator judgement).
+A case whose expressed assertions **all** use DeploySpecter code is refused (``oracle_depends_on_tool``).
 
 ``check_spec`` parses the test file with ``ast`` and refuses a spec that leaves out an assertion, invents one, or
 names a file whose blob id differs: no assertion can be dropped silently. ``compile_oracle`` **refuses** a case whose
@@ -31,11 +48,15 @@ import argparse
 import ast
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
 
-FORMAT = "ds-maintainer-spec/1"
+FORMAT = "ds-maintainer-spec/2"
+FORMATS = ("ds-maintainer-spec/1", "ds-maintainer-spec/2")
+MECHANICAL = ("mock", "exception", "in_memory_return_value")
+MOCK_ASSERT = re.compile(r"^assert_\w*(await|call)\w*$")
 REASONS = {
     "in_memory_return_value": "asserts on an object or value returned in memory, not on stored state",
     "mock": "asserts on a mock or a patched hook",
@@ -79,7 +100,7 @@ def _assert_nodes(fn: ast.AST) -> list[tuple[int, str]]:
     return sorted(set(out))
 
 
-def test_assertions(source: str, functions: list[str]) -> dict[int, str]:
+def _functions(source: str, functions: list[str]) -> dict[str, ast.AST]:
     tree = ast.parse(source)
     found: dict[str, ast.AST] = {}
     for node in ast.walk(tree):
@@ -88,15 +109,181 @@ def test_assertions(source: str, functions: list[str]) -> dict[int, str]:
     missing = [f for f in functions if f not in found]
     if missing:
         raise Refused(f"test functions not found in the file: {missing}")
+    return found
+
+
+def test_assertions(source: str, functions: list[str]) -> dict[int, str]:
+    found = _functions(source, functions)
     lines = source.splitlines()
     return {ln: lines[ln - 1].strip() for f in functions for ln, _ in _assert_nodes(found[f])}
+
+
+def _bindings(fn: ast.AST) -> dict[str, list[ast.AST]]:
+    """name -> the values it is bound from in the function (None for a binding that isn't an assignment)."""
+    out: dict[str, list[Any]] = {}
+
+    def bind(target: ast.AST, value: Any) -> None:
+        for n in ast.walk(target):
+            if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Store):
+                out.setdefault(n.id, []).append(value)
+
+    for node in ast.walk(fn):
+        if isinstance(node, ast.Assign):
+            for tg in node.targets:
+                bind(tg, node.value)
+        elif isinstance(node, (ast.AnnAssign, ast.AugAssign)) and node.value is not None:
+            bind(node.target, node.value if isinstance(node, ast.AnnAssign) else None)
+        elif isinstance(node, (ast.For, ast.AsyncFor)):
+            bind(node.target, None)
+        elif isinstance(node, (ast.With, ast.AsyncWith)):
+            for item in node.items:
+                if item.optional_vars is not None:
+                    bind(item.optional_vars, None)
+        elif isinstance(node, ast.NamedExpr):
+            bind(node.target, node.value)
+    return out
+
+
+def _is_call(v: Any) -> bool:
+    return isinstance(v, ast.Call) or (isinstance(v, ast.Await) and isinstance(v.value, ast.Call))
+
+
+def verify_reason(fn: ast.AST, line: int, reason: str) -> tuple[str, str]:
+    """("verified" | "failed" | "investigator_judgement", detail) for a not-expressible reason at ``line``."""
+    if reason not in MECHANICAL:
+        return "investigator_judgement", f"{reason} can't be checked mechanically"
+    nodes = [n for n in ast.walk(fn) if getattr(n, "lineno", None) == line]
+    if reason == "mock":
+        ok = any(isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute) and MOCK_ASSERT.match(n.func.attr)
+                 and not (isinstance(n.func.value, ast.Name) and n.func.value.id == "self") for n in nodes)
+        return ("verified", "a mock assertion call") if ok else ("failed", "no mock assert_*await*/*call* call here")
+    if reason == "exception":
+        for w in ast.walk(fn):
+            if isinstance(w, (ast.With, ast.AsyncWith)) and any(
+                    isinstance(i.context_expr, ast.Call) and isinstance(i.context_expr.func, ast.Attribute)
+                    and i.context_expr.func.attr == "raises" for i in w.items):
+                if w.lineno <= line <= (w.end_lineno or w.lineno):
+                    return "verified", "pytest.raises"
+        return "failed", "not pytest.raises or inside it"
+    # in_memory_return_value
+    exprs: list[ast.AST] = []
+    for n in nodes:
+        if isinstance(n, ast.Assert):
+            exprs.append(n.test)
+        elif isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute) and n.func.attr.startswith("assert") \
+                and isinstance(n.func.value, ast.Name) and n.func.value.id == "self":
+            exprs.extend(n.args)
+    if not exprs:
+        return "failed", "no assertion expression at this line"
+    if any(isinstance(x, (ast.Call, ast.Await)) for e in exprs for x in ast.walk(e)):
+        return "failed", "the asserted expression makes a call (it may read the database)"
+    binds = _bindings(fn)
+    names = {x.id for e in exprs for x in ast.walk(e) if isinstance(x, ast.Name) and x.id in binds}
+    if not names:
+        return "failed", "no locally bound name is asserted"
+    for nm in sorted(names):
+        vals = binds[nm]
+        if len(vals) != 1 or not _is_call(vals[0]):
+            return "failed", f"{nm} isn't bound exactly once from a call's return value"
+    return "verified", "names bound once from call return values: " + ", ".join(sorted(names))
+
+
+def _paths(p: Any, scope: dict[str, str] | None = None) -> set[str]:
+    """Every data path a predicate or expression reads, with bound row names resolved to their source."""
+    scope = dict(scope or {})
+    out: set[str] = set()
+
+    def resolve(path: str) -> str:
+        head, _, rest = path.partition(".")
+        if head in scope:
+            return scope[head] + ("." + rest if rest else "")
+        return path
+
+    def walk(x: Any, sc: dict[str, str]) -> None:
+        nonlocal scope
+        if isinstance(x, dict):
+            if set(x) == {"path"} and isinstance(x["path"], str):
+                head, _, rest = x["path"].partition(".")
+                out.add((sc[head] + ("." + rest if rest else "")) if head in sc else x["path"])
+                return
+            if "rows" in x and isinstance(x.get("rows"), dict):
+                src = _paths(x["rows"], sc)
+                out.update(src)
+                inner = dict(sc)
+                rows_path = x["rows"].get("path") if isinstance(x["rows"], dict) else None
+                if rows_path:
+                    head, _, rest = rows_path.partition(".")
+                    inner[x.get("as", "r")] = (sc[head] + ("." + rest if rest else "")) if head in sc else rows_path
+                for k, v in x.items():
+                    if k not in ("rows", "as"):
+                        walk(v, inner)
+                return
+            for v in x.values():
+                walk(v, sc)
+        elif isinstance(x, list):
+            for v in x:
+                walk(v, sc)
+
+    walk(p, scope)
+    return {resolve(q) for q in out}
+
+
+def reads_deployspecter(pred: Any, sources: dict[str, Any]) -> list[str]:
+    """The paths of ``pred`` that read DeploySpecter's data under the spec's declared ``sources``."""
+    fs = (sources or {}).get("final_state") or {}
+    record = (sources or {}).get("raw_results_workload_record") or []
+    out = []
+    for path in sorted(_paths(pred)):
+        root, _, rest = path.partition(".")
+        if root == "final_state":
+            key = rest.split(".")[0]
+            if fs.get(key) != "application":
+                out.append(path)
+        elif root == "raw_results":
+            if not any(rest == r or rest.startswith(r + ".") for r in record):
+                out.append(path)
+    return out
+
+
+def coverage(spec: dict[str, Any], test_file: bytes) -> dict[str, Any]:
+    """The per-case coverage record (see the module docstring)."""
+    up = spec.get("upstream") or {}
+    a = spec.get("assertions") or []
+    expressed = [x for x in a if x.get("kind") == "final_state"]
+    ne = [x for x in a if x.get("kind") == "not_expressible"]
+    by_reason: dict[str, int] = {}
+    verified = judgement = failed = 0
+    fns: dict[str, ast.AST] = {}
+    if up.get("test_functions"):
+        try:
+            fns = _functions(test_file.decode(), up["test_functions"])
+        except (Refused, SyntaxError, UnicodeDecodeError):
+            fns = {}
+    for x in ne:
+        by_reason[x.get("reason")] = by_reason.get(x.get("reason"), 0) + 1
+        fn = next((f for f in fns.values() if f.lineno <= x["line"] <= (f.end_lineno or f.lineno)), None)
+        status = verify_reason(fn, x["line"], x.get("reason")) if fn is not None else ("failed", "no function")
+        verified += status[0] == "verified"
+        judgement += status[0] == "investigator_judgement"
+        failed += status[0] == "failed"
+    flags = [x.get("uses_deployspecter_code") for x in expressed]
+    known = all(isinstance(f, bool) for f in flags)
+    without = sum(1 for f in flags if f is False) if known else None
+    return {"case_id": spec.get("case_id"), "format": spec.get("format"), "total": len(a),
+            "expressed": len(expressed), "expressed_without_deployspecter_code": without,
+            "expressed_with_deployspecter_code": (len(expressed) - without) if known else None,
+            "not_expressible_by_reason": dict(sorted(by_reason.items())), "mechanically_verified": verified,
+            "verification_failed": failed, "investigator_judgement": judgement,
+            "strict_subset": bool(known and expressed and without == len(expressed) and judgement == 0
+                                  and failed == 0)}
 
 
 def check_spec(spec: dict[str, Any], test_file: bytes) -> list[str]:
     """Problems with a spec against the upstream test file; an empty list means it accounts for every assertion."""
     p: list[str] = []
-    if spec.get("format") != FORMAT:
-        p.append(f"format must be {FORMAT}")
+    if spec.get("format") not in FORMATS:
+        p.append(f"format must be one of {FORMATS}")
+    v2 = spec.get("format") == FORMAT
     up = spec.get("upstream") or {}
     functions = up.get("test_functions") or []
     if not functions:
@@ -129,6 +316,14 @@ def check_spec(spec: dict[str, Any], test_file: bytes) -> list[str]:
             p.append(f"line {ln}: a final_state assertion needs a predicate")
         if a.get("kind") not in ("final_state", "not_expressible"):
             p.append(f"line {ln}: kind must be final_state or not_expressible")
+        if v2 and a.get("kind") == "final_state":
+            flag = a.get("uses_deployspecter_code")
+            if not isinstance(flag, bool):
+                p.append(f"line {ln}: uses_deployspecter_code (true or false) is required")
+            elif flag is False and isinstance(a.get("predicate"), dict):
+                ds = reads_deployspecter(a["predicate"], spec.get("sources") or {})
+                if ds:
+                    p.append(f"line {ln}: uses_deployspecter_code is false but the predicate reads {ds}")
     for ln, text in expected.items():
         if ln not in listed:
             p.append(f"line {ln} isn't accounted for: {text[:80]}")
@@ -137,6 +332,17 @@ def check_spec(spec: dict[str, Any], test_file: bytes) -> list[str]:
     for ln in listed:
         if ln not in expected:
             p.append(f"line {ln} isn't an assertion in the named test functions")
+    if v2:
+        if not isinstance((spec.get("sources") or {}).get("final_state"), dict):
+            p.append("sources.final_state must classify each final-state key")
+        fns = _functions(test_file.decode(), functions)
+        for ln, a in listed.items():
+            if a.get("kind") != "not_expressible" or ln not in expected:
+                continue
+            fn = next((f for f in fns.values() if f.lineno <= ln <= (f.end_lineno or f.lineno)), None)
+            status, detail = verify_reason(fn, ln, a.get("reason"))
+            if status == "failed":
+                p.append(f"line {ln}: reason {a.get('reason')!r} fails mechanical verification ({detail})")
     return p
 
 
@@ -225,6 +431,7 @@ def evaluate_predicate(p: Any, env: dict[str, Any]) -> bool:
 class MaintainerOracle:
     def __init__(self, spec: dict[str, Any]):
         self.spec = spec
+        self.coverage: dict[str, Any] | None = None
         self.expressed = [a for a in spec.get("assertions") or [] if a.get("kind") == "final_state"]
         self.not_expressed = [a for a in spec.get("assertions") or [] if a.get("kind") == "not_expressible"]
 
@@ -245,7 +452,11 @@ class MaintainerOracle:
                 return {"verdict": "NO_VERDICT", "why": f"line {a['line']}: {e}"}
             if not ok:
                 failed.append(a["line"])
+        flags = {a["line"]: a.get("uses_deployspecter_code") for a in self.expressed}
         return {"verdict": "VIOLATED" if failed else "HOLDS", "failed_lines": failed,
+                "failed_without_deployspecter_code": [ln for ln in failed if flags.get(ln) is False],
+                "detected_only_through_deployspecter_code": bool(failed) and all(flags.get(ln) is True
+                                                                                  for ln in failed),
                 "expressed": [a["line"] for a in self.expressed],
                 "not_expressed": {a["line"]: a["reason"] for a in self.not_expressed}}
 
@@ -262,15 +473,25 @@ def compile_oracle(spec: dict[str, Any], test_file: bytes, log: list[dict[str, A
         reason = "; ".join(problems)
     else:
         o = MaintainerOracle(spec)
-        if o.expressed:
+        cov = coverage(spec, test_file)
+        o.coverage = cov
+        if o.expressed and spec.get("format") == FORMAT and all(
+                a.get("uses_deployspecter_code") is True for a in o.expressed):
+            reason = "oracle_depends_on_tool: every expressed assertion uses DeploySpecter code"
+        elif o.expressed:
             if log is not None:
                 log.append({"case_id": case, "admitted": True, "expressed": len(o.expressed),
-                            "not_expressed": {str(a["line"]): a["reason"] for a in o.not_expressed}})
+                            "not_expressed": {str(a["line"]): a["reason"] for a in o.not_expressed},
+                            "coverage": cov})
             return o
-        reason = "no assertion is expressible over the final state: " + ", ".join(
-            sorted({a["reason"] for a in o.not_expressed}))
+        else:
+            reason = "no assertion is expressible over the final state: " + ", ".join(
+                sorted({a["reason"] for a in o.not_expressed}))
     if log is not None:
-        log.append({"case_id": case, "admitted": False, "reason": reason})
+        entry = {"case_id": case, "admitted": False, "reason": reason}
+        if not problems:
+            entry["coverage"] = coverage(spec, test_file)
+        log.append(entry)
     raise Refused(reason)
 
 

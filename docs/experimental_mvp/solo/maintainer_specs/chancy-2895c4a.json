@@ -1,7 +1,7 @@
 {
- "format": "ds-maintainer-spec/1",
+ "format": "ds-maintainer-spec/2",
  "label": "NONBLIND development case: transcribed after the fix was read (ds-nbc/1)",
- "transcribed": "2026-11-16",
+ "transcribed": "2026-11-16 (format 2)",
  "case_id": "chancy-2895c4a",
  "upstream": {
   "repository": "https://github.com/TkTech/chancy",
@@ -71,8 +71,8 @@
    "line": 146,
    "source": "assert await chancy.cancel_job_ex(cursor, ref) == 1",
    "kind": "not_expressible",
-   "reason": "in_memory_return_value",
-   "note": "cancel's return value; used as the precondition (rowcount 1)"
+   "reason": "not_in_final_state",
+   "note": "the row count cancel_job_ex returns; it isn't stored in the database. The workload's record of it is the precondition. Re-tagged on 2026-11-16 from in_memory_return_value, which can't be verified mechanically for an assertion that is itself a call"
   },
   {
    "line": 150,
@@ -131,7 +131,8 @@
      }
     }
    },
-   "note": "get_job(ref) == expected after the late completion: the cancelled job's final state is still the cancelled one, state 'failed' (line 150)"
+   "note": "get_job(ref) == expected after the late completion: the cancelled job's final state is still the cancelled one, state 'failed' (line 150)",
+   "uses_deployspecter_code": false
   },
   {
    "line": 165,
@@ -190,7 +191,8 @@
      }
     }
    },
-   "note": "completed_at is set on the cancelled job (jobs_detail.completed)"
+   "note": "completed_at is set on the cancelled job (jobs_detail.completed)",
+   "uses_deployspecter_code": false
   },
   {
    "line": 167,
@@ -204,5 +206,17 @@
    "kind": "not_expressible",
    "reason": "mock"
   }
- ]
+ ],
+ "sources": {
+  "final_state": {
+   "jobs_detail": "application",
+   "jobs": "application",
+   "schema_version": "application"
+  },
+  "raw_results_workload_record": [
+   "push.cancelled",
+   "push.pushed"
+  ],
+  "notes": "jobs_detail is plain SQL over chancy_jobs (src/deployspecter/experimental/chancy_properties.py JOBS_DETAIL_SQL: n = kwargs->>'n', the job argument the workload set; completed = completed_at IS NOT NULL). push.cancelled is the workload's record of its cancel calls (job n and the returned row count)."
+ }
 }

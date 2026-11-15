@@ -1,0 +1,581 @@
+{
+ "format": "ds-maintainer-spec/1",
+ "label": "NONBLIND development case: transcribed after the fix was read (ds-nbc/1)",
+ "transcribed": "2026-11-16",
+ "case_id": "pgqueuer-8dfadf4",
+ "upstream": {
+  "repository": "https://github.com/janbjorge/pgqueuer",
+  "fix_commit": "8dfadf4ea3a6fb6d60ac970d799faf8338f9d03f",
+  "test_path": "test/integration/test_persistence_queries_sql.py",
+  "test_blob": "539175899e8125bee25956cc3eb00926e6741baf",
+  "changed_test_functions": [
+   "test_cancel_keeps_picked_row_until_worker_logs",
+   "test_cancel_removes_failed_job",
+   "test_log_jobs_skips_job_cleared_while_it_ran"
+  ],
+  "test_functions": [
+   "test_cancel_keeps_picked_row_until_worker_logs"
+  ],
+  "unused_test_functions": {
+   "test_cancel_removes_failed_job": "scenario_not_exercised",
+   "test_log_jobs_skips_job_cleared_while_it_ran": "scenario_not_exercised"
+  },
+  "unused_test_files": {
+   "test/test_inmemory.py": "other_backend"
+  }
+ },
+ "precondition": {
+  "all": [
+   {
+    "ge": [
+     {
+      "len": {
+       "path": "raw_results.prod.cancelled"
+      }
+     },
+     {
+      "lit": 1
+     }
+    ]
+   },
+   {
+    "ge": [
+     {
+      "len": {
+       "path": "final_state.runs"
+      }
+     },
+     {
+      "lit": 1
+     }
+    ]
+   }
+  ]
+ },
+ "assertions": [
+  {
+   "line": 249,
+   "source": "assert running.id == running_id",
+   "kind": "not_expressible",
+   "reason": "in_memory_return_value"
+  },
+  {
+   "line": 253,
+   "source": "assert await q.queue_job_by_id(queued_id) is None",
+   "kind": "final_state",
+   "predicate": {
+    "forall": {
+     "rows": {
+      "path": "raw_results.prod.cancelled"
+     },
+     "as": "c",
+     "where": {
+      "not": {
+       "exists": {
+        "rows": {
+         "path": "final_state.runs"
+        },
+        "as": "s",
+        "where": {
+         "all": [
+          {
+           "eq": [
+            {
+             "path": "s.n"
+            },
+            {
+             "path": "c"
+            }
+           ]
+          },
+          {
+           "eq": [
+            {
+             "path": "s.phase"
+            },
+            {
+             "lit": "start"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      }
+     },
+     "check": {
+      "not": {
+       "exists": {
+        "rows": {
+         "path": "final_state.queue"
+        },
+        "as": "q",
+        "where": {
+         "eq": [
+          {
+           "path": "q.id"
+          },
+          {
+           "get": [
+            {
+             "path": "raw_results.prod.job_ids"
+            },
+            {
+             "path": "c"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      }
+     }
+    }
+   },
+   "note": "a job cancelled before it started has no queue row at the end"
+  },
+  {
+   "line": 254,
+   "source": "assert [entry.status for entry in await q.job_log_history(queued_id)] == [\"queued\", \"canceled\"]",
+   "kind": "final_state",
+   "predicate": {
+    "forall": {
+     "rows": {
+      "path": "raw_results.prod.cancelled"
+     },
+     "as": "c",
+     "where": {
+      "not": {
+       "exists": {
+        "rows": {
+         "path": "final_state.runs"
+        },
+        "as": "s",
+        "where": {
+         "all": [
+          {
+           "eq": [
+            {
+             "path": "s.n"
+            },
+            {
+             "path": "c"
+            }
+           ]
+          },
+          {
+           "eq": [
+            {
+             "path": "s.phase"
+            },
+            {
+             "lit": "start"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      }
+     },
+     "check": {
+      "eq": [
+       {
+        "pluck": {
+         "rows": {
+          "path": "final_state.log"
+         },
+         "as": "e",
+         "where": {
+          "eq": [
+           {
+            "path": "e.job_id"
+           },
+           {
+            "get": [
+             {
+              "path": "raw_results.prod.job_ids"
+             },
+             {
+              "path": "c"
+             }
+            ]
+           }
+          ]
+         },
+         "value": {
+          "path": "e.status"
+         },
+         "order_by": "id"
+        }
+       },
+       {
+        "lit": [
+         "queued",
+         "canceled"
+        ]
+       }
+      ]
+     }
+    }
+   },
+   "note": "its log history is queued, canceled"
+  },
+  {
+   "line": 256,
+   "source": "assert held is not None and held.status == \"picked\"",
+   "kind": "not_expressible",
+   "reason": "intermediate_state",
+   "note": "the held row before the worker logs"
+  },
+  {
+   "line": 257,
+   "source": "assert [entry.status for entry in await q.job_log_history(running_id)] == [\"queued\", \"picked\"]",
+   "kind": "not_expressible",
+   "reason": "intermediate_state",
+   "note": "the log before the worker logs"
+  },
+  {
+   "line": 258,
+   "source": "assert await q.dequeue(1, params, owner, None, timeout) == []",
+   "kind": "final_state",
+   "predicate": {
+    "forall": {
+     "rows": {
+      "path": "raw_results.prod.cancelled"
+     },
+     "as": "c",
+     "where": {
+      "exists": {
+       "rows": {
+        "path": "final_state.runs"
+       },
+       "as": "s",
+       "where": {
+        "all": [
+         {
+          "eq": [
+           {
+            "path": "s.n"
+           },
+           {
+            "path": "c"
+           }
+          ]
+         },
+         {
+          "eq": [
+           {
+            "path": "s.phase"
+           },
+           {
+            "lit": "start"
+           }
+          ]
+         }
+        ]
+       }
+      }
+     },
+     "check": {
+      "forall": {
+       "rows": {
+        "path": "final_state.runs"
+       },
+       "as": "b",
+       "where": {
+        "all": [
+         {
+          "eq": [
+           {
+            "path": "b.n"
+           },
+           {
+            "path": "c"
+           }
+          ]
+         },
+         {
+          "eq": [
+           {
+            "path": "b.phase"
+           },
+           {
+            "lit": "start"
+           }
+          ]
+         }
+        ]
+       },
+       "check": {
+        "forall": {
+         "rows": {
+          "path": "final_state.runs"
+         },
+         "as": "e",
+         "where": {
+          "all": [
+           {
+            "eq": [
+             {
+              "path": "e.exec"
+             },
+             {
+              "path": "b.exec"
+             }
+            ]
+           },
+           {
+            "eq": [
+             {
+              "path": "e.phase"
+             },
+             {
+              "lit": "end"
+             }
+            ]
+           }
+          ]
+         },
+         "check": {
+          "not": {
+           "exists": {
+            "rows": {
+             "path": "final_state.runs"
+            },
+            "as": "o",
+            "where": {
+             "all": [
+              {
+               "ne": [
+                {
+                 "path": "o.n"
+                },
+                {
+                 "path": "c"
+                }
+               ]
+              },
+              {
+               "eq": [
+                {
+                 "path": "o.phase"
+                },
+                {
+                 "lit": "start"
+                }
+               ]
+              },
+              {
+               "gt": [
+                {
+                 "path": "o.seq"
+                },
+                {
+                 "path": "b.seq"
+                }
+               ]
+              },
+              {
+               "lt": [
+                {
+                 "path": "o.seq"
+                },
+                {
+                 "path": "e.seq"
+                }
+               ]
+              }
+             ]
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   },
+   "note": "TRANSLATED through the handler table: while a cancelled job's handler runs (its start..end rows in the integration's ds_pgq_runs table, part of the final database state), no other job starts; that is, dequeue returns nothing under concurrency_limit 1"
+  },
+  {
+   "line": 259,
+   "source": "with pytest.raises(DuplicateJobError):",
+   "kind": "not_expressible",
+   "reason": "exception",
+   "note": "the dedupe key is held (DuplicateJobError); the workload uses no dedupe keys"
+  },
+  {
+   "line": 264,
+   "source": "assert await q.queue_job_by_id(running_id) is None",
+   "kind": "final_state",
+   "predicate": {
+    "forall": {
+     "rows": {
+      "path": "raw_results.prod.cancelled"
+     },
+     "as": "c",
+     "where": {
+      "exists": {
+       "rows": {
+        "path": "final_state.runs"
+       },
+       "as": "s",
+       "where": {
+        "all": [
+         {
+          "eq": [
+           {
+            "path": "s.n"
+           },
+           {
+            "path": "c"
+           }
+          ]
+         },
+         {
+          "eq": [
+           {
+            "path": "s.phase"
+           },
+           {
+            "lit": "start"
+           }
+          ]
+         }
+        ]
+       }
+      }
+     },
+     "check": {
+      "not": {
+       "exists": {
+        "rows": {
+         "path": "final_state.queue"
+        },
+        "as": "q",
+        "where": {
+         "eq": [
+          {
+           "path": "q.id"
+          },
+          {
+           "get": [
+            {
+             "path": "raw_results.prod.job_ids"
+            },
+            {
+             "path": "c"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      }
+     }
+    }
+   },
+   "note": "after the worker logs, the cancelled job has no queue row"
+  },
+  {
+   "line": 265,
+   "source": "assert [entry.status for entry in await q.job_log_history(running_id)] == [",
+   "kind": "final_state",
+   "predicate": {
+    "forall": {
+     "rows": {
+      "path": "raw_results.prod.cancelled"
+     },
+     "as": "c",
+     "where": {
+      "exists": {
+       "rows": {
+        "path": "final_state.runs"
+       },
+       "as": "s",
+       "where": {
+        "all": [
+         {
+          "eq": [
+           {
+            "path": "s.n"
+           },
+           {
+            "path": "c"
+           }
+          ]
+         },
+         {
+          "eq": [
+           {
+            "path": "s.phase"
+           },
+           {
+            "lit": "start"
+           }
+          ]
+         }
+        ]
+       }
+      }
+     },
+     "check": {
+      "eq": [
+       {
+        "pluck": {
+         "rows": {
+          "path": "final_state.log"
+         },
+         "as": "e",
+         "where": {
+          "eq": [
+           {
+            "path": "e.job_id"
+           },
+           {
+            "get": [
+             {
+              "path": "raw_results.prod.job_ids"
+             },
+             {
+              "path": "c"
+             }
+            ]
+           }
+          ]
+         },
+         "value": {
+          "path": "e.status"
+         },
+         "order_by": "id"
+        }
+       },
+       {
+        "lit": [
+         "queued",
+         "picked",
+         "canceled"
+        ]
+       }
+      ]
+     }
+    }
+   },
+   "note": "its log history is queued, picked, canceled"
+  },
+  {
+   "line": 271,
+   "source": "assert next_job.id == waiting_id",
+   "kind": "not_expressible",
+   "reason": "in_memory_return_value"
+  },
+  {
+   "line": 273,
+   "source": "assert replacement is not None",
+   "kind": "not_expressible",
+   "reason": "in_memory_return_value"
+  }
+ ]
+}
