@@ -1,0 +1,16 @@
+# Disposable: PostgreSQL 16 and a Python 3.12 container with saq 0.26.5 from PyPI. No host port is published.
+#   docker compose run --rm repro                      # 20 iterations, concurrency 2, max_burst_jobs 2, 3 jobs
+#   docker compose run --rm repro python /repro/repro_max_burst.py 20 1 2 3   # control: concurrency 1
+#   docker compose down -v
+services:
+  db:
+    image: postgres:16
+    environment: {POSTGRES_PASSWORD: postgres}
+    healthcheck: {test: ["CMD", "pg_isready", "-U", "postgres"], interval: 1s, retries: 30}
+  repro:
+    image: python:3.12-slim
+    depends_on: {db: {condition: service_healthy}}
+    environment: {SAQ_PG_URL: "postgresql://postgres:postgres@db:5432/postgres", PIP_DISABLE_PIP_VERSION_CHECK: "1"}
+    volumes: ["./repro_max_burst.py:/repro/repro_max_burst.py:ro"]
+    entrypoint: ["sh", "-c", "pip install -q 'saq[postgres]==0.26.5' 'psycopg[binary]' && exec \"$@\"", "--"]
+    command: ["python", "/repro/repro_max_burst.py", "20", "2", "2", "3"]

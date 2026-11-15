@@ -1,0 +1,16 @@
+# Forced-schedule trace (DeploySpecter coordinator, ds-coord/1), saq v0.26.5, NONBLIND EXPLORATORY
+# workload: jobs=3 concurrency=2 max_burst_jobs=2 dequeue_timeout=1 s poll_interval=0.25 s; policy {'kind': 'seeded', 'seed': 0} ; outcome completed ; grants 80 ; server-log corroboration ok: True matched 62
+# worker statements that claim or update saq_jobs, in global grant order (the producer inserts 3 jobs first). Labels are by SQL shape only: "update+expire_at" is the finishing write.
+grant  28  claim (dequeue)  WITH locked_job AS ( SELECT key FROM "saq_jobs" WHERE status = 'queued' AND queue = %(queue)s AND %(now)s >= s
+grant  30  update           UPDATE "saq_jobs" SET job = %(job)s ,status = %(status)s ,scheduled = %(scheduled)s WHERE key = %(key)s
+grant  33  update           UPDATE "saq_jobs" SET job = %(job)s ,status = %(status)s ,scheduled = %(scheduled)s WHERE key = %(key)s
+grant  42  update           UPDATE "saq_jobs" SET job = %(job)s ,status = %(status)s ,scheduled = %(scheduled)s WHERE key = %(key)s
+grant  46  update           UPDATE "saq_jobs" SET job = %(job)s ,status = %(status)s ,scheduled = %(scheduled)s WHERE key = %(key)s
+grant  56  update+expire_at UPDATE "saq_jobs" SET job = %(job)s ,status = %(status)s ,scheduled = %(scheduled)s ,expire_at = %(expire_at)s
+grant  60  update+expire_at UPDATE "saq_jobs" SET job = %(job)s ,status = %(status)s ,scheduled = %(scheduled)s ,expire_at = %(expire_at)s
+grant  64  claim (dequeue)  WITH locked_job AS ( SELECT key FROM "saq_jobs" WHERE status = 'queued' AND queue = %(queue)s AND %(now)s >= s
+grant  66  update           UPDATE "saq_jobs" SET job = %(job)s ,status = %(status)s ,scheduled = %(scheduled)s WHERE key = %(key)s
+grant  73  update           UPDATE "saq_jobs" SET job = %(job)s ,status = %(status)s ,scheduled = %(scheduled)s WHERE key = %(key)s
+grant  77  update+expire_at UPDATE "saq_jobs" SET job = %(job)s ,status = %(status)s ,scheduled = %(scheduled)s ,expire_at = %(expire_at)s
+# final saq_jobs: [('default-0', 'complete'), ('default-1', 'complete'), ('default-2', 'complete')]
+# handler calls: [['default', 0], ['default', 1], ['default', 2]]
