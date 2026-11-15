@@ -68,8 +68,8 @@ class TestPages:
     def test_external_links_are_only_the_project_and_published_sources(self):
         text = (STATIC / "landing.html").read_text()
         assert set(re.findall(r'href="(https?://[^"]+)"', text)) == {
-            "https://github.com/pm2m1/deployspecter/tree/hackathon-release",
-            "https://github.com/pm2m1/deployspecter/blob/hackathon-release/README.md#setup",
+            "https://github.com/pm2m1/deployspecter/tree/main",
+            "https://github.com/pm2m1/deployspecter/blob/main/README.md#setup",
         }
 
 
@@ -206,8 +206,8 @@ class TestStaticExport:
         out = tmp_path / "site"
         export_static_site(out)
         allowed = {
-            "https://github.com/pm2m1/deployspecter/tree/hackathon-release",
-            "https://github.com/pm2m1/deployspecter/blob/hackathon-release/README.md#setup",
+            "https://github.com/pm2m1/deployspecter/tree/main",
+            "https://github.com/pm2m1/deployspecter/blob/main/README.md#setup",
         }
         index = (out / "index.html").read_text()
         assert set(re.findall(r'href="(https?://[^"]+)"', index)) == allowed
@@ -232,7 +232,7 @@ class TestStaticExport:
 
     def test_local_page_keeps_its_links_and_setup(self):
         text = (STATIC / "landing.html").read_text()
-        assert "github.com/pm2m1/deployspecter/tree/hackathon-release" in text and "Run it locally" in text
+        assert "github.com/pm2m1/deployspecter/tree/main" in text and "Run it locally" in text
 
     def test_old_fragments_do_not_redirect_to_a_missing_workbench_in_the_export(self):
         assert "!window.DEPLOYSPECTER?.staticSite" in (STATIC / "js" / "landing.js").read_text()

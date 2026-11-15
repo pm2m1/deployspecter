@@ -2,6 +2,15 @@
 
 DeploySpecter finds and reproduces data corruption caused by rolling database deployments. It runs real PostgreSQL sessions through bounded statement-level interleavings of old code, new code and background jobs, checks the outcome against independently written requirements, and saves each failure so it can be replayed.
 
+## Research since the hackathon
+
+Since the hackathon, the work has moved from declarative scenarios to stepping real application code: psycopg,
+SQLAlchemy, Django, and job queues in isolated containers, with every run checked against the PostgreSQL server
+log. It includes four reproduced upstream defects, a mixed-version Chancy experiment and two Muse Spark
+comparisons, all NONBLIND. See [RESEARCH.md](RESEARCH.md); its figures link to the fixed tag
+[`research-2026-11-15`](https://github.com/pm2m1/deployspecter/tree/research-2026-11-15). The sections below
+describe the hackathon release and are unchanged.
+
 ## The problem
 
 During a rollout, old code, new code and migrations share one schema. Each can be correct alone and still lose data together. A backfill reads a row, a user updates it, and the backfill's later write discards the update. Other defects need no concurrency at all, yet still only appear once a migration meets real data.
