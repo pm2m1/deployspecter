@@ -28,7 +28,7 @@ sources of cases:
 One person runs the study. Independence that r3 requires is replaced by automation where possible, and the rest
 is declared. The protocol is Amendment 003, revision candidate r3 (sha256
 `af9b2205ab77c38cb5b7c803e85dbf7bb8bd283b68e15e26d6b177a9bb13fe1c`), adopted under the attached solo adoption record.
-`FREEZE.json` (sha256 `0bf657c07caff0f20bda39ae20d52e2d8fba0a8889daaf2c13a1d9fd8771cc6a`) lists the sha256 of every
+`FREEZE.json` (sha256 `6fb0a189eb68c2351203bb5764387432c824e20d11a117a389dcdacb9aeced47`) lists the sha256 of every
 frozen document and program, and of the two sealed seeds. Results will be
 labelled "preregistered, automation-blinded, single-investigator. Not independent".
 
@@ -143,6 +143,8 @@ The workload source (arm).
 - Per case, the coverage record: assertions total, expressed, expressed without DeploySpecter code, not expressible
   by reason, mechanically verified, investigator judgement. Per detection, whether it rests only on DeploySpecter
   code.
+- Per run (results schema `ds-solo-run/1`): each defective-revision schedule's VIOLATED assertions with their
+  `uses_deployspecter_code` flag, and the first schedule whose VIOLATED assertions include one with the flag false.
 
 ### Indices
 
@@ -159,6 +161,12 @@ The workload source (arm).
 - **preregistered sensitivity analysis:** the same comparisons on the strict subset (no expressed assertion uses
   DeploySpecter code, and no not-expressible reason is investigator judgement). It is reported whatever its size,
   and is descriptive only with fewer than 10 strict cases;
+- **preregistered sensitivity analysis, detection level:** the primary and secondary comparisons again (McNemar
+  against RA-DET-G and RA-DET with Holm; time to detection), counting only detections where at least one VIOLATED
+  assertion has `uses_deployspecter_code: false` (`research_tools/solo/detection_level.py`). It is reported per arm
+  beside the main result and never replaces it. With fewer than 10 paired defect cases it is descriptive only, and the
+  report says so. On the development cases it counts chancy-2895c4a (line 164) and not pgqueuer-8dfadf4 (line 258
+  only);
 - leave-one-application-out sensitivity;
 - Kaplan–Meier and the paired censored median difference for time to detection, with an exact Wilcoxon only if
   both arms detect at least 10 cases;

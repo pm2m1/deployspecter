@@ -84,3 +84,16 @@ mechanically. saq-addee31 is still refused: there is no regression test.
 **Every pgqueuer detection rests only on line 258**, the assertion that reads DeploySpecter's handler table. The
 four assertions over pgqueuer's own tables hold on R1 as well. The verdicts are unchanged from the format-1 oracles,
 and the controls still hold.
+
+## Detection level (2026-11-17, before registration)
+
+`research_tools/solo/detection_level.py` counts a detection only if at least one VIOLATED assertion at that schedule
+has `uses_deployspecter_code: false`. Rebuilt from the captured RA-DET oracle calls above
+(`tests/experimental/test_solo_detection_level_offline.py`):
+
+| Case | Detecting runs | VIOLATED at the first detection | Counted at detection level |
+|---|---|---|---|
+| chancy-2895c4a | 2 of 2 | line 164 (flag false) | **yes**, on schedule 1 |
+| pgqueuer-8dfadf4 | 3 of 3 | line 258 only (flag true) | **no**: censored at the budget |
+
+Neither case has a corrected-revision violation.

@@ -35,6 +35,7 @@ Every admitted and every refused case gets its coverage record from `maintainer_
 
 For every detection, the report also states whether it rests on at least one assertion that uses no DeploySpecter
 code (`failed_without_deployspecter_code`), or only on assertions that do (`detected_only_through_deployspecter_code`).
+The detection-level sensitivity analysis below counts with this.
 
 ### Preregistered sensitivity analysis: the strict subset
 
@@ -45,6 +46,33 @@ reason is investigator judgement (`coverage.strict_subset`).
 - They are reported whatever its size, with exact counts.
 - With fewer than 10 strict cases, the result is **descriptive only**, and the report says so in those words.
 - For reference, neither development case would qualify (`solo/DEV_CASE_CHECK.md`).
+
+### Preregistered sensitivity analysis: detection level
+
+The strict subset works per case, so it can't show a case that is detected only through DeploySpecter's own tables.
+This analysis works per detection.
+- **Recorded per run.** The maintainer oracle's verdict record for each schedule lists every VIOLATED assertion with
+  its `uses_deployspecter_code` flag (`MaintainerOracle.evaluate`, key `violated_assertions`). Each run record uses
+  the results schema `ds-solo-run/1` (`research_tools/solo/detection_level.py`). It carries this list for every
+  defective-revision schedule, and, for the first detection, the VIOLATED lines with the flag true and with the flag
+  false.
+- **What counts.** A detection counts only if at least one VIOLATED assertion at that schedule has
+  `uses_deployspecter_code: false`. A run that detects only through flag-true assertions detects, in this analysis,
+  at its first schedule with a flag-false VIOLATED assertion. If there is none, it is a nondetection, censored at the
+  budget.
+- **What is repeated.** The primary comparison (exact McNemar, the Muse arm against RA-DET-G) and the secondary
+  comparisons (against RA-DET, with Holm correction across the two McNemar tests; time to detection with the Gehan
+  sign test and Kaplan–Meier medians) are run again by `paired_eval.py`'s own code, through `detection_level.py`.
+  The cases, budgets and costs are the same. A corrected-revision violation still counts against the arm, whichever
+  assertion it came from.
+- **Reported per arm, beside the main result:** detected cases in the main analysis, detected cases at detection
+  level, and the cases detected only through DeploySpecter code.
+- **Status.** It is a sensitivity analysis and never replaces the main result. With fewer than 10 paired defect
+  cases it is **descriptive only**, and the report says so in those words ("Descriptive only: N paired defect cases,
+  fewer than 10.").
+- **Development cases** (NONBLIND, never counted): it currently counts chancy-2895c4a, whose detections rest on
+  line 164 (no DeploySpecter code), and not pgqueuer-8dfadf4, whose detections rest on line 258 only
+  (`solo/DEV_CASE_CHECK.md`).
 
 ### Rule: an oracle may not depend only on the tool
 

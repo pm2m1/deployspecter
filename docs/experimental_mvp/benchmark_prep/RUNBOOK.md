@@ -55,6 +55,9 @@ Commit the printed counts and hashes.
   build, paired with the unmutated build. Classify with `auto_oracles.py classify`, and write `RESULTS.json`
   (`{"<mutant id>": {"verdict": ...}}`).
 - **#10 (time to detection)** comes from these same runs. No extra run is made.
+- **Run records:** one `ds-solo-run/1` record per run (`research_tools/solo/detection_level.py`): the
+  `paired_eval.py` fields, plus every defective-revision schedule's status and the maintainer oracle's
+  `violated_assertions` for it (`detection_level.schedule_entry`).
 
 ## 5. Decode the mutants
 
@@ -68,6 +71,8 @@ for each mutant. Commit the decoded records and `ACCESS.log`.
 
 `../osf/ANALYSIS_PLAN.md` and `../osf/ANALYSIS_PLAN_SOLO.md`, with `research_tools/paired_eval.py`:
 - historical cases: McNemar (primary and secondary), leave-one-application-out, Kaplan–Meier (#10);
+- the detection-level sensitivity analysis, beside the main result:
+  `python research_tools/solo/detection_level.py --runs RUNS.jsonl --out DIR`;
 - mutants: separately, per operator and application;
 - report refusals, exclusions, integration time and cost with exact counts.
 
