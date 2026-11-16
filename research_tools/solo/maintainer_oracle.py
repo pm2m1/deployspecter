@@ -454,6 +454,8 @@ class MaintainerOracle:
                 failed.append(a["line"])
         flags = {a["line"]: a.get("uses_deployspecter_code") for a in self.expressed}
         return {"verdict": "VIOLATED" if failed else "HOLDS", "failed_lines": failed,
+                # the detection-level record: each VIOLATED assertion with its flag (None only in format 1)
+                "violated_assertions": [{"line": ln, "uses_deployspecter_code": flags.get(ln)} for ln in failed],
                 "failed_without_deployspecter_code": [ln for ln in failed if flags.get(ln) is False],
                 "detected_only_through_deployspecter_code": bool(failed) and all(flags.get(ln) is True
                                                                                   for ln in failed),
