@@ -61,14 +61,24 @@ statement corroborated.
     (M) vs 9 (D2). Verdict: **INSUFFICIENT SAMPLE**.
   - **Fixed-version violations:** D2 and M both had one, on saq-c570ba4 (clause B3).
 
+## Preregistered single-investigator evaluation
+
+The next study is preregistered on OSF: [osf.io/34ytz](https://osf.io/34ytz) (project
+[osf.io/9xdrb](https://osf.io/9xdrb)), registered 2026-11-17. It compares Muse workloads with an outcome-blind
+generator on historical defects selected by frozen code with a sealed seed, judged by the maintainers' own regression
+tests, plus seeded mutants. One person runs it, so its results will be labelled "preregistered, automation-blinded,
+single-investigator. Not independent". The frozen plan, code and seed hashes are on branch `research/benchmark-prep`
+at commit `312d0af` (`docs/experimental_mvp/osf/FREEZE.json`). No case has been selected and no run made yet.
+
 ## Limitations
 
 - **NONBLIND:** the developers chose the cases and wrote the oracles after reading the fixes.
 - **Developer-selected cases:** 4 cases from 3 applications, all of them already exposed to this project.
 - **Hand-built integrations:** one per library, written by the developers.
 - **Isolation:** not hostile-grade, and hostile-code testing is BLOCKED.
-- **No confirmatory study yet.** The protocol (Amendment 003, revision candidate r3) is PROPOSED, unsigned and
-  unregistered. The confirmatory runner refuses to run (`docs/experimental_mvp/protocol/APPROVAL_DASHBOARD.md`).
+- **No confirmatory study yet.** The protocol (Amendment 003, revision candidate r3) is PROPOSED and unsigned. The
+  confirmatory runner refuses to run (`docs/experimental_mvp/protocol/APPROVAL_DASHBOARD.md`). The single-investigator
+  evaluation above is registered, but it is not independent and won't be called confirmatory.
 
 ## Reproduce one case end to end (saq-c570ba4, RA-DET)
 
