@@ -50,3 +50,27 @@ Admitted then refused, by application: plane 7, airflow 5, kiwitcms 1, wger 1, m
 
 Specs and coverage records are hashed in `SPECS.sha256`. Each spec was committed before any work on its case's
 integration.
+
+## Concurrency dependence of the admitted cases (added 2026-11-17, before any arm or oracle-error check)
+
+Added on the owner's instruction at Gate 1 (verbatim): "Before any Stage 2 work, add to STAGE1_SUMMARY.md (new
+section, dated, before any arm or oracle-error check runs) a classification of each admitted case:
+concurrency-dependent yes/no, with a one-line reason from the fix and test. Commit and push it. This is descriptive
+only and changes no registered analysis."
+
+Authorization (verbatim):
+
+> I, Parth Mishra (sole owner, GitHub pm2m1), authorize this session to run the evaluation preregistered at https://osf.io/34ytz (DOI 10.17605/OSF.IO/34YTZ), exactly as registered: case selection, oracle transcription, integrations, mutant generation, all arms, mutant decoding and the frozen analysis, on research/benchmark-prep and new branches off it. Muse API spend is capped at $100 in total. Record this text verbatim in each record you write on my behalf.
+
+"Concurrency-dependent" means the defect needs two or more interleaved transactions or requests to show. It is read
+from the fix diff and the chosen regression test functions only. No arm has run and no oracle-error check has run.
+
+| Case | Concurrency-dependent | Reason (fix and test) |
+|---|---|---|
+| `pretix-409e64d5f2` | no | The fix changes `self._voucher_use_diff[cp.voucher] += 2` to `+= 1` in cart extension; the test extends one expired position with a one-use voucher in a single `commit()`. |
+| `plane-b2717dc9f4` | no | The fix narrows `WorkSpaceBasePermission` for PUT/PATCH from `[Admin, Member]` to `Admin` and makes `deleted_at` read-only; each test makes one request as one user. |
+| `plane-4605f0078f` | no | The fix allowlists `{"role": ...}` in `partial_update` (mass assignment) and adds sole-admin guards; every test makes one request. The fix also narrows a stale full-row save ("a concurrent removal … isn't reverted"), but no chosen test exercises that. |
+| `wger-bcfdde1a96` | no | The fix matches an existing weight unit by gram as well as name on OFF re-import; the test imports twice in sequence and expects one unit. |
+
+**Result: 0 of 4 admitted cases are concurrency-dependent.** Each defect shows under a single serial request. This is
+descriptive only and changes no registered analysis: the cases, arms, budgets and detection rule stay as registered.
