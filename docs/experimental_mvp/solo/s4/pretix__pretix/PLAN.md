@@ -41,3 +41,15 @@ read. Only the following were read at the revision below, to set up the environm
      application.
 6. The verdict, commands, versions and exit codes go into `LOG.md` and `../../S4.json`. Initials: PM (run on their
    behalf under the authorization above).
+
+## Addendum (2026-11-17, committed before the second attempt)
+
+The first attempt (06:20:19–06:21:01 UTC) failed in step 2, while the environment was being built. `uv pip install
+-e ".[dev]"` exited 1 because `libsass` 0.23.0 builds from source and the image had no C++ compiler
+(`error: [Errno 2] No such file or directory: 'g++'`). Django was therefore never installed. Steps 3–5 failed with
+`ModuleNotFoundError: No module named 'django'` and `py.test: command not found`, under both drivers alike. No S4
+step ran against the application, so no verdict was reached. That attempt's log and exit codes are kept in
+`attempt1_environment_failure/`.
+
+The second attempt adds `g++` to the system packages of step 2. Nothing else changes: the same revision, commands,
+test set and pass criterion. The source copy is re-exported, and the database container is new.
