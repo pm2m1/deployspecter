@@ -38,4 +38,4 @@ packaging, settings, test configuration and CI workflow at the revision below we
      comparison uses the two JUnit XML files, by test id.
    - Failures shared by both runs, such as missing front-end build files, don't count against the application.
 6. The verdict, commands, versions and exit codes go into `LOG.md` and `../../S4.json`. Initials: PM (the
-   investigator; run on his behalf under the authorization above).
+   investigator; run on their behalf under the authorization above).
