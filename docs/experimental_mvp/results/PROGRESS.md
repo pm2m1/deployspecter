@@ -12,9 +12,9 @@ Authorization (verbatim):
 |---|---|
 | 0. Preflight | **done** 2026-11-17: FREEZE.json `6fb0a189…aeced47` matches a rebuild; REGISTRATION.json accepted; sealed seed hashes match; Docker 29.7.2; Python 3.12.14; running from `research/benchmark-prep` d56ad87. No Muse health check exists in the frozen tooling, so no model call was made. |
 | 1. Case selection | **done** (`solo/STAGE1_SUMMARY.md`): final `solo/selection_7`, 4 cases from 3 applications (pretix 1, plane 2, wger 1) after 100 screens; 15 refused by check-spec; strict subset 0; S4: Tandoor pass, Sentry fail, pretix pass, Zulip fail. RA-Q3 descriptive only. |
-| Gate 1 | **reported 2026-11-17; waiting for the owner's "continue"** |
-| 2. Integrations | not started |
-| 3. Mutants | not started |
+| Gate 1 | reported 2026-11-17; the owner answered "continue" with conditions. Concurrency classification added to `solo/STAGE1_SUMMARY.md` (0 of 4 concurrency-dependent). |
+| 2. Integrations | **stopped 2026-11-17.** D3 seam validation on paperless-ngx v3.4.2 (`django_seam_validation/`): **FAIL** (P1 pass, P2 fail: 5 of 25 runs time out on the application's search-index file lock; P3 pass; P4 fail: W3 differs, because the seam refuses the reconnect Celery's fixup causes). The 4 admitted cases were refused (E3: r3 #12 Django seam not validated). **0 eligible historical cases.** No integration was started. |
+| 3. Mutants | not started (owner: "Do not start integrations or mutants") |
 | 4. Arms | not started |
 | 5. Decode and analyse | not started |
 
@@ -36,8 +36,11 @@ Stage 1 (RUNBOOK §2):
 ```
 Use the next unused `selection_<n>`; never overwrite an earlier one. A stop at exit 4 writes nothing.
 
-Current resume point: Gate 1. After the owner's "continue", Stage 2 starts with D3: validate the Django seam on
-InvenTree or paperless-ngx (`results/django_seam_validation/`), because all 4 admitted cases are Django. Then one
-blinded integration per application (pretix, plane, wger) under D5's generic final-state read.
+Current resume point: **stopped at Stage 2, waiting for the owner.** The D3 validation failed, and the 4 admitted
+cases are refused with E3. The owner's instruction: "If it fails, record the E3 refusals, stop, and report: the study
+ends at Stage 2 with 0 eligible historical cases. Do not start integrations or mutants." Nothing runs until the owner
+decides otherwise.
+- `select` was not re-run after these refusals (the D4 re-selection step), because the owner said to stop.
+- The 100-screen budget is spent in any case.
 
 Each S4 check: write `solo/s4/<owner>__<repo>/PLAN.md` (commands and test set) and commit it **before** running.

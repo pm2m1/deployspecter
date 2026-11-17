@@ -1,0 +1,2224 @@
+[2026-11-17 12:56:36,638] [WARNING] [django.request] Bad Request: /api/tags/
+{"run": "W1_S1", "outcome": "completed", "status": {"a": 201, "b": 400}, "corr_ok": true, "mismatched": 0, "error": null}
+[2026-11-17 12:56:37,406] [WARNING] [django.request] Bad Request: /api/tags/
+{"run": "W1_S2", "outcome": "completed", "status": {"a": 400, "b": 201}, "corr_ok": true, "mismatched": 0, "error": null}
+[2026-11-17 12:56:38,123] [ERROR] [django.request] Internal Server Error: /api/tags/
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/stepping.py", line 258, in execute
+    actor.run.gate(actor, "execute", text, params, run, cursor=self, client_text=sent)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/stepping.py", line 472, in gate
+    out = call()
+  File "/ds/src/deployspecter/experimental/stepping.py", line 255, in run
+    psycopg.ClientCursor.execute(self, query, params, prepare=prepare, binary=binary)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/psycopg/cursor.py", line 117, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.UniqueViolation: duplicate key value violates unique constraint "documents_tag_unique_name_owner"
+DETAIL:  Key (name, owner_id)=(dup, 2) already exists.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.14/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/lib/python3.14/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/viewsets.py", line 124, in view
+    return self.dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/views.py", line 526, in dispatch
+    response = self.handle_exception(exc)
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/views.py", line 474, in handle_exception
+    self.raise_uncaught_exception(exc)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/views.py", line 485, in raise_uncaught_exception
+    raise exc
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/views.py", line 523, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/mixins.py", line 19, in create
+    self.perform_create(serializer)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/mixins.py", line 24, in perform_create
+    serializer.save()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/serializers.py", line 210, in save
+    self.instance = self.create(validated_data)
+                    ~~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "/usr/src/paperless/src/documents/serialisers.py", line 467, in create
+    instance = super().create(validated_data)
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/serializers.py", line 1020, in create
+    instance = ModelClass._default_manager.create(**validated_data)
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 665, in create
+    obj.save(force_insert=True, using=self.db)
+    ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/base.py", line 902, in save
+    self.save_base(
+    ~~~~~~~~~~~~~~^
+        using=using,
+        ^^^^^^^^^^^^
+    ...<2 lines>...
+        update_fields=update_fields,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/base.py", line 1008, in save_base
+    updated = self._save_table(
+        raw,
+    ...<4 lines>...
+        update_fields,
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/base.py", line 1169, in _save_table
+    results = self._do_insert(
+        cls._base_manager, using, fields, returning_fields, raw
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/base.py", line 1210, in _do_insert
+    return manager._insert(
+           ~~~~~~~~~~~~~~~^
+        [self],
+        ^^^^^^^
+    ...<3 lines>...
+        raw=raw,
+        ^^^^^^^^
+    )
+    ^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1873, in _insert
+    return query.get_compiler(using=using).execute_sql(returning_fields)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1882, in execute_sql
+    cursor.execute(sql, params)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sql, params, many=False, executor=self._execute
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/stepping.py", line 258, in execute
+    actor.run.gate(actor, "execute", text, params, run, cursor=self, client_text=sent)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/stepping.py", line 472, in gate
+    out = call()
+  File "/ds/src/deployspecter/experimental/stepping.py", line 255, in run
+    psycopg.ClientCursor.execute(self, query, params, prepare=prepare, binary=binary)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/psycopg/cursor.py", line 117, in execute
+    raise ex.with_traceback(None)
+django.db.utils.IntegrityError: duplicate key value violates unique constraint "documents_tag_unique_name_owner"
+DETAIL:  Key (name, owner_id)=(dup, 2) already exists.
+{"run": "W1_S3", "outcome": "completed", "status": {"a": 201, "b": 500}, "corr_ok": true, "mismatched": 0, "error": null}
+[2026-11-17 12:56:38,952] [WARNING] [django.request] Bad Request: /api/tags/
+{"run": "W1_S4", "outcome": "completed", "status": {"a": 400, "b": 201}, "corr_ok": true, "mismatched": 0, "error": null}
+[2026-11-17 12:56:39,692] [WARNING] [django.request] Bad Request: /api/tags/
+{"run": "W1_S5", "outcome": "completed", "status": {"a": 201, "b": 400}, "corr_ok": true, "mismatched": 0, "error": null}
+{"run": "W2_S1", "outcome": "completed", "status": {"a": 200, "b": 200}, "corr_ok": true, "mismatched": 0, "error": null}
+{"run": "W2_S2", "outcome": "completed", "status": {"a": 200, "b": 200}, "corr_ok": true, "mismatched": 0, "error": null}
+{"run": "W2_S3", "outcome": "timeout", "status": {"a": null, "b": null}, "corr_ok": true, "mismatched": 0, "error": null}
+{"run": "W2_S4", "outcome": "timeout", "status": {"a": null, "b": null}, "corr_ok": true, "mismatched": 0, "error": null}
+{"run": "W2_S5", "outcome": "completed", "status": {"a": 200, "b": 200}, "corr_ok": true, "mismatched": 0, "error": null}
+[2026-11-17 12:57:44,636] [WARNING] [kombu.connection] No hostname was supplied. Reverting to default 'localhost'
+[2026-11-17 12:57:44,639] [ERROR] [paperless.handlers] Setting PaperlessTask started failed
+Traceback (most recent call last):
+  File "/usr/src/paperless/src/documents/signals/handlers.py", line 1223, in task_prerun_handler
+    PaperlessTask.objects.filter(task_id=task_id).update(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        status=PaperlessTask.Status.STARTED,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        date_started=timezone.now(),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1263, in update
+    rows = query.get_compiler(self.db).execute_sql(ROW_COUNT)
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 2060, in execute_sql
+    row_count = super().execute_sql(result_type)
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:44,656] [ERROR] [paperless.handlers] Updating PaperlessTask on failure failed
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.14/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/usr/src/paperless/src/documents/tasks.py", line 324, in bulk_update_documents
+    for doc in documents:
+               ^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 386, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/src/paperless/src/documents/signals/handlers.py", line 1342, in task_failure_handler
+    task_instance = task_qs.values("date_started", "date_created").first()
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1106, in first
+    for obj in queryset[:1]:
+               ~~~~~~~~^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 386, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 218, in __iter__
+    for row in compiler.results_iter(
+               ~~~~~~~~~~~~~~~~~~~~~^
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ):
+    ^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1572, in results_iter
+    results = self.execute_sql(
+        MULTI, chunked_fetch=chunked_fetch, chunk_size=chunk_size
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:44,657] [ERROR] [celery.app.trace] Task documents.tasks.bulk_update_documents[732c05fe-16d9-476c-b58f-a0991db07461] raised unexpected: Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.14/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/usr/src/paperless/src/documents/tasks.py", line 324, in bulk_update_documents
+    for doc in documents:
+               ^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 386, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:44,658] [WARNING] [paperless.api] An error occurred performing bulk edit: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:44,658] [WARNING] [django.request] Bad Request: /api/documents/bulk_edit/
+[2026-11-17 12:57:45,038] [ERROR] [paperless.handlers] Setting PaperlessTask started failed
+Traceback (most recent call last):
+  File "/usr/src/paperless/src/documents/signals/handlers.py", line 1223, in task_prerun_handler
+    PaperlessTask.objects.filter(task_id=task_id).update(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        status=PaperlessTask.Status.STARTED,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        date_started=timezone.now(),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1263, in update
+    rows = query.get_compiler(self.db).execute_sql(ROW_COUNT)
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 2060, in execute_sql
+    row_count = super().execute_sql(result_type)
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:45,044] [ERROR] [paperless.handlers] Updating PaperlessTask on failure failed
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.14/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/usr/src/paperless/src/documents/tasks.py", line 324, in bulk_update_documents
+    for doc in documents:
+               ^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 386, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/src/paperless/src/documents/signals/handlers.py", line 1342, in task_failure_handler
+    task_instance = task_qs.values("date_started", "date_created").first()
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1106, in first
+    for obj in queryset[:1]:
+               ~~~~~~~~^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 386, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 218, in __iter__
+    for row in compiler.results_iter(
+               ~~~~~~~~~~~~~~~~~~~~~^
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ):
+    ^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1572, in results_iter
+    results = self.execute_sql(
+        MULTI, chunked_fetch=chunked_fetch, chunk_size=chunk_size
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:45,045] [ERROR] [celery.app.trace] Task documents.tasks.bulk_update_documents[dade2196-e473-450a-9307-44046815350f] raised unexpected: Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.14/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/usr/src/paperless/src/documents/tasks.py", line 324, in bulk_update_documents
+    for doc in documents:
+               ^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 386, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:45,046] [WARNING] [paperless.api] An error occurred performing bulk edit: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:45,046] [WARNING] [django.request] Bad Request: /api/documents/bulk_edit/
+{"run": "W3_S1", "outcome": "completed", "status": {"a": 400, "b": 400}, "corr_ok": true, "mismatched": 0, "error": null}
+[2026-11-17 12:57:45,448] [ERROR] [paperless.handlers] Setting PaperlessTask started failed
+Traceback (most recent call last):
+  File "/usr/src/paperless/src/documents/signals/handlers.py", line 1223, in task_prerun_handler
+    PaperlessTask.objects.filter(task_id=task_id).update(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        status=PaperlessTask.Status.STARTED,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        date_started=timezone.now(),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1263, in update
+    rows = query.get_compiler(self.db).execute_sql(ROW_COUNT)
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 2060, in execute_sql
+    row_count = super().execute_sql(result_type)
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:45,454] [ERROR] [paperless.handlers] Updating PaperlessTask on failure failed
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.14/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/usr/src/paperless/src/documents/tasks.py", line 324, in bulk_update_documents
+    for doc in documents:
+               ^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 386, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/src/paperless/src/documents/signals/handlers.py", line 1342, in task_failure_handler
+    task_instance = task_qs.values("date_started", "date_created").first()
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1106, in first
+    for obj in queryset[:1]:
+               ~~~~~~~~^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 386, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 218, in __iter__
+    for row in compiler.results_iter(
+               ~~~~~~~~~~~~~~~~~~~~~^
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ):
+    ^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1572, in results_iter
+    results = self.execute_sql(
+        MULTI, chunked_fetch=chunked_fetch, chunk_size=chunk_size
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:45,455] [ERROR] [celery.app.trace] Task documents.tasks.bulk_update_documents[4eb4b042-4dfd-409d-9f1b-2832e9522461] raised unexpected: Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.14/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/usr/src/paperless/src/documents/tasks.py", line 324, in bulk_update_documents
+    for doc in documents:
+               ^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 386, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:45,456] [WARNING] [paperless.api] An error occurred performing bulk edit: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:45,456] [WARNING] [django.request] Bad Request: /api/documents/bulk_edit/
+[2026-11-17 12:57:45,777] [ERROR] [paperless.handlers] Setting PaperlessTask started failed
+Traceback (most recent call last):
+  File "/usr/src/paperless/src/documents/signals/handlers.py", line 1223, in task_prerun_handler
+    PaperlessTask.objects.filter(task_id=task_id).update(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        status=PaperlessTask.Status.STARTED,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        date_started=timezone.now(),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1263, in update
+    rows = query.get_compiler(self.db).execute_sql(ROW_COUNT)
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 2060, in execute_sql
+    row_count = super().execute_sql(result_type)
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:45,784] [ERROR] [paperless.handlers] Updating PaperlessTask on failure failed
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.14/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/usr/src/paperless/src/documents/tasks.py", line 324, in bulk_update_documents
+    for doc in documents:
+               ^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 386, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/src/paperless/src/documents/signals/handlers.py", line 1342, in task_failure_handler
+    task_instance = task_qs.values("date_started", "date_created").first()
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1106, in first
+    for obj in queryset[:1]:
+               ~~~~~~~~^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 386, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 218, in __iter__
+    for row in compiler.results_iter(
+               ~~~~~~~~~~~~~~~~~~~~~^
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ):
+    ^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1572, in results_iter
+    results = self.execute_sql(
+        MULTI, chunked_fetch=chunked_fetch, chunk_size=chunk_size
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:45,785] [ERROR] [celery.app.trace] Task documents.tasks.bulk_update_documents[9f21599f-ce43-4ee6-b4b2-88aa22ed5bb7] raised unexpected: Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.14/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/usr/src/paperless/src/documents/tasks.py", line 324, in bulk_update_documents
+    for doc in documents:
+               ^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 386, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:45,786] [WARNING] [paperless.api] An error occurred performing bulk edit: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:45,786] [WARNING] [django.request] Bad Request: /api/documents/bulk_edit/
+{"run": "W3_S2", "outcome": "completed", "status": {"a": 400, "b": 400}, "corr_ok": true, "mismatched": 0, "error": null}
+[2026-11-17 12:57:46,477] [ERROR] [paperless.handlers] Setting PaperlessTask started failed
+Traceback (most recent call last):
+  File "/usr/src/paperless/src/documents/signals/handlers.py", line 1223, in task_prerun_handler
+    PaperlessTask.objects.filter(task_id=task_id).update(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        status=PaperlessTask.Status.STARTED,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        date_started=timezone.now(),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1263, in update
+    rows = query.get_compiler(self.db).execute_sql(ROW_COUNT)
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 2060, in execute_sql
+    row_count = super().execute_sql(result_type)
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:46,483] [ERROR] [paperless.handlers] Updating PaperlessTask on failure failed
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.14/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/usr/src/paperless/src/documents/tasks.py", line 324, in bulk_update_documents
+    for doc in documents:
+               ^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 386, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/src/paperless/src/documents/signals/handlers.py", line 1342, in task_failure_handler
+    task_instance = task_qs.values("date_started", "date_created").first()
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1106, in first
+    for obj in queryset[:1]:
+               ~~~~~~~~^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 386, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 218, in __iter__
+    for row in compiler.results_iter(
+               ~~~~~~~~~~~~~~~~~~~~~^
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ):
+    ^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1572, in results_iter
+    results = self.execute_sql(
+        MULTI, chunked_fetch=chunked_fetch, chunk_size=chunk_size
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:46,484] [ERROR] [celery.app.trace] Task documents.tasks.bulk_update_documents[2c19bd98-f279-483a-acf0-06fa7403af79] raised unexpected: Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.14/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/usr/src/paperless/src/documents/tasks.py", line 324, in bulk_update_documents
+    for doc in documents:
+               ^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 386, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:46,485] [WARNING] [paperless.api] An error occurred performing bulk edit: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:46,485] [WARNING] [django.request] Bad Request: /api/documents/bulk_edit/
+[2026-11-17 12:57:46,487] [ERROR] [paperless.handlers] Setting PaperlessTask started failed
+Traceback (most recent call last):
+  File "/usr/src/paperless/src/documents/signals/handlers.py", line 1223, in task_prerun_handler
+    PaperlessTask.objects.filter(task_id=task_id).update(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        status=PaperlessTask.Status.STARTED,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        date_started=timezone.now(),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1263, in update
+    rows = query.get_compiler(self.db).execute_sql(ROW_COUNT)
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 2060, in execute_sql
+    row_count = super().execute_sql(result_type)
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:46,493] [ERROR] [paperless.handlers] Updating PaperlessTask on failure failed
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.14/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/usr/src/paperless/src/documents/tasks.py", line 324, in bulk_update_documents
+    for doc in documents:
+               ^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 386, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/src/paperless/src/documents/signals/handlers.py", line 1342, in task_failure_handler
+    task_instance = task_qs.values("date_started", "date_created").first()
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1106, in first
+    for obj in queryset[:1]:
+               ~~~~~~~~^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 386, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 218, in __iter__
+    for row in compiler.results_iter(
+               ~~~~~~~~~~~~~~~~~~~~~^
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ):
+    ^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1572, in results_iter
+    results = self.execute_sql(
+        MULTI, chunked_fetch=chunked_fetch, chunk_size=chunk_size
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:46,494] [ERROR] [celery.app.trace] Task documents.tasks.bulk_update_documents[3659a3f0-a21e-4fe6-8b7b-07970c8274c1] raised unexpected: Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.14/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/usr/src/paperless/src/documents/tasks.py", line 324, in bulk_update_documents
+    for doc in documents:
+               ^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 386, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:46,494] [WARNING] [paperless.api] An error occurred performing bulk edit: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:46,494] [WARNING] [django.request] Bad Request: /api/documents/bulk_edit/
+{"run": "W3_S3", "outcome": "completed", "status": {"a": 400, "b": 400}, "corr_ok": true, "mismatched": 0, "error": null}
+[2026-11-17 12:57:47,262] [ERROR] [paperless.handlers] Setting PaperlessTask started failed
+Traceback (most recent call last):
+  File "/usr/src/paperless/src/documents/signals/handlers.py", line 1223, in task_prerun_handler
+    PaperlessTask.objects.filter(task_id=task_id).update(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        status=PaperlessTask.Status.STARTED,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        date_started=timezone.now(),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1263, in update
+    rows = query.get_compiler(self.db).execute_sql(ROW_COUNT)
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 2060, in execute_sql
+    row_count = super().execute_sql(result_type)
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:47,269] [ERROR] [paperless.handlers] Updating PaperlessTask on failure failed
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.14/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/usr/src/paperless/src/documents/tasks.py", line 324, in bulk_update_documents
+    for doc in documents:
+               ^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 386, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/src/paperless/src/documents/signals/handlers.py", line 1342, in task_failure_handler
+    task_instance = task_qs.values("date_started", "date_created").first()
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1106, in first
+    for obj in queryset[:1]:
+               ~~~~~~~~^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 386, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 218, in __iter__
+    for row in compiler.results_iter(
+               ~~~~~~~~~~~~~~~~~~~~~^
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ):
+    ^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1572, in results_iter
+    results = self.execute_sql(
+        MULTI, chunked_fetch=chunked_fetch, chunk_size=chunk_size
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:47,270] [ERROR] [celery.app.trace] Task documents.tasks.bulk_update_documents[f003b715-0dbe-4883-876c-9788d3b73740] raised unexpected: Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.14/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/usr/src/paperless/src/documents/tasks.py", line 324, in bulk_update_documents
+    for doc in documents:
+               ^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 386, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:47,271] [WARNING] [paperless.api] An error occurred performing bulk edit: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:47,271] [WARNING] [django.request] Bad Request: /api/documents/bulk_edit/
+[2026-11-17 12:57:47,273] [ERROR] [paperless.handlers] Setting PaperlessTask started failed
+Traceback (most recent call last):
+  File "/usr/src/paperless/src/documents/signals/handlers.py", line 1223, in task_prerun_handler
+    PaperlessTask.objects.filter(task_id=task_id).update(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        status=PaperlessTask.Status.STARTED,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        date_started=timezone.now(),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1263, in update
+    rows = query.get_compiler(self.db).execute_sql(ROW_COUNT)
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 2060, in execute_sql
+    row_count = super().execute_sql(result_type)
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:47,279] [ERROR] [paperless.handlers] Updating PaperlessTask on failure failed
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.14/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/usr/src/paperless/src/documents/tasks.py", line 324, in bulk_update_documents
+    for doc in documents:
+               ^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 386, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/src/paperless/src/documents/signals/handlers.py", line 1342, in task_failure_handler
+    task_instance = task_qs.values("date_started", "date_created").first()
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1106, in first
+    for obj in queryset[:1]:
+               ~~~~~~~~^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 386, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 218, in __iter__
+    for row in compiler.results_iter(
+               ~~~~~~~~~~~~~~~~~~~~~^
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ):
+    ^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1572, in results_iter
+    results = self.execute_sql(
+        MULTI, chunked_fetch=chunked_fetch, chunk_size=chunk_size
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:47,280] [ERROR] [celery.app.trace] Task documents.tasks.bulk_update_documents[54cf7b8f-6657-4fb2-bfee-201c5211d65a] raised unexpected: Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.14/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/usr/src/paperless/src/documents/tasks.py", line 324, in bulk_update_documents
+    for doc in documents:
+               ^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 386, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:47,281] [WARNING] [paperless.api] An error occurred performing bulk edit: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:47,281] [WARNING] [django.request] Bad Request: /api/documents/bulk_edit/
+{"run": "W3_S4", "outcome": "completed", "status": {"a": 400, "b": 400}, "corr_ok": true, "mismatched": 0, "error": null}
+[2026-11-17 12:57:47,999] [ERROR] [paperless.handlers] Setting PaperlessTask started failed
+Traceback (most recent call last):
+  File "/usr/src/paperless/src/documents/signals/handlers.py", line 1223, in task_prerun_handler
+    PaperlessTask.objects.filter(task_id=task_id).update(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        status=PaperlessTask.Status.STARTED,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        date_started=timezone.now(),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1263, in update
+    rows = query.get_compiler(self.db).execute_sql(ROW_COUNT)
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 2060, in execute_sql
+    row_count = super().execute_sql(result_type)
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:48,006] [ERROR] [paperless.handlers] Updating PaperlessTask on failure failed
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.14/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/usr/src/paperless/src/documents/tasks.py", line 324, in bulk_update_documents
+    for doc in documents:
+               ^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 386, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/src/paperless/src/documents/signals/handlers.py", line 1342, in task_failure_handler
+    task_instance = task_qs.values("date_started", "date_created").first()
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1106, in first
+    for obj in queryset[:1]:
+               ~~~~~~~~^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 386, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 218, in __iter__
+    for row in compiler.results_iter(
+               ~~~~~~~~~~~~~~~~~~~~~^
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ):
+    ^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1572, in results_iter
+    results = self.execute_sql(
+        MULTI, chunked_fetch=chunked_fetch, chunk_size=chunk_size
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:48,007] [ERROR] [celery.app.trace] Task documents.tasks.bulk_update_documents[fc9ae186-10cb-4041-9c7a-862e2287f91d] raised unexpected: Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.14/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/usr/src/paperless/src/documents/tasks.py", line 324, in bulk_update_documents
+    for doc in documents:
+               ^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 386, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:48,008] [WARNING] [paperless.api] An error occurred performing bulk edit: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:48,008] [WARNING] [django.request] Bad Request: /api/documents/bulk_edit/
+[2026-11-17 12:57:48,010] [ERROR] [paperless.handlers] Setting PaperlessTask started failed
+Traceback (most recent call last):
+  File "/usr/src/paperless/src/documents/signals/handlers.py", line 1223, in task_prerun_handler
+    PaperlessTask.objects.filter(task_id=task_id).update(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        status=PaperlessTask.Status.STARTED,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        date_started=timezone.now(),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1263, in update
+    rows = query.get_compiler(self.db).execute_sql(ROW_COUNT)
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 2060, in execute_sql
+    row_count = super().execute_sql(result_type)
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:48,016] [ERROR] [paperless.handlers] Updating PaperlessTask on failure failed
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.14/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/usr/src/paperless/src/documents/tasks.py", line 324, in bulk_update_documents
+    for doc in documents:
+               ^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 386, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/src/paperless/src/documents/signals/handlers.py", line 1342, in task_failure_handler
+    task_instance = task_qs.values("date_started", "date_created").first()
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1106, in first
+    for obj in queryset[:1]:
+               ~~~~~~~~^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 386, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 218, in __iter__
+    for row in compiler.results_iter(
+               ~~~~~~~~~~~~~~~~~~~~~^
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ):
+    ^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1572, in results_iter
+    results = self.execute_sql(
+        MULTI, chunked_fetch=chunked_fetch, chunk_size=chunk_size
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:48,017] [ERROR] [celery.app.trace] Task documents.tasks.bulk_update_documents[36b7b9ef-7fb5-48e6-a7d0-7e73cc57e51f] raised unexpected: Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.14/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/usr/src/paperless/src/documents/tasks.py", line 324, in bulk_update_documents
+    for doc in documents:
+               ^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 386, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/sql/compiler.py", line 1621, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/django_backend/base.py", line 61, in get_new_connection
+    raise Refused("Django asked for a connection this thread wasn't given (a second or reopened connection)")
+deployspecter.experimental.stepping.Refused: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:48,018] [WARNING] [paperless.api] An error occurred performing bulk edit: Django asked for a connection this thread wasn't given (a second or reopened connection)
+[2026-11-17 12:57:48,018] [WARNING] [django.request] Bad Request: /api/documents/bulk_edit/
+{"run": "W3_S5", "outcome": "completed", "status": {"a": 400, "b": 400}, "corr_ok": true, "mismatched": 0, "error": null}
+[2026-11-17 12:57:48,748] [WARNING] [django.request] Bad Request: /api/documents/2/
+{"run": "W4_S1", "outcome": "completed", "status": {"a": 204, "b": 400}, "corr_ok": true, "mismatched": 0, "error": null}
+{"run": "W4_S2", "outcome": "completed", "status": {"a": 204, "b": 200}, "corr_ok": true, "mismatched": 0, "error": null}
+[2026-11-17 12:57:50,279] [ERROR] [django.request] Internal Server Error: /api/documents/2/
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 303, in _commit
+    return self.connection.commit()
+           ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/ds/src/deployspecter/experimental/stepping.py", line 283, in commit
+    a.run.gate(a, "commit", "COMMIT", None, lambda: psycopg.Connection.commit(self))
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/stepping.py", line 472, in gate
+    out = call()
+  File "/ds/src/deployspecter/experimental/stepping.py", line 283, in <lambda>
+    a.run.gate(a, "commit", "COMMIT", None, lambda: psycopg.Connection.commit(self))
+                                                    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/psycopg/connection.py", line 305, in commit
+    self.wait(self._commit_gen())
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/psycopg/connection.py", line 484, in wait
+    return waiting.wait(gen, self.pgconn.socket, interval=interval)
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/psycopg/waiting.py", line 396, in wait_poll
+    s = gen.send(ready)
+  File "/usr/local/lib/python3.14/site-packages/psycopg/_connection_base.py", line 585, in _commit_gen
+    yield from self._exec_command(b"COMMIT")
+  File "/usr/local/lib/python3.14/site-packages/psycopg/_connection_base.py", line 483, in _exec_command
+    raise e.error_from_result(result, encoding=self.pgconn._encoding)
+psycopg.errors.ForeignKeyViolation: insert or update on table "documents_document_tags" violates foreign key constraint "documents_document_tags_tag_id_4f4a71e9_fk_documents_tag_id"
+DETAIL:  Key (tag_id)=(2) is not present in table "documents_tag".
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.14/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/lib/python3.14/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/viewsets.py", line 124, in view
+    return self.dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/views.py", line 526, in dispatch
+    response = self.handle_exception(exc)
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/views.py", line 474, in handle_exception
+    self.raise_uncaught_exception(exc)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/views.py", line 485, in raise_uncaught_exception
+    raise exc
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/views.py", line 523, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/mixins.py", line 82, in partial_update
+    return self.update(request, *args, **kwargs)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/src/paperless/src/documents/views.py", line 1266, in update
+    self.perform_update(serializer)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/mixins.py", line 78, in perform_update
+    serializer.save()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/drf_writable_nested/mixins.py", line 232, in save
+    return super(BaseNestedModelSerializer, self).save(**kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/serializers.py", line 205, in save
+    self.instance = self.update(self.instance, validated_data)
+                    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/src/paperless/src/documents/serialisers.py", line 1259, in update
+    super().update(instance, validated_data)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/src/paperless/src/documents/serialisers.py", line 489, in update
+    return super().update(instance, validated_data)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/drf_writable_nested/mixins.py", line 285, in update
+    instance = super(NestedUpdateMixin, self).update(
+        instance,
+        validated_data,
+    )
+  File "/usr/src/paperless/src/documents/serialisers.py", line 166, in update
+    field.set(value)
+    ~~~~~~~~~^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/fields/related_descriptors.py", line 1331, in set
+    with transaction.atomic(using=db, savepoint=False):
+         ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/transaction.py", line 263, in __exit__
+    connection.commit()
+    ~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 327, in commit
+    self._commit()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 302, in _commit
+    with debug_transaction(self, "COMMIT"), self.wrap_database_errors:
+                                            ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 303, in _commit
+    return self.connection.commit()
+           ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/ds/src/deployspecter/experimental/stepping.py", line 283, in commit
+    a.run.gate(a, "commit", "COMMIT", None, lambda: psycopg.Connection.commit(self))
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/stepping.py", line 472, in gate
+    out = call()
+  File "/ds/src/deployspecter/experimental/stepping.py", line 283, in <lambda>
+    a.run.gate(a, "commit", "COMMIT", None, lambda: psycopg.Connection.commit(self))
+                                                    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/psycopg/connection.py", line 305, in commit
+    self.wait(self._commit_gen())
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/psycopg/connection.py", line 484, in wait
+    return waiting.wait(gen, self.pgconn.socket, interval=interval)
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/psycopg/waiting.py", line 396, in wait_poll
+    s = gen.send(ready)
+  File "/usr/local/lib/python3.14/site-packages/psycopg/_connection_base.py", line 585, in _commit_gen
+    yield from self._exec_command(b"COMMIT")
+  File "/usr/local/lib/python3.14/site-packages/psycopg/_connection_base.py", line 483, in _exec_command
+    raise e.error_from_result(result, encoding=self.pgconn._encoding)
+django.db.utils.IntegrityError: insert or update on table "documents_document_tags" violates foreign key constraint "documents_document_tags_tag_id_4f4a71e9_fk_documents_tag_id"
+DETAIL:  Key (tag_id)=(2) is not present in table "documents_tag".
+{"run": "W4_S3", "outcome": "completed", "status": {"a": 204, "b": 500}, "corr_ok": true, "mismatched": 0, "error": null}
+[2026-11-17 12:57:51,018] [ERROR] [django.request] Internal Server Error: /api/documents/2/
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 303, in _commit
+    return self.connection.commit()
+           ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/ds/src/deployspecter/experimental/stepping.py", line 283, in commit
+    a.run.gate(a, "commit", "COMMIT", None, lambda: psycopg.Connection.commit(self))
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/stepping.py", line 472, in gate
+    out = call()
+  File "/ds/src/deployspecter/experimental/stepping.py", line 283, in <lambda>
+    a.run.gate(a, "commit", "COMMIT", None, lambda: psycopg.Connection.commit(self))
+                                                    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/psycopg/connection.py", line 305, in commit
+    self.wait(self._commit_gen())
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/psycopg/connection.py", line 484, in wait
+    return waiting.wait(gen, self.pgconn.socket, interval=interval)
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/psycopg/waiting.py", line 396, in wait_poll
+    s = gen.send(ready)
+  File "/usr/local/lib/python3.14/site-packages/psycopg/_connection_base.py", line 585, in _commit_gen
+    yield from self._exec_command(b"COMMIT")
+  File "/usr/local/lib/python3.14/site-packages/psycopg/_connection_base.py", line 483, in _exec_command
+    raise e.error_from_result(result, encoding=self.pgconn._encoding)
+psycopg.errors.ForeignKeyViolation: insert or update on table "documents_document_tags" violates foreign key constraint "documents_document_tags_tag_id_4f4a71e9_fk_documents_tag_id"
+DETAIL:  Key (tag_id)=(2) is not present in table "documents_tag".
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.14/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/lib/python3.14/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/viewsets.py", line 124, in view
+    return self.dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/views.py", line 526, in dispatch
+    response = self.handle_exception(exc)
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/views.py", line 474, in handle_exception
+    self.raise_uncaught_exception(exc)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/views.py", line 485, in raise_uncaught_exception
+    raise exc
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/views.py", line 523, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/mixins.py", line 82, in partial_update
+    return self.update(request, *args, **kwargs)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/src/paperless/src/documents/views.py", line 1266, in update
+    self.perform_update(serializer)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/mixins.py", line 78, in perform_update
+    serializer.save()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/drf_writable_nested/mixins.py", line 232, in save
+    return super(BaseNestedModelSerializer, self).save(**kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/serializers.py", line 205, in save
+    self.instance = self.update(self.instance, validated_data)
+                    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/src/paperless/src/documents/serialisers.py", line 1259, in update
+    super().update(instance, validated_data)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/src/paperless/src/documents/serialisers.py", line 489, in update
+    return super().update(instance, validated_data)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/drf_writable_nested/mixins.py", line 285, in update
+    instance = super(NestedUpdateMixin, self).update(
+        instance,
+        validated_data,
+    )
+  File "/usr/src/paperless/src/documents/serialisers.py", line 166, in update
+    field.set(value)
+    ~~~~~~~~~^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/fields/related_descriptors.py", line 1331, in set
+    with transaction.atomic(using=db, savepoint=False):
+         ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/transaction.py", line 263, in __exit__
+    connection.commit()
+    ~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 327, in commit
+    self._commit()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 302, in _commit
+    with debug_transaction(self, "COMMIT"), self.wrap_database_errors:
+                                            ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 303, in _commit
+    return self.connection.commit()
+           ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/ds/src/deployspecter/experimental/stepping.py", line 283, in commit
+    a.run.gate(a, "commit", "COMMIT", None, lambda: psycopg.Connection.commit(self))
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/stepping.py", line 472, in gate
+    out = call()
+  File "/ds/src/deployspecter/experimental/stepping.py", line 283, in <lambda>
+    a.run.gate(a, "commit", "COMMIT", None, lambda: psycopg.Connection.commit(self))
+                                                    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/psycopg/connection.py", line 305, in commit
+    self.wait(self._commit_gen())
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/psycopg/connection.py", line 484, in wait
+    return waiting.wait(gen, self.pgconn.socket, interval=interval)
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/psycopg/waiting.py", line 396, in wait_poll
+    s = gen.send(ready)
+  File "/usr/local/lib/python3.14/site-packages/psycopg/_connection_base.py", line 585, in _commit_gen
+    yield from self._exec_command(b"COMMIT")
+  File "/usr/local/lib/python3.14/site-packages/psycopg/_connection_base.py", line 483, in _exec_command
+    raise e.error_from_result(result, encoding=self.pgconn._encoding)
+django.db.utils.IntegrityError: insert or update on table "documents_document_tags" violates foreign key constraint "documents_document_tags_tag_id_4f4a71e9_fk_documents_tag_id"
+DETAIL:  Key (tag_id)=(2) is not present in table "documents_tag".
+{"run": "W4_S4", "outcome": "completed", "status": {"a": 204, "b": 500}, "corr_ok": true, "mismatched": 0, "error": null}
+[2026-11-17 12:57:51,767] [ERROR] [django.request] Internal Server Error: /api/documents/2/
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 303, in _commit
+    return self.connection.commit()
+           ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/ds/src/deployspecter/experimental/stepping.py", line 283, in commit
+    a.run.gate(a, "commit", "COMMIT", None, lambda: psycopg.Connection.commit(self))
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/stepping.py", line 472, in gate
+    out = call()
+  File "/ds/src/deployspecter/experimental/stepping.py", line 283, in <lambda>
+    a.run.gate(a, "commit", "COMMIT", None, lambda: psycopg.Connection.commit(self))
+                                                    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/psycopg/connection.py", line 305, in commit
+    self.wait(self._commit_gen())
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/psycopg/connection.py", line 484, in wait
+    return waiting.wait(gen, self.pgconn.socket, interval=interval)
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/psycopg/waiting.py", line 396, in wait_poll
+    s = gen.send(ready)
+  File "/usr/local/lib/python3.14/site-packages/psycopg/_connection_base.py", line 585, in _commit_gen
+    yield from self._exec_command(b"COMMIT")
+  File "/usr/local/lib/python3.14/site-packages/psycopg/_connection_base.py", line 483, in _exec_command
+    raise e.error_from_result(result, encoding=self.pgconn._encoding)
+psycopg.errors.ForeignKeyViolation: insert or update on table "documents_document_tags" violates foreign key constraint "documents_document_tags_tag_id_4f4a71e9_fk_documents_tag_id"
+DETAIL:  Key (tag_id)=(2) is not present in table "documents_tag".
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.14/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/lib/python3.14/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/viewsets.py", line 124, in view
+    return self.dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/views.py", line 526, in dispatch
+    response = self.handle_exception(exc)
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/views.py", line 474, in handle_exception
+    self.raise_uncaught_exception(exc)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/views.py", line 485, in raise_uncaught_exception
+    raise exc
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/views.py", line 523, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/mixins.py", line 82, in partial_update
+    return self.update(request, *args, **kwargs)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/src/paperless/src/documents/views.py", line 1266, in update
+    self.perform_update(serializer)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/mixins.py", line 78, in perform_update
+    serializer.save()
+    ~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/drf_writable_nested/mixins.py", line 232, in save
+    return super(BaseNestedModelSerializer, self).save(**kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/rest_framework/serializers.py", line 205, in save
+    self.instance = self.update(self.instance, validated_data)
+                    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/src/paperless/src/documents/serialisers.py", line 1259, in update
+    super().update(instance, validated_data)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/src/paperless/src/documents/serialisers.py", line 489, in update
+    return super().update(instance, validated_data)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/drf_writable_nested/mixins.py", line 285, in update
+    instance = super(NestedUpdateMixin, self).update(
+        instance,
+        validated_data,
+    )
+  File "/usr/src/paperless/src/documents/serialisers.py", line 166, in update
+    field.set(value)
+    ~~~~~~~~~^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/models/fields/related_descriptors.py", line 1331, in set
+    with transaction.atomic(using=db, savepoint=False):
+         ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/transaction.py", line 263, in __exit__
+    connection.commit()
+    ~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 327, in commit
+    self._commit()
+    ~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 302, in _commit
+    with debug_transaction(self, "COMMIT"), self.wrap_database_errors:
+                                            ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/usr/local/lib/python3.14/site-packages/django/db/backends/base/base.py", line 303, in _commit
+    return self.connection.commit()
+           ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/ds/src/deployspecter/experimental/stepping.py", line 283, in commit
+    a.run.gate(a, "commit", "COMMIT", None, lambda: psycopg.Connection.commit(self))
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/ds/src/deployspecter/experimental/stepping.py", line 472, in gate
+    out = call()
+  File "/ds/src/deployspecter/experimental/stepping.py", line 283, in <lambda>
+    a.run.gate(a, "commit", "COMMIT", None, lambda: psycopg.Connection.commit(self))
+                                                    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/psycopg/connection.py", line 305, in commit
+    self.wait(self._commit_gen())
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/psycopg/connection.py", line 484, in wait
+    return waiting.wait(gen, self.pgconn.socket, interval=interval)
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.14/site-packages/psycopg/waiting.py", line 396, in wait_poll
+    s = gen.send(ready)
+  File "/usr/local/lib/python3.14/site-packages/psycopg/_connection_base.py", line 585, in _commit_gen
+    yield from self._exec_command(b"COMMIT")
+  File "/usr/local/lib/python3.14/site-packages/psycopg/_connection_base.py", line 483, in _exec_command
+    raise e.error_from_result(result, encoding=self.pgconn._encoding)
+django.db.utils.IntegrityError: insert or update on table "documents_document_tags" violates foreign key constraint "documents_document_tags_tag_id_4f4a71e9_fk_documents_tag_id"
+DETAIL:  Key (tag_id)=(2) is not present in table "documents_tag".
+{"run": "W4_S5", "outcome": "completed", "status": {"a": 204, "b": 500}, "corr_ok": true, "mismatched": 0, "error": null}
+{"run": "W5_S1", "outcome": "completed", "status": {"a": 200, "b": 200}, "corr_ok": true, "mismatched": 0, "error": null}
+{"run": "W5_S2", "outcome": "completed", "status": {"a": 200, "b": 200}, "corr_ok": true, "mismatched": 0, "error": null}
+{"run": "W5_S3", "outcome": "timeout", "status": {"a": null, "b": null}, "corr_ok": true, "mismatched": 0, "error": null}
+{"run": "W5_S4", "outcome": "timeout", "status": {"a": null, "b": null}, "corr_ok": true, "mismatched": 0, "error": null}
+{"run": "W5_S5", "outcome": "timeout", "status": {"a": null, "b": null}, "corr_ok": true, "mismatched": 0, "error": null}
