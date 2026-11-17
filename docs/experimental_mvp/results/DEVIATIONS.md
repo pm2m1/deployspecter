@@ -134,3 +134,21 @@ The generic final-state read runs on one connection with `SET TimeZone = 'UTC'`:
 
 The tables are those in the application's schemas after migrations: `public`, or the schema the application
 configures. Django's own `django_migrations` table is excluded.
+
+## D6. The study is closed as terminated at Stage 2 (2026-11-17, before the closing records are written)
+
+- **Plan:** the registered plan runs Stages 1–5. It sets no rule for 0 eligible historical cases.
+- **What happened:**
+  - The D3 seam validation failed (`django_seam_validation/VERDICT.json`).
+  - All 4 admitted cases were refused (E3).
+  - The registered re-selection (`solo/selection_8`) admitted 0 cases after 100 screens.
+- **Owner's instruction (verbatim):** "Close the registered study as terminated at Stage 2 (owner-authorized; same
+  rules: no AI attribution, frozen files untouched, nothing re-run, no Muse calls, no mutants)."
+- **Departure:**
+  - No Stage 3, 4 or 5 work runs.
+  - Mutants are not generated: the plan generates them per application of selected cases, and none remain.
+  - `results/RESULTS.md` reports the outcome, and is not produced by the frozen analysis tools: there are no run
+    records for them to read.
+  - No `RESULTS.json` (mutant verdicts) exists.
+- **Expected effect:** every registered comparison (RA-Q3 and all secondary, sensitivity and mutant analyses) is not
+  estimable. Nothing is claimed about any arm.
