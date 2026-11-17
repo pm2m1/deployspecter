@@ -124,3 +124,18 @@ stopped: S4 verdict needed for zulip/zulip (run the S4 check, record it, re-run 
  }
 }
 ```
+
+## select pass 12 (selection_8; D4 re-selection after the four E3 refusals, run once on the owner's instruction to close the study)
+```
+{
+ "screens": 100,
+ "admitted": 0,
+ "apps": 0,
+ "skips": {
+  "adapter_refused": 19,
+  "driver": 37,
+  "no_regression_test": 20,
+  "s4_failed": 24
+ }
+}
+```
