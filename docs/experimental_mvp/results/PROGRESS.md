@@ -36,7 +36,9 @@ Stage 1 (RUNBOOK §2):
 ```
 Use the next unused `selection_<n>`; never overwrite an earlier one. A stop at exit 4 writes nothing.
 
-Current resume point: **stopped at Stage 2, waiting for the owner.** The D3 validation failed, and the 4 admitted
+**Closed 2026-11-17: terminated at Stage 2 (`DEVIATIONS.md` D6, `RESULTS.md`).** Re-selection `solo/selection_8`: 100 screens, 0 admitted.
+
+Previous resume point: **stopped at Stage 2, waiting for the owner.** The D3 validation failed, and the 4 admitted
 cases are refused with E3. The owner's instruction: "If it fails, record the E3 refusals, stop, and report: the study
 ends at Stage 2 with 0 eligible historical cases. Do not start integrations or mutants." Nothing runs until the owner
 decides otherwise.
