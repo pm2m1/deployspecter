@@ -56,3 +56,18 @@ mirror, for comparison, has 36,129 of them), and every deepen step deepens all o
 
   These are fully present. PostHog's mirror lacks only the pull-request refs, which `select` never reads. This is
   recorded so that a re-run of `select` on a one-shot mirror can be compared.
+
+## D2. S4 commands use the application's own Django entry point (2026-11-17)
+
+- **Plan:** `osf/SELECTION_RULE.md` S4 steps 3 and 4 name `python manage.py shell -c …` and `python manage.py
+  migrate`.
+- **Departure:** an application without a `manage.py` uses its documented equivalent for the same command.
+  - For `getsentry/sentry` that is:
+    - `sentry django shell -c "<the same code>"` for step 3;
+    - for step 4, the databases its `tools/dev_db.py migrate` creates (`sentry`, `control`, `region`,
+      `secondary`), then `sentry upgrade --noinput`, which runs Django's `migrate`. This is what
+      `make apply-migrations` does.
+  - The code checked in step 3 is unchanged.
+  - Each S4 plan names the commands it uses, and is committed before its check runs.
+- **Expected effect:** none on what counts as a case. The checks are the same checks, run through the application's
+  own management command. No application source file is changed.
