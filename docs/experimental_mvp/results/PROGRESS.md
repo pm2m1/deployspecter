@@ -11,8 +11,8 @@ Authorization (verbatim):
 | Stage | Status |
 |---|---|
 | 0. Preflight | **done** 2026-11-17: FREEZE.json `6fb0a189…aeced47` matches a rebuild; REGISTRATION.json accepted; sealed seed hashes match; Docker 29.7.2; Python 3.12.14; running from `research/benchmark-prep` d56ad87. No Muse health check exists in the frozen tooling, so no model call was made. |
-| 1. Case selection | **selection done, specs not started (paused for owner decisions)**: `solo/selection_1` (e8c3b32): 10 admitted from 5 applications in 90 screens (pretix 1, kiwitcms 1, plane 3, wger 2, airflow 3). S4 verdicts (`solo/S4.json`): TandoorRecipes/recipes pass, getsentry/sentry fail, pretix/pretix pass, zulip/zulip fail. Open owner questions before any spec is written: r3 #12 (Django seam development-only; 7 of 10 cases are Django), E2–E6 (not screened by the frozen code), and the final-state convention for blinded integrations. |
-| Gate 1 | owner's "continue" needed |
+| 1. Case selection | **done** (`solo/STAGE1_SUMMARY.md`): final `solo/selection_7`, 4 cases from 3 applications (pretix 1, plane 2, wger 1) after 100 screens; 15 refused by check-spec; strict subset 0; S4: Tandoor pass, Sentry fail, pretix pass, Zulip fail. RA-Q3 descriptive only. |
+| Gate 1 | **reported 2026-11-17; waiting for the owner's "continue"** |
 | 2. Integrations | not started |
 | 3. Mutants | not started |
 | 4. Arms | not started |
@@ -36,9 +36,8 @@ Stage 1 (RUNBOOK §2):
 ```
 Use the next unused `selection_<n>`; never overwrite an earlier one. A stop at exit 4 writes nothing.
 
-Current resume point: waiting for the owner's answers on r3 #12, E2–E6 and the final-state convention. Then, for
-each admitted case in `solo/selection_1/SELECTION.json`, write `solo/maintainer_specs/<repo>-<commit10>.json`, run
-`maintainer_oracle.py check-spec`, record refusals in `solo/REFUSED.json`, and re-run `select` into `selection_2`
-with `--s4-verdicts solo/S4.json --refused solo/REFUSED.json`.
+Current resume point: Gate 1. After the owner's "continue", Stage 2 starts with D3: validate the Django seam on
+InvenTree or paperless-ngx (`results/django_seam_validation/`), because all 4 admitted cases are Django. Then one
+blinded integration per application (pretix, plane, wger) under D5's generic final-state read.
 
 Each S4 check: write `solo/s4/<owner>__<repo>/PLAN.md` (commands and test set) and commit it **before** running.
