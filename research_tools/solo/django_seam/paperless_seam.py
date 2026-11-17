@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import argparse
 import gzip
-import hashlib
 import json
 import random
 import shutil
@@ -246,7 +245,6 @@ def phase_seed(out: Path) -> int:
     from django.contrib.auth.models import User
     from django.core.management import call_command
     from django.db import connection
-
     from documents.models import Correspondent, Document, Tag
     buf = io.StringIO()
     call_command("showmigrations", "--list", stdout=buf, no_color=True)
@@ -380,7 +378,7 @@ def diff_columns(s1: dict[str, list[dict[str, Any]]], s2: dict[str, list[dict[st
         a, b = s1.get(t, []), s2.get(t, [])
         if len(a) != len(b):
             continue  # a row-count difference isn't masked; it shows in the comparison
-        for ra, rb in zip(a, b):
+        for ra, rb in zip(a, b, strict=False):
             for k in set(ra) | set(rb):
                 if ra.get(k) != rb.get(k):
                     out.setdefault(t, set()).add(k)

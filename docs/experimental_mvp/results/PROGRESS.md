@@ -37,6 +37,14 @@ Stage 1 (RUNBOOK §2):
 Use the next unused `selection_<n>`; never overwrite an earlier one. A stop at exit 4 writes nothing.
 
 **Closed 2026-11-17: terminated at Stage 2 (`DEVIATIONS.md` D6, `RESULTS.md`).** Re-selection `solo/selection_8`: 100 screens, 0 admitted.
+Closing records:
+- `RESULTS.md` (10aa32d);
+- `OSF_UPDATE.md`, a draft for the owner to paste (bf22f5b);
+- the draft GitHub release `results-2026-11-17` (not published), whose tarball sha256 is `e9f4d657…0038` and whose
+  `SHA256SUMS` covers every file in it;
+- PR #4 off `main`, which updates RESEARCH.md's status (not merged).
+
+The paperless-ngx image was removed from the local Docker cache.
 
 Previous resume point: **stopped at Stage 2, waiting for the owner.** The D3 validation failed, and the 4 admitted
 cases are refused with E3. The owner's instruction: "If it fails, record the E3 refusals, stop, and report: the study
