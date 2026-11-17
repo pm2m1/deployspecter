@@ -71,3 +71,53 @@ mirror, for comparison, has 36,129 of them), and every deepen step deepens all o
   - Each S4 plan names the commands it uses, and is committed before its check runs.
 - **Expected effect:** none on what counts as a case. The checks are the same checks, run through the application's
   own management command. No application source file is changed.
+
+## Owner decisions of 2026-11-17 (after `selection_1`, before any spec was written)
+
+Asked and answered in the session. Each answer is quoted as given.
+
+### D3. r3 #12: the Django seam is validated before any Django case runs
+
+- **Question:** 7 of the 10 admitted cases (pretix 1, kiwitcms 1, plane 3, wger 2) are Django applications. Registered
+  r3 #12: "The Django seam stays development-only until a development Django application of comparable scale has run
+  through it." Only the small fixture app has used it (`protocol/OWNER_DECISIONS.md:67`).
+- **Owner's answer:** "Validate seam first (Recommended)". Before any Django case runs, an already-seen, non-candidate
+  Django application of comparable scale (InvenTree or paperless-ngx, both excluded from the pool) is run through the
+  seam.
+- **What happens:**
+  - The validation is recorded under `results/django_seam_validation/`.
+  - Specs and integrations for the Django cases may be written before it. No Django case's arm or oracle-error check
+    runs until it is done.
+  - If the seam can't run that application, the Django cases fail E3 and are refused (`REFUSED.json`, reason
+    `E3: r3 #12 Django seam not validated`). The owner is told before that refusal is recorded.
+- **Expected effect:** none on which cases are admitted, if the validation succeeds. It costs integration time.
+
+### D4. E2–E6 are applied through the existing refusal channels
+
+- **Question:** the frozen `select_cases.py` doesn't screen E2–E6, though `SELECTION_RULE_SOLO.md` says they still
+  apply.
+- **Owner's answer:** "Existing refusal channels (Recommended)". The code stays authoritative.
+  - E2 and E5 take effect through `maintainer_oracle.py check-spec`: a case whose regression test expresses nothing
+    over the final database state is refused.
+  - E3: an integration that can't run the case's code path under the stepping seam at that revision is refused,
+    with reason `E3: <what failed>`.
+  - Each refusal goes into `solo/REFUSED.json` with its reason, and `select` is re-run into the next `selection_<n>`.
+    No new rule.
+- **Expected effect:** cases that fail E2, E3 or E5 leave the sample through the registered refusal channel (skip
+  code `adapter_refused`, with the reason copied).
+
+### D5. One generic final-state read for every integration
+
+- **Question:** specs must name the final-state keys the oracle reads, but the Stage 2 integrations are written by an
+  agent that never sees the spec.
+- **Owner's answer:** "Generic table export (Recommended)".
+- **Convention:** every integration's final-state read returns:
+  - `final_state.tables.<table name>`: every row of every application table (the tables the application's own
+    migrations create), as plain dicts, read with plain SQL after the run;
+  - `final_state.db_now`: the database clock (`SELECT now()`) at the time of that read.
+
+  Specs reference only these keys, plus the workload record in `raw_results` where the spec declares it.
+  `tables.*` are `"application"` sources. `db_now` is declared a `"deployspecter"` source, so any assertion that
+  uses it is flagged `uses_deployspecter_code: true`, which keeps it out of the strict subset.
+- **Expected effect:** the integrator learns nothing about any case. What the oracle can see is fixed before any
+  arm runs, and is the same for every arm.
