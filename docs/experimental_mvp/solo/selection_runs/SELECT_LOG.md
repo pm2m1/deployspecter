@@ -30,3 +30,19 @@ stopped: S4 verdict needed for zulip/zulip (run the S4 check, record it, re-run 
  }
 }
 ```
+
+## select pass 6 (selection_2, after REFUSED.json)
+```
+{
+ "screens": 100,
+ "admitted": 8,
+ "apps": 5,
+ "skips": {
+  "adapter_refused": 7,
+  "app_cap": 4,
+  "driver": 37,
+  "no_regression_test": 20,
+  "s4_failed": 24
+ }
+}
+```
