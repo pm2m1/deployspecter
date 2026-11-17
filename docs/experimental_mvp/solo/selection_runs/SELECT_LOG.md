@@ -1,0 +1,32 @@
+# select invocations (2026-11-17), in order
+
+## select pass 1
+```
+stopped: S4 verdict needed for TandoorRecipes/recipes (run the S4 check, record it, re-run select)
+```
+## select pass 2
+```
+stopped: S4 verdict needed for getsentry/sentry (run the S4 check, record it, re-run select)
+```
+## select pass 3
+```
+stopped: S4 verdict needed for pretix/pretix (run the S4 check, record it, re-run select)
+```
+## select pass 4
+```
+stopped: S4 verdict needed for zulip/zulip (run the S4 check, record it, re-run select)
+```
+## select pass 5
+```
+{
+ "screens": 90,
+ "admitted": 10,
+ "apps": 5,
+ "skips": {
+  "app_cap": 6,
+  "driver": 30,
+  "no_regression_test": 20,
+  "s4_failed": 24
+ }
+}
+```
