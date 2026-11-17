@@ -6,6 +6,7 @@ The database password is read from a mounted file and never printed.
 """
 
 import os
+import secrets
 
 _env = {
     "PAPERLESS_DBHOST": "127.0.0.1",
@@ -18,6 +19,7 @@ _env = {
 for _k, _v in _env.items():
     os.environ[_k] = _v
 os.environ.pop("PAPERLESS_DB_POOLSIZE", None)
+os.environ["PAPERLESS_SECRET_KEY"] = secrets.token_urlsafe(64)  # required; per process, nothing signed persists
 with open("/run/ds_secret") as _f:
     os.environ["PAPERLESS_DBPASS"] = _f.read().strip()
 

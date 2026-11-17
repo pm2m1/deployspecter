@@ -88,8 +88,12 @@ def restore(conn: Any) -> None:
     with conn.transaction():
         conn.execute("SET LOCAL session_replication_role = replica")
         conn.execute("TRUNCATE " + ", ".join(f'public."{t}"' for t in tables) + " RESTART IDENTITY")
-        for t in tables:
-            conn.execute(f'INSERT INTO public."{t}" SELECT * FROM {SEED_SCHEMA}."{t}"')
+        for t in tables:  # generated columns are computed by the server, never inserted
+            cols = [r[0] for r in conn.execute(
+                "SELECT attname FROM pg_attribute WHERE attrelid = format('public.%%I', %s::text)::regclass "
+                "AND attnum > 0 AND NOT attisdropped AND attgenerated = '' ORDER BY attnum", (t,)).fetchall()]
+            names = ", ".join(f'"{c}"' for c in cols)
+            conn.execute(f'INSERT INTO public."{t}" ({names}) SELECT {names} FROM {SEED_SCHEMA}."{t}"')
         seqs = conn.execute(
             "SELECT c.table_name, c.column_name, pg_get_serial_sequence(format('public.%I', c.table_name), "
             "c.column_name) FROM information_schema.columns c WHERE c.table_schema = 'public' "
