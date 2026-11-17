@@ -46,3 +46,19 @@ stopped: S4 verdict needed for zulip/zulip (run the S4 check, record it, re-run 
  }
 }
 ```
+
+## select pass 7 (selection_3)
+```
+{
+ "screens": 100,
+ "admitted": 5,
+ "apps": 3,
+ "skips": {
+  "adapter_refused": 11,
+  "app_cap": 3,
+  "driver": 37,
+  "no_regression_test": 20,
+  "s4_failed": 24
+ }
+}
+```
