@@ -1,0 +1,48 @@
+start 2026-11-17T06:35:34Z
+### clone: git clone -q /mirror zulip
+### clone exit=0
+### checkout: git checkout -q afcd0cae679ed84eecd3570d072c93e50a71d865
+### checkout exit=0
+* Resolve the errors or get help on chat.
+* If you can fix this yourself, you can re-run tools/provision at any time.
+* Logs are here: zulip/var/log/provision.log
+[0m
+### provision exit=1
+Using /home/github/zulip/.venv
+uv=/usr/local/bin/uv
+### pip_psycopg3: /usr/local/bin/uv pip install --python .venv/bin/python psycopg[binary]
+Resolved 3 packages in 3.65s
+Downloading psycopg-binary (3.7MiB)
+ Downloaded psycopg-binary
+Prepared 2 packages in 6.87s
+Installed 2 packages in 28ms
+ + psycopg==3.3.9
+ + psycopg-binary==3.3.9
+### pip_psycopg3 exit=0
+AttributeError: module 'psycopg' has no attribute 'extensions'
+### backend_psycopg3 exit=1
+psql: error: connection to server at "localhost" (::1), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+connection to server at "localhost" (127.0.0.1), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+### rebuild_test_db exit=2
+  File "/home/github/zulip/.venv/lib/python3.12/site-packages/bitfield/types.py", line 256, in <module>
+    Database.extensions.register_adapter(Bit, lambda x: Database.extensions.AsIs(int(x)))
+    ^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'psycopg' has no attribute 'extensions'
+### tests_psycopg3 exit=1
+### uninstall_psycopg3: /usr/local/bin/uv pip uninstall --python .venv/bin/python psycopg psycopg-binary
+Uninstalled 2 packages in 17ms
+ - psycopg==3.3.9
+ - psycopg-binary==3.3.9
+### uninstall_psycopg3 exit=0
+
+### backend_psycopg2 exit=1
+
+[0;37;41mSubcommand of ./tools/test-backend failed with exit status 2: tools/rebuild-test-database[0m
+[0;37;41mActual error output for the subcommand is just above this.[0m
+
+### tests_psycopg2 exit=1
+done
+container exit=0
+end 2026-11-17T06:44:00Z

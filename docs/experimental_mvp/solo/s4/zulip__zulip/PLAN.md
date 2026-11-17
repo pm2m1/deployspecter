@@ -54,3 +54,17 @@ step ran against the application, so no verdict was reached. That attempt's log 
 
 The second attempt runs `git config --global --add safe.directory /mirror` in the container before cloning. Nothing
 else changes.
+
+## Addendum 2 (2026-11-17, committed before the third attempt)
+
+The second attempt (06:35:34–06:44:00 UTC) failed in step 2, inside the application's provisioning:
+- `scripts/setup/configure-rabbitmq` exited 69 (`epmd reports: node 'rabbit' not running at all`), in both passes
+  of `tools/ci/setup-backend`;
+- the cause is that the provisioning starts its services (Redis, memcached, RabbitMQ, PostgreSQL) only when
+  `CONTINUOUS_INTEGRATION` is true, and `tools/lib/provision.py:32` sets that to `"GITHUB_ACTIONS" in os.environ`.
+  The application's CI always has that variable, because it runs under GitHub Actions; this container didn't;
+- the later steps ran in a half-provisioned environment, so their results say nothing about the application (exit
+  codes in `attempt2_environment_failure/`). No verdict was reached.
+
+The third attempt sets `GITHUB_ACTIONS=true` in the container, which reproduces the environment of the CI job named
+in step 2. Nothing else changes. The container is new.
