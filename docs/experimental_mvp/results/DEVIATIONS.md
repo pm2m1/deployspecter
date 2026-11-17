@@ -121,3 +121,16 @@ Asked and answered in the session. Each answer is quoted as given.
   uses it is flagged `uses_deployspecter_code: true`, which keeps it out of the strict subset.
 - **Expected effect:** the integrator learns nothing about any case. What the oracle can see is fixed before any
   arm runs, and is the same for every arm.
+
+### D5, addendum: value encoding (2026-11-17, before any spec uses it)
+
+The generic final-state read runs on one connection with `SET TimeZone = 'UTC'`:
+- `final_state.tables.<table>`: `SELECT to_jsonb(t) FROM <table> t ORDER BY 1`, decoded with standard JSON.
+  - Numbers are JSON numbers (decoded as int or float).
+  - Timestamps are PostgreSQL's ISO 8601 text with a `+00:00` offset. Because the offset is the same, they compare
+    correctly as strings.
+  - `uuid`, `text` and enum values are strings; `json` and `jsonb` columns are nested objects; NULL is `null`.
+- `final_state.db_now`: `SELECT to_jsonb(now())` in the same session, in the same encoding.
+
+The tables are those in the application's schemas after migrations: `public`, or the schema the application
+configures. Django's own `django_migrations` table is excluded.
