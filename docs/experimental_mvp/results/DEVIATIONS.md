@@ -35,3 +35,24 @@ low-speed timeout (`curl 28`) while the server was still building the pack. The 
 steps and no low-speed limit. Because the PostHog path now exists, the frozen `fetch` skips it, and it runs for the
 other 17 repositories at the same time instead of afterwards. `select` still does not run until the PostHog mirror is
 complete (not shallow) and `git fsck --connectivity-only` passes. Expected effect: none.
+
+### D1, addendum 2 (2026-11-17, before it takes effect)
+
+From 04:04 to 05:50 UTC, no `--deepen=500` step on PostHog completed. The failures were connection resets, timeouts,
+two DNS outages and a bad pack header. The reason is the mirror refspec: it includes GitHub's `refs/pull/*` (Zulip's
+mirror, for comparison, has 36,129 of them), and every deepen step deepens all of those refs.
+- **Departure:** the PostHog mirror is rebuilt in a separate scratch directory under `~/ds-mirrors/`. It fetches
+  `refs/heads/*` and `refs/tags/*` only, without `refs/pull/*`:
+  1. depth 1 first;
+  2. then `--deepen` steps;
+  3. then `--unshallow`.
+
+  `HEAD` points at the remote's default branch (`master`). It must end up not shallow and pass
+  `git fsck --connectivity-only`. Then it replaces the depth-1 directory at `~/ds-mirrors/PostHog__posthog.git`. The
+  other 19 mirrors are one-shot `select_cases.py fetch` mirrors, all verified not shallow.
+- **Expected effect:** none on selection. `select_cases.py` reads only the default branch:
+  - `git log --no-merges --first-parent … HEAD`;
+  - `diff-tree`, `diff`, `show` and `ls-tree` of those commits and their parents.
+
+  These are fully present. PostHog's mirror lacks only the pull-request refs, which `select` never reads. This is
+  recorded so that a re-run of `select` on a one-shot mirror can be compared.
