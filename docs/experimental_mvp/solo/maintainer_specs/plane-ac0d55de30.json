@@ -1,0 +1,422 @@
+{
+ "format": "ds-maintainer-spec/2",
+ "label": "preregistered, automation-blinded, single-investigator. Not independent",
+ "authorization": "I, Parth Mishra (sole owner, GitHub pm2m1), authorize this session to run the evaluation preregistered at https://osf.io/34ytz (DOI 10.17605/OSF.IO/34YTZ), exactly as registered: case selection, oracle transcription, integrations, mutant generation, all arms, mutant decoding and the frozen analysis, on research/benchmark-prep and new branches off it. Muse API spend is capped at $100 in total. Record this text verbatim in each record you write on my behalf.",
+ "transcribed": "2026-11-17",
+ "case_id": "plane-ac0d55de30",
+ "upstream": {
+  "repository": "https://github.com/makeplane/plane",
+  "fix_commit": "ac0d55de30eb2876209016744e025c95647dffe4",
+  "parent": "982fe6dc4ddae695f1461088e24c1beb4de65783",
+  "test_path": "apps/api/plane/tests/contract/app/test_issue_subresource_scope_app.py",
+  "test_blob": "410744bdc0f15412a178e48fa8aab5583f24cd75",
+  "changed_test_functions": [
+   "test_allows_listing_within_project",
+   "test_allows_own_project_issue",
+   "test_allows_relation_within_project",
+   "test_allows_removal_within_project",
+   "test_comment_allowed_on_archived_issue",
+   "test_comment_allowed_on_draft_issue",
+   "test_missing_relation_404s_rather_than_500",
+   "test_non_uuid_related_issue_is_400_not_500",
+   "test_rejects_cross_workspace_issue",
+   "test_rejects_cross_workspace_url_issue",
+   "test_rejects_same_workspace_other_project_issue",
+   "test_rejects_same_workspace_other_project_url_issue",
+   "test_relation_create_excludes_archived_url_issue",
+   "test_relation_list_allows_archived_issue_in_own_project",
+   "test_relation_list_rejects_archived_issue_in_other_project",
+   "test_relation_remove_excludes_archived_url_issue"
+  ],
+  "test_functions": [
+   "test_allows_listing_within_project",
+   "test_allows_own_project_issue",
+   "test_allows_relation_within_project",
+   "test_allows_removal_within_project",
+   "test_comment_allowed_on_archived_issue",
+   "test_comment_allowed_on_draft_issue",
+   "test_missing_relation_404s_rather_than_500",
+   "test_non_uuid_related_issue_is_400_not_500",
+   "test_rejects_cross_workspace_issue",
+   "test_rejects_cross_workspace_url_issue",
+   "test_rejects_same_workspace_other_project_issue",
+   "test_rejects_same_workspace_other_project_url_issue",
+   "test_relation_create_excludes_archived_url_issue",
+   "test_relation_list_allows_archived_issue_in_own_project",
+   "test_relation_list_rejects_archived_issue_in_other_project",
+   "test_relation_remove_excludes_archived_url_issue"
+  ],
+  "unused_test_functions": {}
+ },
+ "sources": {
+  "final_state": {
+   "tables": "application",
+   "db_now": "deployspecter"
+  },
+  "raw_results_workload_record": []
+ },
+ "final_state_convention": "results/DEVIATIONS.md D5 and its addendum",
+ "assertions": [
+  {
+   "line": 177,
+   "source": "assert response.status_code == status.HTTP_404_NOT_FOUND, (",
+   "kind": "not_expressible",
+   "reason": "in_memory_return_value",
+   "note": "asserts on a value returned in memory (an HTTP response, a helper's return value)"
+  },
+  {
+   "line": 181,
+   "source": "assert not IssueComment.objects.filter(issue_id=victim_issue.id).exists()",
+   "kind": "final_state",
+   "predicate": {
+    "forall": {
+     "rows": {
+      "path": "final_state.tables.issue_comments"
+     },
+     "as": "c",
+     "check": {
+      "exists": {
+       "rows": {
+        "path": "final_state.tables.issues"
+       },
+       "as": "i",
+       "where": {
+        "eq": [
+         {
+          "path": "i.id"
+         },
+         {
+          "path": "c.issue_id"
+         }
+        ]
+       },
+       "check": {
+        "all": [
+         {
+          "eq": [
+           {
+            "path": "i.workspace_id"
+           },
+           {
+            "path": "c.workspace_id"
+           }
+          ]
+         },
+         {
+          "eq": [
+           {
+            "path": "i.project_id"
+           },
+           {
+            "path": "c.project_id"
+           }
+          ]
+         }
+        ]
+       }
+      }
+     }
+    }
+   },
+   "uses_deployspecter_code": false,
+   "note": "generalised: every comment lies in its issue's workspace and project"
+  },
+  {
+   "line": 183,
+   "source": "assert \"Confidential victim issue\" not in str(getattr(response, \"data\", \"\"))",
+   "kind": "not_expressible",
+   "reason": "in_memory_return_value",
+   "note": "asserts on a value returned in memory (an HTTP response, a helper's return value)"
+  },
+  {
+   "line": 184,
+   "source": "assert \"Secret roadmap detail\" not in str(getattr(response, \"data\", \"\"))",
+   "kind": "not_expressible",
+   "reason": "in_memory_return_value",
+   "note": "asserts on a value returned in memory (an HTTP response, a helper's return value)"
+  },
+  {
+   "line": 193,
+   "source": "assert response.status_code == status.HTTP_404_NOT_FOUND, (",
+   "kind": "not_expressible",
+   "reason": "in_memory_return_value",
+   "note": "asserts on a value returned in memory (an HTTP response, a helper's return value)"
+  },
+  {
+   "line": 196,
+   "source": "assert not IssueComment.objects.filter(issue_id=sibling_project_issue.id).exists()",
+   "kind": "final_state",
+   "predicate": {
+    "forall": {
+     "rows": {
+      "path": "final_state.tables.issue_comments"
+     },
+     "as": "c",
+     "check": {
+      "exists": {
+       "rows": {
+        "path": "final_state.tables.issues"
+       },
+       "as": "i",
+       "where": {
+        "eq": [
+         {
+          "path": "i.id"
+         },
+         {
+          "path": "c.issue_id"
+         }
+        ]
+       },
+       "check": {
+        "all": [
+         {
+          "eq": [
+           {
+            "path": "i.workspace_id"
+           },
+           {
+            "path": "c.workspace_id"
+           }
+          ]
+         },
+         {
+          "eq": [
+           {
+            "path": "i.project_id"
+           },
+           {
+            "path": "c.project_id"
+           }
+          ]
+         }
+        ]
+       }
+      }
+     }
+    }
+   },
+   "uses_deployspecter_code": false,
+   "note": "generalised: every comment lies in its issue's workspace and project"
+  },
+  {
+   "line": 204,
+   "source": "assert response.status_code == status.HTTP_201_CREATED, (",
+   "kind": "not_expressible",
+   "reason": "in_memory_return_value",
+   "note": "asserts on a value returned in memory (an HTTP response, a helper's return value)"
+  },
+  {
+   "line": 207,
+   "source": "assert IssueComment.objects.filter(issue_id=attacker_issue.id).exists()",
+   "kind": "not_expressible",
+   "reason": "not_in_final_state",
+   "note": "positive control on the test's own issue; which request, actor or input the workload used isn't in the final state"
+  },
+  {
+   "line": 223,
+   "source": "assert response.status_code == status.HTTP_404_NOT_FOUND, (",
+   "kind": "not_expressible",
+   "reason": "in_memory_return_value",
+   "note": "asserts on a value returned in memory (an HTTP response, a helper's return value)"
+  },
+  {
+   "line": 226,
+   "source": "assert not IssueRelation.objects.filter(related_issue_id=victim_issue.id).exists()",
+   "kind": "final_state",
+   "predicate": {
+    "forall": {
+     "rows": {
+      "path": "final_state.tables.issue_relations"
+     },
+     "as": "r",
+     "check": {
+      "exists": {
+       "rows": {
+        "path": "final_state.tables.issues"
+       },
+       "as": "i",
+       "where": {
+        "eq": [
+         {
+          "path": "i.id"
+         },
+         {
+          "path": "r.related_issue_id"
+         }
+        ]
+       },
+       "check": {
+        "eq": [
+         {
+          "path": "i.workspace_id"
+         },
+         {
+          "path": "r.workspace_id"
+         }
+        ]
+       }
+      }
+     }
+    }
+   },
+   "uses_deployspecter_code": false,
+   "note": "generalised: every relation's related issue is in the relation's workspace"
+  },
+  {
+   "line": 227,
+   "source": "assert not IssueRelation.objects.filter(issue_id=victim_issue.id).exists()",
+   "kind": "final_state",
+   "predicate": {
+    "forall": {
+     "rows": {
+      "path": "final_state.tables.issue_relations"
+     },
+     "as": "r",
+     "check": {
+      "exists": {
+       "rows": {
+        "path": "final_state.tables.issues"
+       },
+       "as": "i",
+       "where": {
+        "eq": [
+         {
+          "path": "i.id"
+         },
+         {
+          "path": "r.issue_id"
+         }
+        ]
+       },
+       "check": {
+        "eq": [
+         {
+          "path": "i.workspace_id"
+         },
+         {
+          "path": "r.workspace_id"
+         }
+        ]
+       }
+      }
+     }
+    }
+   },
+   "uses_deployspecter_code": false,
+   "note": "generalised: every relation's issue is in the relation's workspace"
+  },
+  {
+   "line": 257,
+   "source": "assert response.status_code == status.HTTP_201_CREATED, (",
+   "kind": "not_expressible",
+   "reason": "in_memory_return_value",
+   "note": "asserts on a value returned in memory (an HTTP response, a helper's return value)"
+  },
+  {
+   "line": 260,
+   "source": "assert IssueRelation.objects.filter(issue_id=other.id, related_issue_id=attacker_issue.id).exists()",
+   "kind": "not_expressible",
+   "reason": "not_in_final_state",
+   "note": "positive control on the test's own issues; which request, actor or input the workload used isn't in the final state"
+  },
+  {
+   "line": 306,
+   "source": "assert response.status_code == status.HTTP_404_NOT_FOUND, (",
+   "kind": "not_expressible",
+   "reason": "in_memory_return_value",
+   "note": "asserts on a value returned in memory (an HTTP response, a helper's return value)"
+  },
+  {
+   "line": 325,
+   "source": "assert response.status_code == status.HTTP_204_NO_CONTENT, (",
+   "kind": "not_expressible",
+   "reason": "in_memory_return_value",
+   "note": "asserts on a value returned in memory (an HTTP response, a helper's return value)"
+  },
+  {
+   "line": 329,
+   "source": "assert relation.deleted_at is not None",
+   "kind": "not_expressible",
+   "reason": "not_in_final_state",
+   "note": "which relation the workload removed isn't recorded"
+  },
+  {
+   "line": 361,
+   "source": "assert response.status_code == status.HTTP_404_NOT_FOUND, (",
+   "kind": "not_expressible",
+   "reason": "in_memory_return_value",
+   "note": "asserts on a value returned in memory (an HTTP response, a helper's return value)"
+  },
+  {
+   "line": 364,
+   "source": "assert \"Sibling relation target\" not in str(getattr(response, \"data\", \"\"))",
+   "kind": "not_expressible",
+   "reason": "in_memory_return_value",
+   "note": "asserts on a value returned in memory (an HTTP response, a helper's return value)"
+  },
+  {
+   "line": 381,
+   "source": "assert response.status_code == status.HTTP_200_OK, (",
+   "kind": "not_expressible",
+   "reason": "in_memory_return_value",
+   "note": "asserts on a value returned in memory (an HTTP response, a helper's return value)"
+  },
+  {
+   "line": 384,
+   "source": "assert \"Second own issue\" in str(response.data), \"In-project relation went missing\"",
+   "kind": "not_expressible",
+   "reason": "in_memory_return_value",
+   "note": "asserts on a value returned in memory (an HTTP response, a helper's return value)"
+  },
+  {
+   "line": 419,
+   "source": "assert response.status_code == status.HTTP_201_CREATED, (",
+   "kind": "not_expressible",
+   "reason": "in_memory_return_value",
+   "note": "asserts on a value returned in memory (an HTTP response, a helper's return value)"
+  },
+  {
+   "line": 433,
+   "source": "assert response.status_code == status.HTTP_201_CREATED, (",
+   "kind": "not_expressible",
+   "reason": "in_memory_return_value",
+   "note": "asserts on a value returned in memory (an HTTP response, a helper's return value)"
+  },
+  {
+   "line": 449,
+   "source": "assert response.status_code == status.HTTP_404_NOT_FOUND, (",
+   "kind": "not_expressible",
+   "reason": "in_memory_return_value",
+   "note": "asserts on a value returned in memory (an HTTP response, a helper's return value)"
+  },
+  {
+   "line": 472,
+   "source": "assert response.status_code == status.HTTP_404_NOT_FOUND, (",
+   "kind": "not_expressible",
+   "reason": "in_memory_return_value",
+   "note": "asserts on a value returned in memory (an HTTP response, a helper's return value)"
+  },
+  {
+   "line": 489,
+   "source": "assert response.status_code == status.HTTP_200_OK, (",
+   "kind": "not_expressible",
+   "reason": "in_memory_return_value",
+   "note": "asserts on a value returned in memory (an HTTP response, a helper's return value)"
+  },
+  {
+   "line": 506,
+   "source": "assert response.status_code == status.HTTP_404_NOT_FOUND, (",
+   "kind": "not_expressible",
+   "reason": "in_memory_return_value",
+   "note": "asserts on a value returned in memory (an HTTP response, a helper's return value)"
+  },
+  {
+   "line": 524,
+   "source": "assert response.status_code == status.HTTP_400_BAD_REQUEST, (",
+   "kind": "not_expressible",
+   "reason": "in_memory_return_value",
+   "note": "asserts on a value returned in memory (an HTTP response, a helper's return value)"
+  }
+ ]
+}

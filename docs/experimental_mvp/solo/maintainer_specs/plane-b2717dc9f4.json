@@ -1,0 +1,95 @@
+{
+ "format": "ds-maintainer-spec/2",
+ "label": "preregistered, automation-blinded, single-investigator. Not independent",
+ "authorization": "I, Parth Mishra (sole owner, GitHub pm2m1), authorize this session to run the evaluation preregistered at https://osf.io/34ytz (DOI 10.17605/OSF.IO/34YTZ), exactly as registered: case selection, oracle transcription, integrations, mutant generation, all arms, mutant decoding and the frozen analysis, on research/benchmark-prep and new branches off it. Muse API spend is capped at $100 in total. Record this text verbatim in each record you write on my behalf.",
+ "transcribed": "2026-11-17",
+ "case_id": "plane-b2717dc9f4",
+ "upstream": {
+  "repository": "https://github.com/makeplane/plane",
+  "fix_commit": "b2717dc9f49b4842e01fae9f6b3f88a7e9794319",
+  "parent": "03cff6229c76dc4b17718bdab868c287cd99cfdd",
+  "test_path": "apps/api/plane/tests/contract/app/test_workspace_update_admin_scope_app.py",
+  "test_blob": "d33b328c750792c9088399c98c096d6b9e211488",
+  "changed_test_functions": [
+   "test_admin_can_update_workspace",
+   "test_non_admin_cannot_update_workspace",
+   "test_update_leaves_deleted_at_unchanged"
+  ],
+  "test_functions": [
+   "test_admin_can_update_workspace",
+   "test_non_admin_cannot_update_workspace",
+   "test_update_leaves_deleted_at_unchanged"
+  ],
+  "unused_test_functions": {}
+ },
+ "sources": {
+  "final_state": {
+   "tables": "application",
+   "db_now": "deployspecter"
+  },
+  "raw_results_workload_record": []
+ },
+ "final_state_convention": "results/DEVIATIONS.md D5 and its addendum",
+ "assertions": [
+  {
+   "line": 38,
+   "source": "assert response.status_code == status.HTTP_403_FORBIDDEN, response.data",
+   "kind": "not_expressible",
+   "reason": "in_memory_return_value",
+   "note": "asserts on a value returned in memory (an HTTP response, a helper's return value)"
+  },
+  {
+   "line": 40,
+   "source": "assert workspace.name == \"Test Workspace\"",
+   "kind": "not_expressible",
+   "reason": "not_in_final_state",
+   "note": "the expected name depends on the requester's role; which request, actor or input the workload used isn't in the final state"
+  },
+  {
+   "line": 48,
+   "source": "assert response.status_code == status.HTTP_200_OK, response.data",
+   "kind": "not_expressible",
+   "reason": "in_memory_return_value",
+   "note": "asserts on a value returned in memory (an HTTP response, a helper's return value)"
+  },
+  {
+   "line": 50,
+   "source": "assert workspace.name == \"Renamed\"",
+   "kind": "not_expressible",
+   "reason": "not_in_final_state",
+   "note": "the expected name depends on the requester's role; which request, actor or input the workload used isn't in the final state"
+  },
+  {
+   "line": 57,
+   "source": "assert response.status_code == status.HTTP_200_OK, response.data",
+   "kind": "not_expressible",
+   "reason": "in_memory_return_value",
+   "note": "asserts on a value returned in memory (an HTTP response, a helper's return value)"
+  },
+  {
+   "line": 59,
+   "source": "assert workspace.deleted_at is None",
+   "kind": "final_state",
+   "predicate": {
+    "forall": {
+     "rows": {
+      "path": "final_state.tables.workspaces"
+     },
+     "as": "w",
+     "check": {
+      "eq": [
+       {
+        "path": "w.deleted_at"
+       },
+       {
+        "lit": null
+       }
+      ]
+     }
+    }
+   },
+   "uses_deployspecter_code": false,
+   "note": "generalised: no workspace update sets deleted_at; assumes the workload doesn't delete workspaces through the delete endpoint"
+  }
+ ]
+}

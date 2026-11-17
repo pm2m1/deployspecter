@@ -1,0 +1,99 @@
+{
+ "format": "ds-maintainer-spec/2",
+ "label": "preregistered, automation-blinded, single-investigator. Not independent",
+ "authorization": "I, Parth Mishra (sole owner, GitHub pm2m1), authorize this session to run the evaluation preregistered at https://osf.io/34ytz (DOI 10.17605/OSF.IO/34YTZ), exactly as registered: case selection, oracle transcription, integrations, mutant generation, all arms, mutant decoding and the frozen analysis, on research/benchmark-prep and new branches off it. Muse API spend is capped at $100 in total. Record this text verbatim in each record you write on my behalf.",
+ "transcribed": "2026-11-17",
+ "case_id": "wger-bcfdde1a96",
+ "upstream": {
+  "repository": "https://github.com/wger-project/wger",
+  "fix_commit": "bcfdde1a966d8cea870be88c5a0571219c2182c0",
+  "parent": "b28f1a2faf8b2216d960adc6d41afe4d8fd8c5ac",
+  "test_path": "wger/nutrition/tests/test_ingredient.py",
+  "test_blob": "985e34540002575653d50c1a35e15a7c365551ca",
+  "changed_test_functions": [
+   "test_reimport_same_gram_different_name_does_not_duplicate"
+  ],
+  "test_functions": [
+   "test_reimport_same_gram_different_name_does_not_duplicate"
+  ],
+  "unused_test_functions": {}
+ },
+ "sources": {
+  "final_state": {
+   "tables": "application",
+   "db_now": "deployspecter"
+  },
+  "raw_results_workload_record": []
+ },
+ "final_state_convention": "results/DEVIATIONS.md D5 and its addendum",
+ "assertions": [
+  {
+   "line": 548,
+   "source": "self.assertEqual(units.count(), 1)",
+   "kind": "final_state",
+   "predicate": {
+    "forall": {
+     "rows": {
+      "path": "final_state.tables.nutrition_ingredientweightunit"
+     },
+     "as": "u",
+     "check": {
+      "eq": [
+       {
+        "count": {
+         "rows": {
+          "path": "final_state.tables.nutrition_ingredientweightunit"
+         },
+         "as": "x",
+         "where": {
+          "all": [
+           {
+            "eq": [
+             {
+              "path": "x.ingredient_id"
+             },
+             {
+              "path": "u.ingredient_id"
+             }
+            ]
+           },
+           {
+            "eq": [
+             {
+              "path": "x.gram"
+             },
+             {
+              "path": "u.gram"
+             }
+            ]
+           }
+          ]
+         }
+        }
+       },
+       {
+        "lit": 1
+       }
+      ]
+     }
+    }
+   },
+   "uses_deployspecter_code": false,
+   "note": "generalised: an ingredient has at most one weight unit per gram value"
+  },
+  {
+   "line": 549,
+   "source": "self.assertEqual(units.first().name, '1 Portion (3 biscuits)')",
+   "kind": "not_expressible",
+   "reason": "not_in_final_state",
+   "note": "the expected name comes from the test's mocked Open Food Facts input; which request, actor or input the workload used isn't in the final state"
+  },
+  {
+   "line": 550,
+   "source": "self.assertEqual(units.first().gram, 30)",
+   "kind": "not_expressible",
+   "reason": "not_in_final_state",
+   "note": "the expected gram comes from the test's mocked Open Food Facts input; which request, actor or input the workload used isn't in the final state"
+  }
+ ]
+}
