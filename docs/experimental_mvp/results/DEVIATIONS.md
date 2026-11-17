@@ -27,3 +27,11 @@ Every entry is written before the departure takes effect. Entries are only ever 
 - **Expected effect:** none on what counts as a case, an arm or a budget. The result is a complete mirror clone
   with the same refspec (`+refs/*:refs/*`, `mirror = true`) and the full history. `select` reads only the default
   branch's history and trees, which are identical to a one-shot mirror clone's. No frozen file is changed.
+
+### D1, addendum (2026-11-17, before it takes effect)
+
+The first stepwise attempt left a depth-1 mirror at the path. Its `--deepen` steps all hit a client-side
+low-speed timeout (`curl 28`) while the server was still building the pack. The deepening continues with smaller
+steps and no low-speed limit. Because the PostHog path now exists, the frozen `fetch` skips it, and it runs for the
+other 17 repositories at the same time instead of afterwards. `select` still does not run until the PostHog mirror is
+complete (not shallow) and `git fsck --connectivity-only` passes. Expected effect: none.
