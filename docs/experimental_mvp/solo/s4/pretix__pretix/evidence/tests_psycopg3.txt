@@ -1,0 +1,2890 @@
+### tests_psycopg3: py.test -p no:cacheprovider -n 4 tests --ignore=tests/e2e --junitxml=/out/junit_psycopg3.xml -q
+bringing up nodes...
+bringing up nodes...
+
+........................................................................ [  1%]
+........................................................................ [  2%]
+........................................................................ [  3%]
+........................................................................ [  4%]
+........................................................................ [  5%]
+........................................................................ [  7%]
+........................................................................ [  8%]
+........................................................................ [  9%]
+........................................................................ [ 10%]
+........................................................................ [ 11%]
+........................................................................ [ 12%]
+........................................................................ [ 14%]
+........................................................................ [ 15%]
+...s.................................................................... [ 16%]
+........................................................................ [ 17%]
+........................................................................ [ 18%]
+........................................................................ [ 19%]
+...............................F........................................ [ 21%]
+........................................................................ [ 22%]
+........................................................................ [ 23%]
+........................................................................ [ 24%]
+........................................................................ [ 25%]
+...............x........................................................ [ 27%]
+........................................................................ [ 28%]
+..............................s......................................... [ 29%]
+........................................................................ [ 30%]
+........................................................................ [ 31%]
+........................................................................ [ 32%]
+........................................................................ [ 34%]
+........................................................................ [ 35%]
+........................................................................ [ 36%]
+........................................................................ [ 37%]
+.........................x.............................................. [ 38%]
+........................................................................ [ 39%]
+........................................................................ [ 41%]
+........................................................................ [ 42%]
+........................................................................ [ 43%]
+............................s........................................... [ 44%]
+........................................................................ [ 45%]
+........................................................................ [ 47%]
+........................................................................ [ 48%]
+........................................................................ [ 49%]
+.....................s..........s.............ss........s........s...... [ 50%]
+.......s.s.............................................................. [ 51%]
+........................................................................ [ 52%]
+........................................................................ [ 54%]
+........................................................................ [ 55%]
+........................................................................ [ 56%]
+........................................................................ [ 57%]
+........................................................................ [ 58%]
+........................................................................ [ 59%]
+........................................................................ [ 61%]
+........................................................................ [ 62%]
+........................................................................ [ 63%]
+........................................................................ [ 64%]
+........................................................................ [ 65%]
+........................................................................ [ 67%]
+........................................................................ [ 68%]
+..............................x......................................... [ 69%]
+........................................................................ [ 70%]
+....................................................F................... [ 71%]
+....................................................F................... [ 72%]
+........................................................................ [ 74%]
+........................................................................ [ 75%]
+........................................................................ [ 76%]
+........................................................................ [ 77%]
+........................................................................ [ 78%]
+........................................................................ [ 79%]
+........................................................................ [ 81%]
+........................................................................ [ 82%]
+........................................................................ [ 83%]
+........................................................................ [ 84%]
+........................................................................ [ 85%]
+..........................F............................................. [ 87%]
+.................................................F.F...............F.... [ 88%]
+........................................................................ [ 89%]
+........................................................................ [ 90%]
+........................................................................ [ 91%]
+....F.FF.FF.F.FF........................................................ [ 92%]
+........................................................................ [ 94%]
+........................................................................ [ 95%]
+........................................................................ [ 96%]
+...........................................................s............ [ 97%]
+........................................................................ [ 98%]
+..............s.s..s...s.s..s..s.s.s..s..s.s.s..s..s.................... [ 99%]
+.                                                                        [100%]
+=================================== FAILURES ===================================
+_____________________ test_reason_explanation_localization _____________________
+[gw0] linux -- Python 3.13.18 /venv/bin/python
+
+token_client = <rest_framework.test.APIClient object at 0xffff73baa8e0>
+organizer = <Organizer: Dummy>, clist = <CheckinList: Default>
+other_item = <Item: Budget Ticket>, event = <Event: Dummy>
+order = <Order: DUMMY-FOO>
+
+    @pytest.mark.django_db
+    def test_reason_explanation_localization(token_client, organizer, clist, other_item, event, order):
+        event.settings.locales = ["de", "en"]
+        order.locale = "de"
+        order.save()
+        with scopes_disabled():
+            p = order.positions.first()
+        p.valid_from = datetime.datetime(2020, 1, 1, 12, 0, 0, tzinfo=event.timezone)
+        p.save()
+        with freeze_time("2020-01-01 10:45:00"):
+            resp = _redeem(token_client, organizer, clist, 'z3fsn8jyufm5kpk768q69gkbyr5f4h6w', {})
+            assert resp.status_code == 400
+            assert resp.data["status"] == "error"
+            assert resp.data["reason"] == "invalid_time"
+            assert resp.data["reason_explanation"] == "This ticket is only valid after 2020-01-01 12:00."
+    
+            resp = _redeem(token_client, organizer, clist, 'z3fsn8jyufm5kpk768q69gkbyr5f4h6w', {
+                "use_order_locale": True
+            })
+            assert resp.status_code == 400
+            assert resp.data["status"] == "error"
+            assert resp.data["reason"] == "invalid_time"
+>           assert resp.data["reason_explanation"] == "Erst ab 01.01.2020 12:00 gültig."
+E           AssertionError: assert 'This ticket ...1.2020 12:00.' == 'Erst ab 01.0...12:00 gültig.'
+E             
+E             - Erst ab 01.01.2020 12:00 gültig.
+E             + This ticket is only valid after 01.01.2020 12:00.
+
+tests/api/test_checkinrpc.py:1163: AssertionError
+----------------------------- Captured stderr call -----------------------------
+WARNING 2020-01-01 10:45:00,000 django.request log Bad Request: /api/v1/organizers/dummy/checkinrpc/redeem/
+WARNING 2020-01-01 10:45:00,000 django.request log Bad Request: /api/v1/organizers/dummy/checkinrpc/redeem/
+WARNING 2020-01-01 10:45:00,000 django.request log Bad Request: /api/v1/organizers/dummy/checkinrpc/redeem/
+WARNING 2020-01-01 10:45:00,000 django.request log Bad Request: /api/v1/organizers/dummy/checkinrpc/redeem/
+------------------------------ Captured log call -------------------------------
+WARNING  django.request:log.py:293 Bad Request: /api/v1/organizers/dummy/checkinrpc/redeem/
+WARNING  django.request:log.py:293 Bad Request: /api/v1/organizers/dummy/checkinrpc/redeem/
+______________ MailSettingPreviewTest.test_localized_payment_info ______________
+[gw1] linux -- Python 3.13.18 /venv/bin/python
+
+self = <tests.control.test_mail_settings_preview.MailSettingPreviewTest testMethod=test_localized_payment_info>
+
+    def test_localized_payment_info(self):
+        dummy_text = '{payment_info}'
+        response = self.client.post(self.target.format(
+            self.orga1.slug, self.locale_event.slug), {
+            'item': 'mail_text_order_paid',
+            'mail_text_order_paid_0': dummy_text,
+            'mail_text_order_paid_2': dummy_text
+        })
+        assert response.status_code == 200
+        res = json.loads(response.content.decode())
+        assert res['item'] == 'mail_text_order_paid'
+        assert len(res['msgs']) == 2
+>       assert res['msgs']['en'] != res['msgs']['de-informal']
+E       assert '<p><span class="placeholder" title="This value will be replaced based on dynamic parameters.">Please transfer money to this bank account: 9999-9999-9999-9999</span></p>' != '<p><span class="placeholder" title="This value will be replaced based on dynamic parameters.">Please transfer money to this bank account: 9999-9999-9999-9999</span></p>'
+
+tests/control/test_mail_settings_preview.py:338: AssertionError
+______________________ test_sendmail_context_localization ______________________
+[gw3] linux -- Python 3.13.18 /venv/bin/python
+
+event = <Event: Dummy>, order = <Order: DUMMY-DUMMY>
+pos = <OrderPosition: item 992, variation 0 for order 852>
+
+    @pytest.mark.django_db
+    @scopes_disabled()
+    def test_sendmail_context_localization(event, order, pos):
+        order.locale = 'de'
+        order.save()
+        event.settings.name_scheme = 'salutation_given_family'
+        InvoiceAddress.objects.create(
+            order=order,
+            name_parts={'_scheme': 'salutation_given_family', 'salutation': 'Mr', 'given_name': 'Max', 'family_name': 'Mustermann'}
+        )
+    
+        djmail.outbox = []
+        event.sendmail_rules.create(send_date=dt_now - datetime.timedelta(hours=1),
+                                    restrict_to_status=['p', 'n__not_pending_approval_and_not_valid_if_pending',
+                                                        'n__valid_if_pending'],
+                                    subject='meow', template='Hallo {name_for_salutation}')
+    
+        sendmail_run_rules(None)
+>       assert "Hallo Herr Mustermann" in djmail.outbox[0].body
+E       AssertionError: assert 'Hallo Herr Mustermann' in 'Hallo Mr Mustermann\r\n\r\n-- \r\nYou are receiving this email because you placed an order for Dummy.\r\nYou can view...rder details at the following URL:\r\nhttp://example.com/dummy/dummy/order/DUMMY/ib62s2wvgzf7jvbq/open/99ca7704b/.\r\n'
+E        +  where 'Hallo Mr Mustermann\r\n\r\n-- \r\nYou are receiving this email because you placed an order for Dummy.\r\nYou can view...rder details at the following URL:\r\nhttp://example.com/dummy/dummy/order/DUMMY/ib62s2wvgzf7jvbq/open/99ca7704b/.\r\n' = <pretix.base.services.mail.CustomEmail object at 0xffff66f72af0>.body
+
+tests/plugins/sendmail/test_rules.py:863: AssertionError
+----------------------------- Captured stderr call -----------------------------
+INFO 2026-11-17 06:25:00,145 celery.app.trace trace Task pretix.base.services.mail.mail_send_task[c00a3f2d-26af-4551-92b4-7d53d0fc1c58] succeeded in 0.005606083897873759s: True
+------------------------------ Captured log call -------------------------------
+INFO     celery.app.trace:trace.py:128 Task pretix.base.services.mail.mail_send_task[c00a3f2d-26af-4551-92b4-7d53d0fc1c58] succeeded in 0.005606083897873759s: True
+_______________________ WidgetCartTest.test_js_localized _______________________
+[gw1] linux -- Python 3.13.18 /venv/bin/python
+
+self = <tests.presale.test_widget.WidgetCartTest testMethod=test_js_localized>
+
+    def test_js_localized(self):
+>       response = self.client.get('/widget/v2.en.js')
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/presale/test_widget.py:572: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/venv/lib/python3.13/site-packages/django/test/client.py:1127: in get
+    response = super().get(
+/venv/lib/python3.13/site-packages/django/test/client.py:475: in get
+    return self.generic(
+/venv/lib/python3.13/site-packages/django/test/client.py:671: in generic
+    return self.request(**r)
+           ^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/test/client.py:1085: in request
+    response = self.handler(environ)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/test/client.py:186: in __call__
+    response = self.get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/base.py:140: in get_response
+    response = self._middleware_chain(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+pretix/testutils/middleware.py:51: in __call__
+    return self.get_response(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+pretix/helpers/logs.py:73: in __call__
+    return self.get_response(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+pretix/api/middleware.py:47: in __call__
+    return self.get_response(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django_querytagger/middleware.py:29: in __call__
+    return self.get_response(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+pretix/control/middleware.py:137: in __call__
+    return self.get_response(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+pretix/control/middleware.py:248: in __call__
+    response = self.get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+pretix/presale/middleware.py:75: in __call__
+    response = self.get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+pretix/api/middleware.py:132: in __call__
+    return self.get_response(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/base.py:197: in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/decorators.py:192: in _view_wrapper
+    result = _process_exception(request, e)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/decorators.py:190: in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/views/decorators/http.py:154: in inner
+    response = func(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pretix/presale/views/widget.py:266: in widget_js
+    data = get_widget_js(version, lang)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pretix/presale/views/widget.py:229: in get_widget_js
+    data = generate_widget_js(version, lang).encode()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+version = 2, lang = 'en'
+
+    def generate_widget_js(version, lang):
+        code = []
+        with language(lang):
+            # Provide isolation
+            code.append('(function (siteglobals) {\n')
+            code.append('var module = {}, exports = {};\n')
+            code.append('const LANG = "%s";\n' % lang)
+    
+            c = JavaScriptCatalog()
+            c.translation = DjangoTranslation(lang, domain='djangojs')
+            catalog, plural = c.get_catalog(), c.get_plural()
+    
+            str_wl = (
+                'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su',
+                'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August',
+                'September', 'October', 'November', 'December'
+            )
+            catalog = dict((k, v) for k, v in catalog.items() if k.startswith('widget\u0004') or k in str_wl)
+            with builtin_template_path("i18n_catalog.js").open(encoding="utf-8") as fh:
+                template = Engine().from_string(fh.read())
+            context = Context({
+                'catalog_str': indent(json.dumps(
+                    catalog, sort_keys=True, indent=2)) if catalog else None,
+                'formats_str': indent(json.dumps(
+                    get_formats(), sort_keys=True, indent=2)),
+                'plural': plural,
+            })
+            i18n_js = template.render(context)
+            code.append(i18n_js)
+    
+            vite_js = finders.find('vite/widget/widget.js')
+            if not vite_js:
+>               raise FileNotFoundError('Vite widget build not found. Run: npm run build:widget')
+E               FileNotFoundError: Vite widget build not found. Run: npm run build:widget
+
+pretix/presale/views/widget.py:187: FileNotFoundError
+__________ StyleTest.test_organizer_generate_css_for_inherited_events __________
+[gw3] linux -- Python 3.13.18 /venv/bin/python
+
+self = <tests.presale.test_style.StyleTest testMethod=test_organizer_generate_css_for_inherited_events>
+
+    def test_organizer_generate_css_for_inherited_events(self):
+        self.orga.settings.primary_color = "#33c33c"
+>       c = self.client.get("/ccc/theme.css").content.decode()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/presale/test_style.py:43: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/venv/lib/python3.13/site-packages/django/test/client.py:1127: in get
+    response = super().get(
+/venv/lib/python3.13/site-packages/django/test/client.py:475: in get
+    return self.generic(
+/venv/lib/python3.13/site-packages/django/test/client.py:671: in generic
+    return self.request(**r)
+           ^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/test/client.py:1085: in request
+    response = self.handler(environ)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/test/client.py:186: in __call__
+    response = self.get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/base.py:140: in get_response
+    response = self._middleware_chain(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+pretix/testutils/middleware.py:51: in __call__
+    return self.get_response(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+pretix/helpers/logs.py:73: in __call__
+    return self.get_response(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+pretix/api/middleware.py:47: in __call__
+    return self.get_response(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django_querytagger/middleware.py:29: in __call__
+    return self.get_response(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+pretix/control/middleware.py:137: in __call__
+    return self.get_response(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+pretix/control/middleware.py:248: in __call__
+    response = self.get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+pretix/presale/middleware.py:75: in __call__
+    response = self.get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+pretix/api/middleware.py:132: in __call__
+    return self.get_response(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/base.py:197: in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/decorators.py:192: in _view_wrapper
+    result = _process_exception(request, e)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/decorators.py:190: in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/views/decorators/http.py:154: in inner
+    response = func(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pretix/presale/views/theme.py:49: in theme_css
+    css = get_theme_vars_css(obj, widget=False)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pretix/presale/style.py:216: in get_theme_vars_css
+    css = sass.compile(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+kwargs = {}
+
+    def compile(**kwargs):
+        r"""There are three modes of parameters :func:`compile()` can take:
+        ``string``, ``filename``, and ``dirname``.
+    
+        The ``string`` parameter is the most basic way to compile Sass.
+        It simply takes a string of Sass code, and then returns a compiled
+        CSS string.
+    
+        :param string: Sass source code to compile.  it's exclusive to
+                       ``filename`` and ``dirname`` parameters
+        :type string: :class:`str`
+        :param output_style: an optional coding style of the compiled result.
+                             choose one of: ``'nested'`` (default), ``'expanded'``,
+                             ``'compact'``, ``'compressed'``
+        :type output_style: :class:`str`
+        :param source_comments: whether to add comments about source lines.
+                                :const:`False` by default
+        :type source_comments: :class:`bool`
+        :param source_map_contents: embed include contents in map
+        :type source_map_contents: :class:`bool`
+        :param source_map_embed: embed sourceMappingUrl as data URI
+        :type source_map_embed: :class:`bool`
+        :param omit_source_map_url: omit source map URL comment from output
+        :type omit_source_map_url: :class:`bool`
+        :param source_map_root: base path, will be emitted in source map as is
+        :type source_map_root: :class:`str`
+        :param include_paths: an optional list of paths to find ``@import``\ ed
+                              Sass/CSS source files
+        :type include_paths: :class:`collections.abc.Sequence`
+        :param precision: optional precision for numbers. :const:`5` by default.
+        :type precision: :class:`int`
+        :param custom_functions: optional mapping of custom functions.
+                                 see also below `custom functions
+                                 <custom-functions_>`_ description
+        :type custom_functions: :class:`set`,
+                                :class:`collections.abc.Sequence`,
+                                :class:`collections.abc.Mapping`
+        :param custom_import_extensions: (ignored, for backward compatibility)
+        :param indented: optional declaration that the string is Sass, not SCSS
+                         formatted. :const:`False` by default
+        :type indented: :class:`bool`
+        :returns: the compiled CSS string
+        :param importers: optional callback functions.
+                         see also below `importer callbacks
+                         <importer-callbacks_>`_ description
+        :type importers: :class:`collections.abc.Callable`
+        :rtype: :class:`str`
+        :raises sass.CompileError: when it fails for any reason
+                                   (for example the given Sass has broken syntax)
+    
+        The ``filename`` is the most commonly used way.  It takes a string of
+        Sass filename, and then returns a compiled CSS string.
+    
+        :param filename: the filename of Sass source code to compile.
+                         it's exclusive to ``string`` and ``dirname`` parameters
+        :type filename: :class:`str`
+        :param output_style: an optional coding style of the compiled result.
+                             choose one of: ``'nested'`` (default), ``'expanded'``,
+                             ``'compact'``, ``'compressed'``
+        :type output_style: :class:`str`
+        :param source_comments: whether to add comments about source lines.
+                                :const:`False` by default
+        :type source_comments: :class:`bool`
+        :param source_map_filename: use source maps and indicate the source map
+                                    output filename.  :const:`None` means not
+                                    using source maps.  :const:`None` by default.
+        :type source_map_filename: :class:`str`
+        :param source_map_contents: embed include contents in map
+        :type source_map_contents: :class:`bool`
+        :param source_map_embed: embed sourceMappingUrl as data URI
+        :type source_map_embed: :class:`bool`
+        :param omit_source_map_url: omit source map URL comment from output
+        :type omit_source_map_url: :class:`bool`
+        :param source_map_root: base path, will be emitted in source map as is
+        :type source_map_root: :class:`str`
+        :param include_paths: an optional list of paths to find ``@import``\ ed
+                              Sass/CSS source files
+        :type include_paths: :class:`collections.abc.Sequence`
+        :param precision: optional precision for numbers. :const:`5` by default.
+        :type precision: :class:`int`
+        :param custom_functions: optional mapping of custom functions.
+                                 see also below `custom functions
+                                 <custom-functions_>`_ description
+        :type custom_functions: :class:`set`,
+                                :class:`collections.abc.Sequence`,
+                                :class:`collections.abc.Mapping`
+        :param custom_import_extensions: (ignored, for backward compatibility)
+        :param importers: optional callback functions.
+                         see also below `importer callbacks
+                         <importer-callbacks_>`_ description
+        :type importers: :class:`collections.abc.Callable`
+        :returns: the compiled CSS string, or a pair of the compiled CSS string
+                  and the source map string if ``source_map_filename`` is set
+        :rtype: :class:`str`, :class:`tuple`
+        :raises sass.CompileError: when it fails for any reason
+                                   (for example the given Sass has broken syntax)
+        :raises exceptions.IOError: when the ``filename`` doesn't exist or
+                                    cannot be read
+    
+        The ``dirname`` is useful for automation.  It takes a pair of paths.
+        The first of the ``dirname`` pair refers the source directory, contains
+        several Sass source files to compiled.  Sass source files can be nested
+        in directories.  The second of the pair refers the output directory
+        that compiled CSS files would be saved.  Directory tree structure of
+        the source directory will be maintained in the output directory as well.
+        If ``dirname`` parameter is used the function returns :const:`None`.
+    
+        :param dirname: a pair of ``(source_dir, output_dir)``.
+                        it's exclusive to ``string`` and ``filename``
+                        parameters
+        :type dirname: :class:`tuple`
+        :param output_style: an optional coding style of the compiled result.
+                             choose one of: ``'nested'`` (default), ``'expanded'``,
+                             ``'compact'``, ``'compressed'``
+        :type output_style: :class:`str`
+        :param source_comments: whether to add comments about source lines.
+                                :const:`False` by default
+        :type source_comments: :class:`bool`
+        :param source_map_contents: embed include contents in map
+        :type source_map_contents: :class:`bool`
+        :param source_map_embed: embed sourceMappingUrl as data URI
+        :type source_map_embed: :class:`bool`
+        :param omit_source_map_url: omit source map URL comment from output
+        :type omit_source_map_url: :class:`bool`
+        :param source_map_root: base path, will be emitted in source map as is
+        :type source_map_root: :class:`str`
+        :param include_paths: an optional list of paths to find ``@import``\ ed
+                              Sass/CSS source files
+        :type include_paths: :class:`collections.abc.Sequence`
+        :param precision: optional precision for numbers. :const:`5` by default.
+        :type precision: :class:`int`
+        :param custom_functions: optional mapping of custom functions.
+                                 see also below `custom functions
+                                 <custom-functions_>`_ description
+        :type custom_functions: :class:`set`,
+                                :class:`collections.abc.Sequence`,
+                                :class:`collections.abc.Mapping`
+        :param custom_import_extensions: (ignored, for backward compatibility)
+        :raises sass.CompileError: when it fails for any reason
+                                   (for example the given Sass has broken syntax)
+    
+        .. _custom-functions:
+    
+        The ``custom_functions`` parameter can take three types of forms:
+    
+        :class:`~set`/:class:`~collections.abc.Sequence` of \
+        :class:`SassFunction`\ s
+           It is the most general form.  Although pretty verbose, it can take
+           any kind of callables like type objects, unnamed functions,
+           and user-defined callables.
+    
+           .. code-block:: python
+    
+              sass.compile(
+                  ...,
+                  custom_functions={
+                      sass.SassFunction('func-name', ('$a', '$b'), some_callable),
+                      ...
+                  }
+              )
+    
+        :class:`~collections.abc.Mapping` of names to functions
+           Less general, but easier-to-use form.  Although it's not it can take
+           any kind of callables, it can take any kind of *functions* defined
+           using :keyword:`def`/:keyword:`lambda` syntax.
+           It cannot take callables other than them since inspecting arguments
+           is not always available for every kind of callables.
+    
+           .. code-block:: python
+    
+              sass.compile(
+                  ...,
+                  custom_functions={
+                      'func-name': lambda a, b: ...,
+                      ...
+                  }
+              )
+    
+        :class:`~set`/:class:`~collections.abc.Sequence` of \
+        named functions
+           Not general, but the easiest-to-use form for *named* functions.
+           It can take only named functions, defined using :keyword:`def`.
+           It cannot take lambdas sinc names are unavailable for them.
+    
+           .. code-block:: python
+    
+              def func_name(a, b):
+                  return ...
+    
+              sass.compile(
+                  ...,
+                  custom_functions={func_name}
+              )
+    
+        .. _importer-callbacks:
+    
+        Newer versions of ``libsass`` allow developers to define callbacks to be
+        called and given a chance to process ``@import`` directives. You can
+        define yours by passing in a list of callables via the ``importers``
+        parameter. The callables must be passed as 2-tuples in the form:
+    
+        .. code-block:: python
+    
+            (priority_int, callback_fn)
+    
+        A priority of zero is acceptable; priority determines the order callbacks
+        are attempted.
+    
+        These callbacks can accept one or two string arguments. The first argument
+        is the path that was passed to the ``@import`` directive; the second
+        (optional) argument is the previous resolved path, where the ``@import``
+        directive was found. The callbacks must either return ``None`` to
+        indicate the path wasn't handled by that callback (to continue with others
+        or fall back on internal ``libsass`` filesystem behaviour) or a list of
+        one or more tuples, each in one of three forms:
+    
+        * A 1-tuple representing an alternate path to handle internally; or,
+        * A 2-tuple representing an alternate path and the content that path
+          represents; or,
+        * A 3-tuple representing the same as the 2-tuple with the addition of a
+          "sourcemap".
+    
+        All tuple return values must be strings. As a not overly realistic
+        example:
+    
+        .. code-block:: python
+    
+            def my_importer(path, prev):
+                return [(path, '#' + path + ' { color: red; }')]
+    
+            sass.compile(
+                    ...,
+                    importers=[(0, my_importer)]
+                )
+    
+        Now, within the style source, attempting to ``@import 'button';`` will
+        instead attach ``color: red`` as a property of an element with the
+        imported name.
+    
+        .. versionadded:: 0.4.0
+           Added ``source_comments`` and ``source_map_filename`` parameters.
+    
+        .. versionchanged:: 0.6.0
+           The ``source_comments`` parameter becomes to take only :class:`bool`
+           instead of :class:`str`.
+    
+        .. deprecated:: 0.6.0
+           Values like ``'none'``, ``'line_numbers'``, and ``'map'`` for
+           the ``source_comments`` parameter are deprecated.
+    
+        .. versionadded:: 0.7.0
+           Added ``precision`` parameter.
+    
+        .. versionadded:: 0.7.0
+           Added ``custom_functions`` parameter.
+    
+        .. versionadded:: 0.11.0
+           ``source_map_filename`` no longer implies ``source_comments``.
+    
+        .. versionadded:: 0.17.0
+           Added ``source_map_contents``, ``source_map_embed``,
+           ``omit_source_map_url``, and ``source_map_root`` parameters.
+    
+        .. versionadded:: 0.18.0
+            The importer callbacks can now take a second argument, the previously-
+            resolved path, so that importers can do relative path resolution.
+    
+        """
+        modes = set()
+        for mode_name in MODES:
+            if mode_name in kwargs:
+                modes.add(mode_name)
+        if not modes:
+            raise TypeError('choose one at least in ' + and_join(MODES))
+        elif len(modes) > 1:
+            raise TypeError(
+                and_join(modes) + ' are exclusive each other; '
+                'cannot be used at a time',
+            )
+        precision = kwargs.pop('precision', 5)
+        output_style = kwargs.pop('output_style', 'nested')
+        if not isinstance(output_style, str):
+            raise TypeError(
+                'output_style must be a string, not ' +
+                repr(output_style),
+            )
+        try:
+            output_style = OUTPUT_STYLES[output_style]
+        except KeyError:
+            raise CompileError(
+                '{} is unsupported output_style; choose one of {}'
+                ''.format(output_style, and_join(OUTPUT_STYLES)),
+            )
+        source_comments = kwargs.pop('source_comments', False)
+        if source_comments in SOURCE_COMMENTS:
+            if source_comments == 'none':
+                deprecation_message = (
+                    'you can simply pass False to '
+                    "source_comments instead of 'none'"
+                )
+                source_comments = False
+            elif source_comments in ('line_numbers', 'default'):
+                deprecation_message = (
+                    'you can simply pass True to '
+                    'source_comments instead of ' +
+                    repr(source_comments)
+                )
+                source_comments = True
+            else:
+                deprecation_message = (
+                    "you don't have to pass 'map' to "
+                    'source_comments but just need to '
+                    'specify source_map_filename'
+                )
+                source_comments = False
+            warnings.warn(
+                "values like 'none', 'line_numbers', and 'map' for "
+                'the source_comments parameter are deprecated; ' +
+                deprecation_message,
+                FutureWarning,
+            )
+        if not isinstance(source_comments, bool):
+            raise TypeError(
+                'source_comments must be bool, not ' +
+                repr(source_comments),
+            )
+        fs_encoding = sys.getfilesystemencoding() or sys.getdefaultencoding()
+    
+        def _get_file_arg(key):
+            ret = kwargs.pop(key, None)
+            if ret is not None and not isinstance(ret, str):
+                raise TypeError(f'{key} must be a string, not {ret!r}')
+            elif isinstance(ret, str):
+                ret = ret.encode(fs_encoding)
+            if ret and 'filename' not in modes:
+                raise CompileError(
+                    '{} is only available with filename= keyword argument since '
+                    'has to be aware of it'.format(key),
+                )
+            return ret
+    
+        source_map_filename = _get_file_arg('source_map_filename')
+        output_filename_hint = _get_file_arg('output_filename_hint')
+    
+        source_map_contents = kwargs.pop('source_map_contents', False)
+        source_map_embed = kwargs.pop('source_map_embed', False)
+        omit_source_map_url = kwargs.pop('omit_source_map_url', False)
+        source_map_root = kwargs.pop('source_map_root', None)
+    
+        if isinstance(source_map_root, str):
+            source_map_root = source_map_root.encode('utf-8')
+    
+        # #208: cwd is always included in include paths
+        include_paths = (os.getcwd(),)
+        include_paths += tuple(kwargs.pop('include_paths', ()) or ())
+        include_paths = os.pathsep.join(include_paths)
+        if isinstance(include_paths, str):
+            include_paths = include_paths.encode(fs_encoding)
+    
+        custom_functions = kwargs.pop('custom_functions', ())
+        if isinstance(custom_functions, collections.abc.Mapping):
+            custom_functions = [
+                SassFunction.from_lambda(name, lambda_)
+                for name, lambda_ in custom_functions.items()
+            ]
+        elif isinstance(
+                custom_functions,
+                (collections.abc.Set, collections.abc.Sequence),
+        ):
+            custom_functions = [
+                func if isinstance(func, SassFunction)
+                else SassFunction.from_named_function(func)
+                for func in custom_functions
+            ]
+        else:
+            raise TypeError(
+                'custom_functions must be one of:\n'
+                '- a set/sequence of {0.__module__}.{0.__name__} objects,\n'
+                '- a mapping of function name strings to lambda functions,\n'
+                '- a set/sequence of named functions,\n'
+                'not {1!r}'.format(SassFunction, custom_functions),
+            )
+    
+        if kwargs.pop('custom_import_extensions', None) is not None:
+            warnings.warn(
+                '`custom_import_extensions` has no effect and will be removed in '
+                'a future version.',
+                FutureWarning,
+            )
+    
+        importers = _validate_importers(kwargs.pop('importers', None))
+    
+        if 'string' in modes:
+            string = kwargs.pop('string')
+            if isinstance(string, str):
+                string = string.encode('utf-8')
+            indented = kwargs.pop('indented', False)
+            if not isinstance(indented, bool):
+                raise TypeError(
+                    'indented must be bool, not ' +
+                    repr(source_comments),
+                )
+            _check_no_remaining_kwargs(compile, kwargs)
+            s, v = _sass.compile_string(
+                string, output_style, source_comments, include_paths, precision,
+                custom_functions, indented, importers,
+                source_map_contents, source_map_embed, omit_source_map_url,
+                source_map_root,
+            )
+            if s:
+                return v.decode('utf-8')
+        elif 'filename' in modes:
+            filename = kwargs.pop('filename')
+            if not isinstance(filename, str):
+                raise TypeError('filename must be a string, not ' + repr(filename))
+            elif not os.path.isfile(filename):
+                raise OSError(f'{filename!r} seems not a file')
+            elif isinstance(filename, str):
+                filename = filename.encode(fs_encoding)
+            _check_no_remaining_kwargs(compile, kwargs)
+            s, v, source_map = _sass.compile_filename(
+                filename, output_style, source_comments, include_paths, precision,
+                source_map_filename, custom_functions, importers,
+                output_filename_hint,
+                source_map_contents, source_map_embed, omit_source_map_url,
+                source_map_root,
+            )
+            if s:
+                v = v.decode('utf-8')
+                if source_map_filename:
+                    source_map = source_map.decode('utf-8')
+                    v = v, source_map
+                return v
+        elif 'dirname' in modes:
+            try:
+                search_path, output_path = kwargs.pop('dirname')
+            except ValueError:
+                raise ValueError(
+                    'dirname must be a pair of (source_dir, '
+                    'output_dir)',
+                )
+            _check_no_remaining_kwargs(compile, kwargs)
+            s, v = compile_dirname(
+                search_path, output_path, output_style, source_comments,
+                include_paths, precision, custom_functions, importers,
+                source_map_contents, source_map_embed, omit_source_map_url,
+                source_map_root,
+            )
+            if s:
+                return
+        else:
+            raise TypeError('something went wrong')
+        assert not s
+>       raise CompileError(v)
+E       sass.CompileError: Error: File to import not found or unreadable: _contrast.scss.
+E               on line 5:1 of stdin
+E       >> @import "_contrast.scss";
+E       
+E          ^
+
+/venv/lib/python3.13/site-packages/sass.py:725: CompileError
+_______ StyleTest.test_organizer_generate_css_only_for_inherited_events ________
+[gw3] linux -- Python 3.13.18 /venv/bin/python
+
+self = <tests.presale.test_style.StyleTest testMethod=test_organizer_generate_css_only_for_inherited_events>
+
+    def test_organizer_generate_css_only_for_inherited_events(self):
+        self.orga.settings.primary_color = "#33c33c"
+        self.event.settings.primary_color = "#34c34c"
+    
+>       c = self.client.get("/ccc/theme.css").content.decode()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/presale/test_style.py:53: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/venv/lib/python3.13/site-packages/django/test/client.py:1127: in get
+    response = super().get(
+/venv/lib/python3.13/site-packages/django/test/client.py:475: in get
+    return self.generic(
+/venv/lib/python3.13/site-packages/django/test/client.py:671: in generic
+    return self.request(**r)
+           ^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/test/client.py:1085: in request
+    response = self.handler(environ)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/test/client.py:186: in __call__
+    response = self.get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/base.py:140: in get_response
+    response = self._middleware_chain(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+pretix/testutils/middleware.py:51: in __call__
+    return self.get_response(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+pretix/helpers/logs.py:73: in __call__
+    return self.get_response(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+pretix/api/middleware.py:47: in __call__
+    return self.get_response(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django_querytagger/middleware.py:29: in __call__
+    return self.get_response(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+pretix/control/middleware.py:137: in __call__
+    return self.get_response(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+pretix/control/middleware.py:248: in __call__
+    response = self.get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+pretix/presale/middleware.py:75: in __call__
+    response = self.get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+pretix/api/middleware.py:132: in __call__
+    return self.get_response(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/base.py:197: in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/decorators.py:192: in _view_wrapper
+    result = _process_exception(request, e)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/decorators.py:190: in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/views/decorators/http.py:154: in inner
+    response = func(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pretix/presale/views/theme.py:49: in theme_css
+    css = get_theme_vars_css(obj, widget=False)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pretix/presale/style.py:216: in get_theme_vars_css
+    css = sass.compile(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+kwargs = {}
+
+    def compile(**kwargs):
+        r"""There are three modes of parameters :func:`compile()` can take:
+        ``string``, ``filename``, and ``dirname``.
+    
+        The ``string`` parameter is the most basic way to compile Sass.
+        It simply takes a string of Sass code, and then returns a compiled
+        CSS string.
+    
+        :param string: Sass source code to compile.  it's exclusive to
+                       ``filename`` and ``dirname`` parameters
+        :type string: :class:`str`
+        :param output_style: an optional coding style of the compiled result.
+                             choose one of: ``'nested'`` (default), ``'expanded'``,
+                             ``'compact'``, ``'compressed'``
+        :type output_style: :class:`str`
+        :param source_comments: whether to add comments about source lines.
+                                :const:`False` by default
+        :type source_comments: :class:`bool`
+        :param source_map_contents: embed include contents in map
+        :type source_map_contents: :class:`bool`
+        :param source_map_embed: embed sourceMappingUrl as data URI
+        :type source_map_embed: :class:`bool`
+        :param omit_source_map_url: omit source map URL comment from output
+        :type omit_source_map_url: :class:`bool`
+        :param source_map_root: base path, will be emitted in source map as is
+        :type source_map_root: :class:`str`
+        :param include_paths: an optional list of paths to find ``@import``\ ed
+                              Sass/CSS source files
+        :type include_paths: :class:`collections.abc.Sequence`
+        :param precision: optional precision for numbers. :const:`5` by default.
+        :type precision: :class:`int`
+        :param custom_functions: optional mapping of custom functions.
+                                 see also below `custom functions
+                                 <custom-functions_>`_ description
+        :type custom_functions: :class:`set`,
+                                :class:`collections.abc.Sequence`,
+                                :class:`collections.abc.Mapping`
+        :param custom_import_extensions: (ignored, for backward compatibility)
+        :param indented: optional declaration that the string is Sass, not SCSS
+                         formatted. :const:`False` by default
+        :type indented: :class:`bool`
+        :returns: the compiled CSS string
+        :param importers: optional callback functions.
+                         see also below `importer callbacks
+                         <importer-callbacks_>`_ description
+        :type importers: :class:`collections.abc.Callable`
+        :rtype: :class:`str`
+        :raises sass.CompileError: when it fails for any reason
+                                   (for example the given Sass has broken syntax)
+    
+        The ``filename`` is the most commonly used way.  It takes a string of
+        Sass filename, and then returns a compiled CSS string.
+    
+        :param filename: the filename of Sass source code to compile.
+                         it's exclusive to ``string`` and ``dirname`` parameters
+        :type filename: :class:`str`
+        :param output_style: an optional coding style of the compiled result.
+                             choose one of: ``'nested'`` (default), ``'expanded'``,
+                             ``'compact'``, ``'compressed'``
+        :type output_style: :class:`str`
+        :param source_comments: whether to add comments about source lines.
+                                :const:`False` by default
+        :type source_comments: :class:`bool`
+        :param source_map_filename: use source maps and indicate the source map
+                                    output filename.  :const:`None` means not
+                                    using source maps.  :const:`None` by default.
+        :type source_map_filename: :class:`str`
+        :param source_map_contents: embed include contents in map
+        :type source_map_contents: :class:`bool`
+        :param source_map_embed: embed sourceMappingUrl as data URI
+        :type source_map_embed: :class:`bool`
+        :param omit_source_map_url: omit source map URL comment from output
+        :type omit_source_map_url: :class:`bool`
+        :param source_map_root: base path, will be emitted in source map as is
+        :type source_map_root: :class:`str`
+        :param include_paths: an optional list of paths to find ``@import``\ ed
+                              Sass/CSS source files
+        :type include_paths: :class:`collections.abc.Sequence`
+        :param precision: optional precision for numbers. :const:`5` by default.
+        :type precision: :class:`int`
+        :param custom_functions: optional mapping of custom functions.
+                                 see also below `custom functions
+                                 <custom-functions_>`_ description
+        :type custom_functions: :class:`set`,
+                                :class:`collections.abc.Sequence`,
+                                :class:`collections.abc.Mapping`
+        :param custom_import_extensions: (ignored, for backward compatibility)
+        :param importers: optional callback functions.
+                         see also below `importer callbacks
+                         <importer-callbacks_>`_ description
+        :type importers: :class:`collections.abc.Callable`
+        :returns: the compiled CSS string, or a pair of the compiled CSS string
+                  and the source map string if ``source_map_filename`` is set
+        :rtype: :class:`str`, :class:`tuple`
+        :raises sass.CompileError: when it fails for any reason
+                                   (for example the given Sass has broken syntax)
+        :raises exceptions.IOError: when the ``filename`` doesn't exist or
+                                    cannot be read
+    
+        The ``dirname`` is useful for automation.  It takes a pair of paths.
+        The first of the ``dirname`` pair refers the source directory, contains
+        several Sass source files to compiled.  Sass source files can be nested
+        in directories.  The second of the pair refers the output directory
+        that compiled CSS files would be saved.  Directory tree structure of
+        the source directory will be maintained in the output directory as well.
+        If ``dirname`` parameter is used the function returns :const:`None`.
+    
+        :param dirname: a pair of ``(source_dir, output_dir)``.
+                        it's exclusive to ``string`` and ``filename``
+                        parameters
+        :type dirname: :class:`tuple`
+        :param output_style: an optional coding style of the compiled result.
+                             choose one of: ``'nested'`` (default), ``'expanded'``,
+                             ``'compact'``, ``'compressed'``
+        :type output_style: :class:`str`
+        :param source_comments: whether to add comments about source lines.
+                                :const:`False` by default
+        :type source_comments: :class:`bool`
+        :param source_map_contents: embed include contents in map
+        :type source_map_contents: :class:`bool`
+        :param source_map_embed: embed sourceMappingUrl as data URI
+        :type source_map_embed: :class:`bool`
+        :param omit_source_map_url: omit source map URL comment from output
+        :type omit_source_map_url: :class:`bool`
+        :param source_map_root: base path, will be emitted in source map as is
+        :type source_map_root: :class:`str`
+        :param include_paths: an optional list of paths to find ``@import``\ ed
+                              Sass/CSS source files
+        :type include_paths: :class:`collections.abc.Sequence`
+        :param precision: optional precision for numbers. :const:`5` by default.
+        :type precision: :class:`int`
+        :param custom_functions: optional mapping of custom functions.
+                                 see also below `custom functions
+                                 <custom-functions_>`_ description
+        :type custom_functions: :class:`set`,
+                                :class:`collections.abc.Sequence`,
+                                :class:`collections.abc.Mapping`
+        :param custom_import_extensions: (ignored, for backward compatibility)
+        :raises sass.CompileError: when it fails for any reason
+                                   (for example the given Sass has broken syntax)
+    
+        .. _custom-functions:
+    
+        The ``custom_functions`` parameter can take three types of forms:
+    
+        :class:`~set`/:class:`~collections.abc.Sequence` of \
+        :class:`SassFunction`\ s
+           It is the most general form.  Although pretty verbose, it can take
+           any kind of callables like type objects, unnamed functions,
+           and user-defined callables.
+    
+           .. code-block:: python
+    
+              sass.compile(
+                  ...,
+                  custom_functions={
+                      sass.SassFunction('func-name', ('$a', '$b'), some_callable),
+                      ...
+                  }
+              )
+    
+        :class:`~collections.abc.Mapping` of names to functions
+           Less general, but easier-to-use form.  Although it's not it can take
+           any kind of callables, it can take any kind of *functions* defined
+           using :keyword:`def`/:keyword:`lambda` syntax.
+           It cannot take callables other than them since inspecting arguments
+           is not always available for every kind of callables.
+    
+           .. code-block:: python
+    
+              sass.compile(
+                  ...,
+                  custom_functions={
+                      'func-name': lambda a, b: ...,
+                      ...
+                  }
+              )
+    
+        :class:`~set`/:class:`~collections.abc.Sequence` of \
+        named functions
+           Not general, but the easiest-to-use form for *named* functions.
+           It can take only named functions, defined using :keyword:`def`.
+           It cannot take lambdas sinc names are unavailable for them.
+    
+           .. code-block:: python
+    
+              def func_name(a, b):
+                  return ...
+    
+              sass.compile(
+                  ...,
+                  custom_functions={func_name}
+              )
+    
+        .. _importer-callbacks:
+    
+        Newer versions of ``libsass`` allow developers to define callbacks to be
+        called and given a chance to process ``@import`` directives. You can
+        define yours by passing in a list of callables via the ``importers``
+        parameter. The callables must be passed as 2-tuples in the form:
+    
+        .. code-block:: python
+    
+            (priority_int, callback_fn)
+    
+        A priority of zero is acceptable; priority determines the order callbacks
+        are attempted.
+    
+        These callbacks can accept one or two string arguments. The first argument
+        is the path that was passed to the ``@import`` directive; the second
+        (optional) argument is the previous resolved path, where the ``@import``
+        directive was found. The callbacks must either return ``None`` to
+        indicate the path wasn't handled by that callback (to continue with others
+        or fall back on internal ``libsass`` filesystem behaviour) or a list of
+        one or more tuples, each in one of three forms:
+    
+        * A 1-tuple representing an alternate path to handle internally; or,
+        * A 2-tuple representing an alternate path and the content that path
+          represents; or,
+        * A 3-tuple representing the same as the 2-tuple with the addition of a
+          "sourcemap".
+    
+        All tuple return values must be strings. As a not overly realistic
+        example:
+    
+        .. code-block:: python
+    
+            def my_importer(path, prev):
+                return [(path, '#' + path + ' { color: red; }')]
+    
+            sass.compile(
+                    ...,
+                    importers=[(0, my_importer)]
+                )
+    
+        Now, within the style source, attempting to ``@import 'button';`` will
+        instead attach ``color: red`` as a property of an element with the
+        imported name.
+    
+        .. versionadded:: 0.4.0
+           Added ``source_comments`` and ``source_map_filename`` parameters.
+    
+        .. versionchanged:: 0.6.0
+           The ``source_comments`` parameter becomes to take only :class:`bool`
+           instead of :class:`str`.
+    
+        .. deprecated:: 0.6.0
+           Values like ``'none'``, ``'line_numbers'``, and ``'map'`` for
+           the ``source_comments`` parameter are deprecated.
+    
+        .. versionadded:: 0.7.0
+           Added ``precision`` parameter.
+    
+        .. versionadded:: 0.7.0
+           Added ``custom_functions`` parameter.
+    
+        .. versionadded:: 0.11.0
+           ``source_map_filename`` no longer implies ``source_comments``.
+    
+        .. versionadded:: 0.17.0
+           Added ``source_map_contents``, ``source_map_embed``,
+           ``omit_source_map_url``, and ``source_map_root`` parameters.
+    
+        .. versionadded:: 0.18.0
+            The importer callbacks can now take a second argument, the previously-
+            resolved path, so that importers can do relative path resolution.
+    
+        """
+        modes = set()
+        for mode_name in MODES:
+            if mode_name in kwargs:
+                modes.add(mode_name)
+        if not modes:
+            raise TypeError('choose one at least in ' + and_join(MODES))
+        elif len(modes) > 1:
+            raise TypeError(
+                and_join(modes) + ' are exclusive each other; '
+                'cannot be used at a time',
+            )
+        precision = kwargs.pop('precision', 5)
+        output_style = kwargs.pop('output_style', 'nested')
+        if not isinstance(output_style, str):
+            raise TypeError(
+                'output_style must be a string, not ' +
+                repr(output_style),
+            )
+        try:
+            output_style = OUTPUT_STYLES[output_style]
+        except KeyError:
+            raise CompileError(
+                '{} is unsupported output_style; choose one of {}'
+                ''.format(output_style, and_join(OUTPUT_STYLES)),
+            )
+        source_comments = kwargs.pop('source_comments', False)
+        if source_comments in SOURCE_COMMENTS:
+            if source_comments == 'none':
+                deprecation_message = (
+                    'you can simply pass False to '
+                    "source_comments instead of 'none'"
+                )
+                source_comments = False
+            elif source_comments in ('line_numbers', 'default'):
+                deprecation_message = (
+                    'you can simply pass True to '
+                    'source_comments instead of ' +
+                    repr(source_comments)
+                )
+                source_comments = True
+            else:
+                deprecation_message = (
+                    "you don't have to pass 'map' to "
+                    'source_comments but just need to '
+                    'specify source_map_filename'
+                )
+                source_comments = False
+            warnings.warn(
+                "values like 'none', 'line_numbers', and 'map' for "
+                'the source_comments parameter are deprecated; ' +
+                deprecation_message,
+                FutureWarning,
+            )
+        if not isinstance(source_comments, bool):
+            raise TypeError(
+                'source_comments must be bool, not ' +
+                repr(source_comments),
+            )
+        fs_encoding = sys.getfilesystemencoding() or sys.getdefaultencoding()
+    
+        def _get_file_arg(key):
+            ret = kwargs.pop(key, None)
+            if ret is not None and not isinstance(ret, str):
+                raise TypeError(f'{key} must be a string, not {ret!r}')
+            elif isinstance(ret, str):
+                ret = ret.encode(fs_encoding)
+            if ret and 'filename' not in modes:
+                raise CompileError(
+                    '{} is only available with filename= keyword argument since '
+                    'has to be aware of it'.format(key),
+                )
+            return ret
+    
+        source_map_filename = _get_file_arg('source_map_filename')
+        output_filename_hint = _get_file_arg('output_filename_hint')
+    
+        source_map_contents = kwargs.pop('source_map_contents', False)
+        source_map_embed = kwargs.pop('source_map_embed', False)
+        omit_source_map_url = kwargs.pop('omit_source_map_url', False)
+        source_map_root = kwargs.pop('source_map_root', None)
+    
+        if isinstance(source_map_root, str):
+            source_map_root = source_map_root.encode('utf-8')
+    
+        # #208: cwd is always included in include paths
+        include_paths = (os.getcwd(),)
+        include_paths += tuple(kwargs.pop('include_paths', ()) or ())
+        include_paths = os.pathsep.join(include_paths)
+        if isinstance(include_paths, str):
+            include_paths = include_paths.encode(fs_encoding)
+    
+        custom_functions = kwargs.pop('custom_functions', ())
+        if isinstance(custom_functions, collections.abc.Mapping):
+            custom_functions = [
+                SassFunction.from_lambda(name, lambda_)
+                for name, lambda_ in custom_functions.items()
+            ]
+        elif isinstance(
+                custom_functions,
+                (collections.abc.Set, collections.abc.Sequence),
+        ):
+            custom_functions = [
+                func if isinstance(func, SassFunction)
+                else SassFunction.from_named_function(func)
+                for func in custom_functions
+            ]
+        else:
+            raise TypeError(
+                'custom_functions must be one of:\n'
+                '- a set/sequence of {0.__module__}.{0.__name__} objects,\n'
+                '- a mapping of function name strings to lambda functions,\n'
+                '- a set/sequence of named functions,\n'
+                'not {1!r}'.format(SassFunction, custom_functions),
+            )
+    
+        if kwargs.pop('custom_import_extensions', None) is not None:
+            warnings.warn(
+                '`custom_import_extensions` has no effect and will be removed in '
+                'a future version.',
+                FutureWarning,
+            )
+    
+        importers = _validate_importers(kwargs.pop('importers', None))
+    
+        if 'string' in modes:
+            string = kwargs.pop('string')
+            if isinstance(string, str):
+                string = string.encode('utf-8')
+            indented = kwargs.pop('indented', False)
+            if not isinstance(indented, bool):
+                raise TypeError(
+                    'indented must be bool, not ' +
+                    repr(source_comments),
+                )
+            _check_no_remaining_kwargs(compile, kwargs)
+            s, v = _sass.compile_string(
+                string, output_style, source_comments, include_paths, precision,
+                custom_functions, indented, importers,
+                source_map_contents, source_map_embed, omit_source_map_url,
+                source_map_root,
+            )
+            if s:
+                return v.decode('utf-8')
+        elif 'filename' in modes:
+            filename = kwargs.pop('filename')
+            if not isinstance(filename, str):
+                raise TypeError('filename must be a string, not ' + repr(filename))
+            elif not os.path.isfile(filename):
+                raise OSError(f'{filename!r} seems not a file')
+            elif isinstance(filename, str):
+                filename = filename.encode(fs_encoding)
+            _check_no_remaining_kwargs(compile, kwargs)
+            s, v, source_map = _sass.compile_filename(
+                filename, output_style, source_comments, include_paths, precision,
+                source_map_filename, custom_functions, importers,
+                output_filename_hint,
+                source_map_contents, source_map_embed, omit_source_map_url,
+                source_map_root,
+            )
+            if s:
+                v = v.decode('utf-8')
+                if source_map_filename:
+                    source_map = source_map.decode('utf-8')
+                    v = v, source_map
+                return v
+        elif 'dirname' in modes:
+            try:
+                search_path, output_path = kwargs.pop('dirname')
+            except ValueError:
+                raise ValueError(
+                    'dirname must be a pair of (source_dir, '
+                    'output_dir)',
+                )
+            _check_no_remaining_kwargs(compile, kwargs)
+            s, v = compile_dirname(
+                search_path, output_path, output_style, source_comments,
+                include_paths, precision, custom_functions, importers,
+                source_map_contents, source_map_embed, omit_source_map_url,
+                source_map_root,
+            )
+            if s:
+                return
+        else:
+            raise TypeError('something went wrong')
+        assert not s
+>       raise CompileError(v)
+E       sass.CompileError: Error: File to import not found or unreadable: _contrast.scss.
+E               on line 5:1 of stdin
+E       >> @import "_contrast.scss";
+E       
+E          ^
+
+/venv/lib/python3.13/site-packages/sass.py:725: CompileError
+______________________ WidgetCartTest.test_css_customized ______________________
+[gw3] linux -- Python 3.13.18 /venv/bin/python
+
+self = <tests.presale.test_widget.WidgetCartTest testMethod=test_css_customized>
+
+    @override_settings(COMPRESS_PRECOMPILERS=settings.COMPRESS_PRECOMPILERS_ORIGINAL)
+    def test_css_customized(self):
+>       response = self.client.get('/%s/%s/widget/v2.css' % (self.orga.slug, self.event.slug))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/presale/test_widget.py:549: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/venv/lib/python3.13/site-packages/django/test/client.py:1127: in get
+    response = super().get(
+/venv/lib/python3.13/site-packages/django/test/client.py:475: in get
+    return self.generic(
+/venv/lib/python3.13/site-packages/django/test/client.py:671: in generic
+    return self.request(**r)
+           ^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/test/client.py:1085: in request
+    response = self.handler(environ)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/test/client.py:186: in __call__
+    response = self.get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/base.py:140: in get_response
+    response = self._middleware_chain(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+pretix/testutils/middleware.py:51: in __call__
+    return self.get_response(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+pretix/helpers/logs.py:73: in __call__
+    return self.get_response(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+pretix/api/middleware.py:47: in __call__
+    return self.get_response(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django_querytagger/middleware.py:29: in __call__
+    return self.get_response(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+pretix/control/middleware.py:137: in __call__
+    return self.get_response(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+pretix/control/middleware.py:248: in __call__
+    response = self.get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/deprecation.py:120: in __call__
+    response = response or self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+pretix/presale/middleware.py:75: in __call__
+    response = self.get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+pretix/api/middleware.py:132: in __call__
+    return self.get_response(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:57: in inner
+    response = response_for_exception(request, exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:141: in response_for_exception
+    response = handle_uncaught_exception(
+/venv/lib/python3.13/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/core/handlers/base.py:197: in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/decorators.py:192: in _view_wrapper
+    result = _process_exception(request, e)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/decorators.py:190: in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/views/decorators/http.py:154: in inner
+    response = func(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/decorators.py:192: in _view_wrapper
+    result = _process_exception(request, e)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/venv/lib/python3.13/site-packages/django/utils/decorators.py:190: in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pretix/presale/views/widget.py:147: in widget_css
+    theme_css = get_theme_vars_css(o, widget=True)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pretix/presale/style.py:216: in get_theme_vars_css
+    css = sass.compile(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+kwargs = {}
+
+    def compile(**kwargs):
+        r"""There are three modes of parameters :func:`compile()` can take:
+        ``string``, ``filename``, and ``dirname``.
+    
+        The ``string`` parameter is the most basic way to compile Sass.
+        It simply takes a string of Sass code, and then returns a compiled
+        CSS string.
+    
+        :param string: Sass source code to compile.  it's exclusive to
+                       ``filename`` and ``dirname`` parameters
+        :type string: :class:`str`
+        :param output_style: an optional coding style of the compiled result.
+                             choose one of: ``'nested'`` (default), ``'expanded'``,
+                             ``'compact'``, ``'compressed'``
+        :type output_style: :class:`str`
+        :param source_comments: whether to add comments about source lines.
+                                :const:`False` by default
+        :type source_comments: :class:`bool`
+        :param source_map_contents: embed include contents in map
+        :type source_map_contents: :class:`bool`
+        :param source_map_embed: embed sourceMappingUrl as data URI
+        :type source_map_embed: :class:`bool`
+        :param omit_source_map_url: omit source map URL comment from output
+        :type omit_source_map_url: :class:`bool`
+        :param source_map_root: base path, will be emitted in source map as is
+        :type source_map_root: :class:`str`
+        :param include_paths: an optional list of paths to find ``@import``\ ed
+                              Sass/CSS source files
+        :type include_paths: :class:`collections.abc.Sequence`
+        :param precision: optional precision for numbers. :const:`5` by default.
+        :type precision: :class:`int`
+        :param custom_functions: optional mapping of custom functions.
+                                 see also below `custom functions
+                                 <custom-functions_>`_ description
+        :type custom_functions: :class:`set`,
+                                :class:`collections.abc.Sequence`,
+                                :class:`collections.abc.Mapping`
+        :param custom_import_extensions: (ignored, for backward compatibility)
+        :param indented: optional declaration that the string is Sass, not SCSS
+                         formatted. :const:`False` by default
+        :type indented: :class:`bool`
+        :returns: the compiled CSS string
+        :param importers: optional callback functions.
+                         see also below `importer callbacks
+                         <importer-callbacks_>`_ description
+        :type importers: :class:`collections.abc.Callable`
+        :rtype: :class:`str`
+        :raises sass.CompileError: when it fails for any reason
+                                   (for example the given Sass has broken syntax)
+    
+        The ``filename`` is the most commonly used way.  It takes a string of
+        Sass filename, and then returns a compiled CSS string.
+    
+        :param filename: the filename of Sass source code to compile.
+                         it's exclusive to ``string`` and ``dirname`` parameters
+        :type filename: :class:`str`
+        :param output_style: an optional coding style of the compiled result.
+                             choose one of: ``'nested'`` (default), ``'expanded'``,
+                             ``'compact'``, ``'compressed'``
+        :type output_style: :class:`str`
+        :param source_comments: whether to add comments about source lines.
+                                :const:`False` by default
+        :type source_comments: :class:`bool`
+        :param source_map_filename: use source maps and indicate the source map
+                                    output filename.  :const:`None` means not
+                                    using source maps.  :const:`None` by default.
+        :type source_map_filename: :class:`str`
+        :param source_map_contents: embed include contents in map
+        :type source_map_contents: :class:`bool`
+        :param source_map_embed: embed sourceMappingUrl as data URI
+        :type source_map_embed: :class:`bool`
+        :param omit_source_map_url: omit source map URL comment from output
+        :type omit_source_map_url: :class:`bool`
+        :param source_map_root: base path, will be emitted in source map as is
+        :type source_map_root: :class:`str`
+        :param include_paths: an optional list of paths to find ``@import``\ ed
+                              Sass/CSS source files
+        :type include_paths: :class:`collections.abc.Sequence`
+        :param precision: optional precision for numbers. :const:`5` by default.
+        :type precision: :class:`int`
+        :param custom_functions: optional mapping of custom functions.
+                                 see also below `custom functions
+                                 <custom-functions_>`_ description
+        :type custom_functions: :class:`set`,
+                                :class:`collections.abc.Sequence`,
+                                :class:`collections.abc.Mapping`
+        :param custom_import_extensions: (ignored, for backward compatibility)
+        :param importers: optional callback functions.
+                         see also below `importer callbacks
+                         <importer-callbacks_>`_ description
+        :type importers: :class:`collections.abc.Callable`
+        :returns: the compiled CSS string, or a pair of the compiled CSS string
+                  and the source map string if ``source_map_filename`` is set
+        :rtype: :class:`str`, :class:`tuple`
+        :raises sass.CompileError: when it fails for any reason
+                                   (for example the given Sass has broken syntax)
+        :raises exceptions.IOError: when the ``filename`` doesn't exist or
+                                    cannot be read
+    
+        The ``dirname`` is useful for automation.  It takes a pair of paths.
+        The first of the ``dirname`` pair refers the source directory, contains
+        several Sass source files to compiled.  Sass source files can be nested
+        in directories.  The second of the pair refers the output directory
+        that compiled CSS files would be saved.  Directory tree structure of
+        the source directory will be maintained in the output directory as well.
+        If ``dirname`` parameter is used the function returns :const:`None`.
+    
+        :param dirname: a pair of ``(source_dir, output_dir)``.
+                        it's exclusive to ``string`` and ``filename``
+                        parameters
+        :type dirname: :class:`tuple`
+        :param output_style: an optional coding style of the compiled result.
+                             choose one of: ``'nested'`` (default), ``'expanded'``,
+                             ``'compact'``, ``'compressed'``
+        :type output_style: :class:`str`
+        :param source_comments: whether to add comments about source lines.
+                                :const:`False` by default
+        :type source_comments: :class:`bool`
+        :param source_map_contents: embed include contents in map
+        :type source_map_contents: :class:`bool`
+        :param source_map_embed: embed sourceMappingUrl as data URI
+        :type source_map_embed: :class:`bool`
+        :param omit_source_map_url: omit source map URL comment from output
+        :type omit_source_map_url: :class:`bool`
+        :param source_map_root: base path, will be emitted in source map as is
+        :type source_map_root: :class:`str`
+        :param include_paths: an optional list of paths to find ``@import``\ ed
+                              Sass/CSS source files
+        :type include_paths: :class:`collections.abc.Sequence`
+        :param precision: optional precision for numbers. :const:`5` by default.
+        :type precision: :class:`int`
+        :param custom_functions: optional mapping of custom functions.
+                                 see also below `custom functions
+                                 <custom-functions_>`_ description
+        :type custom_functions: :class:`set`,
+                                :class:`collections.abc.Sequence`,
+                                :class:`collections.abc.Mapping`
+        :param custom_import_extensions: (ignored, for backward compatibility)
+        :raises sass.CompileError: when it fails for any reason
+                                   (for example the given Sass has broken syntax)
+    
+        .. _custom-functions:
+    
+        The ``custom_functions`` parameter can take three types of forms:
+    
+        :class:`~set`/:class:`~collections.abc.Sequence` of \
+        :class:`SassFunction`\ s
+           It is the most general form.  Although pretty verbose, it can take
+           any kind of callables like type objects, unnamed functions,
+           and user-defined callables.
+    
+           .. code-block:: python
+    
+              sass.compile(
+                  ...,
+                  custom_functions={
+                      sass.SassFunction('func-name', ('$a', '$b'), some_callable),
+                      ...
+                  }
+              )
+    
+        :class:`~collections.abc.Mapping` of names to functions
+           Less general, but easier-to-use form.  Although it's not it can take
+           any kind of callables, it can take any kind of *functions* defined
+           using :keyword:`def`/:keyword:`lambda` syntax.
+           It cannot take callables other than them since inspecting arguments
+           is not always available for every kind of callables.
+    
+           .. code-block:: python
+    
+              sass.compile(
+                  ...,
+                  custom_functions={
+                      'func-name': lambda a, b: ...,
+                      ...
+                  }
+              )
+    
+        :class:`~set`/:class:`~collections.abc.Sequence` of \
+        named functions
+           Not general, but the easiest-to-use form for *named* functions.
+           It can take only named functions, defined using :keyword:`def`.
+           It cannot take lambdas sinc names are unavailable for them.
+    
+           .. code-block:: python
+    
+              def func_name(a, b):
+                  return ...
+    
+              sass.compile(
+                  ...,
+                  custom_functions={func_name}
+              )
+    
+        .. _importer-callbacks:
+    
+        Newer versions of ``libsass`` allow developers to define callbacks to be
+        called and given a chance to process ``@import`` directives. You can
+        define yours by passing in a list of callables via the ``importers``
+        parameter. The callables must be passed as 2-tuples in the form:
+    
+        .. code-block:: python
+    
+            (priority_int, callback_fn)
+    
+        A priority of zero is acceptable; priority determines the order callbacks
+        are attempted.
+    
+        These callbacks can accept one or two string arguments. The first argument
+        is the path that was passed to the ``@import`` directive; the second
+        (optional) argument is the previous resolved path, where the ``@import``
+        directive was found. The callbacks must either return ``None`` to
+        indicate the path wasn't handled by that callback (to continue with others
+        or fall back on internal ``libsass`` filesystem behaviour) or a list of
+        one or more tuples, each in one of three forms:
+    
+        * A 1-tuple representing an alternate path to handle internally; or,
+        * A 2-tuple representing an alternate path and the content that path
+          represents; or,
+        * A 3-tuple representing the same as the 2-tuple with the addition of a
+          "sourcemap".
+    
+        All tuple return values must be strings. As a not overly realistic
+        example:
+    
+        .. code-block:: python
+    
+            def my_importer(path, prev):
+                return [(path, '#' + path + ' { color: red; }')]
+    
+            sass.compile(
+                    ...,
+                    importers=[(0, my_importer)]
+                )
+    
+        Now, within the style source, attempting to ``@import 'button';`` will
+        instead attach ``color: red`` as a property of an element with the
+        imported name.
+    
+        .. versionadded:: 0.4.0
+           Added ``source_comments`` and ``source_map_filename`` parameters.
+    
+        .. versionchanged:: 0.6.0
+           The ``source_comments`` parameter becomes to take only :class:`bool`
+           instead of :class:`str`.
+    
+        .. deprecated:: 0.6.0
+           Values like ``'none'``, ``'line_numbers'``, and ``'map'`` for
+           the ``source_comments`` parameter are deprecated.
+    
+        .. versionadded:: 0.7.0
+           Added ``precision`` parameter.
+    
+        .. versionadded:: 0.7.0
+           Added ``custom_functions`` parameter.
+    
+        .. versionadded:: 0.11.0
+           ``source_map_filename`` no longer implies ``source_comments``.
+    
+        .. versionadded:: 0.17.0
+           Added ``source_map_contents``, ``source_map_embed``,
+           ``omit_source_map_url``, and ``source_map_root`` parameters.
+    
+        .. versionadded:: 0.18.0
+            The importer callbacks can now take a second argument, the previously-
+            resolved path, so that importers can do relative path resolution.
+    
+        """
+        modes = set()
+        for mode_name in MODES:
+            if mode_name in kwargs:
+                modes.add(mode_name)
+        if not modes:
+            raise TypeError('choose one at least in ' + and_join(MODES))
+        elif len(modes) > 1:
+            raise TypeError(
+                and_join(modes) + ' are exclusive each other; '
+                'cannot be used at a time',
+            )
+        precision = kwargs.pop('precision', 5)
+        output_style = kwargs.pop('output_style', 'nested')
+        if not isinstance(output_style, str):
+            raise TypeError(
+                'output_style must be a string, not ' +
+                repr(output_style),
+            )
+        try:
+            output_style = OUTPUT_STYLES[output_style]
+        except KeyError:
+            raise CompileError(
+                '{} is unsupported output_style; choose one of {}'
+                ''.format(output_style, and_join(OUTPUT_STYLES)),
+            )
+        source_comments = kwargs.pop('source_comments', False)
+        if source_comments in SOURCE_COMMENTS:
+            if source_comments == 'none':
+                deprecation_message = (
+                    'you can simply pass False to '
+                    "source_comments instead of 'none'"
+                )
+                source_comments = False
+            elif source_comments in ('line_numbers', 'default'):
+                deprecation_message = (
+                    'you can simply pass True to '
+                    'source_comments instead of ' +
+                    repr(source_comments)
+                )
+                source_comments = True
+            else:
+                deprecation_message = (
+                    "you don't have to pass 'map' to "
+                    'source_comments but just need to '
+                    'specify source_map_filename'
+                )
+                source_comments = False
+            warnings.warn(
+                "values like 'none', 'line_numbers', and 'map' for "
+                'the source_comments parameter are deprecated; ' +
+                deprecation_message,
+                FutureWarning,
+            )
+        if not isinstance(source_comments, bool):
+            raise TypeError(
+                'source_comments must be bool, not ' +
+                repr(source_comments),
+            )
+        fs_encoding = sys.getfilesystemencoding() or sys.getdefaultencoding()
+    
+        def _get_file_arg(key):
+            ret = kwargs.pop(key, None)
+            if ret is not None and not isinstance(ret, str):
+                raise TypeError(f'{key} must be a string, not {ret!r}')
+            elif isinstance(ret, str):
+                ret = ret.encode(fs_encoding)
+            if ret and 'filename' not in modes:
+                raise CompileError(
+                    '{} is only available with filename= keyword argument since '
+                    'has to be aware of it'.format(key),
+                )
+            return ret
+    
+        source_map_filename = _get_file_arg('source_map_filename')
+        output_filename_hint = _get_file_arg('output_filename_hint')
+    
+        source_map_contents = kwargs.pop('source_map_contents', False)
+        source_map_embed = kwargs.pop('source_map_embed', False)
+        omit_source_map_url = kwargs.pop('omit_source_map_url', False)
+        source_map_root = kwargs.pop('source_map_root', None)
+    
+        if isinstance(source_map_root, str):
+            source_map_root = source_map_root.encode('utf-8')
+    
+        # #208: cwd is always included in include paths
+        include_paths = (os.getcwd(),)
+        include_paths += tuple(kwargs.pop('include_paths', ()) or ())
+        include_paths = os.pathsep.join(include_paths)
+        if isinstance(include_paths, str):
+            include_paths = include_paths.encode(fs_encoding)
+    
+        custom_functions = kwargs.pop('custom_functions', ())
+        if isinstance(custom_functions, collections.abc.Mapping):
+            custom_functions = [
+                SassFunction.from_lambda(name, lambda_)
+                for name, lambda_ in custom_functions.items()
+            ]
+        elif isinstance(
+                custom_functions,
+                (collections.abc.Set, collections.abc.Sequence),
+        ):
+            custom_functions = [
+                func if isinstance(func, SassFunction)
+                else SassFunction.from_named_function(func)
+                for func in custom_functions
+            ]
+        else:
+            raise TypeError(
+                'custom_functions must be one of:\n'
+                '- a set/sequence of {0.__module__}.{0.__name__} objects,\n'
+                '- a mapping of function name strings to lambda functions,\n'
+                '- a set/sequence of named functions,\n'
+                'not {1!r}'.format(SassFunction, custom_functions),
+            )
+    
+        if kwargs.pop('custom_import_extensions', None) is not None:
+            warnings.warn(
+                '`custom_import_extensions` has no effect and will be removed in '
+                'a future version.',
+                FutureWarning,
+            )
+    
+        importers = _validate_importers(kwargs.pop('importers', None))
+    
+        if 'string' in modes:
+            string = kwargs.pop('string')
+            if isinstance(string, str):
+                string = string.encode('utf-8')
+            indented = kwargs.pop('indented', False)
+            if not isinstance(indented, bool):
+                raise TypeError(
+                    'indented must be bool, not ' +
+                    repr(source_comments),
+                )
+            _check_no_remaining_kwargs(compile, kwargs)
+            s, v = _sass.compile_string(
+                string, output_style, source_comments, include_paths, precision,
+                custom_functions, indented, importers,
+                source_map_contents, source_map_embed, omit_source_map_url,
+                source_map_root,
+            )
+            if s:
+                return v.decode('utf-8')
+        elif 'filename' in modes:
+            filename = kwargs.pop('filename')
+            if not isinstance(filename, str):
+                raise TypeError('filename must be a string, not ' + repr(filename))
+            elif not os.path.isfile(filename):
+                raise OSError(f'{filename!r} seems not a file')
+            elif isinstance(filename, str):
+                filename = filename.encode(fs_encoding)
+            _check_no_remaining_kwargs(compile, kwargs)
+            s, v, source_map = _sass.compile_filename(
+                filename, output_style, source_comments, include_paths, precision,
+                source_map_filename, custom_functions, importers,
+                output_filename_hint,
+                source_map_contents, source_map_embed, omit_source_map_url,
+                source_map_root,
+            )
+            if s:
+                v = v.decode('utf-8')
+                if source_map_filename:
+                    source_map = source_map.decode('utf-8')
+                    v = v, source_map
+                return v
+        elif 'dirname' in modes:
+            try:
+                search_path, output_path = kwargs.pop('dirname')
+            except ValueError:
+                raise ValueError(
+                    'dirname must be a pair of (source_dir, '
+                    'output_dir)',
+                )
+            _check_no_remaining_kwargs(compile, kwargs)
+            s, v = compile_dirname(
+                search_path, output_path, output_style, source_comments,
+                include_paths, precision, custom_functions, importers,
+                source_map_contents, source_map_embed, omit_source_map_url,
+                source_map_root,
+            )
+            if s:
+                return
+        else:
+            raise TypeError('something went wrong')
+        assert not s
+>       raise CompileError(v)
+E       sass.CompileError: Error: File to import not found or unreadable: _contrast.scss.
+E               on line 6:1 of stdin
+E       >> @import "_contrast.scss";
+E       
+E          ^
+
+/venv/lib/python3.13/site-packages/sass.py:725: CompileError
+____________________________ test_same_month_german ____________________________
+[gw2] linux -- Python 3.13.18 /venv/bin/python
+
+    def test_same_month_german():
+        with translation.override('de'):
+            df = date(2003, 2, 1)
+            dt = date(2003, 2, 3)
+            assert daterange(df, dt) == "1.–3. Februar 2003"
+>           assert daterange(df, dt, as_html=True) == '<time datetime="2003-02-01">1.</time>' \
+                                                      '<span aria-hidden="true">–</span><span class="sr-only"> bis </span>' \
+                                                      '<time datetime="2003-02-03">3. Februar 2003</time>'
+E           assert '<time dateti...r 2003</time>' == '<time dateti...r 2003</time>'
+E             
+E             Skipping 83 identical leading characters in diff, use -v to show
+E             - sr-only"> bis </span><time datetime="2003-02-03">3. Februar 2003</time>
+E             ?           ^ ^
+E             + sr-only"> until </span><time datetime="2003-02-03">3. Februar 2003</time>
+E             ?           ^^^ ^
+
+tests/helpers/test_daterange.py:76: AssertionError
+___________________________ test_same_month_spanish ____________________________
+[gw2] linux -- Python 3.13.18 /venv/bin/python
+
+    def test_same_month_spanish():
+        with translation.override('es'):
+            df = date(2003, 2, 1)
+            dt = date(2003, 2, 3)
+            assert daterange(df, dt) == "1 – 3 de febrero de 2003"
+>           assert daterange(df, dt, as_html=True) == '<time datetime="2003-02-01">1</time> ' \
+                                                      '<span aria-hidden="true">–</span><span class="sr-only"> hasta </span> ' \
+                                                      '<time datetime="2003-02-03">3 de febrero de 2003</time>'
+E           assert '<time dateti...e 2003</time>' == '<time dateti...e 2003</time>'
+E             
+E             Skipping 83 identical leading characters in diff, use -v to show
+E             Skipping 55 identical trailing characters in diff, use -v to show
+E             - sr-only"> hasta </span> 
+E             ?           ^^^ ^
+E             + sr-only"> until </span> 
+E             ?           ^^ ^^
+
+tests/helpers/test_daterange.py:96: AssertionError
+____________________________ test_same_year_german _____________________________
+[gw2] linux -- Python 3.13.18 /venv/bin/python
+
+    def test_same_year_german():
+        with translation.override('de'):
+            df = date(2003, 2, 1)
+            dt = date(2003, 4, 3)
+            assert daterange(df, dt) == "1. Februar – 3. April 2003"
+>           assert daterange(df, dt, as_html=True) == '<time datetime="2003-02-01">1. Februar</time> ' \
+                                                      '<span aria-hidden="true">–</span><span class="sr-only"> bis </span> ' \
+                                                      '<time datetime="2003-04-03">3. April 2003</time>'
+E           assert '<time dateti...l 2003</time>' == '<time dateti...l 2003</time>'
+E             
+E             Skipping 92 identical leading characters in diff, use -v to show
+E             - sr-only"> bis </span> <time datetime="2003-04-03">3. April 2003</time>
+E             ?           ^ ^
+E             + sr-only"> until </span> <time datetime="2003-04-03">3. April 2003</time>
+E             ?           ^^^ ^
+
+tests/helpers/test_daterange.py:106: AssertionError
+____________________________ test_same_year_spanish ____________________________
+[gw2] linux -- Python 3.13.18 /venv/bin/python
+
+    def test_same_year_spanish():
+        with translation.override('es'):
+            df = date(2003, 2, 1)
+            dt = date(2003, 4, 3)
+            assert daterange(df, dt) == "1 de febrero – 3 de abril de 2003"
+>           assert daterange(df, dt, as_html=True) == '<time datetime="2003-02-01">1 de febrero</time> ' \
+                                                      '<span aria-hidden="true">–</span><span class="sr-only"> hasta </span> ' \
+                                                      '<time datetime="2003-04-03">3 de abril de 2003</time>'
+E           assert '<time dateti...e 2003</time>' == '<time dateti...e 2003</time>'
+E             
+E             Skipping 94 identical leading characters in diff, use -v to show
+E             Skipping 53 identical trailing characters in diff, use -v to show
+E             - sr-only"> hasta </span> 
+E             ?           ^^^ ^
+E             + sr-only"> until </span> 
+E             ?           ^^ ^^
+
+tests/helpers/test_daterange.py:126: AssertionError
+_________________________ test_different_dates_german __________________________
+[gw2] linux -- Python 3.13.18 /venv/bin/python
+
+    def test_different_dates_german():
+        with translation.override('de'):
+            df = date(2003, 2, 1)
+            dt = date(2005, 4, 3)
+            assert daterange(df, dt) == "1. Februar 2003 – 3. April 2005"
+>           assert daterange(df, dt, as_html=True) == '<time datetime="2003-02-01">1. Februar 2003</time> ' \
+                                                      '<span aria-hidden="true">–</span><span class="sr-only"> bis </span> ' \
+                                                      '<time datetime="2005-04-03">3. April 2005</time>'
+E           assert '<time dateti...l 2005</time>' == '<time dateti...l 2005</time>'
+E             
+E             Skipping 97 identical leading characters in diff, use -v to show
+E             - sr-only"> bis </span> <time datetime="2005-04-03">3. April 2005</time>
+E             ?           ^ ^
+E             + sr-only"> until </span> <time datetime="2005-04-03">3. April 2005</time>
+E             ?           ^^^ ^
+
+tests/helpers/test_daterange.py:136: AssertionError
+_________________________ test_different_dates_spanish _________________________
+[gw2] linux -- Python 3.13.18 /venv/bin/python
+
+    def test_different_dates_spanish():
+        with translation.override('es'):
+            df = date(2003, 2, 1)
+            dt = date(2005, 4, 3)
+            assert daterange(df, dt) == "1 de febrero de 2003 – 3 de abril de 2005"
+>           assert daterange(df, dt, as_html=True) == '<time datetime="2003-02-01">1 de febrero de 2003</time> ' \
+                                                      '<span aria-hidden="true">–</span><span class="sr-only"> hasta </span> ' \
+                                                      '<time datetime="2005-04-03">3 de abril de 2005</time>'
+E           assert '<time dateti...e 2005</time>' == '<time dateti...e 2005</time>'
+E             
+E             Skipping 102 identical leading characters in diff, use -v to show
+E             Skipping 53 identical trailing characters in diff, use -v to show
+E             - sr-only"> hasta </span> 
+E             ?           ^^^ ^
+E             + sr-only"> until </span> 
+E             ?           ^^ ^^
+
+tests/helpers/test_daterange.py:156: AssertionError
+____________________________ test_datetime_same_day ____________________________
+[gw2] linux -- Python 3.13.18 /venv/bin/python
+
+    def test_datetime_same_day():
+        with translation.override('de'):
+            df = datetime(2003, 2, 1, 9, 0)
+            dt = datetime(2003, 2, 1, 10, 0)
+            assert datetimerange(df, dt) == "01.02.2003 09:00 – 10:00"
+>           assert datetimerange(df, dt, as_html=True) == '<time datetime="2003-02-01 09:00">01.02.2003 09:00</time> ' \
+                                                          '<span aria-hidden="true">–</span><span class="sr-only"> bis </span> ' \
+                                                          '<time datetime="2003-02-01 10:00">10:00</time>'
+E           assert '<time dateti...>10:00</time>' == '<time dateti...>10:00</time>'
+E             
+E             Skipping 104 identical leading characters in diff, use -v to show
+E             - sr-only"> bis </span> <time datetime="2003-02-01 10:00">10:00</time>
+E             ?           ^ ^
+E             + sr-only"> until </span> <time datetime="2003-02-01 10:00">10:00</time>
+E             ?           ^^^ ^
+
+tests/helpers/test_daterange.py:176: AssertionError
+_________________________ test_datetime_different_day __________________________
+[gw2] linux -- Python 3.13.18 /venv/bin/python
+
+    def test_datetime_different_day():
+        with translation.override('de'):
+            df = datetime(2003, 2, 1, 9, 0)
+            dt = datetime(2003, 2, 2, 10, 0)
+            assert datetimerange(df, dt) == "01.02.2003 09:00 – 02.02.2003 10:00"
+>           assert datetimerange(df, dt, as_html=True) == '<time datetime="2003-02-01 09:00">01.02.2003 09:00</time> ' \
+                                                          '<span aria-hidden="true">–</span><span class="sr-only"> bis </span> ' \
+                                                          '<time datetime="2003-02-02 10:00">02.02.2003 10:00</time>'
+E           assert '<time dateti... 10:00</time>' == '<time dateti... 10:00</time>'
+E             
+E             Skipping 104 identical leading characters in diff, use -v to show
+E             - sr-only"> bis </span> <time datetime="2003-02-02 10:00">02.02.2003 10:00</time>
+E             ?           ^ ^
+E             + sr-only"> until </span> <time datetime="2003-02-02 10:00">02.02.2003 10:00</time>
+E             ?           ^^^ ^
+
+tests/helpers/test_daterange.py:193: AssertionError
+15 failed, 6076 passed, 27 skipped, 3 xfailed in 196.35s (0:03:16)
+### tests_psycopg3 exit=1
