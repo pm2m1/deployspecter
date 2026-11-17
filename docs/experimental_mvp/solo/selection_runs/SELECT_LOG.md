@@ -109,3 +109,18 @@ stopped: S4 verdict needed for zulip/zulip (run the S4 check, record it, re-run 
  }
 }
 ```
+
+## select pass 11 (selection_7; stable: no capped candidate left, screen budget reached)
+```
+{
+ "screens": 100,
+ "admitted": 4,
+ "apps": 3,
+ "skips": {
+  "adapter_refused": 15,
+  "driver": 37,
+  "no_regression_test": 20,
+  "s4_failed": 24
+ }
+}
+```
