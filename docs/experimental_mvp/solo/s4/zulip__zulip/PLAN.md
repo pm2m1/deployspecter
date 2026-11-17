@@ -43,3 +43,14 @@ of `tools/test-backend` and `.github/workflows/zulip-ci.yml`.
      are compared instead.
 6. The verdict, commands, versions and exit codes go into `LOG.md` and `../../S4.json`. Initials: PM (run on their
    behalf under the authorization above).
+
+## Addendum (2026-11-17, committed before the second attempt)
+
+The first attempt (06:34:59–06:35:00 UTC) failed at its first command. `git clone` of the read-only mirror exited 128
+with `fatal: detected dubious ownership in repository at '/mirror'`: the `-c safe.directory='*'` option doesn't
+reach git's `upload-pack`. The checkout never happened, and every later command failed with exit 127 or 128. No
+step ran against the application, so no verdict was reached. That attempt's log is kept in
+`attempt1_environment_failure/`.
+
+The second attempt runs `git config --global --add safe.directory /mirror` in the container before cloning. Nothing
+else changes.
