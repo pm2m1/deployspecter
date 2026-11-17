@@ -68,7 +68,17 @@ The next study is preregistered on OSF: [osf.io/34ytz](https://osf.io/34ytz) (pr
 generator on historical defects selected by frozen code with a sealed seed, judged by the maintainers' own regression
 tests, plus seeded mutants. One person runs it, so its results will be labelled "preregistered, automation-blinded,
 single-investigator. Not independent". The frozen plan, code and seed hashes are on branch `research/benchmark-prep`
-at commit `312d0af` (`docs/experimental_mvp/osf/FREEZE.json`). No case has been selected and no run made yet.
+at commit `312d0af` (`docs/experimental_mvp/osf/FREEZE.json`).
+
+**Status: terminated at Stage 2 (2026-11-17), with 0 eligible historical cases.**
+- Selection ran as registered and admitted 4 cases from 3 applications after the 100-screen budget. All 4 were Django
+  applications, and none needed concurrency to show its defect.
+- The Django seam's validation on paperless-ngx v3.4.2 failed. Migrations and simple requests ran faithfully, but
+  interleaved runs stalled on a file lock the application holds outside the database, and the tool refused a
+  reconnection the task queue makes. So the 4 cases were refused, and re-selection admitted none.
+- No arm ran and no mutants were generated. The primary comparison and every other registered comparison are not
+  estimable. Muse spend was $0, and no claim is made about Muse either way.
+- Report: [`RESULTS.md`](https://github.com/pm2m1/deployspecter/blob/10aa32d13913c6d61c9f4f257355508da5617377/docs/experimental_mvp/results/RESULTS.md).
 
 ## Limitations
 
@@ -78,7 +88,8 @@ at commit `312d0af` (`docs/experimental_mvp/osf/FREEZE.json`). No case has been 
 - **Isolation:** not hostile-grade, and hostile-code testing is BLOCKED.
 - **No confirmatory study yet.** The protocol (Amendment 003, revision candidate r3) is PROPOSED and unsigned. The
   confirmatory runner refuses to run (`docs/experimental_mvp/protocol/APPROVAL_DASHBOARD.md`). The single-investigator
-  evaluation above is registered, but it is not independent and won't be called confirmatory.
+  evaluation above was registered and terminated at Stage 2 with no estimable result. It was not independent and is
+  not called confirmatory.
 
 ## Reproduce one case end to end (saq-c570ba4, RA-DET)
 
