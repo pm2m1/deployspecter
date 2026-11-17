@@ -140,3 +140,15 @@ If the seam fails, it is not fixed and re-run. That failure is the result.
 
 Each run's trace, corroboration and final-state digest go in `evidence/`, hashed in `EVIDENCE.sha256`.
 `LOG.md` holds the commands and times. `VERDICT.json` holds P1–P4 and "PASS" or "FAIL".
+
+## Addendum 1 (2026-11-17, before any run): a driver dry run on the stock backend only
+
+Before phase 1, the driver is checked once in stock mode only, with Django's own backend and no stepping or
+corroboration:
+1. `migrate` with `manage.py migrate` (stock);
+2. `seed`;
+3. `stock`.
+
+This catches driver errors (reset, generic read, seed, requests) without any run through the seam. Its output goes in
+`dryrun/` and is not evidence for P1–P4. Afterwards the schema is dropped, and phase 1 starts from an empty `public`
+schema as planned. Nothing in P1–P4, the workloads or the schedules changes.
