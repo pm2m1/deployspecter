@@ -11,7 +11,7 @@ Authorization (verbatim):
 | Stage | Status |
 |---|---|
 | 0. Preflight | **done** 2026-11-17: FREEZE.json `6fb0a189…aeced47` matches a rebuild; REGISTRATION.json accepted; sealed seed hashes match; Docker 29.7.2; Python 3.12.14; running from `research/benchmark-prep` d56ad87. No Muse health check exists in the frozen tooling, so no model call was made. |
-| 1. Case selection | **in progress**: 20 mirrors in `~/ds-mirrors` (PostHog built stepwise, DEVIATIONS D1). `select` stops (exit 4) at each S4 application in the seeded order. Verdicts so far (`solo/S4.json`): TandoorRecipes/recipes **pass**, getsentry/sentry **fail**, pretix/pretix **pass**; zulip/zulip check running (`solo/s4/zulip__zulip/PLAN.md`). No case admitted yet; `selection_1` not yet written. |
+| 1. Case selection | **selection done, specs not started (paused for owner decisions)**: `solo/selection_1` (e8c3b32): 10 admitted from 5 applications in 90 screens (pretix 1, kiwitcms 1, plane 3, wger 2, airflow 3). S4 verdicts (`solo/S4.json`): TandoorRecipes/recipes pass, getsentry/sentry fail, pretix/pretix pass, zulip/zulip fail. Open owner questions before any spec is written: r3 #12 (Django seam development-only; 7 of 10 cases are Django), E2–E6 (not screened by the frozen code), and the final-state convention for blinded integrations. |
 | Gate 1 | owner's "continue" needed |
 | 2. Integrations | not started |
 | 3. Mutants | not started |
@@ -36,11 +36,9 @@ Stage 1 (RUNBOOK §2):
 ```
 Use the next unused `selection_<n>`; never overwrite an earlier one. A stop at exit 4 writes nothing.
 
-Current resume point: if `solo/S4.json` lacks `zulip/zulip`, run that check per its committed
-`solo/s4/zulip__zulip/PLAN.md`, record `LOG.md` and the verdict in `S4.json`, commit, then:
-```sh
-.venv/bin/python research_tools/solo/select_cases.py select --mirrors ~/ds-mirrors \
-    --registration docs/experimental_mvp/osf/REGISTRATION.json --out docs/experimental_mvp/solo/selection_1 \
-    --s4-verdicts docs/experimental_mvp/solo/S4.json
-```
+Current resume point: waiting for the owner's answers on r3 #12, E2–E6 and the final-state convention. Then, for
+each admitted case in `solo/selection_1/SELECTION.json`, write `solo/maintainer_specs/<repo>-<commit10>.json`, run
+`maintainer_oracle.py check-spec`, record refusals in `solo/REFUSED.json`, and re-run `select` into `selection_2`
+with `--s4-verdicts solo/S4.json --refused solo/REFUSED.json`.
+
 Each S4 check: write `solo/s4/<owner>__<repo>/PLAN.md` (commands and test set) and commit it **before** running.
